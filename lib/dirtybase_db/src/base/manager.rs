@@ -22,6 +22,7 @@ impl Manager {
         self.schema.as_mut()
     }
 
+    // Get a table or view for querying
     pub fn table<F>(&mut self, table: &str, callback: F) -> &dyn SchemaManagerTrait
     where
         F: FnMut(&mut QueryBuilder),
@@ -29,6 +30,7 @@ impl Manager {
         self.tables(vec![table.to_owned()], callback)
     }
 
+    // Get tables or view for querying
     pub fn tables<F>(&mut self, tables: Vec<String>, mut callback: F) -> &dyn SchemaManagerTrait
     where
         F: FnMut(&mut QueryBuilder),
@@ -49,7 +51,7 @@ impl Manager {
         }
     }
 
-    // Get an existing table to updating
+    // Get an existing table for updating
     pub async fn update(&self, name: &str, mut callback: impl FnMut(&mut BaseTable)) {
         if self.has_table(name).await {
             let mut table = self.schema.fetch_table_for_update(name);
@@ -58,6 +60,20 @@ impl Manager {
             callback(&mut table);
             self.schema.commit(table).await;
         }
+    }
+
+    // Create a new view
+    pub async fn view_from_table(
+        &self,
+        name: &str,
+        from_table: &str,
+        mut callback: impl FnMut(&mut QueryBuilder),
+    ) {
+        let mut query = QueryBuilder::new(vec![from_table.to_owned()]);
+        callback(&mut query);
+        let mut table = self.schema.fetch_table_for_update(name);
+        table.view_query = Some(query);
+        self.schema.commit(table).await;
     }
 
     pub fn insert(&self, name: &str) -> SaveRecord {

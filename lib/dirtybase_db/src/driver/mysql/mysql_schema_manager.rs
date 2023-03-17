@@ -17,6 +17,17 @@ struct ActiveQuery {
     statement: String,
     params: Vec<String>,
 }
+
+impl ActiveQuery {
+    fn to_sql_string(&self) -> String {
+        let mut query = self.statement.clone();
+        for a_param in &self.params {
+            query = query.replacen("?", &a_param, 1);
+        }
+
+        query
+    }
+}
 pub struct MySqlSchemaManager {
     db_pool: Arc<Pool<MySql>>,
     active_query: Option<ActiveQuery>,
@@ -99,11 +110,44 @@ impl SchemaManagerTrait for MySqlSchemaManager {
 
 impl MySqlSchemaManager {
     async fn do_commit(&self, table: BaseTable) {
-        if table.is_new() {
-            println!("create new table");
-            self.create_table(table).await
+        if table.view_query.is_some() {
+            // working with view table
+            self.create_or_replace_view(table).await
         } else {
+            // working with real table
             self.create_table(table).await
+        }
+    }
+
+    async fn create_or_replace_view(&self, table: BaseTable) {
+        if let Some(query) = &table.view_query {
+            let mut params = Vec::new();
+            let sql = self.build_query(query, &mut params);
+
+            let active_query = ActiveQuery {
+                statement: sql,
+                params,
+            };
+
+            let query = format!(
+                "CREATE OR REPLACE VIEW `{}` AS ({})",
+                &table.name,
+                active_query.to_sql_string()
+            );
+
+            let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
+            match result {
+                Ok(_) => {
+                    log::info!("View '{}' created or replaced successfully", &table.name);
+                }
+                Err(error) => {
+                    log::error!(
+                        "Could not create or replace view '{}': {:#?}",
+                        &table.name,
+                        error
+                    );
+                }
+            }
         }
     }
 
@@ -114,8 +158,11 @@ impl MySqlSchemaManager {
             .map(|column| self.create_column(column))
             .collect();
 
+        let command = if table.is_new() { "CREATE" } else { "ALTER" };
+
         let query = format!(
-            "CREATE TABLE `{}` (\n{}\n) ENGINE='InnoDB';",
+            "{} TABLE `{}` (\n{}\n) ENGINE='InnoDB';",
+            command,
             &table.name,
             columns.join(",\n")
         );
@@ -123,15 +170,25 @@ impl MySqlSchemaManager {
         let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
 
         match result {
-            Ok(x) => {
-                println!("----------------------- ok result -------------");
-                dbg!(x);
-                println!("----------------------- ok result -------------");
+            Ok(_) => {
+                log::info!(
+                    "Table '{}' {} successfully",
+                    &table.name,
+                    if table.is_new() { "created" } else { "updated" }
+                );
             }
             Err(e) => {
-                println!("----------------------- error result -------------");
-                dbg!(e.to_string());
-                println!("----------------------- error result -------------");
+                let name;
+                let action;
+
+                if table.is_new() {
+                    action = "create";
+                    name = table.new_name.unwrap_or(table.name)
+                } else {
+                    action = "update";
+                    name = table.name
+                }
+                log::error!("Could not {} table {}: {}", action, name, e);
             }
         }
 
