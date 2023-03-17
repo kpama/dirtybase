@@ -303,15 +303,7 @@ VALUES (?, ?, ?);";
         // fields
         match query.select_columns() {
             Some(fields) => sql = format!("{} {}", sql, fields.join(",")),
-            None => {
-                for entry in query.tables().iter().enumerate() {
-                    if entry.0 == 0 {
-                        sql = format!("{} {}.*", sql, entry.1)
-                    } else {
-                        sql = format!("{}, {}.*", sql, entry.1)
-                    }
-                }
-            }
+            None => (),
         };
 
         // join fields
@@ -321,7 +313,7 @@ VALUES (?, ?, ?);";
                     Some(columns) => {
                         sql = format!("{}, {}", sql, columns.join(","));
                     }
-                    None => sql = format!("{}, {}.*", sql, a_join.table()),
+                    None => (),
                 }
             }
         }
