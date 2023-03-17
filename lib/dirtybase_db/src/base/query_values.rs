@@ -125,7 +125,7 @@ impl Value {
             Self::U64(v) => params.push(v.to_string()),
             Self::I64(v) => params.push(v.to_string()),
             Self::F64(v) => params.push(v.to_string()),
-            Self::String(v) => params.push(format!("'{}'", v)),
+            Self::String(v) => params.push(v.to_string()),
             Self::Boolean(v) => {
                 params.push(if *v { 1.to_string() } else { 0.to_string() });
             }
@@ -150,10 +150,7 @@ impl Value {
                     .collect::<Vec<String>>(),
             ),
             Self::Strings(v) => {
-                let s = v
-                    .iter()
-                    .map(|x| format!("'{}'", x))
-                    .collect::<Vec<String>>();
+                let s = v.iter().map(|x| x.to_string()).collect::<Vec<String>>();
                 params.extend(s);
             }
             Self::SubQuery(_) => {
