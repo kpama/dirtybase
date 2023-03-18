@@ -16,15 +16,14 @@ pub fn user_table_name() -> String {
 // table
 pub async fn setup_users_table(manager: &super::manager::Manager) {
     let name = user_table_name();
-    if !manager.has_table(&name).await {
+    if !manager.has_table(USER_TABLE).await {
         manager
-            .create(&name, |table| {
+            .create(USER_TABLE, |table| {
                 table.id_set();
                 table.string("username");
                 table.string("email");
                 // password, open ID, third party, magic link?
                 // the user could be using openID to login !?!?!
-                table.string("password").set_is_nullable(true);
                 table.timestamps();
                 table.soft_deletable();
             })
