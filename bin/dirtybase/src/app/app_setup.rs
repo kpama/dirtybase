@@ -52,8 +52,12 @@ pub async fn db_connect(conn: &str, max_connection: u32) -> Pool<MySql> {
         .connect(conn)
         .await
     {
-        Ok(conn) => conn,
+        Ok(conn) => {
+            log::info!("Maximum DB pool connection: {}", max_connection);
+            conn
+        }
         Err(e) => {
+            log::error!("could not connect to the database: {:#?}", &e);
             panic!("could not connect to the database: {:#?}", e);
         }
     }
