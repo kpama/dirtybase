@@ -158,14 +158,17 @@ impl MySqlSchemaManager {
             .map(|column| self.create_column(column))
             .collect();
 
-        let command = if table.is_new() { "CREATE" } else { "ALTER" };
+        let mut query = if table.is_new() {
+            format!("CREATE TABLE `{}`", &table.name)
+        } else {
+            format!("ALTER TABLE `{}`", &table.name)
+        };
 
-        let query = format!(
-            "{} TABLE `{}` (\n{}\n) ENGINE='InnoDB';",
-            command,
-            &table.name,
-            columns.join(",\n")
-        );
+        if columns.len() > 0 {
+            query = format!("{} ({})", query, columns.join(","));
+        }
+
+        query = format!("{} ENGINE='InnoDB';", query);
 
         let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
 
@@ -183,12 +186,28 @@ impl MySqlSchemaManager {
 
                 if table.is_new() {
                     action = "create";
-                    name = table.new_name.unwrap_or(table.name)
+                    name = table.new_name.unwrap_or(table.name.clone())
                 } else {
                     action = "update";
-                    name = table.name
+                    name = table.name.clone();
                 }
                 log::error!("Could not {} table {}: {}", action, name, e);
+            }
+        }
+
+        // create/update indexes
+        if let Some(indexes) = &table.indexes {
+            for entry in indexes {
+                let sql = format!("ALTER TABLE {} {}", &table.name, entry.to_string());
+
+                let index_result = sqlx::query(&sql).execute(self.db_pool.as_ref()).await;
+                match index_result {
+                    Ok(_e) => log::info!("table index created"),
+                    Err(e) => {
+                        log::error!("could not create table index: {}", e.to_string())
+                    }
+                }
+                dbg!(sql);
             }
         }
 
@@ -213,9 +232,6 @@ VALUES (?, ?, ?);";
                 }
             }
         }
-
-        println!("update existing table");
-        dbg!(query);
     }
 
     fn create_column(&self, column: &BaseColumn) -> String {
