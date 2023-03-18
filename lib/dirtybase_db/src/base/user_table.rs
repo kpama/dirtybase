@@ -5,7 +5,7 @@ pub struct User {
     // password: String
 }
 // Core User table name
-static USER_TABLE: &str = "_core_users";
+pub static USER_TABLE: &str = "_core_users";
 
 pub fn user_table_name() -> String {
     USER_TABLE.to_owned()
