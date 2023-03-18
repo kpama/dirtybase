@@ -1,5 +1,9 @@
+use crate::base::to_fk_column;
+
 use super::{
     column::{BaseColumn, ColumnType, RelationType},
+    index::{IndexProp, IndexType},
+    query::QueryBuilder,
     user_table::user_table_name,
 };
 use std::fmt::Debug;
@@ -10,6 +14,8 @@ pub struct BaseTable {
     pub new_name: Option<String>,
     pub columns: Vec<BaseColumn>,
     pub is_new: bool,
+    pub view_query: Option<QueryBuilder>,
+    pub indexes: Option<Vec<IndexType>>,
 }
 
 impl BaseTable {
@@ -19,6 +25,8 @@ impl BaseTable {
             new_name: None,
             columns: Vec::new(),
             is_new: true,
+            view_query: None,
+            indexes: None,
         }
     }
 
@@ -192,5 +200,43 @@ impl BaseTable {
 
     pub fn columns(&self) -> &Vec<BaseColumn> {
         &self.columns
+    }
+
+    pub fn column_string(
+        &mut self,
+        name: String,
+        callback: impl FnOnce(&mut BaseColumn),
+    ) -> &mut BaseColumn {
+        let mut column = BaseColumn::new(&name, ColumnType::String(255));
+
+        callback(&mut column);
+        self.columns.push(column);
+
+        self.columns.last_mut().unwrap()
+    }
+
+    // pub fn unique_index(&mut self, columns: &[&str]) -> &mut Self {
+    //     if self.indexes.is_none() {
+    //         self.indexes = Some(Vec::new());
+    //     }
+
+    //     if let Some(indexes) = &mut self.indexes {
+    //         indexes.push(IndexType::Unique(
+    //             columns.iter().map(|c| c.to_string()).collect(),
+    //         ));
+    //     }
+
+    //     self
+    // }
+
+    pub fn primary_index(&mut self, columns: &[&str]) -> &mut Self {
+        if self.indexes.is_none() {
+            self.indexes = Some(Vec::new());
+        }
+
+        if let Some(indexes) = &mut self.indexes {
+            indexes.push(IndexType::Primary(IndexProp::new(columns, false)));
+        }
+        self
     }
 }

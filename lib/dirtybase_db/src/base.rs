@@ -1,5 +1,6 @@
 pub mod column;
 pub mod helper;
+pub mod index;
 pub mod join_builder;
 pub mod manager;
 pub mod query;
