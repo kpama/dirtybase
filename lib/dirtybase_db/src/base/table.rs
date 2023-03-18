@@ -145,6 +145,19 @@ impl BaseTable {
         })
     }
 
+    pub fn ulid_fk(&mut self, foreign_table: &str, cascade_delete: bool) -> &mut BaseColumn {
+        let name = to_fk_column(foreign_table);
+
+        self.column_string(name, |column| {
+            column.set_type(ColumnType::Char(16));
+            if cascade_delete {
+                column.references_with_cascade_delete(&foreign_table, "id");
+            } else {
+                column.references_without_cascade_delete(&foreign_table, "id");
+            }
+        })
+    }
+
     pub fn ulid(&mut self, name: &'static str) -> &mut BaseColumn {
         self.char(name, 26)
     }
