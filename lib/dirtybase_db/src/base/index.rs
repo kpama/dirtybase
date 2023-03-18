@@ -9,7 +9,7 @@ pub struct IndexProp {
 impl IndexProp {
     pub fn new(columns: &[&str], to_delete: bool) -> Self {
         let mut col = columns
-            .into_iter()
+            .iter()
             .map(|s| s.to_string())
             .collect::<Vec<String>>();
         col.sort();
