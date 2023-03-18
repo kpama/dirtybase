@@ -15,7 +15,6 @@ pub fn user_table_name() -> String {
 // the "own" fields are assuming there is a user
 // table
 pub async fn setup_users_table(manager: &super::manager::Manager) {
-    let name = user_table_name();
     if !manager.has_table(USER_TABLE).await {
         manager
             .create(USER_TABLE, |table| {
