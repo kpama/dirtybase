@@ -1,6 +1,5 @@
 use crate::base::{
     column::{BaseColumn, ColumnDefault, ColumnType},
-    helper::generate_ulid,
     query::QueryBuilder,
     query_conditions::Condition,
     query_operators::Operator,
@@ -206,29 +205,6 @@ impl MySqlSchemaManager {
                     Err(e) => {
                         log::error!("could not create table index: {}", e.to_string())
                     }
-                }
-                dbg!(sql);
-            }
-        }
-
-        if self.has_table("_core_users").await {
-            let new_user_query = "INSERT INTO `_core_users` (`id`, `username`, `email`)
-VALUES (?, ?, ?);";
-
-            let id = generate_ulid();
-
-            let result = sqlx::query(new_user_query)
-                .bind(&id)
-                .bind("first_user")
-                .bind(34)
-                .execute(self.db_pool.as_ref())
-                .await;
-            match result {
-                Ok(_) => {
-                    println!("user was created")
-                }
-                Err(e) => {
-                    dbg!(e.to_string());
                 }
             }
         }
