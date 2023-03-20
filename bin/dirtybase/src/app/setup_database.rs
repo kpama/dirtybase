@@ -13,7 +13,7 @@ pub const ROLE_USER_TABLE: &str = "_core_role_user";
 // The table that will hold company's tenets
 async fn setup_company_table(manager: &Manager) {
     manager
-        .create(COMPANY_TABLE, |table| {
+        .create_table_schema(COMPANY_TABLE, |table| {
             let user_table_name = user_table_name();
             // internal_id
             // id
@@ -36,7 +36,7 @@ async fn setup_company_table(manager: &Manager) {
 
 async fn setup_applications_table(manager: &Manager) {
     manager
-        .create(APPLICATION_TABLE, |table| {
+        .create_table_schema(APPLICATION_TABLE, |table| {
             // internal_id
             // id
             table.id_set();
@@ -59,7 +59,7 @@ async fn setup_applications_table(manager: &Manager) {
 // The table that will contain the "collections" definitions
 async fn setup_schema_table(manager: &Manager) {
     manager
-        .create(APPLICATION_SCHEMA_TABLE, |table| {
+        .create_table_schema(APPLICATION_SCHEMA_TABLE, |table| {
             // internal_id
             // id
             table.id_set();
@@ -80,7 +80,7 @@ async fn setup_schema_table(manager: &Manager) {
 // The global roles table
 async fn setup_roles_table(manager: &Manager) {
     manager
-        .create(ROLE_TABLE, |table| {
+        .create_table_schema(ROLE_TABLE, |table| {
             // internal_id
             // id
             table.id_set();
@@ -101,7 +101,7 @@ async fn setup_roles_table(manager: &Manager) {
 // A user role
 async fn setup_role_users_table(manager: &Manager) {
     manager
-        .create(ROLE_USER_TABLE, |table| {
+        .create_table_schema(ROLE_USER_TABLE, |table| {
             // role id
             table.ulid_fk(ROLE_TABLE, true);
             // user id
@@ -127,7 +127,7 @@ async fn setup_role_users_table(manager: &Manager) {
 async fn setup_migration_table(manager: &Manager) {
     let name = "_core_migration";
     manager
-        .create(name, |table| {
+        .create_table_schema(name, |table| {
             // id
             table.id(None);
             // migration name
@@ -144,7 +144,7 @@ async fn setup_migration_table(manager: &Manager) {
 async fn setup_file_metadata_table(manager: &Manager) {
     let name = "_core_file_meta";
     manager
-        .create(name, |table| {
+        .create_table_schema(name, |table| {
             // internal_id
             // id
             table.id_set();
