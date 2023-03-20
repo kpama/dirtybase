@@ -17,7 +17,7 @@ pub fn user_table_name() -> String {
 pub async fn setup_users_table(manager: &super::manager::Manager) {
     if !manager.has_table(USER_TABLE).await {
         manager
-            .create(USER_TABLE, |table| {
+            .create_table_schema(USER_TABLE, |table| {
                 table.id_set();
                 table.string("username");
                 table.string("email");
