@@ -21,7 +21,7 @@ impl ActiveQuery {
     fn to_sql_string(&self) -> String {
         let mut query = self.statement.clone();
         for a_param in &self.params {
-            query = query.replacen("?", &a_param, 1);
+            query = query.replacen('?', a_param, 1);
         }
 
         query
