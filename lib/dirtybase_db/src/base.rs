@@ -8,7 +8,6 @@ pub mod query_conditions;
 pub mod query_join_types;
 pub mod query_operators;
 pub mod query_values;
-pub mod save;
 pub mod save_values;
 pub mod schema;
 pub mod table;
