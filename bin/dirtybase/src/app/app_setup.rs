@@ -2,7 +2,6 @@ use dirtybase_db::base::schema::SchemaManagerTrait;
 use dirtybase_db::{base, driver::mysql::mysql_schema_manager::MySqlSchemaManager};
 use sqlx::{any::AnyKind, mysql::MySqlPoolOptions, MySql, Pool};
 use std::{str::FromStr, sync::Arc};
-
 use super::setup_database::create_data_tables;
 
 pub struct Dirtybase {
