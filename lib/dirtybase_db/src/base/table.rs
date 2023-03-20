@@ -151,9 +151,9 @@ impl BaseTable {
         self.column_string(name, |column| {
             column.set_type(ColumnType::Char(16));
             if cascade_delete {
-                column.references_with_cascade_delete(&foreign_table, "id");
+                column.references_with_cascade_delete(foreign_table, "id");
             } else {
-                column.references_without_cascade_delete(&foreign_table, "id");
+                column.references_without_cascade_delete(foreign_table, "id");
             }
         })
     }
