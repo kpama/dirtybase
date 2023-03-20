@@ -223,7 +223,7 @@ impl MySqlSchemaManager {
             format!("ALTER TABLE `{}`", &table.name)
         };
 
-        if columns.len() > 0 {
+        if !columns.is_empty() {
             query = format!("{} ({})", query, columns.join(","));
         }
 
