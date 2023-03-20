@@ -129,14 +129,13 @@ impl Value {
             Self::Boolean(v) => {
                 params.push(if *v { 1.to_string() } else { 0.to_string() });
             }
-            Self::U64s(v) => params.push(format!(
-                "({})",
+            Self::U64s(v) => params.push(
                 v.as_slice()
                     .iter()
                     .map(|x| x.to_string())
                     .collect::<Vec<String>>()
-                    .join(",")
-            )),
+                    .join(","),
+            ),
             Self::I64s(v) => params.extend(
                 v.as_slice()
                     .iter()
