@@ -86,6 +86,10 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         self
     }
 
+    async fn save(&self, query: QueryBuilder) {
+        self.do_save(query).await
+    }
+
     async fn fetch_all_as_json(&self) -> Vec<serde_json::Value> {
         let mut results = Vec::new();
         match &self.active_query {
@@ -115,6 +119,62 @@ impl MySqlSchemaManager {
         } else {
             // working with real table
             self.apply_table_changes(table).await
+        }
+    }
+
+    async fn do_save(&self, query: QueryBuilder) {
+        let mut columns = Vec::new();
+        let mut params = Vec::new();
+        if let Some(list) = query.set_columns() {
+            for entry in list {
+                columns.push(entry.0);
+                params.push(entry.1.to_string());
+            }
+        }
+
+        let mut sql;
+        if !query.where_clauses().is_empty() {
+            sql = format!("UPDATE `{}` SET ", query.tables().join(","));
+            for entry in columns.iter().enumerate() {
+                if entry.0 > 0 {
+                    sql = format!("{}, `{}` = ? ", sql, *entry.1);
+                } else {
+                    sql = format!("{} `{}` = ? ", sql, *entry.1);
+                }
+            }
+
+            sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
+        } else {
+            sql = format!("INSERT INTO {} (", query.tables().join(","));
+            for entry in columns.iter().enumerate() {
+                if entry.0 > 0 {
+                    sql = format!("{}, `{}`", sql, *entry.1);
+                } else {
+                    sql = format!("{} `{}`", sql, *entry.1);
+                }
+            }
+            sql = format!(
+                "{} ) VALUES ({})",
+                sql,
+                params.iter().map(|_| "?").collect::<Vec<&str>>().join(",")
+            );
+        }
+
+        let mut query_statement = sqlx::query(&sql);
+
+        for p in &params {
+            query_statement = query_statement.bind(p);
+        }
+
+        let result = query_statement.execute(self.db_pool.as_ref()).await;
+
+        match result {
+            Ok(r) => {
+                dbg!(r);
+            }
+            Err(e) => {
+                dbg!(e);
+            }
         }
     }
 
