@@ -1,4 +1,8 @@
-use super::{query::QueryBuilder, save::SaveRecord, schema::SchemaManagerTrait, table::BaseTable};
+use std::collections::HashMap;
+
+use super::{
+    query::QueryBuilder, save_values::SaveValue, schema::SchemaManagerTrait, table::BaseTable,
+};
 use sqlx::any::AnyKind;
 
 pub struct Manager {
@@ -23,15 +27,19 @@ impl Manager {
     }
 
     // Get a table or view for querying
-    pub fn table<F>(&mut self, table: &str, callback: F) -> &dyn SchemaManagerTrait
+    pub fn select_from_table<F>(&mut self, table: &str, callback: F) -> &dyn SchemaManagerTrait
     where
         F: FnMut(&mut QueryBuilder),
     {
-        self.tables(vec![table.to_owned()], callback)
+        self.select_from_tables(vec![table.to_owned()], callback)
     }
 
     // Get tables or view for querying
-    pub fn tables<F>(&mut self, tables: Vec<String>, mut callback: F) -> &dyn SchemaManagerTrait
+    pub fn select_from_tables<F>(
+        &mut self,
+        tables: Vec<String>,
+        mut callback: F,
+    ) -> &dyn SchemaManagerTrait
     where
         F: FnMut(&mut QueryBuilder),
     {
@@ -41,7 +49,7 @@ impl Manager {
     }
 
     // Create a new table
-    pub async fn create(&self, name: &str, mut callback: impl FnMut(&mut BaseTable)) {
+    pub async fn create_table_schema(&self, name: &str, mut callback: impl FnMut(&mut BaseTable)) {
         if !self.has_table(name).await {
             let mut table = self.schema.fetch_table_for_update(name);
             table.set_is_new(true);
@@ -52,7 +60,7 @@ impl Manager {
     }
 
     // Get an existing table for updating
-    pub async fn update(&self, name: &str, mut callback: impl FnMut(&mut BaseTable)) {
+    pub async fn update_table_schema(&self, name: &str, mut callback: impl FnMut(&mut BaseTable)) {
         if self.has_table(name).await {
             let mut table = self.schema.fetch_table_for_update(name);
             table.set_is_new(false);
@@ -63,7 +71,7 @@ impl Manager {
     }
 
     // Create a new view
-    pub async fn view_from_table(
+    pub async fn create_view_from_table(
         &self,
         name: &str,
         from_table: &str,
@@ -76,8 +84,20 @@ impl Manager {
         self.schema.commit(table).await;
     }
 
-    pub fn insert(&self, name: &str) -> SaveRecord {
-        SaveRecord::new(name)
+    pub async fn insert_record<V: Into<SaveValue>>(
+        &self,
+        table_name: &str,
+        column_and_values: HashMap<String, V>,
+    ) {
+        let mut query = QueryBuilder::new(vec![table_name.to_owned()]);
+        query.set_multiple(column_and_values);
+        self.schema.save(query).await;
+    }
+
+    pub async fn save_record(&self, table_name: &str, mut callback: impl FnMut(&mut QueryBuilder)) {
+        let mut query = QueryBuilder::new(vec![table_name.to_owned()]);
+        callback(&mut query);
+        self.schema.save(query).await;
     }
 
     pub async fn has_table(&self, name: &str) -> bool {
