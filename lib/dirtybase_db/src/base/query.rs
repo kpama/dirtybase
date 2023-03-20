@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use super::{
     join_builder::JoinQueryBuilder, query_conditions::Condition, query_join_types::JoinType,
-    query_operators::Operator, query_values::Value, where_join_operators::WhereJoinOperator,
+    query_operators::Operator, query_values::Value, save_values::SaveValue,
+    where_join_operators::WhereJoinOperator,
 };
 
 #[derive(Debug)]
@@ -16,7 +17,7 @@ pub struct QueryBuilder {
     where_clauses: Vec<WhereJoinOperator>,
     tables: Vec<String>,
     select_columns: Option<Vec<String>>,
-    set_columns: Option<HashMap<String, String>>,
+    set_columns: Option<HashMap<String, SaveValue>>,
     joins: Option<Vec<JoinQueryBuilder>>,
 }
 
@@ -39,27 +40,27 @@ impl QueryBuilder {
         &self.select_columns
     }
 
-    pub fn set_columns(&self) -> &Option<Vec<String>> {
-        &self.select_columns
+    pub fn set_columns(&self) -> &Option<HashMap<String, SaveValue>> {
+        &self.set_columns
     }
 
     pub fn joins(&self) -> &Option<Vec<JoinQueryBuilder>> {
         &self.joins
     }
 
-    pub fn set<T: ToString>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn set<T: Into<SaveValue>>(&mut self, column: &str, value: T) -> &mut Self {
         if self.set_columns.is_none() {
             self.set_columns = Some(HashMap::new());
         }
 
         if let Some(columns) = &mut self.set_columns {
-            columns.insert(column.to_string(), value.to_string());
+            columns.insert(column.to_string(), value.into());
         }
 
         self
     }
 
-    pub fn set_multiple<T: ToString>(
+    pub fn set_multiple<T: Into<SaveValue>>(
         &mut self,
         column_and_values: HashMap<String, T>,
     ) -> &mut Self {
@@ -69,7 +70,7 @@ impl QueryBuilder {
 
         if let Some(columns) = &mut self.set_columns {
             for entry in column_and_values {
-                columns.insert(entry.0, entry.1.to_string());
+                columns.insert(entry.0, entry.1.into());
             }
         }
 
@@ -78,6 +79,15 @@ impl QueryBuilder {
 
     pub fn where_clauses(&self) -> &Vec<WhereJoinOperator> {
         &self.where_clauses
+    }
+
+    pub fn where_clauses_mut(&mut self) -> &mut Vec<WhereJoinOperator> {
+        &mut self.where_clauses
+    }
+
+    pub fn set_where_clauses(&mut self, where_classes: Vec<WhereJoinOperator>) -> &mut Self {
+        self.where_clauses = where_classes;
+        self
     }
 
     pub fn select(&mut self, column: &str) -> &mut Self {
