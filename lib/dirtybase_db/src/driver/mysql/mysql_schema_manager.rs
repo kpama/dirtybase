@@ -257,7 +257,7 @@ impl MySqlSchemaManager {
         // create/update indexes
         if let Some(indexes) = &table.indexes {
             for entry in indexes {
-                let sql = format!("ALTER TABLE {} {}", &table.name, entry.to_string());
+                let sql = format!("ALTER TABLE {} {}", &table.name, entry);
 
                 let index_result = sqlx::query(&sql).execute(self.db_pool.as_ref()).await;
                 match index_result {
