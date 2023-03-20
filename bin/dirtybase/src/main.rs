@@ -4,7 +4,6 @@ pub mod http;
 use app::app_setup::Dirtybase;
 use clap::Parser;
 use dotenv::dotenv;
-use pretty_env_logger;
 use std::env;
 
 #[actix_web::main]
