@@ -115,7 +115,7 @@ impl MySqlSchemaManager {
             self.create_or_replace_view(table).await
         } else {
             // working with real table
-            self.create_table(table).await
+            self.apply_table_changes(table).await
         }
     }
 
@@ -151,7 +151,7 @@ impl MySqlSchemaManager {
         }
     }
 
-    async fn create_table(&self, table: BaseTable) {
+    async fn apply_table_changes(&self, table: BaseTable) {
         let columns: Vec<String> = table
             .columns()
             .iter()
