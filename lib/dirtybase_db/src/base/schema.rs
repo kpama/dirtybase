@@ -18,7 +18,10 @@ pub trait SchemaManagerTrait {
     // commit schema changes
     async fn commit(&self, table: BaseTable);
 
+    // build a select query
     fn query(&mut self, query_builder: QueryBuilder) -> &dyn SchemaManagerTrait;
+
+    async fn save(&self, query_builder: QueryBuilder);
 
     async fn fetch_all_as_json(&self) -> Vec<serde_json::Value>;
 
