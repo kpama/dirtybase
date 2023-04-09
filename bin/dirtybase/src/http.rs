@@ -1,12 +1,14 @@
 pub mod api;
+// pub mod http_helpers;
+pub mod middleware;
 pub mod web;
 
-use crate::app::app_setup::Dirtybase;
+use crate::{app::app_setup::DirtyBase, http::middleware::tenant_middleware};
 use actix_files as fs;
-use actix_web::{get, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, web as a_web, App, HttpResponse, HttpServer, Responder};
 use std::env;
 
-pub(crate) async fn init(app: Dirtybase) -> std::io::Result<()> {
+pub(crate) async fn init(app: DirtyBase) -> std::io::Result<()> {
     let static_assets_path =
         env::var("DTY_PUBLIC_DIRECTORY").unwrap_or_else(|_| String::from("./public"));
 
@@ -24,8 +26,12 @@ pub(crate) async fn init(app: Dirtybase) -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(data.clone())
-            .configure(api::configure_api_v1)
             .configure(web::configure_web)
+            .service(
+                a_web::scope("/rest/{company_id}/{application_id}/api")
+                    .wrap(tenant_middleware::InjectTenantAndApp)
+                    .configure(api::configure_api),
+            )
             .service(fs::Files::new("/public", &static_assets_path).index_file("index.html"))
             .service(hello)
             .service(serve_users)
@@ -41,10 +47,10 @@ async fn hello() -> impl Responder {
 }
 
 #[get("/users")]
-async fn serve_users(app: actix_web::web::Data<Dirtybase>) -> impl Responder {
+async fn serve_users(app: actix_web::web::Data<DirtyBase>) -> impl Responder {
     let mut manager = app.schema_manger();
     let result = manager
-        .table("grades", |query| {
+        .select_from_table("grades", |query| {
             query.is_in("grades.id", vec![1]).inner_join_and_select(
                 "students",
                 "students.id",

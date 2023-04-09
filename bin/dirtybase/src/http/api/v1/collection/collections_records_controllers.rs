@@ -1,45 +1,80 @@
-use actix_web::{delete, get, post, put, web, HttpResponse, Responder};
-use serde::Deserialize;
+use actix_web::{
+    delete, get, http::header::q, post, put, web, HttpRequest, HttpResponse, Responder,
+};
 
-use crate::app::app_setup::Dirtybase;
+use crate::app::app_setup::DirtyBase;
 
-#[derive(Debug, Deserialize)]
-struct TenantParam {
-    company_id: String,
-    application_id: String,
-    name: String,
+fn pluck_from_query_string(query_string: &str, name: &str) -> String {
+    let mut result = String::new();
+    let key_value_pieces = query_string.split('&').collect::<Vec<&str>>();
+    let key = format!("{}=", name);
+    for entery in key_value_pieces {
+        log::info!("processing query string entry: {}, {}", entery, &key);
+        if entery.contains(&key) {
+            result = entery
+                .split("=")
+                .collect::<Vec<&str>>()
+                .pop()
+                .unwrap_or_default()
+                .to_owned();
+            break;
+        }
+    }
+
+    result
+}
+
+fn field_string_to_vec(field_string: &str) -> Vec<String> {
+    let mut fields = field_string
+        .split(',')
+        .filter(|e| e.len() > 0)
+        .map(|e| e.to_owned())
+        .collect::<Vec<String>>();
+    // TODO: handle relation fields
+    if fields.is_empty() {
+        fields.push("*".to_owned());
+    }
+    fields
 }
 
 /**
  * Get two or more entries for the specified collection
  */
 #[get("/collections/{name}/records")]
-async fn get_all_handler(
-    params: web::Path<TenantParam>,
-    app: web::Data<Dirtybase>,
-) -> impl Responder {
-    log::info!("current company and application: {:#?}", params);
+async fn get_all_records(app: web::Data<DirtyBase>, resquest: HttpRequest) -> impl Responder {
+    log::info!("Fetching all records");
+    let name = resquest.match_info().query("name");
+    let q_string = resquest.query_string();
+    let fields = field_string_to_vec(&pluck_from_query_string(q_string, "fields"));
+    log::info!("collection to fetch: {:?}", name);
+    log::info!("fetch fields: {:?}", fields);
+
+    // do a test
+    let table_exist = app.graphdb_schema_manager().has_table("family").await;
+    log::info!("surreal db table exist: {}", table_exist);
 
     let result = app
         .schema_manger()
-        .table("users", |query| {
-            query
-                .select("roles.id as RoleId")
-                .select("roles.name as RoleName")
-                .select("applications.id as ApplicationId")
-                .select("applications.name as ApplicationName")
-                .select("company.id as CompanyId")
-                .select("company.name as CompanyName")
-                .left_join("user_roles", "user_roles.user_id", "=", "users.id")
-                .left_join("roles", "roles.id", "=", "user_roles.role_id")
-                .left_join(
-                    "applications",
-                    "applications.id",
-                    "=",
-                    "roles.application_id",
-                )
-                .left_join("company", "company.id", "=", "applications.company_id")
-                .eq("users.name", "user_a");
+        .select_from_table(name, |query| {
+            let x = fields.iter().map(|x| x.as_str()).collect::<Vec<&str>>();
+            query.select_multiple(&x);
+            // query
+            //     .select("roles.id as RoleId")
+            //     .select("roles.name as RoleName")
+            //     .select("applications.id as ApplicationId")
+            //     .select("applications.name as ApplicationName")
+            //     .select("company.id as CompanyId")
+            //     .select("company.name as CompanyName")
+            //     .left_join("user_roles", "user_roles.user_id", "=", "users.id")
+            //     .left_join("roles", "roles.id", "=", "user_roles.role_id")
+            //     .left_join(
+            //         "applications",
+            //         "applications.id",
+            //         "=",
+            //         "roles.application_id",
+            //     )
+            //     .left_join("company", "company.id", "=", "applications.company_id")
+            //     .eq("users.name", "user_a");
         })
         .fetch_all_as_json()
         .await;

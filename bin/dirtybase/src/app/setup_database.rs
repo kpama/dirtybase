@@ -158,6 +158,16 @@ async fn setup_file_metadata_table(manager: &Manager) {
         .await;
 }
 
+async fn create_default_records(manager: &Manager) {
+    // default user
+
+    // default roles
+
+    // default company
+
+    // default app
+}
+
 pub(crate) async fn create_data_tables(manager: Manager) {
     setup_users_table(&manager).await;
     setup_migration_table(&manager).await;
@@ -167,4 +177,5 @@ pub(crate) async fn create_data_tables(manager: Manager) {
     setup_role_users_table(&manager).await;
     setup_applications_table(&manager).await;
     setup_schema_table(&manager).await;
+    create_default_records(&manager).await;
 }

@@ -4,7 +4,7 @@ use crate::base::{
     query_conditions::Condition,
     query_operators::Operator,
     query_values::Value,
-    schema::SchemaManagerTrait,
+    schema::{RelationalDbTrait, SchemaManagerTrait},
     table::BaseTable,
 };
 use async_trait::async_trait;
@@ -42,7 +42,7 @@ impl MySqlSchemaManager {
 }
 
 #[async_trait]
-impl SchemaManagerTrait for MySqlSchemaManager {
+impl RelationalDbTrait for MySqlSchemaManager {
     fn instance(db_pool: Arc<Pool<MySql>>) -> Self
     where
         Self: Sized,
@@ -54,7 +54,10 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         AnyKind::MySql
         // self.db_pool.any_kind()
     }
+}
 
+#[async_trait]
+impl SchemaManagerTrait for MySqlSchemaManager {
     fn fetch_table_for_update(&self, name: &str) -> BaseTable {
         BaseTable::new(name)
     }

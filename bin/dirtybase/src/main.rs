@@ -1,8 +1,9 @@
 pub mod app;
 pub mod http;
 
-use app::app_setup::Dirtybase;
-use clap::Parser;
+use app::app_setup::DirtyBase;
+use clap::{Parser, Subcommand};
+use dirtybase_db::driver::surreal::SurrealDbConfig;
 use dotenv::dotenv;
 use std::env;
 
@@ -10,9 +11,11 @@ use std::env;
 async fn main() -> std::io::Result<()> {
     pretty_env_logger::init();
     let args = Args::parse();
+    let mut env_file_exist = true;
 
     if let Err(e) = dotenv() {
         log::error!("could not load .env file: {:#}", e);
+        env_file_exist = false;
     }
 
     let db_connection = if let Ok(conn) = env::var("DTY_DATABASE") {
@@ -28,22 +31,76 @@ async fn main() -> std::io::Result<()> {
         5
     };
 
-    let app = Dirtybase::new(&db_connection, max_connection)
-        .await
-        .unwrap();
+    let surreal_config = SurrealDbConfig::new_from_env();
 
-    app.db_setup().await;
+    // let db = dirtybase_db::driver::surreal::setup("surrealdb:8000", "root", "root", "test", "test")
+    //     .await;
+    // let result = db
+    //     .query("select * from family")
+    //     .await
+    //     .expect("could not query db");
+    // dbg!(result);
+    // return Ok(());
 
-    if args.serve {
-        http::init(app).await
-    } else {
-        Ok(())
+    //  app.db_setup().await;
+    match &args.command {
+        Some(Commands::Serve) => {
+            if env_file_exist {
+                match DirtyBase::new(&db_connection, max_connection, surreal_config).await {
+                    Ok(app) => {
+                        println!("serve the application");
+                        let _ = http::init(app).await;
+                    }
+                    Err(e) => {
+                        log::error!("server is not up: {}", e);
+                    }
+                }
+            } else {
+                println!("serve setup interface");
+            }
+        }
+        Some(Commands::Migrate { action }) => {
+            let _app = DirtyBase::new(&db_connection, max_connection, surreal_config)
+                .await
+                .unwrap();
+            match action {
+                Migrate::Up => {
+                    println!("migrating up");
+                }
+                Migrate::Down => {
+                    println!("migrating down");
+                }
+                Migrate::New { name } => {
+                    println!("create a new migration: {}", name);
+                }
+            }
+        }
+        None => {
+            println!("unknown sub command");
+        }
     }
+    Ok(())
 }
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(short, long)]
-    serve: bool,
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    Serve,
+    Migrate {
+        #[command(subcommand)]
+        action: Migrate,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum Migrate {
+    Up,
+    Down,
+    New { name: String },
 }

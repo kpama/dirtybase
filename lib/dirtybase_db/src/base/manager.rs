@@ -14,13 +14,13 @@ impl Manager {
         Self { schema }
     }
 
-    pub fn db_kind(&self) -> AnyKind {
-        self.schema.kind()
-    }
+    // pub fn db_kind(&self) -> AnyKind {
+    //     self.schema.kind()
+    // }
 
-    pub fn is_mysql(&self) -> bool {
-        self.db_kind() == AnyKind::MySql
-    }
+    // pub fn is_mysql(&self) -> bool {
+    //     self.db_kind() == AnyKind::MySql
+    // }
 
     pub fn inner(&mut self) -> &dyn SchemaManagerTrait {
         self.schema.as_mut()
