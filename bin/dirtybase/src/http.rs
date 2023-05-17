@@ -1,5 +1,5 @@
 pub mod api;
-// pub mod http_helpers;
+pub mod http_helpers;
 pub mod middleware;
 pub mod web;
 
