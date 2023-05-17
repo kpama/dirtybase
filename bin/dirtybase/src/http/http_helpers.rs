@@ -105,3 +105,36 @@ pub(crate) fn pluck_token_and_role(req: &ServiceRequest) -> (Option<String>, Opt
 
     response
 }
+
+pub(crate) fn pluck_from_query_string(query_string: &str, name: &str) -> String {
+    let mut result = String::new();
+    let key_value_pieces = query_string.split('&').collect::<Vec<&str>>();
+    let key = format!("{}=", name);
+    for entery in key_value_pieces {
+        log::info!("processing query string entry: {}, {}", entery, &key);
+        if entery.contains(&key) {
+            result = entery
+                .split("=")
+                .collect::<Vec<&str>>()
+                .pop()
+                .unwrap_or_default()
+                .to_owned();
+            break;
+        }
+    }
+
+    result
+}
+
+pub(crate) fn field_string_to_vec(field_string: &str) -> Vec<String> {
+    let mut fields = field_string
+        .split(',')
+        .filter(|e| e.len() > 0)
+        .map(|e| e.to_owned())
+        .collect::<Vec<String>>();
+    // TODO: handle relation fields
+    if fields.is_empty() {
+        fields.push("*".to_owned());
+    }
+    fields
+}
