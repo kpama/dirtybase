@@ -1,6 +1,11 @@
 use std::env;
+pub use surrealdb::sql::Object as SurrealObject;
+pub use surrealdb::sql::Thing;
+pub use surrealdb::sql::Value as SurrealValue;
+pub use surrealdb::Response;
 use surrealdb::{engine::remote::ws::Ws, opt::auth::Root, Surreal};
 
+pub mod record_response;
 pub mod surreal_schema_manager;
 pub type SurrealClient = Surreal<surrealdb::engine::remote::ws::Client>;
 

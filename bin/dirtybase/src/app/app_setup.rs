@@ -1,37 +1,40 @@
 use super::setup_database::create_data_tables;
-use dirtybase_db::base::schema::GraphDbClient;
-use dirtybase_db::base::schema::GraphDbTrait;
+use actix_web::web;
 use dirtybase_db::base::schema::RelationalDbTrait;
-use dirtybase_db::base::schema::SchemaManagerTrait;
-use dirtybase_db::driver::surreal::surreal_schema_manager::SurrealGraphDbClient;
-use dirtybase_db::driver::surreal::surreal_schema_manager::SurrealSchemaManager;
-use dirtybase_db::driver::surreal::{SurrealClient, SurrealDbConfig};
+use dirtybase_db::entity::user::UserEntity;
 use dirtybase_db::{base, driver::mysql::mysql_schema_manager::MySqlSchemaManager};
+use hmac::{Hmac, Mac};
+use jwt::SignWithKey;
+use jwt::VerifyWithKey;
+use sha2::Sha256;
 use sqlx::{any::AnyKind, mysql::MySqlPoolOptions, MySql, Pool};
-use std::env;
-use std::sync::Mutex;
+use std::collections::HashMap;
 use std::{str::FromStr, sync::Arc};
 
+#[derive(Debug)]
 pub struct DirtyBase {
     db_pool: Arc<Pool<MySql>>,
-    graph_client: Arc<Mutex<dyn GraphDbClient>>,
     kind: AnyKind,
+    hmac_key: Option<Hmac<Sha256>>,
 }
+
+pub type DirtyBaseWeb = web::Data<DirtyBase>;
 
 impl DirtyBase {
     pub async fn new(
         db_connection: &str,
         db_max_connection: u32,
-        surreal_config: SurrealDbConfig,
+        app_key: &str,
     ) -> anyhow::Result<Self> {
         let kind = AnyKind::from_str(db_connection).unwrap_or(AnyKind::MySql);
-        let surreal_client = SurrealGraphDbClient::new(Arc::new(
-            dirtybase_db::driver::surreal::setup(surreal_config).await,
-        ));
+
         let instance = Self {
             kind,
             db_pool: Arc::new(db_connect(db_connection, db_max_connection).await?),
-            graph_client: Arc::new(Mutex::new(surreal_client)),
+            hmac_key: match Hmac::new_from_slice(app_key.as_bytes()) {
+                Ok(key) => Some(key),
+                Err(_) => None,
+            },
         };
 
         // match instance.kind {
@@ -58,20 +61,40 @@ impl DirtyBase {
         base::manager::Manager::new(Box::new(db))
     }
 
-    pub fn graphdb_schema_manager(&self) -> base::manager::Manager {
-        let db = SurrealSchemaManager::instance(
-            self.graph_client
-                .clone()
-                .lock()
-                .unwrap()
-                .into_inner_client(),
-        );
-        log::info!("surreal schema manager created");
-        base::manager::Manager::new(Box::new(db))
-    }
-
     pub async fn db_setup(&self) {
         create_data_tables(self.schema_manger()).await;
+    }
+
+    pub fn hmac_key(&self) -> &Option<Hmac<Sha256>> {
+        &self.hmac_key
+    }
+
+    pub fn sign_to_jwt(&self, claims: HashMap<String, String>) -> Option<String> {
+        if let Some(key) = self.hmac_key() {
+            return match claims.sign_with_key(key) {
+                Ok(s) => Some(s),
+                Err(e) => {
+                    log::error!("could not generate jwt: {}", e.to_string());
+                    None
+                }
+            };
+        }
+
+        None
+    }
+
+    pub fn verify_jwt(&self, jwt: &str) -> Option<HashMap<String, String>> {
+        if let Some(key) = self.hmac_key() {
+            let result: Result<HashMap<String, String>, _> = jwt.verify_with_key(key);
+            return match result {
+                Ok(claim) => Some(claim),
+                Err(e) => {
+                    log::info!("Could not verify JWT: {}", e.to_string());
+                    None
+                }
+            };
+        }
+        None
     }
 }
 

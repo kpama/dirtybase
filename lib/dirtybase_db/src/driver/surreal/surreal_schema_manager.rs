@@ -1,3 +1,4 @@
+use super::SurrealClient;
 use crate::base::{
     query::QueryBuilder,
     schema::{GraphDbClient, GraphDbTrait, SchemaManagerTrait, SurrealDbTrait},
@@ -5,8 +6,6 @@ use crate::base::{
 };
 use async_trait::async_trait;
 use std::sync::Arc;
-
-use super::SurrealClient;
 
 struct ActiveQuery {
     statement: String,
@@ -45,6 +44,12 @@ impl SurrealSchemaManager {
             active_query: None,
         }
     }
+
+    fn build_query(&self, _query: &QueryBuilder, _params: &mut Vec<String>) -> String {
+        let sql = "SELECT * FROM type:table(family)".to_owned();
+
+        sql
+    }
 }
 
 #[async_trait]
@@ -54,6 +59,10 @@ impl SurrealDbTrait for SurrealSchemaManager {
         Self: Sized,
     {
         Self::new(client)
+    }
+
+    fn inner_client(&self) -> Arc<SurrealClient> {
+        self.client.clone()
     }
 }
 
@@ -82,7 +91,12 @@ impl SchemaManagerTrait for SurrealSchemaManager {
         todo!()
     }
     fn query(&mut self, query_builder: QueryBuilder) -> &dyn SchemaManagerTrait {
-        todo!()
+        let mut params = Vec::new();
+        let statement = self.build_query(&query_builder, &mut params);
+
+        self.active_query = Some(ActiveQuery { statement, params });
+
+        self
     }
 
     async fn save(&self, query_builder: QueryBuilder) {
@@ -90,16 +104,39 @@ impl SchemaManagerTrait for SurrealSchemaManager {
     }
 
     async fn fetch_all_as_json(&self) -> Vec<serde_json::Value> {
-        todo!()
+        let mut results: Vec<serde_json::Value> = Vec::new();
+        match &self.active_query {
+            Some(active_query) => {
+                let client = self.client.query(&active_query.statement);
+                match client.await {
+                    Ok(mut response) => {
+                        results = response.take(0).unwrap_or_default();
+                    }
+                    Err(e) => {
+                        log::error!("could not fetch data: {}", e.to_string());
+                    }
+                }
+            }
+            None => (),
+        }
+
+        results
     }
 
     async fn has_table(&self, name: &str) -> bool {
-        log::error!("making a request to surrealdb");
+        let query = "INFO FOR DB";
 
-        match self.client.query(format!("info for table {}", name)).await {
-            Ok(result) => {
-                dbg!(result);
-                true
+        match self.client.query(query).await {
+            Ok(mut response) => {
+                let table_key = "tb";
+                let result_index = 0usize;
+                let tables: Option<serde_json::Value> =
+                    response.take((result_index, table_key)).unwrap_or(None);
+
+                if tables.is_some() && tables.unwrap().get(name).is_some() {
+                    return true;
+                }
+                false
             }
             Err(_) => false,
         }

@@ -7,21 +7,22 @@ edition = "2021"
 
 [dependencies]
 dirtybase_db = { path = "../../lib/dirtybase_db" }
-actix-web = "4.3.0"
-anyhow = "1.0.68"
-clap = { version = "4.1.4", features = ["derive"] }
-dotenv = "0.15.0"
-serde = { version = "1.0.152", features = ["derive"] }
-serde_json = "1.0.91"
-sqlx = { version = "0.6.2", features = ["runtime-tokio-rustls", "mysql", "sqlite", "any", "chrono", "json"] }
-async-trait = "0.1.64"
-pretty_env_logger = "0.4.0"
-log = "0.4.17"
-actix-files = "0.6.2"
-bcrypt = "0.13.0"
-rand = "0.8.5"
-futures = "0.3.27"
-futures-util = "0.3.27"
-
-[dependencies.cookie]
-features = ["secure", "percent-encode"]
+actix-web = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+dotenv = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+async-trait = { workspace = true }
+pretty_env_logger = { workspace = true }
+log = { workspace = true }
+actix-files = { workspace = true }
+bcrypt = { workspace = true }
+rand = { workspace = true }
+futures = { workspace = true }
+futures-util = { workspace = true }
+hmac = { workspace = true }
+jwt = { workspace = true }
+sha2 = { workspace = true }
+# cookie = { workspace = true }

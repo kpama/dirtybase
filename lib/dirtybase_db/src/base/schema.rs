@@ -17,6 +17,7 @@ pub trait SurrealDbTrait: SchemaManagerTrait {
     fn instance(client: Arc<SurrealClient>) -> Self
     where
         Self: Sized;
+    fn inner_client(&self) -> Arc<SurrealClient>;
 }
 
 pub trait GraphDbClient<T = SurrealClient>: Send {

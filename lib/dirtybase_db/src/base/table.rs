@@ -1,11 +1,10 @@
-use crate::base::to_fk_column;
-
 use super::{
     column::{BaseColumn, ColumnType, RelationType},
+    helper::to_fk_column,
     index::{IndexProp, IndexType},
     query::QueryBuilder,
-    user_table::user_table_name,
 };
+use crate::entity::user::USER_TABLE;
 use std::fmt::Debug;
 
 #[derive(Debug)]
@@ -191,16 +190,15 @@ impl BaseTable {
     }
 
     pub fn blame(&mut self) {
-        let user_table_name = &user_table_name();
         let mut _creator = self
             .ulid("creator")
             .set_is_nullable(false)
-            .references_without_cascade_delete(user_table_name, "id");
+            .references_without_cascade_delete(USER_TABLE, "id");
 
         let mut _editor = self
             .ulid("editor")
             .set_is_nullable(true)
-            .references_without_cascade_delete(user_table_name, "id");
+            .references_without_cascade_delete(USER_TABLE, "id");
     }
 
     pub fn soft_deletable(&mut self) -> &mut BaseColumn {

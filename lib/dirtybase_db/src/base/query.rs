@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use super::{
-    join_builder::JoinQueryBuilder, query_conditions::Condition, query_join_types::JoinType,
-    query_operators::Operator, query_values::Value, save_values::SaveValue,
+    insert_values::InsertValue, join_builder::JoinQueryBuilder, query_conditions::Condition,
+    query_join_types::JoinType, query_operators::Operator, query_values::Value,
     where_join_operators::WhereJoinOperator,
 };
 
@@ -17,7 +17,7 @@ pub struct QueryBuilder {
     where_clauses: Vec<WhereJoinOperator>,
     tables: Vec<String>,
     select_columns: Option<Vec<String>>,
-    set_columns: Option<HashMap<String, SaveValue>>,
+    set_columns: Option<HashMap<String, InsertValue>>,
     joins: Option<Vec<JoinQueryBuilder>>,
 }
 
@@ -40,7 +40,7 @@ impl QueryBuilder {
         &self.select_columns
     }
 
-    pub fn set_columns(&self) -> &Option<HashMap<String, SaveValue>> {
+    pub fn set_columns(&self) -> &Option<HashMap<String, InsertValue>> {
         &self.set_columns
     }
 
@@ -48,7 +48,7 @@ impl QueryBuilder {
         &self.joins
     }
 
-    pub fn set<T: Into<SaveValue>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn set<T: Into<InsertValue>>(&mut self, column: &str, value: T) -> &mut Self {
         if self.set_columns.is_none() {
             self.set_columns = Some(HashMap::new());
         }
@@ -60,7 +60,7 @@ impl QueryBuilder {
         self
     }
 
-    pub fn set_multiple<T: Into<SaveValue>>(
+    pub fn set_multiple<T: Into<InsertValue>>(
         &mut self,
         column_and_values: HashMap<String, T>,
     ) -> &mut Self {
@@ -410,7 +410,7 @@ impl QueryBuilder {
     }
 
     fn and_where(&mut self, condition: Condition) -> &mut Self {
-        self.where_(WhereJoinOperator::Or(condition))
+        self.where_(WhereJoinOperator::And(condition))
     }
 
     pub fn join(

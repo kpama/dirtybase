@@ -94,15 +94,32 @@ impl From<String> for Value {
     }
 }
 
+impl From<&String> for Value {
+    fn from(value: &String) -> Self {
+        Self::String(value.to_owned())
+    }
+}
+
 impl From<Vec<String>> for Value {
     fn from(value: Vec<String>) -> Self {
         Self::Strings(value)
+    }
+}
+impl From<Vec<&String>> for Value {
+    fn from(value: Vec<&String>) -> Self {
+        Self::Strings(value.into_iter().map(|s| s.to_owned()).collect())
     }
 }
 
 impl FromIterator<String> for Value {
     fn from_iter<T: IntoIterator<Item = String>>(iter: T) -> Self {
         Self::Strings(iter.into_iter().collect())
+    }
+}
+
+impl<'a> FromIterator<&'a String> for Value {
+    fn from_iter<T: IntoIterator<Item = &'a String>>(iter: T) -> Self {
+        Self::Strings(iter.into_iter().map(|s| s.to_owned()).collect())
     }
 }
 

@@ -1,5 +1,6 @@
 use crate::base::{
     column::{BaseColumn, ColumnDefault, ColumnType},
+    insert_values::InsertValue,
     query::QueryBuilder,
     query_conditions::Condition,
     query_operators::Operator,
@@ -130,8 +131,10 @@ impl MySqlSchemaManager {
         let mut params = Vec::new();
         if let Some(list) = query.set_columns() {
             for entry in list {
-                columns.push(entry.0);
-                params.push(entry.1.to_string());
+                if *entry.1 != InsertValue::NotSet {
+                    columns.push(entry.0);
+                    params.push(entry.1.to_string());
+                }
             }
         }
 
@@ -613,7 +616,7 @@ impl MySqlSchemaManager {
                     }
                 }
                 "VARBINARY" | "BINARY" | "BLOB" => {
-                    // TODO find a mean to represent binary
+                    // TODO find a means to represent binary
                 }
                 _ => {
                     dbg!("not mapped {:#?}", col.type_info());

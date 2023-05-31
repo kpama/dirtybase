@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
 use super::{
-    query::QueryBuilder, save_values::SaveValue, schema::SchemaManagerTrait, table::BaseTable,
+    insert_values::InsertValue, query::QueryBuilder, schema::SchemaManagerTrait, table::BaseTable,
 };
-use sqlx::any::AnyKind;
 
 pub struct Manager {
     schema: Box<dyn SchemaManagerTrait>,
@@ -84,7 +83,7 @@ impl Manager {
         self.schema.commit(table).await;
     }
 
-    pub async fn insert_record<V: Into<SaveValue>>(
+    pub async fn insert_record<V: Into<InsertValue>>(
         &self,
         table_name: &str,
         column_and_values: HashMap<String, V>,

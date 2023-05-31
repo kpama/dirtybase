@@ -1,22 +1,15 @@
+use app::app_setup::DirtyBase;
+use clap::{Parser, Subcommand};
+use std::env;
+
 pub mod app;
 pub mod http;
 
-use app::app_setup::DirtyBase;
-use clap::{Parser, Subcommand};
-use dirtybase_db::driver::surreal::SurrealDbConfig;
-use dotenv::dotenv;
-use std::env;
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    load_dot_env();
     pretty_env_logger::init();
     let args = Args::parse();
-    let mut env_file_exist = true;
-
-    if let Err(e) = dotenv() {
-        log::error!("could not load .env file: {:#}", e);
-        env_file_exist = false;
-    }
 
     let db_connection = if let Ok(conn) = env::var("DTY_DATABASE") {
         conn
@@ -31,36 +24,28 @@ async fn main() -> std::io::Result<()> {
         5
     };
 
-    let surreal_config = SurrealDbConfig::new_from_env();
+    let secret_key = if let Ok(key) = env::var("DTY_SECRET") {
+        key
+    } else {
+        "".to_owned()
+    };
 
-    // let db = dirtybase_db::driver::surreal::setup("surrealdb:8000", "root", "root", "test", "test")
-    //     .await;
-    // let result = db
-    //     .query("select * from family")
-    //     .await
-    //     .expect("could not query db");
-    // dbg!(result);
-    // return Ok(());
-
-    //  app.db_setup().await;
+    // app.db_setup().await;
     match &args.command {
         Some(Commands::Serve) => {
-            if env_file_exist {
-                match DirtyBase::new(&db_connection, max_connection, surreal_config).await {
-                    Ok(app) => {
-                        println!("serve the application");
-                        let _ = http::init(app).await;
-                    }
-                    Err(e) => {
-                        log::error!("server is not up: {}", e);
-                    }
+            match DirtyBase::new(&db_connection, max_connection, &secret_key).await {
+                Ok(app) => {
+                    app.db_setup().await;
+                    let _ = http::init(app).await;
                 }
-            } else {
-                println!("serve setup interface");
+                Err(e) => {
+                    log::error!("server is not up: {}", e);
+                    panic!();
+                }
             }
         }
         Some(Commands::Migrate { action }) => {
-            let _app = DirtyBase::new(&db_connection, max_connection, surreal_config)
+            let _app = DirtyBase::new(&db_connection, max_connection, &secret_key)
                 .await
                 .unwrap();
             match action {
@@ -103,4 +88,11 @@ enum Migrate {
     Up,
     Down,
     New { name: String },
+}
+
+fn load_dot_env() {
+    let _ = dotenv::from_filename(".env.defaults");
+    let _ = dotenv::from_filename(".env");
+    let _ = dotenv::from_filename(".env.dev");
+    let _ = dotenv::from_filename(".env.prod");
 }

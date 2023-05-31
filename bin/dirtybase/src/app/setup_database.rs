@@ -1,27 +1,34 @@
-use dirtybase_db::base::{
-    manager::Manager,
-    to_fk_column,
-    user_table::{setup_users_table, user_table_name, USER_TABLE},
+use super::entity::company::CompanyEntity;
+use dirtybase_db::{
+    base::{
+        helper::{generate_ulid, to_fk_column},
+        insert_values::InsertValueBuilder,
+        manager::Manager,
+    },
+    entity::user::{setup_users_table, UserEntity, USER_TABLE},
 };
+use std::collections::HashMap;
 
-pub const COMPANY_TABLE: &str = "_core_company";
-pub const APPLICATION_TABLE: &str = "_core_app";
-pub const APPLICATION_SCHEMA_TABLE: &str = "_core_app_schema";
-pub const ROLE_TABLE: &str = "_core_app_role";
-pub const ROLE_USER_TABLE: &str = "_core_role_user";
+pub const COMPANY_TABLE: &str = "core_company";
+pub const APPLICATION_TABLE: &str = "core_app";
+pub const APPLICATION_SCHEMA_TABLE: &str = "core_app_schema";
+pub const ROLE_TABLE: &str = "core_app_role";
+pub const ROLE_USER_TABLE: &str = "core_role_user";
+pub const SYS_ADMIN_TABLE: &str = "core_sys_admin";
+pub const MIGRATION_TABLE: &str = "core_migration";
+pub const FILE_METADATA_TABLE: &str = "core_file_meta";
 
 // The table that will hold company's tenets
 async fn setup_company_table(manager: &Manager) {
     manager
         .create_table_schema(COMPANY_TABLE, |table| {
-            let user_table_name = user_table_name();
             // internal_id
             // id
             table.id_set();
             // name
             table.string("name");
             // owner
-            table.ulid_fk(&user_table_name, false).set_is_nullable(true);
+            table.ulid_fk(USER_TABLE, false).set_is_nullable(true);
             // description
             table.sized_string("description", 512).set_is_nullable(true);
             // blame
@@ -79,6 +86,10 @@ async fn setup_schema_table(manager: &Manager) {
 
 // The global roles table
 async fn setup_roles_table(manager: &Manager) {
+    if !manager.has_table(USER_TABLE).await {
+        log::error!("{} is require to create {} table", USER_TABLE, ROLE_TABLE);
+    }
+
     manager
         .create_table_schema(ROLE_TABLE, |table| {
             // internal_id
@@ -123,11 +134,27 @@ async fn setup_role_users_table(manager: &Manager) {
         .await;
 }
 
+// System administrator table
+async fn setup_sysadmins_table(manager: &Manager) {
+    manager
+        .create_table_schema(SYS_ADMIN_TABLE, |table| {
+            table.ulid_fk(USER_TABLE, true);
+            // status
+            table.string("status");
+            // blame
+            table.blame();
+            // timestamps
+            table.timestamps();
+            // soft delete
+            table.soft_deletable();
+        })
+        .await;
+}
+
 // The table that will hold migration information
 async fn setup_migration_table(manager: &Manager) {
-    let name = "_core_migration";
     manager
-        .create_table_schema(name, |table| {
+        .create_table_schema(MIGRATION_TABLE, |table| {
             // id
             table.id(None);
             // migration name
@@ -142,9 +169,8 @@ async fn setup_migration_table(manager: &Manager) {
 
 // The table that will hold file metadata
 async fn setup_file_metadata_table(manager: &Manager) {
-    let name = "_core_file_meta";
     manager
-        .create_table_schema(name, |table| {
+        .create_table_schema(FILE_METADATA_TABLE, |table| {
             // internal_id
             // id
             table.id_set();
@@ -158,24 +184,49 @@ async fn setup_file_metadata_table(manager: &Manager) {
         .await;
 }
 
-async fn create_default_records(manager: &Manager) {
+async fn create_default_records(mut manager: &mut Manager) {
     // default user
+    let mut user = UserEntity::from_env();
+    if !user.exist(&mut manager).await {
+        user.id = generate_ulid();
+        let mut default_user = HashMap::<String, String>::new();
+        default_user.insert("id".into(), generate_ulid());
+        default_user.insert("username".into(), user.username.clone());
+        default_user.insert("email".into(), user.email.clone());
 
-    // default roles
+        if !user.hashed_password().is_empty() {
+            default_user.insert("password".into(), user.hashed_password());
+        }
+
+        manager.insert_record(USER_TABLE, default_user).await;
+    }
 
     // default company
+    let company = CompanyEntity::from_env();
+    if !company.exist(&mut manager).await {
+        let default_company = InsertValueBuilder::new()
+            .add("id", generate_ulid())
+            .add("name", &company.name)
+            .add("creator", generate_ulid())
+            .build();
+
+        manager.insert_record(COMPANY_TABLE, default_company).await;
+        println!("{:?}", &company.name)
+    }
 
     // default app
+    // default roles
 }
 
-pub(crate) async fn create_data_tables(manager: Manager) {
+pub(crate) async fn create_data_tables(mut manager: Manager) {
     setup_users_table(&manager).await;
     setup_migration_table(&manager).await;
     setup_file_metadata_table(&manager).await;
     setup_company_table(&manager).await;
-    setup_roles_table(&manager).await;
-    setup_role_users_table(&manager).await;
     setup_applications_table(&manager).await;
     setup_schema_table(&manager).await;
-    create_default_records(&manager).await;
+    setup_roles_table(&manager).await;
+    setup_role_users_table(&manager).await;
+    setup_sysadmins_table(&manager).await;
+    create_default_records(&mut manager).await;
 }

@@ -1,4 +1,11 @@
+#![allow(dead_code)]
+
 use actix_web::dev::ServiceRequest;
+use hmac::{Hmac, Mac};
+use jwt::SignWithKey;
+use jwt::VerifyWithKey;
+use sha2::Sha256;
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 /// Returns a HashMap of the query strings as key value
@@ -106,14 +113,24 @@ pub(crate) fn pluck_token_and_role(req: &ServiceRequest) -> (Option<String>, Opt
     response
 }
 
+pub(crate) fn pluck_jwt_token(req: &ServiceRequest) -> Option<String> {
+    if let Some(token) = pluck_token_from_header(req) {
+        Some(token)
+    } else if let Some(token) = pluck_token_from_query_string(req) {
+        Some(token)
+    } else {
+        None
+    }
+}
+
 pub(crate) fn pluck_from_query_string(query_string: &str, name: &str) -> String {
     let mut result = String::new();
     let key_value_pieces = query_string.split('&').collect::<Vec<&str>>();
     let key = format!("{}=", name);
-    for entery in key_value_pieces {
-        log::info!("processing query string entry: {}, {}", entery, &key);
-        if entery.contains(&key) {
-            result = entery
+    for entry in key_value_pieces {
+        log::info!("processing query string entry: {}, {}", entry, &key);
+        if entry.contains(&key) {
+            result = entry
                 .split("=")
                 .collect::<Vec<&str>>()
                 .pop()
