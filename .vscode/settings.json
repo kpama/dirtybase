@@ -6,11 +6,4 @@
     "hmac",
     "sqlx"
   ],
-  "rust-analyzer.linkedProjects": [
-    "./lib/dirtybase_db_traits/Cargo.toml",
-    "./lib/dirtybase_db_internal/Cargo.toml",
-    "./lib/dirtybase_db_internal/Cargo.toml",
-    "./lib/dirtybase_db_internal/Cargo.toml",
-    "./lib/dirtybase_db_internal/Cargo.toml"
-  ]
 }
