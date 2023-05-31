@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "bin/dirtybase",
+  "bin/dirtybase-ui",
   "lib/dirtybase_db",
   "lib/dirtybase_db_macro",
   "lib/dirtybase_db_internal",
