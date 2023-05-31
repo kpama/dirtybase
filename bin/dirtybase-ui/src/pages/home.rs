@@ -1,3 +1,5 @@
+use leptos::*;
+
 /// Renders the home page of your application.
 #[component]
 pub fn HomePage(cx: Scope) -> impl IntoView {
@@ -8,5 +10,11 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
     view! { cx,
         <h1>"Welcome to Leptos!"</h1>
         <button on:click=on_click>"Click Me: " {count}</button>
+
+        <form>
+            <input type="text" name="email" placeholder="Email" />
+            <br />
+            <input type="password" name="password" placeholder="Password" />
+        </form>
     }
 }
