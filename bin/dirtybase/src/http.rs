@@ -4,7 +4,7 @@ pub mod middleware;
 pub mod web;
 
 use crate::{
-    app::app_setup::DirtyBase,
+    app::dirtybase::DirtyBase,
     http::middleware::{api_auth_middleware, tenant_middleware},
 };
 use actix_files as fs;
