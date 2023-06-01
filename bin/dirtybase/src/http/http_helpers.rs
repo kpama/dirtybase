@@ -1,11 +1,6 @@
 #![allow(dead_code)]
 
 use actix_web::dev::ServiceRequest;
-use hmac::{Hmac, Mac};
-use jwt::SignWithKey;
-use jwt::VerifyWithKey;
-use sha2::Sha256;
-use std::collections::BTreeMap;
 use std::collections::HashMap;
 
 /// Returns a HashMap of the query strings as key value
@@ -15,12 +10,8 @@ pub(crate) fn split_query_string(req: &ServiceRequest) -> HashMap<String, Option
     let mut response = HashMap::new();
     for a_piece in pieces {
         let mut an_entry = a_piece.split('=');
-
-        match an_entry.next() {
-            Some(name) => {
-                response.insert(name.to_owned(), an_entry.next());
-            }
-            None => (),
+        if let Some(name) = an_entry.next() {
+            response.insert(name.to_owned(), an_entry.next());
         }
     }
 
@@ -102,11 +93,11 @@ pub(crate) fn pluck_role_from_header(req: &ServiceRequest) -> Option<String> {
 pub(crate) fn pluck_token_and_role(req: &ServiceRequest) -> (Option<String>, Option<String>) {
     let mut response = (pluck_token_from_header(req), pluck_role_from_header(req));
 
-    if response.0 == None {
+    if response.0.is_none() {
         response.0 = pluck_token_from_query_string(req);
     }
 
-    if response.1 == None {
+    if response.1.is_none() {
         response.1 = pluck_role_from_query_string(req);
     }
 
@@ -114,12 +105,11 @@ pub(crate) fn pluck_token_and_role(req: &ServiceRequest) -> (Option<String>, Opt
 }
 
 pub(crate) fn pluck_jwt_token(req: &ServiceRequest) -> Option<String> {
-    if let Some(token) = pluck_token_from_header(req) {
-        Some(token)
-    } else if let Some(token) = pluck_token_from_query_string(req) {
-        Some(token)
+    let token = pluck_token_from_header(req);
+    if token.is_some() {
+        token
     } else {
-        None
+        pluck_token_from_query_string(req)
     }
 }
 
@@ -131,7 +121,7 @@ pub(crate) fn pluck_from_query_string(query_string: &str, name: &str) -> String 
         log::info!("processing query string entry: {}, {}", entry, &key);
         if entry.contains(&key) {
             result = entry
-                .split("=")
+                .split('=')
                 .collect::<Vec<&str>>()
                 .pop()
                 .unwrap_or_default()
@@ -146,7 +136,7 @@ pub(crate) fn pluck_from_query_string(query_string: &str, name: &str) -> String 
 pub(crate) fn field_string_to_vec(field_string: &str) -> Vec<String> {
     let mut fields = field_string
         .split(',')
-        .filter(|e| e.len() > 0)
+        .filter(|e| !e.is_empty())
         .map(|e| e.to_owned())
         .collect::<Vec<String>>();
     // TODO: handle relation fields
