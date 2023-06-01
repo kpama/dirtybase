@@ -1141,6 +1141,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "bcrypt",
+ "chrono",
  "dirtybase_db_internal",
  "dirtybase_db_macro",
  "futures",
