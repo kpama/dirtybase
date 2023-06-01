@@ -1,4 +1,4 @@
-use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{put, web, HttpRequest, HttpResponse, Responder};
 
 #[put("/collections/{name}")]
 async fn update_a_collection_handler(

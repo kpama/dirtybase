@@ -1,4 +1,4 @@
-use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{delete, web, HttpRequest, HttpResponse, Responder};
 
 #[delete("/collections/{name}")]
 async fn delete_a_collection_handler(
