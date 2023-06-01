@@ -1,8 +1,3 @@
-pub mod api;
-pub mod http_helpers;
-pub mod middleware;
-pub mod web;
-
 use crate::{
     app::dirtybase::DirtyBase,
     http::middleware::{api_auth_middleware, tenant_middleware},
@@ -11,7 +6,12 @@ use actix_files as fs;
 use actix_web::{get, web as a_web, App, HttpResponse, HttpServer, Responder};
 use std::env;
 
-pub(crate) async fn init(app: DirtyBase) -> std::io::Result<()> {
+pub mod api;
+pub mod http_helpers;
+pub mod middleware;
+pub mod web;
+
+pub async fn init(app: DirtyBase) -> std::io::Result<()> {
     let static_assets_path =
         env::var("DTY_PUBLIC_DIRECTORY").unwrap_or_else(|_| String::from("./public"));
 
