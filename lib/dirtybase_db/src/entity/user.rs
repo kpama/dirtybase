@@ -8,7 +8,7 @@ pub use user_entity::UserEntity;
 // Core User table name
 pub static USER_TABLE: &str = "core_user";
 
-fn hash_password(raw: &str) -> String {
+pub fn hash_password(raw: &str) -> String {
     bcrypt::hash(raw, 8).unwrap()
 }
 
