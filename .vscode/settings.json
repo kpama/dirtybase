@@ -1,9 +1,12 @@
 {
   "cSpell.words": [
     "actix",
+    "chrono",
+    "datetime",
     "dirtybase",
     "dotenv",
     "hmac",
+    "replacen",
     "sqlx"
   ],
 }
