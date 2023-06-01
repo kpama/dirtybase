@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use sqlx::{any::AnyKind, MySql, Pool};
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::driver::surreal::SurrealClient;
 
-use super::{query::QueryBuilder, table::BaseTable};
+use super::{field_values::FieldValue, query::QueryBuilder, table::BaseTable};
 
 pub trait RelationalDbTrait: SchemaManagerTrait {
     fn instance(db_pool: Arc<Pool<MySql>>) -> Self
@@ -43,6 +43,8 @@ pub trait SchemaManagerTrait {
     async fn save(&self, query_builder: QueryBuilder);
 
     async fn fetch_all_as_json(&self) -> Vec<serde_json::Value>;
+
+    async fn fetch_all_as_field_value(&self) -> Vec<HashMap<String, FieldValue>>;
 
     // checks if a table exist in the database
     async fn has_table(&self, name: &str) -> bool;

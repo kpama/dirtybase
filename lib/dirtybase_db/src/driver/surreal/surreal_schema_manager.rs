@@ -1,11 +1,14 @@
+#![allow(dead_code)]
+
 use super::SurrealClient;
 use crate::base::{
+    field_values::FieldValue,
     query::QueryBuilder,
     schema::{GraphDbClient, GraphDbTrait, SchemaManagerTrait, SurrealDbTrait},
     table::BaseTable,
 };
 use async_trait::async_trait;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 struct ActiveQuery {
     statement: String,
@@ -83,11 +86,11 @@ impl GraphDbTrait<SurrealClient> for SurrealSchemaManager {
 
 #[async_trait]
 impl SchemaManagerTrait for SurrealSchemaManager {
-    fn fetch_table_for_update(&self, name: &str) -> BaseTable {
+    fn fetch_table_for_update(&self, _name: &str) -> BaseTable {
         todo!()
     }
 
-    async fn commit(&self, table: BaseTable) {
+    async fn commit(&self, _table: BaseTable) {
         todo!()
     }
     fn query(&mut self, query_builder: QueryBuilder) -> &dyn SchemaManagerTrait {
@@ -99,7 +102,7 @@ impl SchemaManagerTrait for SurrealSchemaManager {
         self
     }
 
-    async fn save(&self, query_builder: QueryBuilder) {
+    async fn save(&self, _query_builder: QueryBuilder) {
         todo!()
     }
 
@@ -121,6 +124,10 @@ impl SchemaManagerTrait for SurrealSchemaManager {
         }
 
         results
+    }
+
+    async fn fetch_all_as_field_value(&self) -> Vec<HashMap<String, FieldValue>> {
+        Vec::new()
     }
 
     async fn has_table(&self, name: &str) -> bool {

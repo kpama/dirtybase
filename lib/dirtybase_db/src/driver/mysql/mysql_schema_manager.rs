@@ -1,17 +1,17 @@
 use crate::base::{
     column::{BaseColumn, ColumnDefault, ColumnType},
-    insert_values::InsertValue,
+    field_values::FieldValue,
     query::QueryBuilder,
     query_conditions::Condition,
     query_operators::Operator,
-    query_values::Value,
+    query_values::QueryValue,
     schema::{RelationalDbTrait, SchemaManagerTrait},
     table::BaseTable,
 };
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
 use sqlx::{any::AnyKind, mysql::MySqlRow, types::chrono, Column, MySql, Pool, Row};
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 struct ActiveQuery {
     statement: String,
@@ -113,6 +113,27 @@ impl SchemaManagerTrait for MySqlSchemaManager {
 
         results
     }
+
+    async fn fetch_all_as_field_value(&self) -> Vec<HashMap<String, FieldValue>> {
+        let mut results = Vec::new();
+
+        match &self.active_query {
+            Some(active_query) => {
+                let mut query = sqlx::query(&active_query.statement);
+                for p in &active_query.params {
+                    query = query.bind::<&str>(p);
+                }
+
+                let mut rows = query.fetch(self.db_pool.as_ref());
+                while let Some(row) = rows.try_next().await.ok().unwrap_or_default() {
+                    results.push(self.row_to_insert_value(&row));
+                }
+            }
+            None => (),
+        }
+
+        results
+    }
 }
 
 impl MySqlSchemaManager {
@@ -131,7 +152,7 @@ impl MySqlSchemaManager {
         let mut params = Vec::new();
         if let Some(list) = query.set_columns() {
             for entry in list {
-                if *entry.1 != InsertValue::NotSet {
+                if *entry.1 != FieldValue::NotSet {
                     columns.push(entry.0);
                     params.push(entry.1.to_string());
                 }
@@ -420,9 +441,13 @@ impl MySqlSchemaManager {
         let placeholder =
             if *condition.operator() == Operator::In || *condition.operator() == Operator::NotIn {
                 let length = match &condition.value() {
-                    Value::I64s(v) => v.len(),
-                    Value::U64s(v) => v.len(),
-                    Value::Strings(v) => v.len(),
+                    QueryValue::Field(field) => match field {
+                        FieldValue::I64s(v) => v.len(),
+                        FieldValue::U64s(v) => v.len(),
+                        FieldValue::Strings(v) => v.len(),
+                        FieldValue::Array(v) => v.len(),
+                        _ => 1,
+                    },
                     _ => 1,
                 };
 
@@ -438,9 +463,9 @@ impl MySqlSchemaManager {
             .as_clause(condition.column(), &placeholder)
     }
 
-    fn transform_value(&self, value: &Value, params: &mut Vec<String>) {
+    fn transform_value(&self, value: &QueryValue, params: &mut Vec<String>) {
         match value {
-            Value::SubQuery(q) => {
+            QueryValue::SubQuery(q) => {
                 self.build_query(q, params);
             }
             _ => value.to_param(params),
@@ -625,5 +650,136 @@ impl MySqlSchemaManager {
         }
 
         serde_json::Value::Object(this_row)
+    }
+
+    fn row_to_insert_value(&self, row: &MySqlRow) -> HashMap<String, FieldValue> {
+        let mut this_row = HashMap::new();
+
+        for col in row.columns() {
+            let name = col.name().to_owned();
+            match col.type_info().to_string().as_str() {
+                "BOOLEAN" | "TINYINT(1)" => {
+                    let v: bool = row.get(col.name());
+                    this_row.insert(name, FieldValue::Boolean(v));
+                }
+                "TINYINT" => {
+                    let v = row.try_get::<i8, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(name, (v as i32).into());
+                    } else {
+                        this_row.insert(name, 0_i32.into());
+                    }
+                }
+                "SMALLINT" => {
+                    let v = row.try_get::<i16, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(name, (v as i32).into());
+                    } else {
+                        this_row.insert(name, 0_i32.into());
+                    }
+                }
+                "INT" => {
+                    let v = row.try_get::<i32, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(name, v.into());
+                    } else {
+                        this_row.insert(name, 0_i32.into());
+                    }
+                }
+                "BIGINT" => {
+                    let v = row.try_get::<i64, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(name, v.into());
+                    } else {
+                        this_row.insert(name, 0_i64.into());
+                    }
+                }
+                "TINYINT UNSIGNED" => {
+                    let v = row.try_get::<u8, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(name, (v as u32).into());
+                    } else {
+                        this_row.insert(name, 0_u32.into());
+                    }
+                }
+                "SMALLINT UNSIGNED" => {
+                    let v = row.try_get::<u16, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(name, (v as u32).into());
+                    } else {
+                        this_row.insert(name, 0_u32.into());
+                    }
+                }
+                "INT UNSIGNED" => {
+                    let v = row.try_get::<u32, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(name, v.into());
+                    } else {
+                        this_row.insert(name, 0_u32.into());
+                    }
+                }
+                "BIGINT UNSIGNED" => {
+                    let v = row.try_get::<u64, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(name, v.into());
+                    } else {
+                        this_row.insert(name, 0_u64.into());
+                    }
+                }
+                "DOUBLE" | "FLOAT" => {
+                    let v = row.try_get::<f64, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(name, v.into());
+                    } else {
+                        this_row.insert(name, 0.0_f64.into());
+                    }
+                }
+                "CHAR" | "VARCHAR" | "TEXT" => {
+                    if let Ok(v) = row.try_get::<String, &str>(col.name()) {
+                        this_row.insert(name, v.into());
+                    } else {
+                        this_row.insert(name, FieldValue::Null);
+                    }
+                }
+                "TIMESTAMP" => {
+                    let v = row.try_get::<chrono::DateTime<chrono::Utc>, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(name, v.to_string().into());
+                    } else {
+                        this_row.insert(name, FieldValue::Null);
+                    }
+                }
+                "DATE" => {
+                    let v = row.try_get::<chrono::NaiveDate, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(col.name().to_owned(), FieldValue::Date(v));
+                    } else {
+                        this_row.insert(col.name().to_owned(), FieldValue::Null);
+                    }
+                }
+                "TIME" => {
+                    let v = row.try_get::<chrono::NaiveTime, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(name, v.to_string().into());
+                    } else {
+                        this_row.insert(name, FieldValue::Null);
+                    }
+                }
+                "DATETIME" => {
+                    let v = row.try_get::<chrono::NaiveDateTime, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(col.name().to_owned(), FieldValue::DateTime(v.and_utc()));
+                    } else {
+                        this_row.insert(col.name().to_owned(), FieldValue::Null);
+                    }
+                }
+                "VARBINARY" | "BINARY" | "BLOB" => {}
+                // TODO find a means to represent binary
+                _ => {
+                    dbg!("not mapped {:#?}", col.type_info());
+                }
+            }
+        }
+        this_row
     }
 }

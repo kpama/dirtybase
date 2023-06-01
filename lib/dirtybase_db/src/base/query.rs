@@ -1,10 +1,8 @@
-use std::collections::HashMap;
-
 use super::{
-    insert_values::InsertValue, join_builder::JoinQueryBuilder, query_conditions::Condition,
-    query_join_types::JoinType, query_operators::Operator, query_values::Value,
-    where_join_operators::WhereJoinOperator,
+    field_values::FieldValue, join_builder::JoinQueryBuilder, query_conditions::Condition,
+    query_join_types::JoinType, query_operators::Operator, where_join_operators::WhereJoinOperator,
 };
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub enum WhereJoin {
@@ -17,7 +15,7 @@ pub struct QueryBuilder {
     where_clauses: Vec<WhereJoinOperator>,
     tables: Vec<String>,
     select_columns: Option<Vec<String>>,
-    set_columns: Option<HashMap<String, InsertValue>>,
+    set_columns: Option<HashMap<String, FieldValue>>,
     joins: Option<Vec<JoinQueryBuilder>>,
 }
 
@@ -40,7 +38,7 @@ impl QueryBuilder {
         &self.select_columns
     }
 
-    pub fn set_columns(&self) -> &Option<HashMap<String, InsertValue>> {
+    pub fn set_columns(&self) -> &Option<HashMap<String, FieldValue>> {
         &self.set_columns
     }
 
@@ -48,7 +46,7 @@ impl QueryBuilder {
         &self.joins
     }
 
-    pub fn set<T: Into<InsertValue>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn set<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         if self.set_columns.is_none() {
             self.set_columns = Some(HashMap::new());
         }
@@ -60,7 +58,7 @@ impl QueryBuilder {
         self
     }
 
-    pub fn set_multiple<T: Into<InsertValue>>(
+    pub fn set_multiple<T: Into<FieldValue>>(
         &mut self,
         column_and_values: HashMap<String, T>,
     ) -> &mut Self {
@@ -119,58 +117,58 @@ impl QueryBuilder {
         self
     }
 
-    pub fn eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::Equal, value, None)
     }
 
-    pub fn and_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn and_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::Equal, value, Some(WhereJoin::And))
     }
 
-    pub fn or_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn or_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::Equal, value, Some(WhereJoin::Or))
     }
 
-    pub fn not_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn not_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotEqual, value, None)
     }
 
-    pub fn and_not_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn and_not_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotEqual, value, Some(WhereJoin::And))
     }
 
-    pub fn or_not_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn or_not_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotEqual, value, Some(WhereJoin::Or))
     }
 
-    pub fn gt<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn gt<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::Greater, value, None)
     }
 
-    pub fn and_gt<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn and_gt<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::Greater, value, Some(WhereJoin::And))
     }
 
-    pub fn or_gt<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn or_gt<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::Greater, value, Some(WhereJoin::Or))
     }
 
-    pub fn ngt<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn ngt<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotGreater, value, None)
     }
-    pub fn and_ngt<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn and_ngt<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotGreater, value, Some(WhereJoin::And))
     }
 
-    pub fn or_ngt<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn or_ngt<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotGreater, value, Some(WhereJoin::Or))
     }
 
-    pub fn gt_or_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn gt_or_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::GreaterOrEqual, value, None)
     }
 
-    pub fn and_gt_or_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn and_gt_or_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(
             column,
             Operator::GreaterOrEqual,
@@ -178,15 +176,15 @@ impl QueryBuilder {
             Some(WhereJoin::And),
         )
     }
-    pub fn or_gt_or_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn or_gt_or_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::GreaterOrEqual, value, Some(WhereJoin::Or))
     }
 
-    pub fn not_gt_or_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn not_gt_or_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotGreaterOrEqual, value, None)
     }
 
-    pub fn and_not_gt_or_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn and_not_gt_or_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(
             column,
             Operator::NotGreaterOrEqual,
@@ -195,7 +193,7 @@ impl QueryBuilder {
         )
     }
 
-    pub fn or_not_gt_or_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn or_not_gt_or_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(
             column,
             Operator::NotGreaterOrEqual,
@@ -204,46 +202,46 @@ impl QueryBuilder {
         )
     }
 
-    pub fn le<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn le<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::Less, value, None)
     }
 
-    pub fn and_le<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn and_le<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::Less, value, Some(WhereJoin::And))
     }
-    pub fn or_le<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn or_le<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::Less, value, Some(WhereJoin::Or))
     }
 
-    pub fn le_or_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn le_or_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::LessOrEqual, value, None)
     }
 
-    pub fn and_le_or_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn and_le_or_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::LessOrEqual, value, Some(WhereJoin::And))
     }
 
-    pub fn or_le_or_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn or_le_or_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::LessOrEqual, value, Some(WhereJoin::Or))
     }
 
-    pub fn not_le<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn not_le<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotLess, value, None)
     }
 
-    pub fn and_nle<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn and_nle<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotLess, value, Some(WhereJoin::And))
     }
 
-    pub fn or_nle<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn or_nle<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotLess, value, Some(WhereJoin::Or))
     }
 
-    pub fn nle_or_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn not_le_or_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotLessOrEqual, value, None)
     }
 
-    pub fn and_nle_or_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn and_not_le_or_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(
             column,
             Operator::NotLessOrEqual,
@@ -252,63 +250,87 @@ impl QueryBuilder {
         )
     }
 
-    pub fn or_nle_or_eq<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn or_not_le_or_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotLessOrEqual, value, Some(WhereJoin::Or))
     }
 
-    pub fn like<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn like<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::Like, value, None)
     }
 
-    pub fn and_like<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn and_like<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::Like, value, Some(WhereJoin::And))
     }
 
-    pub fn or_like<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn or_like<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::Like, value, Some(WhereJoin::Or))
     }
 
-    pub fn nlike<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn not_like<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotLike, value, None)
     }
 
-    pub fn and_nlike<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn and_not_like<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotLike, value, Some(WhereJoin::And))
     }
 
-    pub fn or_nlike<T: Into<Value>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn or_not_like<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotLike, value, Some(WhereJoin::Or))
     }
 
     pub fn is_null(&mut self, column: &str) -> &mut Self {
-        self.where_operator(column, Operator::Null, Value::Null, None)
+        self.where_operator(column, Operator::Null, FieldValue::Null, None)
     }
 
     pub fn and_is_null(&mut self, column: &str) -> &mut Self {
-        self.where_operator(column, Operator::Null, Value::Null, Some(WhereJoin::And))
+        self.where_operator(
+            column,
+            Operator::Null,
+            FieldValue::Null,
+            Some(WhereJoin::And),
+        )
     }
 
     pub fn or_is_null(&mut self, column: &str) -> &mut Self {
-        self.where_operator(column, Operator::Null, Value::Null, Some(WhereJoin::Or))
+        self.where_operator(
+            column,
+            Operator::Null,
+            FieldValue::Null,
+            Some(WhereJoin::Or),
+        )
     }
 
     pub fn is_not_null(&mut self, column: &str) -> &mut Self {
-        self.where_operator(column, Operator::NotNull, Value::Null, None)
+        self.where_operator(column, Operator::NotNull, FieldValue::Null, None)
     }
 
     pub fn and_is_not_null(&mut self, column: &str) -> &mut Self {
-        self.where_operator(column, Operator::NotNull, Value::Null, Some(WhereJoin::And))
+        self.where_operator(
+            column,
+            Operator::NotNull,
+            FieldValue::Null,
+            Some(WhereJoin::And),
+        )
     }
 
     pub fn or_is_not_null(&mut self, column: &str) -> &mut Self {
-        self.where_operator(column, Operator::NotNull, Value::Null, Some(WhereJoin::Or))
+        self.where_operator(
+            column,
+            Operator::NotNull,
+            FieldValue::Null,
+            Some(WhereJoin::Or),
+        )
     }
 
-    pub fn is_in<T: Into<Value> + IntoIterator>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn is_in<T: Into<FieldValue> + IntoIterator>(
+        &mut self,
+        column: &str,
+        value: T,
+    ) -> &mut Self {
         self.where_operator(column, Operator::In, value, None)
     }
 
-    pub fn and_is_in<T: Into<Value> + IntoIterator>(
+    pub fn and_is_in<T: Into<FieldValue> + IntoIterator>(
         &mut self,
         column: &str,
         value: T,
@@ -316,11 +338,15 @@ impl QueryBuilder {
         self.where_operator(column, Operator::In, value, Some(WhereJoin::And))
     }
 
-    pub fn or_is_in<T: Into<Value> + IntoIterator>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn or_is_in<T: Into<FieldValue> + IntoIterator>(
+        &mut self,
+        column: &str,
+        value: T,
+    ) -> &mut Self {
         self.where_operator(column, Operator::In, value, Some(WhereJoin::Or))
     }
 
-    pub fn is_not_in<T: Into<Value> + IntoIterator>(
+    pub fn is_not_in<T: Into<FieldValue> + IntoIterator>(
         &mut self,
         column: &str,
         value: T,
@@ -328,7 +354,7 @@ impl QueryBuilder {
         self.where_operator(column, Operator::NotIn, value, None)
     }
 
-    pub fn and_is_not_in<T: Into<Value> + IntoIterator>(
+    pub fn and_is_not_in<T: Into<FieldValue> + IntoIterator>(
         &mut self,
         column: &str,
         value: T,
@@ -336,7 +362,7 @@ impl QueryBuilder {
         self.where_operator(column, Operator::NotIn, value, Some(WhereJoin::And))
     }
 
-    pub fn or_is_not_in<T: Into<Value> + IntoIterator>(
+    pub fn or_is_not_in<T: Into<FieldValue> + IntoIterator>(
         &mut self,
         column: &str,
         value: T,
@@ -344,35 +370,56 @@ impl QueryBuilder {
         self.where_operator(column, Operator::NotIn, value, Some(WhereJoin::Or))
     }
 
-    pub fn between<T: Into<Value>>(&mut self, column: &str, first: T, last: T) -> &mut Self {
+    pub fn between<T: Into<FieldValue>>(&mut self, column: &str, first: T, last: T) -> &mut Self {
         self.gt_or_eq(column, first).and_le_or_eq(column, last)
     }
 
-    pub fn and_between<T: Into<Value>>(&mut self, column: &str, first: T, last: T) -> &mut Self {
+    pub fn and_between<T: Into<FieldValue>>(
+        &mut self,
+        column: &str,
+        first: T,
+        last: T,
+    ) -> &mut Self {
         self.and_gt_or_eq(column, first).and_le_or_eq(column, last)
     }
 
-    pub fn or_between<T: Into<Value>>(&mut self, column: &str, first: T, last: T) -> &mut Self {
+    pub fn or_between<T: Into<FieldValue>>(
+        &mut self,
+        column: &str,
+        first: T,
+        last: T,
+    ) -> &mut Self {
         self.or_gt_or_eq(column, first).and_le_or_eq(column, last)
     }
 
-    pub fn not_between<T: Into<Value>>(&mut self, column: &str, first: T, last: T) -> &mut Self {
-        self.not_gt_or_eq(column, first).and_nle_or_eq(column, last)
+    pub fn not_between<T: Into<FieldValue>>(
+        &mut self,
+        column: &str,
+        first: T,
+        last: T,
+    ) -> &mut Self {
+        self.not_gt_or_eq(column, first)
+            .and_not_le_or_eq(column, last)
     }
 
-    pub fn and_not_between<T: Into<Value>>(
+    pub fn and_not_between<T: Into<FieldValue>>(
         &mut self,
         column: &str,
         first: T,
         last: T,
     ) -> &mut Self {
         self.and_not_gt_or_eq(column, first)
-            .and_nle_or_eq(column, last)
+            .and_not_le_or_eq(column, last)
     }
 
-    pub fn or_not_between<T: Into<Value>>(&mut self, column: &str, first: T, last: T) -> &mut Self {
+    pub fn or_not_between<T: Into<FieldValue>>(
+        &mut self,
+        column: &str,
+        first: T,
+        last: T,
+    ) -> &mut Self {
         self.or_not_gt_or_eq(column, first)
-            .and_nle_or_eq(column, last)
+            .and_not_le_or_eq(column, last)
     }
 
     pub fn where_(&mut self, where_clause: WhereJoinOperator) -> &mut Self {
@@ -388,14 +435,14 @@ impl QueryBuilder {
         }
     }
 
-    pub fn where_operator<T: Into<Value>>(
+    pub fn where_operator<T: Into<FieldValue>>(
         &mut self,
         column: &str,
         operator: Operator,
         value: T,
         and_or: Option<WhereJoin>,
     ) -> &mut Self {
-        let condition = Condition::new(column, operator, value);
+        let condition = Condition::new(column, operator, value.into());
         match and_or {
             Some(j) => match j {
                 WhereJoin::And => self.and_where(condition),

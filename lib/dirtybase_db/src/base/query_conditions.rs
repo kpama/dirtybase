@@ -1,14 +1,14 @@
-use super::{query_operators::Operator, query_values::Value};
+use super::{query_operators::Operator, query_values::QueryValue};
 
 #[derive(Debug)]
 pub struct Condition {
     pub column: String,
     pub operator: Operator,
-    pub value: Value,
+    pub value: QueryValue,
 }
 
 impl Condition {
-    pub fn new<T: Into<Value>>(column: &str, operator: Operator, value: T) -> Self {
+    pub fn new<T: Into<QueryValue>>(column: &str, operator: Operator, value: T) -> Self {
         Self {
             column: column.to_owned(),
             operator,
@@ -24,7 +24,7 @@ impl Condition {
         &self.operator
     }
 
-    pub fn value(&self) -> &Value {
+    pub fn value(&self) -> &QueryValue {
         &self.value
     }
 }

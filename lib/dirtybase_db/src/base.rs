@@ -1,7 +1,7 @@
 pub mod column;
+pub mod field_values;
 pub mod helper;
 pub mod index;
-pub mod insert_values;
 pub mod join_builder;
 pub mod manager;
 pub mod query;
