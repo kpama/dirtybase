@@ -26,7 +26,7 @@ fn load_dot_env() {
 /// Setup database application using configs in .env files
 pub async fn setup() -> dirtybase::DirtyBase {
     let config = Config::default();
-    return setup_using(config).await;
+    setup_using(config).await
 }
 
 /// Setup database application using custom configuration
@@ -41,7 +41,7 @@ pub async fn setup() -> dirtybase::DirtyBase {
 ///
 pub async fn setup_using(config: Config) -> dirtybase::DirtyBase {
     load_dot_env();
-    return match dirtybase::DirtyBase::new(config).await {
+    match dirtybase::DirtyBase::new(config).await {
         Ok(app) => {
             app.db_setup().await;
             app
@@ -50,5 +50,5 @@ pub async fn setup_using(config: Config) -> dirtybase::DirtyBase {
             log::error!("server is not up: {}", e);
             panic!();
         }
-    };
+    }
 }
