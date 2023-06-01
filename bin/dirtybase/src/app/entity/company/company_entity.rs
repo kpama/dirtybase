@@ -52,6 +52,7 @@ impl CompanyEntity {
             })
             .fetch_all_as_json()
             .await
+            .unwrap()
             .is_empty();
     }
 }

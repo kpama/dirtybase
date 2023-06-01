@@ -50,5 +50,5 @@ async fn get_all_records_handler(
         .await;
 
     // HttpResponse::Ok().body(format!("list records from collection: {}", 4))
-    HttpResponse::Ok().json(result)
+    HttpResponse::Ok().json(result.unwrap())
 }

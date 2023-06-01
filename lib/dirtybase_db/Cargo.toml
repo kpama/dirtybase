@@ -24,3 +24,4 @@ native-tls = { workspace = true }
 tokio = { workspace = true }
 bcrypt = { workspace = true }
 chrono = { workspace = true }
+anyhow = { workspace = true }

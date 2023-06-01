@@ -66,5 +66,5 @@ async fn serve_users(app: actix_web::web::Data<DirtyBase>) -> impl Responder {
         .fetch_all_as_json()
         .await;
 
-    HttpResponse::Ok().json(result)
+    HttpResponse::Ok().json(result.unwrap())
 }

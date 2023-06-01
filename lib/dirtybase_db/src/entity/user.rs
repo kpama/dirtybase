@@ -1,6 +1,7 @@
 use crate::base::manager::Manager;
 
 mod user_entity;
+mod user_repository;
 mod user_service;
 
 pub use user_entity::UserEntity;

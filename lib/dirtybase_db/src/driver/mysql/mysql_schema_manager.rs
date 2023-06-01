@@ -11,7 +11,7 @@ use crate::base::{
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
 use sqlx::{any::AnyKind, mysql::MySqlRow, types::chrono, Column, MySql, Pool, Row};
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, f32::consts::E, sync::Arc};
 
 struct ActiveQuery {
     statement: String,
@@ -94,7 +94,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         self.do_save(query).await
     }
 
-    async fn fetch_all_as_json(&self) -> Vec<serde_json::Value> {
+    async fn fetch_all_as_json(&self) -> Result<Vec<serde_json::Value>, anyhow::Error> {
         let mut results = Vec::new();
         match &self.active_query {
             Some(active_query) => {
@@ -104,17 +104,36 @@ impl SchemaManagerTrait for MySqlSchemaManager {
                 }
 
                 let mut rows = query.fetch(self.db_pool.as_ref());
-                while let Some(row) = rows.try_next().await.ok().unwrap_or_default() {
-                    results.push(self.row_to_json(&row));
+                while let Ok(result) = rows.try_next().await {
+                    if let Some(row) = result {
+                        results.push(self.row_to_json(&row));
+                    }
                 }
             }
             None => (),
         }
 
-        results
+        Ok(results)
     }
 
-    async fn fetch_all_as_field_value(&self) -> Vec<HashMap<String, FieldValue>> {
+    async fn fetch_one_as_json(&self) -> Result<serde_json::Value, anyhow::Error> {
+        if let Some(active_query) = &self.active_query {
+            let mut query = sqlx::query(&active_query.statement);
+            for p in &active_query.params {
+                query = query.bind::<&str>(p);
+            }
+            return match query.fetch_one(self.db_pool.as_ref()).await {
+                Ok(row) => Ok(self.row_to_json(&row)),
+                Err(e) => Err(e.into()),
+            };
+        }
+
+        Err(anyhow::anyhow!("No query to execute"))
+    }
+
+    async fn fetch_all_as_field_value(
+        &self,
+    ) -> Result<Vec<HashMap<String, FieldValue>>, anyhow::Error> {
         let mut results = Vec::new();
 
         match &self.active_query {
@@ -125,14 +144,31 @@ impl SchemaManagerTrait for MySqlSchemaManager {
                 }
 
                 let mut rows = query.fetch(self.db_pool.as_ref());
-                while let Some(row) = rows.try_next().await.ok().unwrap_or_default() {
-                    results.push(self.row_to_insert_value(&row));
+                while let Ok(result) = rows.try_next().await {
+                    if let Some(row) = result {
+                        results.push(self.row_to_insert_value(&row));
+                    }
                 }
             }
             None => (),
         }
 
-        results
+        Ok(results)
+    }
+
+    async fn fetch_one_as_field_value(&self) -> Result<HashMap<String, FieldValue>, anyhow::Error> {
+        if let Some(active_query) = &self.active_query {
+            let mut query = sqlx::query(&active_query.statement);
+            for p in &active_query.params {
+                query = query.bind::<&str>(p);
+            }
+            return match query.fetch_one(self.db_pool.as_ref()).await {
+                Ok(row) => Ok(self.row_to_insert_value(&row)),
+                Err(e) => Err(e.into()),
+            };
+        }
+
+        Err(anyhow::anyhow!("No query to execute"))
     }
 }
 

@@ -1,36 +1,22 @@
-use super::{UserEntity, USER_TABLE};
-use crate::base::manager::Manager;
+use super::{user_repository::UserRepository, UserEntity};
 
-pub struct UserService;
+pub struct UserService {
+    repo: UserRepository,
+}
 
 impl UserService {
-    pub async fn find_or_create_default_user(manager: &mut Manager) -> UserEntity {
-        let mut user = UserEntity::from_env();
+    pub fn new(repo: UserRepository) -> Self {
+        Self { repo }
+    }
 
-        let result = manager
-            .select_from_table(USER_TABLE, |q| {
-                let columns = vec![
-                    "internal_id",
-                    "id",
-                    "username",
-                    "email",
-                    "password",
-                    "created_at",
-                    "updated_at",
-                    "deleted_at",
-                ];
-                q.select_multiple(&columns);
-                if !user.id.is_empty() {
-                    q.eq("id", &user.id);
-                } else {
-                    q.eq("username", &user.username).eq("email", &user.email);
-                }
-            })
-            .fetch_all_as_json()
-            .await;
+    pub async fn create_admin_user(
+        &self,
+        name: &str,
+        email: &str,
+        raw_password: &str,
+    ) -> Result<UserEntity, anyhow::Error> {
+        let user = UserEntity::default();
 
-        if !result.is_empty() {}
-
-        user
+        Ok(user)
     }
 }

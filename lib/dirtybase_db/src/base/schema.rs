@@ -44,15 +44,13 @@ pub trait SchemaManagerTrait {
 
     async fn fetch_all_as_json(&self) -> Result<Vec<serde_json::Value>, anyhow::Error>;
 
-    async fn fetch_one_as_json(&self) -> Result<HashMap<String, FieldValue>, anyhow::Error>;
+    async fn fetch_one_as_json(&self) -> Result<serde_json::Value, anyhow::Error>;
 
     async fn fetch_all_as_field_value(
         &self,
     ) -> Result<Vec<HashMap<String, FieldValue>>, anyhow::Error>;
 
-    async fn fetch_one_as_field_value(
-        &self,
-    ) -> Result<Vec<HashMap<String, FieldValue>>, anyhow::Error>;
+    async fn fetch_one_as_field_value(&self) -> Result<HashMap<String, FieldValue>, anyhow::Error>;
 
     // checks if a table exist in the database
     async fn has_table(&self, name: &str) -> bool;

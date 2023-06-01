@@ -56,6 +56,16 @@ impl UserEntity {
     }
 
     pub async fn exist(&self, manager: &mut Manager) -> bool {
+        let result = manager
+            .select_from_table(USER_TABLE, |q| {
+                q.select("*");
+            })
+            .fetch_all_as_field_value()
+            .await;
+
+        println!("{:#?}", &result);
+        println!("{:#?}", serde_json::to_string(&result.unwrap()).unwrap());
+
         return !manager
             .select_from_table(USER_TABLE, |q| {
                 q.select("id");
@@ -67,6 +77,7 @@ impl UserEntity {
             })
             .fetch_all_as_json()
             .await
+            .unwrap()
             .is_empty();
     }
 }
