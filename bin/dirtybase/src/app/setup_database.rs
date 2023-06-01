@@ -1,8 +1,8 @@
 use super::entity::company::CompanyEntity;
 use dirtybase_db::{
     base::{
+        field_values::InsertValueBuilder,
         helper::{generate_ulid, to_fk_column},
-        insert_values::InsertValueBuilder,
         manager::Manager,
     },
     entity::user::{setup_users_table, UserEntity, USER_TABLE},
@@ -187,7 +187,7 @@ async fn setup_file_metadata_table(manager: &Manager) {
 async fn create_default_records(mut manager: &mut Manager) {
     // default user
     let mut user = UserEntity::from_env();
-    if !user.exist(&mut manager).await {
+    if !user.exist(manager).await {
         user.id = generate_ulid();
         let mut default_user = HashMap::<String, String>::new();
         default_user.insert("id".into(), generate_ulid());
@@ -203,7 +203,7 @@ async fn create_default_records(mut manager: &mut Manager) {
 
     // default company
     let company = CompanyEntity::from_env();
-    if !company.exist(&mut manager).await {
+    if !company.exist(manager).await {
         let default_company = InsertValueBuilder::new()
             .add("id", generate_ulid())
             .add("name", &company.name)
