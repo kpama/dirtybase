@@ -30,7 +30,6 @@ impl UserService {
             .find_one_by_username_and_email(username, email)
             .await
         {
-            dbg!(&user);
             Ok(user)
         } else {
             let mut user = UserEntity::default();
