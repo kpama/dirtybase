@@ -186,33 +186,33 @@ async fn setup_file_metadata_table(manager: &Manager) {
 
 async fn create_default_records(mut manager: &mut Manager) {
     // default user
-    let mut user = UserEntity::from_env();
-    if !user.exist(manager).await {
-        user.id = generate_ulid();
-        let mut default_user = HashMap::<String, String>::new();
-        default_user.insert("id".into(), generate_ulid());
-        default_user.insert("username".into(), user.username.clone());
-        default_user.insert("email".into(), user.email.clone());
+    // let mut user = UserEntity::from_env();
+    // if !user.exist(&mut manager).await {
+    //     user.id = generate_ulid();
+    //     let mut default_user = HashMap::<String, String>::new();
+    //     default_user.insert("id".into(), generate_ulid());
+    //     default_user.insert("username".into(), user.username.clone());
+    //     default_user.insert("email".into(), user.email.clone());
 
-        if !user.hashed_password().is_empty() {
-            default_user.insert("password".into(), user.hashed_password());
-        }
+    //     if !user.hashed_password().is_empty() {
+    //         default_user.insert("password".into(), user.hashed_password());
+    //     }
 
-        manager.insert_record(USER_TABLE, default_user).await;
-    }
+    //     manager.insert_record(USER_TABLE, default_user).await;
+    // }
 
-    // default company
-    let company = CompanyEntity::from_env();
-    if !company.exist(manager).await {
-        let default_company = InsertValueBuilder::new()
-            .add("id", generate_ulid())
-            .add("name", &company.name)
-            .add("creator", generate_ulid())
-            .build();
+    // // default company
+    // let company = CompanyEntity::from_env();
+    // if !company.exist(manager).await {
+    //     let default_company = InsertValueBuilder::new()
+    //         .add("id", generate_ulid())
+    //         .add("name", &company.name)
+    //         .add("creator", generate_ulid())
+    //         .build();
 
-        manager.insert_record(COMPANY_TABLE, default_company).await;
-        println!("{:?}", &company.name)
-    }
+    //     manager.insert_record(COMPANY_TABLE, default_company).await;
+    //     println!("{:?}", &company.name)
+    // }
 
     // default app
     // default roles

@@ -1,14 +1,12 @@
-use async_trait::async_trait;
-use sqlx::{any::AnyKind, MySql, Pool};
-use std::sync::Arc;
-
-use crate::driver::surreal::SurrealClient;
-
 use super::{
     query::QueryBuilder,
     table::BaseTable,
     types::{ColumnAndValue, FromColumnAndValue},
 };
+use crate::driver::surreal::SurrealClient;
+use async_trait::async_trait;
+use sqlx::{any::AnyKind, MySql, Pool};
+use std::sync::Arc;
 
 pub trait RelationalDbTrait: SchemaManagerTrait {
     fn instance(db_pool: Arc<Pool<MySql>>) -> Self
@@ -50,11 +48,37 @@ pub trait SchemaManagerTrait {
 
     async fn fetch_one_as_json(&self) -> Result<serde_json::Value, anyhow::Error>;
 
-    async fn fetch_all_as_field_value(
-        &self,
-    ) -> Result<Vec<HashMap<String, FieldValue>>, anyhow::Error>;
+    async fn fetch_all_as_field_value(&self) -> Result<Vec<ColumnAndValue>, anyhow::Error>;
 
-    async fn fetch_one_as_field_value(&self) -> Result<HashMap<String, FieldValue>, anyhow::Error>;
+    async fn fetch_one_as_field_value(&self) -> Result<ColumnAndValue, anyhow::Error>;
+
+    async fn fetch_one<T: FromColumnAndValue>(&self) -> Result<T, anyhow::Error>
+    where
+        Self: Sized,
+    {
+        let result = self.fetch_one_as_field_value().await;
+
+        if let Ok(row) = result {
+            Ok(T::from_column_value(row))
+        } else {
+            Err(result.err().unwrap())
+        }
+    }
+
+    async fn fetch_one_all<T: FromColumnAndValue>(&self) -> Result<Vec<T>, anyhow::Error>
+    where
+        Self: Sized,
+    {
+        let result = self.fetch_all_as_field_value().await;
+        if let Ok(records) = result {
+            Ok(records
+                .into_iter()
+                .map(T::from_column_value)
+                .collect::<Vec<T>>())
+        } else {
+            Err(result.err().unwrap())
+        }
+    }
 
     // checks if a table exist in the database
     async fn has_table(&self, name: &str) -> bool;
