@@ -74,7 +74,7 @@ impl Display for FieldValue {
             Self::U64(v) => write!(f, "{}", v),
             Self::I64(v) => write!(f, "{}", v),
             Self::F64(v) => write!(f, "{}", v),
-            Self::String(v) => write!(f, "\"{}\"", v),
+            Self::String(v) => write!(f, "{}", v),
             Self::Boolean(v) => {
                 write!(f, "{}", if *v { 1 } else { 0 })
             }
