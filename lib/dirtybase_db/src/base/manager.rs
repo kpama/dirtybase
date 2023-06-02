@@ -1,7 +1,5 @@
-use std::collections::HashMap;
-
 use super::{
-    field_values::FieldValue, query::QueryBuilder, schema::SchemaManagerTrait, table::BaseTable,
+    query::QueryBuilder, schema::SchemaManagerTrait, table::BaseTable, types::ColumnAndValue,
 };
 
 pub struct Manager {
@@ -12,14 +10,6 @@ impl Manager {
     pub fn new(schema: Box<dyn SchemaManagerTrait>) -> Self {
         Self { schema }
     }
-
-    // pub fn db_kind(&self) -> AnyKind {
-    //     self.schema.kind()
-    // }
-
-    // pub fn is_mysql(&self) -> bool {
-    //     self.db_kind() == AnyKind::MySql
-    // }
 
     pub fn inner(&mut self) -> &dyn SchemaManagerTrait {
         self.schema.as_mut()
@@ -83,18 +73,20 @@ impl Manager {
         self.schema.commit(table).await;
     }
 
-    pub async fn insert_record<V: Into<FieldValue>>(
-        &self,
-        table_name: &str,
-        column_and_values: HashMap<String, V>,
-    ) {
+    pub async fn insert_record(&self, table_name: &str, column_and_values: ColumnAndValue) {
         let mut query = QueryBuilder::new(vec![table_name.to_owned()]);
         query.set_multiple(column_and_values);
         self.schema.save(query).await;
     }
 
-    pub async fn save_record(&self, table_name: &str, mut callback: impl FnMut(&mut QueryBuilder)) {
+    pub async fn save_record(
+        &self,
+        table_name: &str,
+        column_and_values: ColumnAndValue,
+        mut callback: impl FnMut(&mut QueryBuilder),
+    ) {
         let mut query = QueryBuilder::new(vec![table_name.to_owned()]);
+        query.set_multiple(column_and_values);
         callback(&mut query);
         self.schema.save(query).await;
     }
