@@ -1,3 +1,5 @@
+use super::field_values::FieldValue;
+
 #[derive(Debug)]
 pub struct BaseColumn {
     pub name: String,
@@ -100,6 +102,11 @@ impl BaseColumn {
     // TODO: Value should be anything that can be turned into FieldValue
     pub fn set_default(&mut self, default: &str) -> &mut Self {
         self.default = Some(ColumnDefault::Custom(default.to_owned()));
+        self
+    }
+
+    pub fn set_default_from<T: Into<FieldValue>>(&mut self, value: T) -> &mut Self {
+        self.default = Some(ColumnDefault::Custom(value.into().to_string()));
         self
     }
 
