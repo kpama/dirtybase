@@ -1,10 +1,14 @@
 use async_trait::async_trait;
 use sqlx::{any::AnyKind, MySql, Pool};
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use crate::driver::surreal::SurrealClient;
 
-use super::{field_values::FieldValue, query::QueryBuilder, table::BaseTable};
+use super::{
+    query::QueryBuilder,
+    table::BaseTable,
+    types::{ColumnAndValue, FromColumnAndValue},
+};
 
 pub trait RelationalDbTrait: SchemaManagerTrait {
     fn instance(db_pool: Arc<Pool<MySql>>) -> Self

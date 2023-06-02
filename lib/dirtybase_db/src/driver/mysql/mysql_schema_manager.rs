@@ -7,11 +7,12 @@ use crate::base::{
     query_values::QueryValue,
     schema::{RelationalDbTrait, SchemaManagerTrait},
     table::BaseTable,
+    types::ColumnAndValue,
 };
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
 use sqlx::{any::AnyKind, mysql::MySqlRow, types::chrono, Column, MySql, Pool, Row};
-use std::{collections::HashMap, f32::consts::E, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 struct ActiveQuery {
     statement: String,
@@ -156,7 +157,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         Ok(results)
     }
 
-    async fn fetch_one_as_field_value(&self) -> Result<HashMap<String, FieldValue>, anyhow::Error> {
+    async fn fetch_one_as_field_value(&self) -> Result<ColumnAndValue, anyhow::Error> {
         if let Some(active_query) = &self.active_query {
             let mut query = sqlx::query(&active_query.statement);
             for p in &active_query.params {
@@ -688,7 +689,7 @@ impl MySqlSchemaManager {
         serde_json::Value::Object(this_row)
     }
 
-    fn row_to_insert_value(&self, row: &MySqlRow) -> HashMap<String, FieldValue> {
+    fn row_to_insert_value(&self, row: &MySqlRow) -> ColumnAndValue {
         let mut this_row = HashMap::new();
 
         for col in row.columns() {
