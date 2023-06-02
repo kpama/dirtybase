@@ -19,18 +19,20 @@ impl UserService {
         &mut self.user_repo
     }
 
+    /// Returns or create the default system administrator
+    /// A result is returned where Result<(true => user was created, the user record), Error>`
     pub async fn create_admin_user(
         &mut self,
         username: &str,
         email: &str,
         raw_password: &str,
-    ) -> Result<UserEntity, anyhow::Error> {
+    ) -> Result<(bool, UserEntity), anyhow::Error> {
         if let Ok(user) = self
             .user_repo
             .find_one_by_username_and_email(username, email)
             .await
         {
-            Ok(user)
+            Ok((false, user))
         } else {
             let mut user = UserEntity::default();
             user.email = Some(email.into());
@@ -39,7 +41,10 @@ impl UserService {
             user.reset_password = Some(true);
             user.status = Some(super::UserStatus::Active);
 
-            self.create(user).await
+            match self.create(user).await {
+                Ok(user) => Ok((true, user)),
+                Err(e) => Err(e),
+            }
         }
     }
 

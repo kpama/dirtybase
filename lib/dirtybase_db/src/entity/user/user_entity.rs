@@ -40,7 +40,7 @@ impl Default for UserEntity {
 }
 
 impl UserEntity {
-    pub fn empty() -> Self {
+    pub fn new() -> Self {
         Self {
             id: Some(generate_ulid()),
             status: Some(UserStatus::Pending),
@@ -52,11 +52,7 @@ impl UserEntity {
 impl FromColumnAndValue for UserEntity {
     fn from_column_value(column_and_value: ColumnAndValue) -> Self {
         Self {
-            internal_id: if let Some(v) = column_and_value.get("internal_id") {
-                Some(v.into())
-            } else {
-                None
-            },
+            internal_id: FieldValue::from_ref_option_into(column_and_value.get("internal_id")),
             id: FieldValue::from_ref_option_into(column_and_value.get("id")),
             username: FieldValue::from_ref_option_into(column_and_value.get("username")),
             email: FieldValue::from_ref_option_into(column_and_value.get("email")),
@@ -74,32 +70,13 @@ impl FromColumnAndValue for UserEntity {
 
 impl IntoColumnAndValue for UserEntity {
     fn into_column_value(self) -> crate::base::types::ColumnAndValue {
-        let builder = ColumnAndValueBuilder::new();
-
-        if let Some(value) = &self.id {
-            builder.insert("id", value);
-        }
-
-        if let Some(value) = &self.username {
-            builder.insert("username", value);
-        }
-
-        if let Some(value) = &self.email {
-            builder.insert("email", value);
-        }
-
-        if let Some(value) = self.reset_password {
-            builder.insert("reset_password", value);
-        }
-
-        if let Some(value) = &self.status {
-            builder.insert("status", value);
-        }
-
-        if let Some(value) = &self.password {
-            builder.insert("password", value);
-        }
-
-        builder.build()
+        ColumnAndValueBuilder::new()
+            .try_to_insert("id", self.id)
+            .try_to_insert("username", self.username)
+            .try_to_insert("email", self.email)
+            .try_to_insert("reset_password", self.reset_password)
+            .try_to_insert("status", self.status)
+            .try_to_insert("password", self.password)
+            .build()
     }
 }
