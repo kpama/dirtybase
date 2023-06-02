@@ -1,7 +1,9 @@
 use super::setup_database::create_data_tables;
+use super::setup_defaults::setup_default_entities;
 use super::Config;
 use actix_web::web;
 use dirtybase_db::base::schema::RelationalDbTrait;
+use dirtybase_db::entity::user::{UserRepository, UserService};
 use dirtybase_db::{base, driver::mysql::mysql_schema_manager::MySqlSchemaManager};
 use hmac::{Hmac, Mac};
 use jwt::SignWithKey;
@@ -47,8 +49,13 @@ impl DirtyBase {
         base::manager::Manager::new(Box::new(db))
     }
 
+    pub fn user_service(&self) -> UserService {
+        UserService::new(UserRepository::new(self.schema_manger()))
+    }
+
     pub async fn db_setup(&self) {
         create_data_tables(self.schema_manger()).await;
+        setup_default_entities(self).await;
     }
 
     pub fn hmac_key(&self) -> &Option<Hmac<Sha256>> {
