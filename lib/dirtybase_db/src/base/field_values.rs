@@ -51,6 +51,22 @@ pub enum FieldValue {
     Time(chrono::NaiveTime),
 }
 
+impl Default for FieldValue {
+    fn default() -> Self {
+        Self::NotSet
+    }
+}
+
+impl FieldValue {
+    pub fn pluck_some_or_default_ref<'a>(field: Option<&'a FieldValue>) -> &'a FieldValue {
+        if let Some(f) = field {
+            f
+        } else {
+            &Self::NotSet
+        }
+    }
+}
+
 impl Display for FieldValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
