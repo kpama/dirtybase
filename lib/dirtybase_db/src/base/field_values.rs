@@ -58,11 +58,29 @@ impl Default for FieldValue {
 }
 
 impl FieldValue {
-    pub fn pluck_some_or_default_ref<'a>(field: Option<&'a FieldValue>) -> &'a FieldValue {
+    /// Returns a reference to the FieldValue if Some `NotSet` when None
+    pub fn from_ref_option_ref<'a>(field: Option<&'a FieldValue>) -> &'a FieldValue {
         if let Some(f) = field {
             f
         } else {
             &Self::NotSet
+        }
+    }
+
+    /// Unwraps the option, clone the FieldValue and call `into` on the cloned
+    pub fn from_ref_option_into<'a, T>(field: Option<&'a FieldValue>) -> T
+    where
+        Self: Into<T>,
+    {
+        return Self::from_ref_option_ref(field).clone().into();
+    }
+
+    /// Returns a the FieldValue if Some `NotSet` when None
+    pub fn from_ref_option<'a>(field: Option<&'a FieldValue>) -> FieldValue {
+        if let Some(f) = field {
+            f.clone()
+        } else {
+            Self::NotSet
         }
     }
 }
