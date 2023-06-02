@@ -1,6 +1,7 @@
 use super::{
     field_values::FieldValue, join_builder::JoinQueryBuilder, query_conditions::Condition,
-    query_join_types::JoinType, query_operators::Operator, where_join_operators::WhereJoinOperator,
+    query_join_types::JoinType, query_operators::Operator, types::ColumnAndValue,
+    where_join_operators::WhereJoinOperator,
 };
 use std::collections::HashMap;
 
@@ -58,17 +59,14 @@ impl QueryBuilder {
         self
     }
 
-    pub fn set_multiple<T: Into<FieldValue>>(
-        &mut self,
-        column_and_values: HashMap<String, T>,
-    ) -> &mut Self {
+    pub fn set_multiple(&mut self, column_and_values: ColumnAndValue) -> &mut Self {
         if self.set_columns.is_none() {
             self.set_columns = Some(HashMap::new());
         }
 
         if let Some(columns) = &mut self.set_columns {
             for entry in column_and_values {
-                columns.insert(entry.0, entry.1.into());
+                columns.insert(entry.0, entry.1);
             }
         }
 
