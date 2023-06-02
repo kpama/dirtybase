@@ -101,6 +101,7 @@ impl UserEntity {
     }
 }
 
+#[derive(Debug)]
 pub struct UserUpdateEntity {
     pub id: Option<String>,
     pub username: Option<String>,
