@@ -8,6 +8,7 @@ pub mod dirtybase;
 pub mod setup_database;
 pub use config::Config;
 pub use config::ConfigBuilder;
+pub mod setup_defaults;
 
 /// Loads configuration from .env files.
 /// Multiple .env files are check in the following order
