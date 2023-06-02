@@ -33,9 +33,8 @@ impl Default for Config {
         let secret = env::var("DTY_SECRET").unwrap_or_default();
         let admin_user = env::var("DTY_SYS_ADMIN_USERNAME").unwrap_or_default();
         let admin_email = env::var("DTY_SYS_ADMIN_EMAIL").unwrap_or_default();
-        let admin_password =
-            hash_password(&env::var("DTY_SYS_ADMIN_PASSWORD").unwrap_or("changeme!!".into()));
-        let app_name = env::var("DTY_APP_NAME").unwrap_or("Default Company".into());
+        let admin_password = env::var("DTY_SYS_ADMIN_PASSWORD").unwrap_or("changeme!!".into());
+        let app_name: String = env::var("DTY_APP_NAME").unwrap_or("Default Company".into());
 
         Self {
             app_name,
