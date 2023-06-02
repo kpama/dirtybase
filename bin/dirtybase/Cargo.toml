@@ -25,4 +25,5 @@ futures-util = { workspace = true }
 hmac = { workspace = true }
 jwt = { workspace = true }
 sha2 = { workspace = true }
+chrono = { workspace = true }
 # cookie = { workspace = true }
