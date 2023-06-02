@@ -3,7 +3,7 @@ use ulid::Ulid;
 pub type UlidString = String;
 
 pub fn generate_ulid() -> UlidString {
-    Ulid::new().to_string()
+    Ulid::new().to_string().to_lowercase()
 }
 
 /// Transform a table name to a column name.
