@@ -27,6 +27,15 @@ impl From<FieldValue> for Option<String> {
     }
 }
 
+impl From<&FieldValue> for Option<String> {
+    fn from(value: &FieldValue) -> Self {
+        match value {
+            FieldValue::String(v) => Some(v.clone()),
+            _ => None,
+        }
+    }
+}
+
 impl From<FieldValue> for Vec<String> {
     fn from(value: FieldValue) -> Self {
         match value {
