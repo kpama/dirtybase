@@ -5,6 +5,8 @@ mod user_repository;
 mod user_service;
 
 pub use user_entity::UserEntity;
+pub use user_repository::UserRepository;
+pub use user_service::UserService;
 
 // Core User table name
 pub static USER_TABLE: &str = "core_user";
@@ -28,9 +30,10 @@ pub async fn setup_users_table(manager: &Manager) {
                 table.string("username").set_is_unique(true);
                 table.string("email").set_is_unique(true);
                 table.string("password").set_is_nullable(true);
-                // password, open ID, third party, magic link?
-                // the user could be using openID to login !?!?!
-                table.timestamps();
+                table.boolean("reset_require").set_default("0"); // A flag that indicates a password change is required
+                                                                 // password, open ID, third party, magic link?
+                                                                 // the user could be using openID to login !?!?!
+
                 table.soft_deletable();
             })
             .await;
