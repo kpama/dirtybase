@@ -97,6 +97,7 @@ impl BaseColumn {
         self
     }
 
+    // TODO: Value should be anything that can be turned into FieldValue
     pub fn set_default(&mut self, default: &str) -> &mut Self {
         self.default = Some(ColumnDefault::Custom(default.to_owned()));
         self
