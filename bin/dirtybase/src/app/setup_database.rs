@@ -1,15 +1,9 @@
-use super::entity::company::CompanyEntity;
+use super::entity::company::{setup_company_table, COMPANY_TABLE};
 use dirtybase_db::{
-    base::{
-        field_values::InsertValueBuilder,
-        helper::{generate_ulid, to_fk_column},
-        manager::Manager,
-    },
-    entity::user::{setup_users_table, UserEntity, USER_TABLE},
+    base::{helper::to_fk_column, manager::Manager},
+    entity::user::{setup_users_table, USER_TABLE},
 };
-use std::collections::HashMap;
 
-pub const COMPANY_TABLE: &str = "core_company";
 pub const APPLICATION_TABLE: &str = "core_app";
 pub const APPLICATION_SCHEMA_TABLE: &str = "core_app_schema";
 pub const ROLE_TABLE: &str = "core_app_role";
@@ -19,27 +13,6 @@ pub const MIGRATION_TABLE: &str = "core_migration";
 pub const FILE_METADATA_TABLE: &str = "core_file_meta";
 
 // The table that will hold company's tenets
-async fn setup_company_table(manager: &Manager) {
-    manager
-        .create_table_schema(COMPANY_TABLE, |table| {
-            // internal_id
-            // id
-            table.id_set();
-            // name
-            table.string("name");
-            // owner
-            table.ulid_fk(USER_TABLE, false).set_is_nullable(true);
-            // description
-            table.sized_string("description", 512).set_is_nullable(true);
-            // blame
-            table.blame();
-            // timestamp
-            table.timestamps();
-            // soft delete
-            table.soft_deletable();
-        })
-        .await;
-}
 
 async fn setup_applications_table(manager: &Manager) {
     manager
