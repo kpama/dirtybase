@@ -1,3 +1,6 @@
+use chrono::{DateTime, Utc};
+
+use super::UserStatus;
 use crate::base::{
     field_values::FieldValue,
     helper::generate_ulid,
@@ -5,25 +8,43 @@ use crate::base::{
     ColumnAndValueBuilder,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UserEntity {
-    internal_id: Option<u64>,
-    id: String,
-    username: String,
-    email: String,
-    reset_password: bool,
-    password: String,
+    pub internal_id: Option<u64>,
+    pub id: Option<String>,
+    pub username: Option<String>,
+    pub email: Option<String>,
+    pub reset_password: Option<bool>,
+    pub status: Option<UserStatus>,
+    pub password: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
 impl Default for UserEntity {
     fn default() -> Self {
         Self {
             internal_id: None,
-            id: generate_ulid(),
-            username: "".into(),
-            email: "".into(),
-            reset_password: false,
-            password: "".into(), // MUST be the hashed of the raw password
+            id: None,
+            status: None,
+            username: None,
+            email: None,
+            reset_password: None,
+            password: None,
+            created_at: None,
+            updated_at: None,
+            deleted_at: None,
+        }
+    }
+}
+
+impl UserEntity {
+    pub fn empty() -> Self {
+        Self {
+            id: Some(generate_ulid()),
+            status: Some(UserStatus::Pending),
+            ..Self::default()
         }
     }
 }
@@ -36,105 +57,34 @@ impl FromColumnAndValue for UserEntity {
             } else {
                 None
             },
-            id: FieldValue::pluck_some_or_default_ref(column_and_value.get("id")).into(),
-            username: FieldValue::pluck_some_or_default_ref(column_and_value.get("username"))
-                .into(),
-            email: FieldValue::pluck_some_or_default_ref(column_and_value.get("email")).into(),
-            reset_password: FieldValue::pluck_some_or_default_ref(
+            id: FieldValue::from_ref_option_into(column_and_value.get("id")),
+            username: FieldValue::from_ref_option_into(column_and_value.get("username")),
+            email: FieldValue::from_ref_option_into(column_and_value.get("email")),
+            reset_password: FieldValue::from_ref_option_into(
                 column_and_value.get("reset_password"),
-            )
-            .into(),
-            password: FieldValue::pluck_some_or_default_ref(column_and_value.get("password"))
-                .into(),
+            ),
+            status: FieldValue::from_ref_option_into(column_and_value.get("status")),
+            password: FieldValue::from_ref_option_into(column_and_value.get("password")),
+            created_at: FieldValue::from_ref_option_into(column_and_value.get("created_at")),
+            updated_at: FieldValue::from_ref_option_into(column_and_value.get("created_at")),
+            deleted_at: FieldValue::from_ref_option_into(column_and_value.get("created_at")),
         }
     }
 }
 
-impl UserEntity {
-    pub fn internal_id(&self) -> Option<u64> {
-        self.internal_id
-    }
-
-    pub fn id(&self) -> &String {
-        &self.id
-    }
-
-    pub fn set_id(&mut self, id: &str) -> &mut Self {
-        self.id = id.into();
-        self
-    }
-
-    pub fn username(&self) -> &String {
-        &self.username
-    }
-
-    pub fn set_username(&mut self, username: &str) -> &mut Self {
-        self.username = username.into();
-        self
-    }
-
-    pub fn email(&self) -> &String {
-        &self.email
-    }
-
-    pub fn set_email(&mut self, email: &str) -> &mut Self {
-        self.email = email.into();
-        self
-    }
-
-    pub fn password(&self) -> &String {
-        &self.password
-    }
-
-    pub fn reset_password(&self) -> bool {
-        self.reset_password
-    }
-
-    pub fn set_password(&mut self, password: &str) -> &mut Self {
-        self.password = password.into();
-        self
-    }
-
-    pub fn set_reset_password(&mut self, reset: bool) -> &mut Self {
-        self.reset_password = reset;
-        self
-    }
-}
-
-#[derive(Debug)]
-pub struct UserUpdateEntity {
-    pub id: Option<String>,
-    pub username: Option<String>,
-    pub email: Option<String>,
-    pub reset_password: Option<bool>,
-    pub password: Option<String>,
-}
-
-impl Default for UserUpdateEntity {
-    fn default() -> Self {
-        Self {
-            id: None,
-            username: None,
-            email: None,
-            reset_password: None,
-            password: None,
-        }
-    }
-}
-
-impl IntoColumnAndValue for UserUpdateEntity {
+impl IntoColumnAndValue for UserEntity {
     fn into_column_value(self) -> crate::base::types::ColumnAndValue {
         let builder = ColumnAndValueBuilder::new();
 
-        if let Some(value) = self.id {
+        if let Some(value) = &self.id {
             builder.insert("id", value);
         }
 
-        if let Some(value) = self.username {
+        if let Some(value) = &self.username {
             builder.insert("username", value);
         }
 
-        if let Some(value) = self.email {
+        if let Some(value) = &self.email {
             builder.insert("email", value);
         }
 
@@ -142,26 +92,14 @@ impl IntoColumnAndValue for UserUpdateEntity {
             builder.insert("reset_password", value);
         }
 
-        if let Some(value) = self.password {
+        if let Some(value) = &self.status {
+            builder.insert("status", value);
+        }
+
+        if let Some(value) = &self.password {
             builder.insert("password", value);
         }
 
         builder.build()
-    }
-}
-
-impl From<UserEntity> for UserUpdateEntity {
-    fn from(value: UserEntity) -> Self {
-        Self {
-            id: Some(value.id),
-            username: Some(value.username),
-            email: Some(value.email),
-            reset_password: Some(value.reset_password),
-            password: if value.password.is_empty() {
-                None
-            } else {
-                Some(value.password)
-            },
-        }
     }
 }

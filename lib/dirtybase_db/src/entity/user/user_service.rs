@@ -1,6 +1,6 @@
-use super::{
-    hash_password, user_entity::UserUpdateEntity, user_repository::UserRepository, UserEntity,
-};
+use crate::base::helper::generate_ulid;
+
+use super::{hash_password, user_repository::UserRepository, UserEntity};
 
 pub struct UserService {
     user_repo: UserRepository,
@@ -34,25 +34,42 @@ impl UserService {
             Ok(user)
         } else {
             let mut user = UserEntity::default();
-            user.set_email(&email)
-                .set_username(&username)
-                .set_password(&hash_password(&raw_password))
-                .set_reset_password(true);
+            user.email = Some(email.into());
+            user.username = Some(username.into());
+            user.password = Some(raw_password.into());
+            user.reset_password = Some(true);
+            user.status = Some(super::UserStatus::Active);
 
-            self.save(user, None).await
+            self.create(user).await
         }
     }
 
-    pub async fn save(
+    pub async fn reset_password(
+        &mut self,
+        password: &str,
+        id: &str,
+    ) -> Result<UserEntity, anyhow::Error> {
+        let mut user = UserEntity::default();
+        // TODO: validate password
+        user.password = Some(hash_password(password));
+
+        self.update(user, id).await
+    }
+
+    pub async fn create(&mut self, mut user: UserEntity) -> Result<UserEntity, anyhow::Error> {
+        user.password = Some(hash_password(
+            &user.password.unwrap_or("changeme!!".to_owned()),
+        ));
+        user.id = Some(generate_ulid());
+
+        self.user_repo.create(user).await
+    }
+
+    pub async fn update(
         &mut self,
         user: UserEntity,
-        id: Option<&str>,
+        id: &str,
     ) -> Result<UserEntity, anyhow::Error> {
-        let record: UserUpdateEntity = user.into();
-        if let Some(id) = id {
-            self.user_repo.update(id, record).await
-        } else {
-            self.user_repo.create(record).await
-        }
+        self.user_repo.update(id, user).await
     }
 }

@@ -1,10 +1,12 @@
 use crate::base::manager::Manager;
 
 mod user_entity;
+mod user_helpers;
 mod user_repository;
 mod user_service;
 
 pub use user_entity::UserEntity;
+pub use user_helpers::*;
 pub use user_repository::UserRepository;
 pub use user_service::UserService;
 
@@ -30,10 +32,9 @@ pub async fn setup_users_table(manager: &Manager) {
                 table.string("username").set_is_unique(true);
                 table.string("email").set_is_unique(true);
                 table.string("password").set_is_nullable(true);
-                table.boolean("reset_require").set_default("0"); // A flag that indicates a password change is required
-                                                                 // password, open ID, third party, magic link?
-                                                                 // the user could be using openID to login !?!?!
-
+                table.boolean("reset_password").set_default("0"); // A flag that indicates a password change is required
+                table.string("status").set_default_from(UserStatus::Pending);
+                table.timestamps();
                 table.soft_deletable();
             })
             .await;
