@@ -11,9 +11,10 @@ mod field_value_from_u32;
 mod field_value_from_u64;
 mod insert_value;
 
+pub mod to_raw_values;
 pub use insert_value::InsertValueBuilder;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(tag = "type", content = "value")]
 pub enum FieldValue {
     #[serde(rename(serialize = "null"))]
