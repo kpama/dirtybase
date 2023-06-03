@@ -1,4 +1,13 @@
-use dirtybase_db::{base::manager::Manager, entity::user::USER_TABLE};
+use dirtybase_db::{
+    base::{
+        manager::Manager,
+        table::{
+            CREATED_AT_FIELD, CREATOR_FIELD, DELETED_AT_FIELD, EDITOR_FIELD, ID_FIELD,
+            INTERNAL_ID_FIELD, UPDATED_AT_FIELD,
+        },
+    },
+    entity::user::USER_TABLE,
+};
 
 mod company_entity;
 mod company_repository;
@@ -9,8 +18,18 @@ pub use company_repository::CompanyRepository;
 pub use company_service::CompanyService;
 
 pub const COMPANY_TABLE: &str = "core_company";
+
+// Table columns
 pub const COMPANY_TABLE_NAME_FIELD: &str = "name";
 pub const COMPANY_TABLE_DESCRIPTION_FIELD: &str = "description";
+pub const COMPANY_TABLE_CORE_USER_ID_FIELD: &str = "core_user_id";
+pub const COMPANY_TABLE_INTERNAL_ID_FIELD: &str = INTERNAL_ID_FIELD;
+pub const COMPANY_TABLE_ID_FIELD: &str = ID_FIELD;
+pub const COMPANY_TABLE_CREATOR_FIELD: &str = CREATOR_FIELD;
+pub const COMPANY_TABLE_EDITOR_FIELD: &str = EDITOR_FIELD;
+pub const COMPANY_TABLE_CREATED_AT_FIELD: &str = CREATED_AT_FIELD;
+pub const COMPANY_TABLE_UPDATED_AT_FIELD: &str = UPDATED_AT_FIELD;
+pub const COMPANY_TABLE_DELETED_AT_FIELD: &str = DELETED_AT_FIELD;
 
 pub async fn setup_company_table(manager: &Manager) {
     manager

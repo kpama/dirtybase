@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
-use super::{UserEntity, USER_TABLE};
+use super::{UserEntity, USER_TABLE, USER_TABLE_ID_FIELD};
 use crate::base::{
+    field_values::FieldValue,
     manager::Manager,
     types::{FromColumnAndValue, IntoColumnAndValue},
 };
@@ -27,8 +28,7 @@ impl UserRepository {
         match self
             .manager_mut()
             .select_from_table(USER_TABLE, |q| {
-                q.select("*");
-                q.eq("internal_id", id);
+                q.select_all().eq("internal_id", id);
             })
             .fetch_one_as_field_value()
             .await
@@ -42,8 +42,7 @@ impl UserRepository {
         match self
             .manager_mut()
             .select_from_table(USER_TABLE, |q| {
-                q.select("*");
-                q.eq("id", id);
+                q.select_all().eq("id", id);
             })
             .fetch_one_as_field_value()
             .await
@@ -53,7 +52,7 @@ impl UserRepository {
         }
     }
 
-    pub async fn find_one_by_username_and_email(
+    pub async fn find_by_username_and_email(
         &mut self,
         username: &str,
         email: &str,
@@ -61,8 +60,7 @@ impl UserRepository {
         match self
             .manager_mut()
             .select_from_table(USER_TABLE, |q| {
-                q.select("*");
-                q.eq("username", username).eq("email", email);
+                q.select_all().eq("username", username).eq("email", email);
             })
             .fetch_one_as_field_value()
             .await
@@ -79,11 +77,13 @@ impl UserRepository {
         &mut self,
         record: impl IntoColumnAndValue,
     ) -> Result<UserEntity, anyhow::Error> {
-        let kv = record.into_column_value();
-        self.manager.insert_record(USER_TABLE, kv).await;
+        let column_and_values = record.into_column_value();
+        let id: String = FieldValue::from_ref_option_into(column_and_values.get("id"));
+        self.manager
+            .insert_record(USER_TABLE, column_and_values)
+            .await;
 
-        let fake = UserEntity::default();
-        Ok(fake)
+        self.find_on_by_id(&id).await
     }
 
     // Update an existing User record
@@ -95,7 +95,7 @@ impl UserRepository {
         let kv = record.into_column_value();
         self.manager
             .save_record(USER_TABLE, kv, move |q| {
-                q.eq("id", id);
+                q.eq(USER_TABLE_ID_FIELD, id);
             })
             .await;
         self.find_on_by_id(&id).await

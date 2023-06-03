@@ -1,4 +1,5 @@
-use dirtybase_db::entity::user::UserEntity;
+use anyhow::anyhow;
+use dirtybase_db::{base::helper::generate_ulid, entity::user::UserEntity};
 
 use super::{CompanyEntity, CompanyRepository};
 
@@ -21,17 +22,45 @@ impl CompanyService {
 
     pub async fn create(
         &mut self,
-        company: CompanyEntity,
-        user: UserEntity,
+        mut company: CompanyEntity,
+        company_user: UserEntity,
+        blame: UserEntity,
     ) -> Result<CompanyEntity, anyhow::Error> {
-        unimplemented!()
+        if company.id.is_none() {
+            company.id = Some(generate_ulid());
+        }
+
+        // TODO: validate the record
+        if company.name.is_none() {
+            return Err(anyhow!("Name field is required")); // TODO: Insert this in map and return all the errors at once?
+        }
+
+        if company_user.id.is_none() {
+            return Err(anyhow!("A company must have a super administrator"));
+        }
+
+        if blame.id.is_none() {
+            return Err(anyhow!("Company entity requires a user to blame"));
+        }
+
+        company.core_user_id = Some(company_user.id.unwrap());
+        company.creator_id = Some(blame.id.unwrap());
+
+        return self.company_repo.create(company).await;
     }
 
     pub async fn update(
         &mut self,
-        company: CompanyEntity,
+        mut company: CompanyEntity,
         id: &str,
+        blame: UserEntity,
     ) -> Result<CompanyEntity, anyhow::Error> {
-        unimplemented!()
+        // TODO: Validation ....
+        if blame.id.is_none() {
+            return Err(anyhow!("Company entity requires a user to blame"));
+        }
+
+        company.editor_id = Some(blame.id.unwrap());
+        self.company_repo.update(id, company).await
     }
 }

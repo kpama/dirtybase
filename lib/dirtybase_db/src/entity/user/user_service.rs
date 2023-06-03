@@ -29,12 +29,12 @@ impl UserService {
     ) -> Result<(bool, UserEntity), anyhow::Error> {
         if let Ok(user) = self
             .user_repo
-            .find_one_by_username_and_email(username, email)
+            .find_by_username_and_email(username, email)
             .await
         {
             Ok((false, user))
         } else {
-            let mut user = UserEntity::default();
+            let mut user = UserEntity::new();
             user.email = Some(email.into());
             user.username = Some(username.into());
             user.password = Some(raw_password.into());
@@ -64,7 +64,10 @@ impl UserService {
         user.password = Some(hash_password(
             &user.password.unwrap_or("changeme!!".to_owned()),
         ));
-        user.id = Some(generate_ulid());
+
+        if user.id.is_none() {
+            user.id = Some(generate_ulid());
+        }
 
         self.user_repo.create(user).await
     }

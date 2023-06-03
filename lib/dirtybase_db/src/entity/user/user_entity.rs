@@ -1,6 +1,11 @@
 use chrono::{DateTime, Utc};
 
-use super::UserStatus;
+use super::{
+    UserStatus, USER_TABLE_CREATED_AT_FIELD, USER_TABLE_DELETED_AT_FIELD, USER_TABLE_EMAIL_FIELD,
+    USER_TABLE_ID_FIELD, USER_TABLE_INTERNAL_ID_FIELD, USER_TABLE_PASSWORD_FIELD,
+    USER_TABLE_RESET_PASSWORD_FIELD, USER_TABLE_STATUS_FIELD, USER_TABLE_UPDATED_AT_FIELD,
+    USER_TABLE_USERNAME_FIELD,
+};
 use crate::base::{
     field_values::FieldValue,
     helper::generate_ulid,
@@ -52,18 +57,30 @@ impl UserEntity {
 impl FromColumnAndValue for UserEntity {
     fn from_column_value(column_and_value: ColumnAndValue) -> Self {
         Self {
-            internal_id: FieldValue::from_ref_option_into(column_and_value.get("internal_id")),
-            id: FieldValue::from_ref_option_into(column_and_value.get("id")),
-            username: FieldValue::from_ref_option_into(column_and_value.get("username")),
-            email: FieldValue::from_ref_option_into(column_and_value.get("email")),
-            reset_password: FieldValue::from_ref_option_into(
-                column_and_value.get("reset_password"),
+            internal_id: FieldValue::from_ref_option_into(
+                column_and_value.get(USER_TABLE_INTERNAL_ID_FIELD),
             ),
-            status: FieldValue::from_ref_option_into(column_and_value.get("status")),
-            password: FieldValue::from_ref_option_into(column_and_value.get("password")),
-            created_at: FieldValue::from_ref_option_into(column_and_value.get("created_at")),
-            updated_at: FieldValue::from_ref_option_into(column_and_value.get("created_at")),
-            deleted_at: FieldValue::from_ref_option_into(column_and_value.get("created_at")),
+            id: FieldValue::from_ref_option_into(column_and_value.get(USER_TABLE_ID_FIELD)),
+            username: FieldValue::from_ref_option_into(
+                column_and_value.get(USER_TABLE_USERNAME_FIELD),
+            ),
+            email: FieldValue::from_ref_option_into(column_and_value.get(USER_TABLE_EMAIL_FIELD)),
+            reset_password: FieldValue::from_ref_option_into(
+                column_and_value.get(USER_TABLE_RESET_PASSWORD_FIELD),
+            ),
+            status: FieldValue::from_ref_option_into(column_and_value.get(USER_TABLE_STATUS_FIELD)),
+            password: FieldValue::from_ref_option_into(
+                column_and_value.get(USER_TABLE_PASSWORD_FIELD),
+            ),
+            created_at: FieldValue::from_ref_option_into(
+                column_and_value.get(USER_TABLE_CREATED_AT_FIELD),
+            ),
+            updated_at: FieldValue::from_ref_option_into(
+                column_and_value.get(USER_TABLE_UPDATED_AT_FIELD),
+            ),
+            deleted_at: FieldValue::from_ref_option_into(
+                column_and_value.get(USER_TABLE_DELETED_AT_FIELD),
+            ),
         }
     }
 }
@@ -71,12 +88,12 @@ impl FromColumnAndValue for UserEntity {
 impl IntoColumnAndValue for UserEntity {
     fn into_column_value(self) -> crate::base::types::ColumnAndValue {
         ColumnAndValueBuilder::new()
-            .try_to_insert("id", self.id)
-            .try_to_insert("username", self.username)
-            .try_to_insert("email", self.email)
-            .try_to_insert("reset_password", self.reset_password)
-            .try_to_insert("status", self.status)
-            .try_to_insert("password", self.password)
+            .try_to_insert(USER_TABLE_ID_FIELD, self.id)
+            .try_to_insert(USER_TABLE_USERNAME_FIELD, self.username)
+            .try_to_insert(USER_TABLE_EMAIL_FIELD, self.email)
+            .try_to_insert(USER_TABLE_PASSWORD_FIELD, self.password)
+            .try_to_insert(USER_TABLE_STATUS_FIELD, self.status)
+            .try_to_insert(USER_TABLE_RESET_PASSWORD_FIELD, self.reset_password)
             .build()
     }
 }
