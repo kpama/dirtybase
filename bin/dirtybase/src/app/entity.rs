@@ -1,3 +1,4 @@
+pub mod app;
 pub mod company;
 pub mod role;
 
