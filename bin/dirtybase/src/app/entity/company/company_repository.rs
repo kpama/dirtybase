@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
 use super::{
-    CompanyEntity, COMPANY_TABLE, COMPANY_TABLE_ID_FIELD, COMPANY_TABLE_INTERNAL_ID_FIELD,
+    CompanyEntity, COMPANY_TABLE, COMPANY_TABLE_DELETED_AT_FIELD, COMPANY_TABLE_ID_FIELD,
+    COMPANY_TABLE_INTERNAL_ID_FIELD,
 };
 use dirtybase_db::base::{
     field_values::FieldValue,
@@ -30,7 +31,9 @@ impl CompanyRepository {
         match self
             .manager_mut()
             .select_from_table(COMPANY_TABLE, |q| {
-                q.select("*").eq(COMPANY_TABLE_INTERNAL_ID_FIELD, id);
+                q.select_all()
+                    .eq(COMPANY_TABLE_INTERNAL_ID_FIELD, id)
+                    .and_is_null(COMPANY_TABLE_DELETED_AT_FIELD);
             })
             .fetch_one_as_field_value()
             .await
@@ -44,7 +47,9 @@ impl CompanyRepository {
         match self
             .manager_mut()
             .select_from_table(COMPANY_TABLE, |q| {
-                q.select("*").eq(COMPANY_TABLE_ID_FIELD, id);
+                q.select_all()
+                    .eq(COMPANY_TABLE_ID_FIELD, id)
+                    .and_is_null(COMPANY_TABLE_DELETED_AT_FIELD);
             })
             .fetch_one_as_field_value()
             .await
@@ -59,7 +64,7 @@ impl CompanyRepository {
         record: impl IntoColumnAndValue,
     ) -> Result<CompanyEntity, anyhow::Error> {
         let kv = record.into_column_value();
-        let id: String = FieldValue::from_ref_option_into(kv.get("id"));
+        let id: String = FieldValue::from_ref_option_into(kv.get(COMPANY_TABLE_ID_FIELD));
 
         self.manager.insert_record(COMPANY_TABLE, kv).await;
         self.find_by_id(&id).await
