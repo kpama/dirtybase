@@ -1,4 +1,7 @@
-use super::{dirtybase::DirtyBase, entity::company::CompanyEntity};
+use super::{
+    dirtybase::DirtyBase,
+    entity::{company::CompanyEntity, role::ROLE_ADMIN},
+};
 
 pub async fn setup_default_entities(app: &DirtyBase) {
     let config = app.config();
@@ -13,7 +16,13 @@ pub async fn setup_default_entities(app: &DirtyBase) {
 
     if let Ok((created, user)) = result {
         if created {
-            // 1. create company
+            // 1. add user to system wild  admin list
+            let _ = app
+                .sys_admin_service()
+                .add_user(&user.clone().id.unwrap())
+                .await;
+
+            // 2. create default company
             let mut company = CompanyEntity::new();
 
             company.name = Some(config.app_name().clone());
@@ -24,7 +33,7 @@ pub async fn setup_default_entities(app: &DirtyBase) {
                 .create(company, user.clone(), user.clone())
                 .await
             {
-                // 1.1 create company's default app
+                // 2.1 create company's default app
                 let mut app_entity = app.app_service().new_app();
                 let company_copy = company.clone();
 
@@ -33,13 +42,32 @@ pub async fn setup_default_entities(app: &DirtyBase) {
                 app_entity.is_system_app = Some(true);
                 app_entity.description = Some("This is the core/main application".into());
 
-                let result = app.app_service().create(app_entity, user.clone()).await;
-
-                // 1.1.1 add user to the app role as "admin"
-                dbg!(&result);
+                if let Ok(default_app) = app.app_service().create(app_entity, user.clone()).await {
+                    match app
+                        .role_service()
+                        .create_defaults(default_app.clone(), user.clone())
+                        .await
+                    {
+                        Ok(roles) => {
+                            for a_role in &roles {
+                                if a_role.name.as_ref().unwrap() == ROLE_ADMIN {
+                                    // 2.1.1 add user to the app role as "admin"
+                                    let mut role_user = app.role_user_service().new_role_user();
+                                    role_user.core_app_role_id =
+                                        Some(a_role.id.as_ref().unwrap().into());
+                                    role_user.core_user_id =
+                                        Some(user.id.as_deref().unwrap().into());
+                                    let _ = app
+                                        .role_user_service()
+                                        .create(role_user, user.clone())
+                                        .await;
+                                }
+                            }
+                        }
+                        Err(_) => (), // Err(e) => log::error!("could not create default roles: {}", e.to_string());
+                    }
+                }
             }
-
-            // 1.2 add user as the core_user and creator
         }
     }
 }
