@@ -1,9 +1,8 @@
+use super::{AppEntity, APP_TABLE, APP_TABLE_ID_FIELD};
 use dirtybase_db::base::{
     field_values::FieldValue, manager::Manager, types::FromColumnAndValue,
     types::IntoColumnAndValue,
 };
-
-use super::{AppEntity, APP_TABLE, APP_TABLE_ID_FIELD};
 
 pub struct AppRepository {
     manager: Manager,
@@ -41,7 +40,7 @@ impl AppRepository {
         record: impl IntoColumnAndValue,
     ) -> Result<AppEntity, anyhow::Error> {
         let kv = record.into_column_value();
-        let id: String = FieldValue::from_ref_option_into(kv.get("id"));
+        let id: String = FieldValue::from_ref_option_into(kv.get(APP_TABLE_ID_FIELD));
 
         self.manager.insert_record(APP_TABLE, kv).await;
         self.find_by_id(&id).await
