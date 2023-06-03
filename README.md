@@ -2,7 +2,7 @@
 
 
 ## Packages 
-Prefix commands with: `RUST_LOG=debug`
+Prefix commands with `RUST_LOG=debug` for debug logs
 
 |Package|Path | Type | Commands|
 |-------|----|------|---------|
