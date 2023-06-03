@@ -7,6 +7,17 @@ use super::{
 use crate::entity::user::USER_TABLE;
 use std::fmt::Debug;
 
+pub const ULID_STRING_LENGTH: usize = 26;
+
+// Fields
+pub const INTERNAL_ID_FIELD: &str = "internal_id";
+pub const ID_FIELD: &str = "id";
+pub const CREATOR_FIELD: &str = "creator_id";
+pub const EDITOR_FIELD: &str = "editor_id";
+pub const CREATED_AT_FIELD: &str = "created_at";
+pub const UPDATED_AT_FIELD: &str = "updated_at";
+pub const DELETED_AT_FIELD: &str = "deleted_at";
+
 #[derive(Debug)]
 pub struct BaseTable {
     pub name: String,
@@ -148,38 +159,40 @@ impl BaseTable {
         let name = to_fk_column(foreign_table);
 
         self.column_string(name, |column| {
-            column.set_type(ColumnType::Char(16));
+            column.set_type(ColumnType::Char(ULID_STRING_LENGTH));
             if cascade_delete {
-                column.references_with_cascade_delete(foreign_table, "id");
+                column.references_with_cascade_delete(foreign_table, ID_FIELD);
             } else {
-                column.references_without_cascade_delete(foreign_table, "id");
+                column.references_without_cascade_delete(foreign_table, ID_FIELD);
             }
         })
     }
 
     pub fn ulid(&mut self, name: &'static str) -> &mut BaseColumn {
-        self.char(name, 26)
+        self.char(name, ULID_STRING_LENGTH)
     }
 
     pub fn id_set(&mut self) {
-        self.id(Some("internal_id"));
-        self.ulid("id").set_is_unique(true).set_is_nullable(false);
+        self.id(Some(INTERNAL_ID_FIELD));
+        self.ulid(ID_FIELD)
+            .set_is_unique(true)
+            .set_is_nullable(false);
     }
 
     pub fn id(&mut self, name: Option<&'static str>) -> &mut BaseColumn {
-        self.column(name.unwrap_or("id"), |column| {
+        self.column(name.unwrap_or(ID_FIELD), |column| {
             column.set_type(ColumnType::AutoIncrementId);
         })
     }
 
     pub fn created_at(&mut self) -> &mut BaseColumn {
-        self.date("created_at")
+        self.date(CREATED_AT_FIELD)
             .set_is_nullable(false)
             .default_is_created_at()
     }
 
     pub fn updated_at(&mut self) -> &mut BaseColumn {
-        self.date("updated_at")
+        self.date(UPDATED_AT_FIELD)
             .set_is_nullable(false)
             .default_is_updated_at()
     }
@@ -191,18 +204,18 @@ impl BaseTable {
 
     pub fn blame(&mut self) {
         let mut _creator = self
-            .ulid("creator")
+            .ulid(CREATOR_FIELD)
             .set_is_nullable(false)
-            .references_without_cascade_delete(USER_TABLE, "id");
+            .references_without_cascade_delete(USER_TABLE, ID_FIELD);
 
         let mut _editor = self
-            .ulid("editor")
+            .ulid(EDITOR_FIELD)
             .set_is_nullable(true)
-            .references_without_cascade_delete(USER_TABLE, "id");
+            .references_without_cascade_delete(USER_TABLE, ID_FIELD);
     }
 
     pub fn soft_deletable(&mut self) -> &mut BaseColumn {
-        self.date("deleted_at").set_is_nullable(true)
+        self.date(DELETED_AT_FIELD).set_is_nullable(true)
     }
 
     pub fn is_new(&self) -> bool {
