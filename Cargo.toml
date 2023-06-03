@@ -5,7 +5,23 @@ members = [
   "lib/dirtybase_db",
   "lib/dirtybase_db_macro",
   "lib/dirtybase_db_internal",
+  "bin/dirtybase-tos/front",
+  "bin/dirtybase-tos/app",
+  "bin/dirtybase-tos/server",
 ]
+# resolver = "2"
+
+[[workspace.metadata.leptos]]
+name = "dirtybase-tos"
+bin-package = "dirtybase-tos-server"
+lib-package = "dirtybase-tos-front"
+
+# need to be applied only to wasm build
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 'z'
+
 
 [workspace.dependencies]
 actix-web = "4.3.0"
@@ -44,3 +60,11 @@ sha2 = "0.10"
 quote = "1.0"
 syn = { version = "2.0", features = ["extra-traits"] }
 # cookie = { version = "0.17", features= ["default", "secure-cookies"] }
+#------------------------------
+leptos = { version = "0.3", default-features = false, features = ["stable"] }
+leptos_meta = { version = "0.3", default-features = false }
+leptos_router = { version = "0.3", default-features = false, features = [
+  "stable",
+] }
+leptos_dom = { version = "0.3", default-features = false }
+leptos_actix = { version = "0.3" }

@@ -1,11 +1,13 @@
 # DirtyBase
 
 
-## Developing
-To run the application and watch for code changes run the following command in the application's root folder.
+## Packages 
+Prefix commands with: `RUST_LOG=debug`
 
-`cargo watch -c -q -x "run -p dirtybase -- serve" `
-
-If you want to display logs run the following command from the application's root folder.
-
-`RUST_LOG=debug cargo watch -c -q -x "run -p dirtybase -- serve" `
+|Package|Path | Type | Commands|
+|-------|----|------|---------|
+| dirtybase| bin/dirtybase | bin | `cargo watch -c -q -x "run -p dirtybase -- serve" `
+| dirtybase_tos | bin/dirtybase_tos | bin| `cargo leptos watch -p dirtybase-tos` 
+| dirtybase_db  | lib/dirtybase_db | lib | N/A
+| dirtybase_db_internal | lib/dirtybase_db_internal | lib| N/A
+| dirtybase_db_macro | lib/dirtybase_db_macro | lib | N/A
