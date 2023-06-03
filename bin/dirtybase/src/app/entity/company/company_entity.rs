@@ -95,6 +95,7 @@ impl IntoColumnAndValue for CompanyEntity {
             .try_to_insert(COMPANY_TABLE_CORE_USER_ID_FIELD, self.core_user_id)
             .try_to_insert(COMPANY_TABLE_CREATOR_FIELD, self.creator_id)
             .try_to_insert(COMPANY_TABLE_EDITOR_FIELD, self.editor_id)
+            .try_to_insert(COMPANY_TABLE_DELETED_AT_FIELD, self.deleted_at)
             .build()
     }
 }
