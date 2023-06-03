@@ -26,10 +26,6 @@ impl CompanyService {
         company_user: UserEntity,
         blame: UserEntity,
     ) -> Result<CompanyEntity, anyhow::Error> {
-        if company.id.is_none() {
-            company.id = Some(generate_ulid());
-        }
-
         // TODO: validate the record
         if company.name.is_none() {
             return Err(anyhow!("Name field is required")); // TODO: Insert this in map and return all the errors at once?
@@ -43,6 +39,10 @@ impl CompanyService {
             return Err(anyhow!("Company entity requires a user to blame"));
         }
 
+        // prep
+        if company.id.is_none() {
+            company.id = Some(generate_ulid());
+        }
         company.core_user_id = Some(company_user.id.unwrap());
         company.creator_id = Some(blame.id.unwrap());
 
