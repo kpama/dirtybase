@@ -16,7 +16,8 @@ pub struct QueryBuilder {
     where_clauses: Vec<WhereJoinOperator>,
     tables: Vec<String>,
     select_columns: Option<Vec<String>>,
-    set_columns: Option<HashMap<String, FieldValue>>,
+    set_columns: Option<HashMap<String, FieldValue>>, // TODO: refactored name !!!
+    all_columns: bool,
     joins: Option<Vec<JoinQueryBuilder>>,
 }
 
@@ -27,6 +28,7 @@ impl QueryBuilder {
             tables,
             select_columns: None,
             set_columns: None,
+            all_columns: false,
             joins: None,
         }
     }
@@ -41,6 +43,15 @@ impl QueryBuilder {
 
     pub fn set_columns(&self) -> &Option<HashMap<String, FieldValue>> {
         &self.set_columns
+    }
+
+    pub fn all_columns(&self) -> bool {
+        self.all_columns
+    }
+
+    pub fn select_all(&mut self) -> &mut Self {
+        self.all_columns = true;
+        self
     }
 
     pub fn joins(&self) -> &Option<Vec<JoinQueryBuilder>> {
@@ -87,9 +98,7 @@ impl QueryBuilder {
     }
 
     pub fn select(&mut self, column: &str) -> &mut Self {
-        if self.select_columns.is_none() {
-            self.select_columns = Some(Vec::new());
-        }
+        self.init_select_columns_vec();
 
         if let Some(columns) = &mut self.select_columns {
             columns.push(column.to_owned());
@@ -99,10 +108,7 @@ impl QueryBuilder {
     }
 
     pub fn select_multiple(&mut self, columns: &[&str]) -> &mut Self {
-        if self.select_columns.is_none() {
-            self.select_columns = Some(Vec::new());
-        }
-
+        self.init_select_columns_vec();
         if let Some(existing) = &mut self.select_columns {
             existing.extend(
                 columns
@@ -115,14 +121,17 @@ impl QueryBuilder {
         self
     }
 
+    // WHERE field equals value
     pub fn eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::Equal, value, None)
     }
 
+    // AND WHERE field equals value
     pub fn and_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::Equal, value, Some(WhereJoin::And))
     }
 
+    // OR WHERE field equals value
     pub fn or_eq<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
         self.where_operator(column, Operator::Equal, value, Some(WhereJoin::Or))
     }
@@ -587,5 +596,12 @@ impl QueryBuilder {
             JoinType::Right,
             Some(select_columns),
         )
+    }
+
+    fn init_select_columns_vec(&mut self) {
+        if self.select_columns.is_none() {
+            self.select_columns = Some(Vec::new());
+            self.all_columns = false;
+        }
     }
 }
