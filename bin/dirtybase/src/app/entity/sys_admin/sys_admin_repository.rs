@@ -1,0 +1,53 @@
+use super::{SysAdminEntity, SYS_ADMIN_TABLE, SYS_ADMIN_TABLE_USER_ID_FIELD};
+use dirtybase_db::base::{
+    field_values::FieldValue, manager::Manager, types::FromColumnAndValue,
+    types::IntoColumnAndValue,
+};
+
+pub struct SysAdminRepository {
+    manager: Manager,
+}
+
+impl SysAdminRepository {
+    pub fn new(manager: Manager) -> Self {
+        Self { manager }
+    }
+
+    pub fn manager(&self) -> &Manager {
+        &self.manager
+    }
+
+    pub fn manager_mut(&mut self) -> &mut Manager {
+        &mut self.manager
+    }
+
+    pub async fn find_by_user_id(&mut self, id: &str) -> Result<SysAdminEntity, anyhow::Error> {
+        match self
+            .manager_mut()
+            .select_from_table(SYS_ADMIN_TABLE, |q| {
+                q.select_all().eq(SYS_ADMIN_TABLE_USER_ID_FIELD, id);
+            })
+            .fetch_one_as_field_value()
+            .await
+        {
+            Ok(result) => Ok(SysAdminEntity::from_column_value(result)),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn create(
+        &mut self,
+        record: impl IntoColumnAndValue,
+    ) -> Result<SysAdminEntity, anyhow::Error> {
+        let kv = record.into_column_value();
+        let user_id: String =
+            FieldValue::from_ref_option_into(kv.get(SYS_ADMIN_TABLE_USER_ID_FIELD));
+
+        self.manager.insert_record(SYS_ADMIN_TABLE, kv).await;
+        self.find_by_user_id(&user_id).await
+    }
+
+    pub async fn delete(&mut self, _user_id: &str) -> Result<bool, anyhow::Error> {
+        unimplemented!("We cannot delete using the manager"); // TODO: db manager needs handle create, update and delete separately
+    }
+}
