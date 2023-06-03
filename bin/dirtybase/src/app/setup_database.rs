@@ -1,4 +1,7 @@
-use super::entity::{app::setup_applications_table, company::setup_company_table};
+use super::entity::{
+    app::setup_applications_table, company::setup_company_table, role::setup_roles_table,
+    role_user::setup_role_users_table, sys_admin::setup_sysadmins_table,
+};
 use dirtybase_db::{
     base::{helper::to_fk_column, manager::Manager},
     entity::user::{setup_users_table, USER_TABLE},
@@ -6,9 +9,6 @@ use dirtybase_db::{
 
 pub const APPLICATION_TABLE: &str = "core_app";
 pub const APPLICATION_SCHEMA_TABLE: &str = "core_app_schema";
-pub const ROLE_TABLE: &str = "core_app_role";
-pub const ROLE_USER_TABLE: &str = "core_role_user";
-pub const SYS_ADMIN_TABLE: &str = "core_sys_admin";
 pub const MIGRATION_TABLE: &str = "core_migration";
 pub const FILE_METADATA_TABLE: &str = "core_file_meta";
 
@@ -36,71 +36,9 @@ async fn setup_schema_table(manager: &Manager) {
 }
 
 // The global roles table
-async fn setup_roles_table(manager: &Manager) {
-    if !manager.has_table(USER_TABLE).await {
-        log::error!("{} is require to create {} table", USER_TABLE, ROLE_TABLE);
-    }
-
-    manager
-        .create_table_schema(ROLE_TABLE, |table| {
-            // internal_id
-            // id
-            table.id_set();
-            // application
-            table.ulid_fk(APPLICATION_TABLE, true);
-            // name
-            table.string("name");
-            // blame
-            table.blame();
-            // timestamps
-            table.timestamps();
-            // soft delete
-            table.soft_deletable();
-        })
-        .await;
-}
 
 // A user role
-async fn setup_role_users_table(manager: &Manager) {
-    manager
-        .create_table_schema(ROLE_USER_TABLE, |table| {
-            // role id
-            table.ulid_fk(ROLE_TABLE, true);
-            // user id
-            table.ulid_fk(USER_TABLE, true);
-            // blame
-            table.blame();
-            // timestamps
-            table.timestamps();
-
-            // primary key
-            let keys = vec![to_fk_column(ROLE_TABLE), to_fk_column(USER_TABLE)];
-            table.primary_index(
-                keys.iter()
-                    .map(AsRef::as_ref)
-                    .collect::<Vec<&str>>()
-                    .as_slice(),
-            );
-        })
-        .await;
-}
-
 // System administrator table
-async fn setup_sysadmins_table(manager: &Manager) {
-    manager
-        .create_table_schema(SYS_ADMIN_TABLE, |table| {
-            table.ulid_fk(USER_TABLE, true);
-            // status
-            table.string("status");
-            // blame
-            table.blame();
-            // timestamps
-            table.timestamps();
-            // soft delete
-            table.soft_deletable();
-        })
-        .await;
-}
 
 // The table that will hold migration information
 async fn setup_migration_table(manager: &Manager) {
