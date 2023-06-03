@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
 
+mod field_value_from_chrono_datetime;
 mod field_value_from_f32;
 mod field_value_from_f64;
 mod field_value_from_i32;
