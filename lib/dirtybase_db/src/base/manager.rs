@@ -73,12 +73,14 @@ impl Manager {
         self.schema.commit(table).await;
     }
 
+    // TODO: Return a result ...
     pub async fn insert_record(&self, table_name: &str, column_and_values: ColumnAndValue) {
         let mut query = QueryBuilder::new(vec![table_name.to_owned()]);
         query.set_multiple(column_and_values);
         self.schema.save(query).await;
     }
 
+    // TODO: Return a result ...
     pub async fn save_record(
         &self,
         table_name: &str,
