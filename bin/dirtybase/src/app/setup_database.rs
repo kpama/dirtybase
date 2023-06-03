@@ -1,4 +1,4 @@
-use super::entity::company::{setup_company_table, COMPANY_TABLE};
+use super::entity::{app::setup_applications_table, company::setup_company_table};
 use dirtybase_db::{
     base::{helper::to_fk_column, manager::Manager},
     entity::user::{setup_users_table, USER_TABLE},
@@ -13,28 +13,6 @@ pub const MIGRATION_TABLE: &str = "core_migration";
 pub const FILE_METADATA_TABLE: &str = "core_file_meta";
 
 // The table that will hold company's tenets
-
-async fn setup_applications_table(manager: &Manager) {
-    manager
-        .create_table_schema(APPLICATION_TABLE, |table| {
-            // internal_id
-            // id
-            table.id_set();
-            // company_id
-            table.ulid_fk(COMPANY_TABLE, true);
-            // name
-            table.string("name");
-            //description
-            table.sized_string("description", 512).set_is_nullable(true);
-            // blame
-            table.blame();
-            // timestamp
-            table.timestamps();
-            // soft delete
-            table.soft_deletable();
-        })
-        .await
-}
 
 // The table that will contain the "collections" definitions
 async fn setup_schema_table(manager: &Manager) {
