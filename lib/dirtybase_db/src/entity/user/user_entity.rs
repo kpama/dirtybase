@@ -94,6 +94,7 @@ impl IntoColumnAndValue for UserEntity {
             .try_to_insert(USER_TABLE_PASSWORD_FIELD, self.password)
             .try_to_insert(USER_TABLE_STATUS_FIELD, self.status)
             .try_to_insert(USER_TABLE_RESET_PASSWORD_FIELD, self.reset_password)
+            .try_to_insert(USER_TABLE_DELETED_AT_FIELD, self.deleted_at)
             .build()
     }
 }
