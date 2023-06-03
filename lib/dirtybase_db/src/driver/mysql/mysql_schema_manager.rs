@@ -419,7 +419,11 @@ impl MySqlSchemaManager {
         // fields
         match query.select_columns() {
             Some(fields) => sql = format!("{} {}", sql, fields.join(",")),
-            None => (),
+            None => {
+                if query.all_columns() {
+                    sql = format!("{} *", sql) // Select all columns by default
+                }
+            }
         };
 
         // join fields
