@@ -1,5 +1,8 @@
 use super::entity::app::{AppRepository, AppService};
 use super::entity::company::{CompanyRepository, CompanyService};
+use super::entity::role::{RoleRepository, RoleService};
+use super::entity::role_user::{RoleUserRepository, RoleUserService};
+use super::entity::sys_admin::{SysAdminRepository, SysAdminService};
 use super::setup_database::create_data_tables;
 use super::setup_defaults::setup_default_entities;
 use super::Config;
@@ -61,6 +64,18 @@ impl DirtyBase {
 
     pub fn app_service(&self) -> AppService {
         AppService::new(AppRepository::new(self.schema_manger()))
+    }
+
+    pub fn role_service(&self) -> RoleService {
+        RoleService::new(RoleRepository::new(self.schema_manger()))
+    }
+
+    pub fn sys_admin_service(&self) -> SysAdminService {
+        SysAdminService::new(SysAdminRepository::new(self.schema_manger()))
+    }
+
+    pub fn role_user_service(&self) -> RoleUserService {
+        RoleUserService::new(RoleUserRepository::new(self.schema_manger()))
     }
 
     pub async fn db_setup(&self) {
