@@ -14,8 +14,9 @@ use crate::base::{
     ColumnAndValueBuilder,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserEntity {
+    #[serde(skip)]
     pub internal_id: Option<u64>,
     pub id: Option<String>,
     pub username: Option<String>,
@@ -23,8 +24,11 @@ pub struct UserEntity {
     pub reset_password: Option<bool>,
     pub status: Option<UserStatus>,
     pub password: Option<String>,
+    #[serde(skip_deserializing)]
     pub created_at: Option<DateTime<Utc>>,
+    #[serde(skip_deserializing)]
     pub updated_at: Option<DateTime<Utc>>,
+    #[serde(skip_deserializing)]
     pub deleted_at: Option<DateTime<Utc>>,
 }
 
