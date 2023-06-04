@@ -9,7 +9,7 @@ members = [
   "bin/dirtybase-tos/app",
   "bin/dirtybase-tos/server",
 ]
-# resolver = "2"
+resolver = "2"
 
 [[workspace.metadata.leptos]]
 name = "dirtybase-tos"
