@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 use super::{
     UserStatus, USER_TABLE_CREATED_AT_FIELD, USER_TABLE_DELETED_AT_FIELD, USER_TABLE_EMAIL_FIELD,
