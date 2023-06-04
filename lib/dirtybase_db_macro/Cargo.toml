@@ -12,3 +12,4 @@ proc-macro = true
 dirtybase_db_internal = { path = "../dirtybase_db_internal" }
 quote = { workspace = true }
 syn = { workspace = true }
+sqlx = { workspace = true }
