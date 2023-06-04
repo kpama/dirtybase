@@ -2,10 +2,7 @@ use super::entity::{
     app::setup_applications_table, company::setup_company_table, role::setup_roles_table,
     role_user::setup_role_users_table, sys_admin::setup_sysadmins_table,
 };
-use dirtybase_db::{
-    base::{helper::to_fk_column, manager::Manager},
-    entity::user::{setup_users_table, USER_TABLE},
-};
+use dirtybase_db::{base::manager::Manager, entity::user::setup_users_table};
 
 pub const APPLICATION_TABLE: &str = "core_app";
 pub const APPLICATION_SCHEMA_TABLE: &str = "core_app_schema";
@@ -73,41 +70,7 @@ async fn setup_file_metadata_table(manager: &Manager) {
         .await;
 }
 
-async fn create_default_records(mut manager: &mut Manager) {
-    // default user
-    // let mut user = UserEntity::from_env();
-    // if !user.exist(&mut manager).await {
-    //     user.id = generate_ulid();
-    //     let mut default_user = HashMap::<String, String>::new();
-    //     default_user.insert("id".into(), generate_ulid());
-    //     default_user.insert("username".into(), user.username.clone());
-    //     default_user.insert("email".into(), user.email.clone());
-
-    //     if !user.hashed_password().is_empty() {
-    //         default_user.insert("password".into(), user.hashed_password());
-    //     }
-
-    //     manager.insert_record(USER_TABLE, default_user).await;
-    // }
-
-    // // default company
-    // let company = CompanyEntity::from_env();
-    // if !company.exist(manager).await {
-    //     let default_company = InsertValueBuilder::new()
-    //         .add("id", generate_ulid())
-    //         .add("name", &company.name)
-    //         .add("creator", generate_ulid())
-    //         .build();
-
-    //     manager.insert_record(COMPANY_TABLE, default_company).await;
-    //     println!("{:?}", &company.name)
-    // }
-
-    // default app
-    // default roles
-}
-
-pub(crate) async fn create_data_tables(mut manager: Manager) {
+pub(crate) async fn create_data_tables(manager: Manager) {
     setup_users_table(&manager).await;
     setup_migration_table(&manager).await;
     setup_file_metadata_table(&manager).await;
@@ -117,5 +80,4 @@ pub(crate) async fn create_data_tables(mut manager: Manager) {
     setup_roles_table(&manager).await;
     setup_role_users_table(&manager).await;
     setup_sysadmins_table(&manager).await;
-    create_default_records(&mut manager).await;
 }

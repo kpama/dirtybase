@@ -7,8 +7,6 @@ use super::{
 use crate::base::{
     field_values::FieldValue,
     manager::Manager,
-    query::QueryBuilder,
-    schema::SchemaManagerTrait,
     types::{FromColumnAndValue, IntoColumnAndValue},
 };
 

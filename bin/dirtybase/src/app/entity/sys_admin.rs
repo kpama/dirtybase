@@ -2,15 +2,7 @@
 //!
 //! The default user as setup time is placed in this list.
 
-use dirtybase_db::{
-    base::{
-        manager::Manager,
-        table::{
-            CREATED_AT_FIELD, CREATOR_FIELD, DELETED_AT_FIELD, EDITOR_FIELD, UPDATED_AT_FIELD,
-        },
-    },
-    entity::user::USER_TABLE,
-};
+use dirtybase_db::{base::manager::Manager, entity::user::USER_TABLE};
 
 mod sys_admin_entity;
 mod sys_admin_repository;
