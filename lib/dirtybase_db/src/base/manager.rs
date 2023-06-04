@@ -32,7 +32,7 @@ impl Manager {
     where
         F: FnMut(&mut QueryBuilder),
     {
-        let mut query = QueryBuilder::new(tables);
+        let mut query = QueryBuilder::new(tables, super::query::QueryAction::Query);
         callback(&mut query);
         self.schema.query(query)
     }
@@ -66,7 +66,10 @@ impl Manager {
         from_table: &str,
         mut callback: impl FnMut(&mut QueryBuilder),
     ) {
-        let mut query = QueryBuilder::new(vec![from_table.to_owned()]);
+        let mut query = QueryBuilder::new(
+            vec![from_table.to_owned()],
+            super::query::QueryAction::Query,
+        );
         callback(&mut query);
         let mut table = self.schema.fetch_table_for_update(name);
         table.view_query = Some(query);
@@ -74,23 +77,38 @@ impl Manager {
     }
 
     // TODO: Return a result ...
-    pub async fn insert_record(&self, table_name: &str, column_and_values: ColumnAndValue) {
-        let mut query = QueryBuilder::new(vec![table_name.to_owned()]);
+    pub async fn insert(&self, table_name: &str, column_and_values: ColumnAndValue) {
+        let mut query = QueryBuilder::new(
+            vec![table_name.to_owned()],
+            super::query::QueryAction::Create,
+        );
         query.set_multiple(column_and_values);
-        self.schema.save(query).await;
+        self.schema.execute(query).await;
     }
 
     // TODO: Return a result ...
-    pub async fn save_record(
+    pub async fn update(
         &self,
         table_name: &str,
         column_and_values: ColumnAndValue,
         mut callback: impl FnMut(&mut QueryBuilder),
     ) {
-        let mut query = QueryBuilder::new(vec![table_name.to_owned()]);
+        let mut query = QueryBuilder::new(
+            vec![table_name.to_owned()],
+            super::query::QueryAction::Update,
+        );
         query.set_multiple(column_and_values);
         callback(&mut query);
-        self.schema.save(query).await;
+        self.schema.execute(query).await;
+    }
+
+    pub async fn delete(&self, table_name: &str, mut callback: impl FnMut(&mut QueryBuilder)) {
+        let mut query = QueryBuilder::new(
+            vec![table_name.to_owned()],
+            super::query::QueryAction::Delete,
+        );
+        callback(&mut query);
+        self.schema.execute(query).await;
     }
 
     pub async fn has_table(&self, name: &str) -> bool {
