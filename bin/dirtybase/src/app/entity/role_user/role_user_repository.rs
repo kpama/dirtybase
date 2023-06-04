@@ -59,7 +59,7 @@ impl RoleUserRepository {
         let app_id: String =
             FieldValue::from_ref_option_into(kv.get(ROLE_USER_TABLE_CORE_APP_ROLE_ID_FIELD));
 
-        self.manager.insert_record(ROLE_USER_TABLE, kv).await;
+        self.manager.insert(ROLE_USER_TABLE, kv).await;
         self.find_by_user_and_app_ids(&user_id, &app_id, false)
             .await
     }
@@ -76,7 +76,7 @@ impl RoleUserRepository {
             FieldValue::from_ref_option_into(kv.get(ROLE_USER_TABLE_CORE_APP_ROLE_ID_FIELD));
 
         self.manager
-            .save_record(ROLE_USER_TABLE, kv, |q| {
+            .update(ROLE_USER_TABLE, kv, |q| {
                 q.eq(ROLE_USER_TABLE_CORE_USER_ID_FIELD, &user_id)
                     .eq(ROLE_USER_TABLE_CORE_APP_ROLE_ID_FIELD, &app_id);
             })

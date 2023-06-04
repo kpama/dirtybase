@@ -43,11 +43,16 @@ impl SysAdminRepository {
         let user_id: String =
             FieldValue::from_ref_option_into(kv.get(SYS_ADMIN_TABLE_USER_ID_FIELD));
 
-        self.manager.insert_record(SYS_ADMIN_TABLE, kv).await;
+        self.manager.insert(SYS_ADMIN_TABLE, kv).await;
         self.find_by_user_id(&user_id).await
     }
 
-    pub async fn delete(&mut self, _user_id: &str) -> Result<bool, anyhow::Error> {
-        unimplemented!("We cannot delete using the manager"); // TODO: db manager needs handle create, update and delete separately
+    pub async fn delete(&mut self, user_id: &str) -> Result<bool, anyhow::Error> {
+        self.manager
+            .delete(SYS_ADMIN_TABLE, |q| {
+                q.eq(SYS_ADMIN_TABLE_USER_ID_FIELD, user_id);
+            })
+            .await;
+        Ok(true)
     }
 }

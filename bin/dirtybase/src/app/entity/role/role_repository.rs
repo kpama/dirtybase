@@ -53,7 +53,7 @@ impl RoleRepository {
         let kv = record.into_column_value();
         let id: String = FieldValue::from_ref_option_into(kv.get(ROLE_TABLE_ID_FIELD));
 
-        self.manager.insert_record(ROLE_TABLE, kv).await;
+        self.manager.insert(ROLE_TABLE, kv).await;
         self.find_by_id(&id, false).await
     }
 
@@ -64,7 +64,7 @@ impl RoleRepository {
     ) -> Result<RoleEntity, anyhow::Error> {
         let column_and_values = record.into_column_value();
         self.manager
-            .save_record(ROLE_TABLE, column_and_values, |q| {
+            .update(ROLE_TABLE, column_and_values, |q| {
                 q.eq(ROLE_TABLE_ID_FIELD, id);
             })
             .await;

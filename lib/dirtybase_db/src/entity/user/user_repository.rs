@@ -106,9 +106,7 @@ impl UserRepository {
         let column_and_values = record.into_column_value();
         let id: String =
             FieldValue::from_ref_option_into(column_and_values.get(USER_TABLE_ID_FIELD));
-        self.manager
-            .insert_record(USER_TABLE, column_and_values)
-            .await;
+        self.manager.insert(USER_TABLE, column_and_values).await;
 
         self.find_on_by_id(&id).await
     }
@@ -121,7 +119,7 @@ impl UserRepository {
     ) -> Result<UserEntity, anyhow::Error> {
         let kv = record.into_column_value();
         self.manager
-            .save_record(USER_TABLE, kv, move |q| {
+            .update(USER_TABLE, kv, move |q| {
                 q.eq(USER_TABLE_ID_FIELD, id);
             })
             .await;
