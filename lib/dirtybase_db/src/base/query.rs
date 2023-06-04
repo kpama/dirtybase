@@ -11,6 +11,14 @@ pub enum WhereJoin {
     Or,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum QueryAction {
+    Query,
+    Create,
+    Update,
+    Delete,
+}
+
 #[derive(Debug)]
 pub struct QueryBuilder {
     where_clauses: Vec<WhereJoinOperator>,
@@ -19,10 +27,11 @@ pub struct QueryBuilder {
     set_columns: Option<HashMap<String, FieldValue>>, // TODO: refactored name !!!
     all_columns: bool,
     joins: Option<Vec<JoinQueryBuilder>>,
+    action: QueryAction,
 }
 
 impl QueryBuilder {
-    pub fn new(tables: Vec<String>) -> Self {
+    pub fn new(tables: Vec<String>, action: QueryAction) -> Self {
         Self {
             where_clauses: Vec::new(),
             tables,
@@ -30,7 +39,12 @@ impl QueryBuilder {
             set_columns: None,
             all_columns: false,
             joins: None,
+            action,
         }
+    }
+
+    pub fn action(&self) -> QueryAction {
+        self.action
     }
 
     pub fn tables(&self) -> &Vec<String> {
