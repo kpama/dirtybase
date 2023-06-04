@@ -42,7 +42,7 @@ pub trait SchemaManagerTrait {
     // build a select query
     fn query(&mut self, query_builder: QueryBuilder) -> &dyn SchemaManagerTrait;
 
-    async fn save(&self, query_builder: QueryBuilder);
+    async fn execute(&self, query_builder: QueryBuilder);
 
     async fn fetch_all_as_json(&self) -> Result<Vec<serde_json::Value>, anyhow::Error>;
 
