@@ -1,7 +1,7 @@
 use crate::base::{
     column::{BaseColumn, ColumnDefault, ColumnType},
     field_values::FieldValue,
-    query::QueryBuilder,
+    query::{QueryAction, QueryBuilder},
     query_conditions::Condition,
     query_operators::Operator,
     query_values::QueryValue,
@@ -91,8 +91,8 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         self
     }
 
-    async fn save(&self, query: QueryBuilder) {
-        self.do_save(query).await
+    async fn execute(&self, query: QueryBuilder) {
+        self.do_execute(query).await
     }
 
     async fn fetch_all_as_json(&self) -> Result<Vec<serde_json::Value>, anyhow::Error> {
@@ -184,7 +184,7 @@ impl MySqlSchemaManager {
         }
     }
 
-    async fn do_save(&self, query: QueryBuilder) {
+    async fn do_execute(&self, query: QueryBuilder) {
         let mut columns = Vec::new();
         let mut params = Vec::new();
         if let Some(list) = query.set_columns() {
@@ -197,31 +197,41 @@ impl MySqlSchemaManager {
         }
 
         let mut sql;
-        if !query.where_clauses().is_empty() {
-            sql = format!("UPDATE `{}` SET ", query.tables().join(","));
-            for entry in columns.iter().enumerate() {
-                if entry.0 > 0 {
-                    sql = format!("{}, `{}` = ? ", sql, *entry.1);
-                } else {
-                    sql = format!("{} `{}` = ? ", sql, *entry.1);
+        match query.action() {
+            QueryAction::Create => {
+                sql = format!("INSERT INTO {} (", query.tables().join(","));
+                for entry in columns.iter().enumerate() {
+                    if entry.0 > 0 {
+                        sql = format!("{}, `{}`", sql, *entry.1);
+                    } else {
+                        sql = format!("{} `{}`", sql, *entry.1);
+                    }
                 }
+                sql = format!(
+                    "{} ) VALUES ({})",
+                    sql,
+                    params.iter().map(|_| "?").collect::<Vec<&str>>().join(",")
+                );
             }
+            QueryAction::Update => {
+                sql = format!("UPDATE `{}` SET ", query.tables().join(","));
+                for entry in columns.iter().enumerate() {
+                    if entry.0 > 0 {
+                        sql = format!("{}, `{}` = ? ", sql, *entry.1);
+                    } else {
+                        sql = format!("{} `{}` = ? ", sql, *entry.1);
+                    }
+                }
 
-            sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
-        } else {
-            sql = format!("INSERT INTO {} (", query.tables().join(","));
-            for entry in columns.iter().enumerate() {
-                if entry.0 > 0 {
-                    sql = format!("{}, `{}`", sql, *entry.1);
-                } else {
-                    sql = format!("{} `{}`", sql, *entry.1);
-                }
+                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
             }
-            sql = format!(
-                "{} ) VALUES ({})",
-                sql,
-                params.iter().map(|_| "?").collect::<Vec<&str>>().join(",")
-            );
+            QueryAction::Delete => {
+                sql = format!("DELETE FROM {} (", query.tables().join(","));
+                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
+            }
+            _ => {
+                sql = "".into();
+            }
         }
 
         let mut query_statement = sqlx::query(&sql);
