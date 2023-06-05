@@ -307,8 +307,6 @@ impl SqliteSchemaManager {
             )
         }
 
-        dbg!(&query);
-
         let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
 
         match result {
