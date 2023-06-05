@@ -29,7 +29,7 @@ impl Field {
     pub fn new(name: &str, field_type: FieldType) -> Self {
         Self {
             name: name.into(),
-            field_type: field_type.clone(),
+            field_type: field_type,
             multiple: match field_type {
                 FieldType::MultiSelect | FieldType::MultiRelation | FieldType::MultiFile => true,
                 _ => false,
