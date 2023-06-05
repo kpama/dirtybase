@@ -10,20 +10,6 @@ pub use config::Config;
 pub use config::ConfigBuilder;
 pub mod setup_defaults;
 
-/// Loads configuration from .env files.
-/// Multiple .env files are check in the following order
-///  - .env.defaults
-///  - .env
-///  - .env.dev
-///  - .env.prod
-/// Values are merged from these files
-fn load_dot_env() {
-    let _ = dotenv::from_filename(".env.defaults");
-    let _ = dotenv::from_filename(".env");
-    let _ = dotenv::from_filename(".env.dev");
-    let _ = dotenv::from_filename(".env.prod");
-}
-
 /// Setup database application using configs in .env files
 pub async fn setup() -> dirtybase::DirtyBase {
     let config = Config::default();
@@ -41,7 +27,6 @@ pub async fn setup() -> dirtybase::DirtyBase {
 /// ```
 ///
 pub async fn setup_using(config: Config) -> dirtybase::DirtyBase {
-    load_dot_env();
     match dirtybase::DirtyBase::new(config).await {
         Ok(app) => {
             app.db_setup().await;
