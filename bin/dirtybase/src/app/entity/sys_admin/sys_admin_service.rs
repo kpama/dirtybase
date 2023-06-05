@@ -25,7 +25,6 @@ impl SysAdminService {
     pub async fn add_user(&mut self, user_id: &str) -> Result<SysAdminEntity, anyhow::Error> {
         let mut sys_admin = self.new_sys_admin();
         sys_admin.core_user_id = Some(user_id.into());
-        log::error!("we got this far ------------------>");
         self.create(sys_admin).await
     }
 
