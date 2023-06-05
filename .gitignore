@@ -1,3 +1,6 @@
 /target
 .env
+/public/*
 !/public/index.html
+/data/*
+!/data/README.md
