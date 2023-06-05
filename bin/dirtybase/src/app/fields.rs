@@ -5,6 +5,7 @@ pub enum FieldType {
     Text,
     Editor,
     Number,
+    Decimal,
     Bool,
     Email,
     Url,
