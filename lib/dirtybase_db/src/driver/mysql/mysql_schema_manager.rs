@@ -344,7 +344,7 @@ impl MySqlSchemaManager {
         // column type
         match column.column_type {
             ColumnType::AutoIncrementId => {
-                the_type.push_str("bigint(20) unsigned AUTO_INCREMENT PRIMARY KEY")
+                the_type.push_str("bigint(20) AUTO_INCREMENT PRIMARY KEY")
             }
             ColumnType::Boolean => the_type.push_str("tinyint(1)"),
             ColumnType::Char(length) => {
