@@ -7,51 +7,76 @@ use super::setup_database::create_data_tables;
 use super::setup_defaults::setup_default_entities;
 use super::Config;
 use actix_web::web;
-use dirtybase_db::base::schema::RelationalDbTrait;
+use dirtybase_db::base::connection::ConnectionPoolRegisterTrait;
+use dirtybase_db::base::manager::Manager;
+use dirtybase_db::driver::mysql::mysql_pool_manager::MySqlPoolManagerRegisterer;
+use dirtybase_db::driver::sqlite::sqlite_pool_manager::SqlitePoolManagerRegisterer;
 use dirtybase_db::entity::user::{UserRepository, UserService};
-use dirtybase_db::{base, driver::mysql::mysql_schema_manager::MySqlSchemaManager};
+use dirtybase_db::ConnectionPoolManager;
 use hmac::{Hmac, Mac};
 use jwt::SignWithKey;
 use jwt::VerifyWithKey;
 use sha2::Sha256;
 use sqlx::{any::AnyKind, mysql::MySqlPoolOptions, MySql, Pool};
 use std::collections::HashMap;
-use std::{str::FromStr, sync::Arc};
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct DirtyBase {
-    db_pool: Arc<Pool<MySql>>,
-    kind: AnyKind,
+    default_db: String,
     hmac_key: Option<Hmac<Sha256>>,
     config: Config,
+    pool_manager: ConnectionPoolManager,
 }
 
 pub type DirtyBaseWeb = web::Data<DirtyBase>;
 
 impl DirtyBase {
     pub async fn new(config: Config) -> anyhow::Result<Self> {
-        let kind = AnyKind::from_str(config.db_connection()).unwrap_or(AnyKind::MySql);
+        let mut connection_pools: Vec<Box<dyn ConnectionPoolRegisterTrait>> = Vec::new();
+        let default;
+
+        match AnyKind::from_str(config.db_connection()) {
+            Ok(kind) => match kind {
+                AnyKind::MySql => {
+                    connection_pools.push(Box::new(MySqlPoolManagerRegisterer));
+                    default = "mysql"
+                }
+                AnyKind::Sqlite => {
+                    connection_pools.push(Box::new(SqlitePoolManagerRegisterer));
+                    default = "sqlite"
+                }
+            },
+            Err(_) => panic!("Could not determine database kind"),
+        }
+
+        let pool_manager = ConnectionPoolManager::new(
+            connection_pools,
+            default,
+            &config.db_connection(),
+            config.max_db_pool(),
+        )
+        .await;
 
         let instance = Self {
-            kind,
-            db_pool: Arc::new(db_connect(config.db_connection(), config.max_db_pool()).await?),
+            default_db: default.into(),
             hmac_key: match Hmac::new_from_slice(config.secret().as_bytes()) {
                 Ok(key) => Some(key),
                 Err(_) => None,
             },
+            pool_manager,
             config,
         };
 
         Ok(instance)
     }
 
-    pub fn kind(&self) -> &AnyKind {
-        &self.kind
+    pub fn default_db(&self) -> &String {
+        &self.default_db
     }
 
-    pub fn schema_manger(&self) -> base::manager::Manager {
-        let db = MySqlSchemaManager::instance(self.db_pool.clone());
-        base::manager::Manager::new(Box::new(db))
+    pub fn schema_manger(&self) -> Manager {
+        self.pool_manager.default_schema_manager().unwrap()
     }
 
     pub fn user_service(&self) -> UserService {
