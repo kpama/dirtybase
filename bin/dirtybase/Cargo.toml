@@ -10,7 +10,7 @@ dirtybase_db = { path = "../../lib/dirtybase_db" }
 actix-web = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }
-dotenv = { workspace = true }
+dotenvy = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { workspace = true }

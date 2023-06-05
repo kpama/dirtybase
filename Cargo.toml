@@ -59,6 +59,7 @@ jwt = "0.16.0"
 sha2 = "0.10"
 quote = "1.0"
 syn = { version = "2.0", features = ["extra-traits"] }
+dotenvy = "0.15"
 # cookie = { version = "0.17", features= ["default", "secure-cookies"] }
 #------------------------------
 leptos = { version = "0.3", default-features = false, features = ["stable"] }
