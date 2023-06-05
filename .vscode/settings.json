@@ -5,6 +5,7 @@
     "datetime",
     "dirtybase",
     "dotenv",
+    "dotenvy",
     "hmac",
     "replacen",
     "sqlx"
