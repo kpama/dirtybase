@@ -7,13 +7,13 @@ use chrono::{DateTime, Utc};
 use dirtybase_db::base::{
     field_values::FieldValue,
     helper::generate_ulid,
-    types::{FromColumnAndValue, IntoColumnAndValue},
+    types::{FromColumnAndValue, InternalIdField, IntoColumnAndValue},
     ColumnAndValueBuilder,
 };
 
 #[derive(Debug, Clone)]
 pub struct RoleEntity {
-    pub internal_id: Option<u64>,
+    pub internal_id: InternalIdField,
     pub id: Option<String>,
     pub name: Option<String>,
     pub core_app_id: Option<String>,

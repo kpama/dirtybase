@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use dirtybase_db::base::{
     field_values::FieldValue,
     helper::generate_ulid,
-    types::{FromColumnAndValue, IntoColumnAndValue},
+    types::{FromColumnAndValue, InternalIdField, IntoColumnAndValue},
     ColumnAndValueBuilder,
 };
 
@@ -15,7 +15,7 @@ use super::{
 
 #[derive(Debug, Clone)]
 pub struct CompanyEntity {
-    pub internal_id: Option<u64>,
+    pub internal_id: InternalIdField,
     pub id: Option<String>,
     pub name: Option<String>,
     pub description: Option<String>,
