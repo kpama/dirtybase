@@ -3,7 +3,6 @@ use super::{
     table::BaseTable,
     types::{ColumnAndValue, FromColumnAndValue},
 };
-use crate::driver::surreal::SurrealClient;
 use async_trait::async_trait;
 use sqlx::any::AnyKind;
 use std::sync::Arc;
@@ -13,16 +12,6 @@ pub trait RelationalDbTrait: SchemaManagerTrait {
     fn kind(&self) -> AnyKind;
 }
 
-pub trait SurrealDbTrait: SchemaManagerTrait {
-    fn instance(client: Arc<SurrealClient>) -> Self
-    where
-        Self: Sized;
-    fn inner_client(&self) -> Arc<SurrealClient>;
-}
-
-pub trait GraphDbClient<T = SurrealClient>: Send {
-    fn into_inner_client(&self) -> Arc<T>;
-}
 pub trait GraphDbTrait<T> {
     fn instance(client: Arc<T>) -> Self
     where
