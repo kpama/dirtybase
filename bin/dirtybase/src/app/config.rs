@@ -3,11 +3,21 @@
 use dirtybase_db::entity::user::hash_password;
 use std::env;
 
+/// Loads configuration from .env files.
+/// Multiple .env files are check in the following order
+///  - .env.defaults
+///  - .env
+///  - .env.dev
+///  - .env.prod
+/// Values are merged from these files
 fn load_dot_env() {
-    let _ = dotenv::from_filename(".env.defaults");
-    let _ = dotenv::from_filename(".env");
-    let _ = dotenv::from_filename(".env.dev");
-    let _ = dotenv::from_filename(".env.prod");
+    if env::var("DTY_ENV").is_ok() {
+        return;
+    }
+    let _ = dotenvy::from_filename(".env.defaults");
+    let _ = dotenvy::from_filename_override(".env");
+    let _ = dotenvy::from_filename_override(".env.dev");
+    let _ = dotenvy::from_filename_override(".env.prod");
 }
 
 #[derive(Debug, Clone)]
