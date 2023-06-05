@@ -1,6 +1,7 @@
 mod column_value_builder;
 
 pub mod column;
+pub mod connection;
 pub mod field_values;
 pub mod helper;
 pub mod index;
@@ -15,4 +16,5 @@ pub mod schema;
 pub mod table;
 pub mod types;
 pub mod where_join_operators;
+
 pub use column_value_builder::ColumnAndValueBuilder;

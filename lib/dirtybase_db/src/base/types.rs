@@ -1,8 +1,15 @@
-use std::collections::HashMap;
+use chrono::{DateTime, Utc};
 
 use super::field_values::FieldValue;
+use std::collections::HashMap;
 
 pub type ColumnAndValue = HashMap<String, FieldValue>;
+
+pub type InternalIdField = Option<i64>; // works across databases
+pub type StringField = Option<String>;
+pub type UlidField = Option<String>;
+pub type DateTimeField = Option<DateTime<Utc>>;
+pub type BooleanField = Option<bool>;
 
 pub trait IntoColumnAndValue {
     fn into_column_value(self) -> ColumnAndValue;

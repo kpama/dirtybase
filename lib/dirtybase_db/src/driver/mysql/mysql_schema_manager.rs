@@ -45,13 +45,6 @@ impl MySqlSchemaManager {
 
 #[async_trait]
 impl RelationalDbTrait for MySqlSchemaManager {
-    fn instance(db_pool: Arc<Pool<MySql>>) -> Self
-    where
-        Self: Sized,
-    {
-        Self::new(db_pool)
-    }
-
     fn kind(&self) -> AnyKind {
         AnyKind::MySql
         // self.db_pool.any_kind()
@@ -119,7 +112,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
 
     async fn fetch_one_as_json(&self) -> Result<serde_json::Value, anyhow::Error> {
         if let Some(active_query) = &self.active_query {
-            let mut query = sqlx::query(&active_query.statement);
+            let mut query = sqlx::query::<MySql>(&active_query.statement);
             for p in &active_query.params {
                 query = query.bind::<&str>(p);
             }

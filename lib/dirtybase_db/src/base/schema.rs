@@ -5,13 +5,11 @@ use super::{
 };
 use crate::driver::surreal::SurrealClient;
 use async_trait::async_trait;
-use sqlx::{any::AnyKind, MySql, Pool};
+use sqlx::any::AnyKind;
 use std::sync::Arc;
 
+#[async_trait]
 pub trait RelationalDbTrait: SchemaManagerTrait {
-    fn instance(db_pool: Arc<Pool<MySql>>) -> Self
-    where
-        Self: Sized;
     fn kind(&self) -> AnyKind;
 }
 

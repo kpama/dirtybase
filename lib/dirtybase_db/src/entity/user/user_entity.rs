@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -10,26 +9,29 @@ use super::{
 use crate::base::{
     field_values::FieldValue,
     helper::generate_ulid,
-    types::{ColumnAndValue, FromColumnAndValue, IntoColumnAndValue},
+    types::{
+        BooleanField, ColumnAndValue, DateTimeField, FromColumnAndValue, InternalIdField,
+        IntoColumnAndValue, StringField, UlidField,
+    },
     ColumnAndValueBuilder,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserEntity {
     #[serde(skip)]
-    pub internal_id: Option<u64>,
-    pub id: Option<String>,
-    pub username: Option<String>,
-    pub email: Option<String>,
-    pub reset_password: Option<bool>,
+    pub internal_id: InternalIdField,
+    pub id: UlidField,
+    pub username: StringField,
+    pub email: StringField,
+    pub reset_password: BooleanField,
     pub status: Option<UserStatus>,
-    pub password: Option<String>,
+    pub password: StringField,
     #[serde(skip_deserializing)]
-    pub created_at: Option<DateTime<Utc>>,
+    pub created_at: DateTimeField,
     #[serde(skip_deserializing)]
-    pub updated_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTimeField,
     #[serde(skip_deserializing)]
-    pub deleted_at: Option<DateTime<Utc>>,
+    pub deleted_at: DateTimeField,
 }
 
 impl Default for UserEntity {
