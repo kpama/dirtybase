@@ -12,7 +12,7 @@ struct TestHandler;
 #[async_trait]
 impl EventListener for TestHandler {
     async fn handle(&self, name: &str, _event: &Event) {
-        log::error!("handling event: {}", name);
+        log::info!("handling event: {}!", name);
     }
 
     fn handler_id(&self) -> &str {
