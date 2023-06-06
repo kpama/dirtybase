@@ -26,4 +26,5 @@ hmac = { workspace = true }
 jwt = { workspace = true }
 sha2 = { workspace = true }
 chrono = { workspace = true }
+tokio = { workspace = true }
 # cookie = { workspace = true }
