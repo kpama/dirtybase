@@ -38,7 +38,7 @@ impl RoleRepository {
                     q.is_null(ROLE_TABLE_DELETED_AT_FIELD);
                 }
             })
-            .fetch_one_as_field_value()
+            .fetch_one()
             .await
         {
             Ok(result) => Ok(RoleEntity::from_column_value(result)),

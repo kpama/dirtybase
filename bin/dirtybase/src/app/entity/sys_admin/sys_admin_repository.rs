@@ -27,7 +27,7 @@ impl SysAdminRepository {
             .select_from_table(SYS_ADMIN_TABLE, |q| {
                 q.select_all().eq(SYS_ADMIN_TABLE_USER_ID_FIELD, id);
             })
-            .fetch_one_as_field_value()
+            .fetch_one()
             .await
         {
             Ok(result) => Ok(SysAdminEntity::from_column_value(result)),

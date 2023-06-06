@@ -27,7 +27,7 @@ impl AppRepository {
             .select_from_table(APP_TABLE, |q| {
                 q.select_all().eq(APP_TABLE_ID_FIELD, id);
             })
-            .fetch_one_as_field_value()
+            .fetch_one()
             .await
         {
             Ok(result) => Ok(AppEntity::from_column_value(result)),

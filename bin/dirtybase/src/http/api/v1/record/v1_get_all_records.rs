@@ -46,7 +46,7 @@ async fn get_all_records_handler(
             //     .left_join("company", "company.id", "=", "applications.company_id")
             //     .eq("users.name", "user_a");
         })
-        .fetch_all_as_json()
+        .fetch_all()
         .await;
 
     // HttpResponse::Ok().body(format!("list records from collection: {}", 4))

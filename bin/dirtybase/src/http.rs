@@ -4,6 +4,7 @@ use crate::{
 };
 use actix_files as fs;
 use actix_web::{get, web as a_web, App, HttpResponse, HttpServer, Responder};
+use dirtybase_db::entity::user::USER_TABLE;
 use std::env;
 
 pub mod api;
@@ -47,23 +48,19 @@ pub async fn init(app: DirtyBase) -> std::io::Result<()> {
 
 #[get("/")]
 async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("Hello world!")
+    HttpResponse::Ok()
+        .content_type("text/html")
+        .body("<center><h1>DirtyBase is Up</h1></center>")
 }
 
 #[get("/users")]
 async fn serve_users(app: actix_web::web::Data<DirtyBase>) -> impl Responder {
     let mut manager = app.schema_manger();
     let result = manager
-        .select_from_table("grades", |query| {
-            query.is_in("grades.id", vec![1]).inner_join_and_select(
-                "students",
-                "students.id",
-                "=",
-                "grades.id",
-                &["students.id as student_tb_id", "lastname"],
-            );
+        .select_from_table(USER_TABLE, |query| {
+            query.select_all();
         })
-        .fetch_all_as_json()
+        .fetch_all()
         .await;
 
     HttpResponse::Ok().json(result.unwrap())

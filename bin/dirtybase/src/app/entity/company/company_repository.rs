@@ -35,7 +35,7 @@ impl CompanyRepository {
                     .eq(COMPANY_TABLE_INTERNAL_ID_FIELD, id)
                     .and_is_null(COMPANY_TABLE_DELETED_AT_FIELD);
             })
-            .fetch_one_as_field_value()
+            .fetch_one()
             .await
         {
             Ok(result) => Ok(CompanyEntity::from_column_value(result)),
@@ -51,7 +51,7 @@ impl CompanyRepository {
                     .eq(COMPANY_TABLE_ID_FIELD, id)
                     .and_is_null(COMPANY_TABLE_DELETED_AT_FIELD);
             })
-            .fetch_one_as_field_value()
+            .fetch_one()
             .await
         {
             Ok(result) => Ok(CompanyEntity::from_column_value(result)),
