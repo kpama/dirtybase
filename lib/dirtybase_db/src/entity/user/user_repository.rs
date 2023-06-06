@@ -51,7 +51,7 @@ impl UserRepository {
                     .eq(USER_TABLE_INTERNAL_ID_FIELD, id)
                     .and_is_null(USER_TABLE_DELETED_AT_FIELD);
             })
-            .fetch_one_as_field_value()
+            .fetch_one()
             .await
         {
             Ok(user) => Ok(UserEntity::from_column_value(user)),
@@ -67,7 +67,7 @@ impl UserRepository {
                     .eq(USER_TABLE_ID_FIELD, id)
                     .and_is_null(USER_TABLE_DELETED_AT_FIELD);
             })
-            .fetch_one_as_field_value()
+            .fetch_one()
             .await
         {
             Ok(user) => Ok(UserEntity::from_column_value(user)),
@@ -88,7 +88,7 @@ impl UserRepository {
                     .eq(USER_TABLE_EMAIL_FIELD, email)
                     .is_null(USER_TABLE_DELETED_AT_FIELD);
             })
-            .fetch_one_as_field_value()
+            .fetch_one()
             .await
         {
             Ok(field) => {

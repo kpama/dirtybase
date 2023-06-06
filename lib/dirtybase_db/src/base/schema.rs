@@ -31,19 +31,15 @@ pub trait SchemaManagerTrait {
 
     async fn execute(&self, query_builder: QueryBuilder);
 
-    async fn fetch_all_as_json(&self) -> Result<Vec<serde_json::Value>, anyhow::Error>;
+    async fn fetch_all(&self) -> Result<Vec<ColumnAndValue>, anyhow::Error>;
 
-    async fn fetch_one_as_json(&self) -> Result<serde_json::Value, anyhow::Error>;
+    async fn fetch_one(&self) -> Result<ColumnAndValue, anyhow::Error>;
 
-    async fn fetch_all_as_field_value(&self) -> Result<Vec<ColumnAndValue>, anyhow::Error>;
-
-    async fn fetch_one_as_field_value(&self) -> Result<ColumnAndValue, anyhow::Error>;
-
-    async fn fetch_one<T: FromColumnAndValue>(&self) -> Result<T, anyhow::Error>
+    async fn fetch_one_to<T: FromColumnAndValue>(&self) -> Result<T, anyhow::Error>
     where
         Self: Sized,
     {
-        let result = self.fetch_one_as_field_value().await;
+        let result = self.fetch_one().await;
 
         if let Ok(row) = result {
             Ok(T::from_column_value(row))
@@ -52,11 +48,11 @@ pub trait SchemaManagerTrait {
         }
     }
 
-    async fn fetch_one_all<T: FromColumnAndValue>(&self) -> Result<Vec<T>, anyhow::Error>
+    async fn fetch_one_all_to<T: FromColumnAndValue>(&self) -> Result<Vec<T>, anyhow::Error>
     where
         Self: Sized,
     {
-        let result = self.fetch_all_as_field_value().await;
+        let result = self.fetch_all().await;
         if let Ok(records) = result {
             Ok(records
                 .into_iter()

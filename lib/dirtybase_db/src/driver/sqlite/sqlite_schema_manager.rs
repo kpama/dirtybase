@@ -88,46 +88,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         self.do_execute(query).await
     }
 
-    async fn fetch_all_as_json(&self) -> Result<Vec<serde_json::Value>, anyhow::Error> {
-        let mut results = Vec::new();
-        match &self.active_query {
-            Some(active_query) => {
-                let mut query = sqlx::query(&active_query.statement);
-                for p in &active_query.params {
-                    query = query.bind::<&str>(p);
-                }
-
-                let mut rows = query.fetch(self.db_pool.as_ref());
-                while let Ok(result) = rows.try_next().await {
-                    if let Some(row) = result {
-                        results.push(self.row_to_json(&row));
-                    }
-                }
-            }
-            None => (),
-        }
-
-        Ok(results)
-    }
-
-    async fn fetch_one_as_json(&self) -> Result<serde_json::Value, anyhow::Error> {
-        if let Some(active_query) = &self.active_query {
-            let mut query = sqlx::query(&active_query.statement);
-            for p in &active_query.params {
-                query = query.bind::<&str>(p);
-            }
-            return match query.fetch_one(self.db_pool.as_ref()).await {
-                Ok(row) => Ok(self.row_to_json(&row)),
-                Err(e) => Err(e.into()),
-            };
-        }
-
-        Err(anyhow::anyhow!("No query to execute"))
-    }
-
-    async fn fetch_all_as_field_value(
-        &self,
-    ) -> Result<Vec<HashMap<String, FieldValue>>, anyhow::Error> {
+    async fn fetch_all(&self) -> Result<Vec<HashMap<String, FieldValue>>, anyhow::Error> {
         let mut results = Vec::new();
 
         match &self.active_query {
@@ -140,7 +101,9 @@ impl SchemaManagerTrait for SqliteSchemaManager {
                 let mut rows = query.fetch(self.db_pool.as_ref());
                 while let Ok(result) = rows.try_next().await {
                     if let Some(row) = result {
-                        results.push(self.row_to_insert_value(&row));
+                        results.push(self.row_to_field_value(&row));
+                    } else {
+                        break;
                     }
                 }
             }
@@ -150,14 +113,14 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         Ok(results)
     }
 
-    async fn fetch_one_as_field_value(&self) -> Result<ColumnAndValue, anyhow::Error> {
+    async fn fetch_one(&self) -> Result<ColumnAndValue, anyhow::Error> {
         if let Some(active_query) = &self.active_query {
             let mut query = sqlx::query(&active_query.statement);
             for p in &active_query.params {
                 query = query.bind::<&str>(p);
             }
             return match query.fetch_one(self.db_pool.as_ref()).await {
-                Ok(row) => Ok(self.row_to_insert_value(&row)),
+                Ok(row) => Ok(self.row_to_field_value(&row)),
                 Err(e) => Err(e.into()),
             };
         }
@@ -557,187 +520,7 @@ impl SqliteSchemaManager {
         }
     }
 
-    fn row_to_json(&self, row: &SqliteRow) -> serde_json::Value {
-        let mut this_row = serde_json::Map::new();
-
-        // types are from : https://docs.rs/sqlx/latest/sqlx/mysql/types/index.html
-        for col in row.columns() {
-            let name = col.name().to_owned();
-            match col.type_info().to_string().as_str() {
-                "BOOLEAN" | "TINYINT(1)" => {
-                    let v: bool = row.get(col.name());
-                    this_row.insert(name, serde_json::Value::Bool(v));
-                }
-                "TINYINT" => {
-                    let v = row.try_get::<i8, &str>(col.name());
-                    if let Ok(v) = v {
-                        this_row
-                            .insert(name, serde_json::Value::Number(serde_json::Number::from(v)));
-                    } else {
-                        this_row.insert(
-                            name,
-                            serde_json::Value::Number(serde_json::Number::from(0_i8)),
-                        );
-                    }
-                }
-                "SMALLINT" => {
-                    let v = row.try_get::<i16, &str>(col.name());
-                    if let Ok(v) = v {
-                        this_row
-                            .insert(name, serde_json::Value::Number(serde_json::Number::from(v)));
-                    } else {
-                        this_row.insert(
-                            name,
-                            serde_json::Value::Number(serde_json::Number::from(0_i16)),
-                        );
-                    }
-                }
-                "INT" => {
-                    let v = row.try_get::<i32, &str>(col.name());
-                    if let Ok(v) = v {
-                        this_row
-                            .insert(name, serde_json::Value::Number(serde_json::Number::from(v)));
-                    } else {
-                        this_row.insert(
-                            name,
-                            serde_json::Value::Number(serde_json::Number::from(0_i32)),
-                        );
-                    }
-                }
-                "BIGINT" => {
-                    let v = row.try_get::<i64, &str>(col.name());
-                    if let Ok(v) = v {
-                        this_row
-                            .insert(name, serde_json::Value::Number(serde_json::Number::from(v)));
-                    } else {
-                        this_row.insert(
-                            name,
-                            serde_json::Value::Number(serde_json::Number::from(0_i64)),
-                        );
-                    }
-                }
-                "TINYINT UNSIGNED" => {
-                    let v = row.try_get::<u8, &str>(col.name());
-                    if let Ok(v) = v {
-                        this_row
-                            .insert(name, serde_json::Value::Number(serde_json::Number::from(v)));
-                    } else {
-                        this_row.insert(
-                            name,
-                            serde_json::Value::Number(serde_json::Number::from(0_u8)),
-                        );
-                    }
-                }
-                "SMALLINT UNSIGNED" => {
-                    let v = row.try_get::<u16, &str>(col.name());
-                    if let Ok(v) = v {
-                        this_row
-                            .insert(name, serde_json::Value::Number(serde_json::Number::from(v)));
-                    } else {
-                        this_row.insert(
-                            name,
-                            serde_json::Value::Number(serde_json::Number::from(0_u16)),
-                        );
-                    }
-                }
-                "INT UNSIGNED" => {
-                    let v = row.try_get::<u32, &str>(col.name());
-                    if let Ok(v) = v {
-                        this_row
-                            .insert(name, serde_json::Value::Number(serde_json::Number::from(v)));
-                    } else {
-                        this_row.insert(
-                            name,
-                            serde_json::Value::Number(serde_json::Number::from(0_u32)),
-                        );
-                    }
-                }
-                // "BIGINT UNSIGNED" => {
-                //     let v = row.try_get::<u64, &str>(col.name());
-                //     if let Ok(v) = v {
-                //         this_row.insert(
-                //             col.name().to_owned(),
-                //             serde_json::Value::Number(serde_json::Number::from(v)),
-                //         );
-                //     } else {
-                //         this_row.insert(
-                //             col.name().to_owned(),
-                //             serde_json::Value::Number(serde_json::Number::from(0_u64)),
-                //         );
-                //     }
-                // }
-                "DOUBLE" | "FLOAT" => {
-                    let v = row.try_get::<f64, &str>(col.name());
-                    if let Ok(v) = v {
-                        this_row.insert(
-                            name,
-                            serde_json::Value::Number(serde_json::Number::from_f64(v).unwrap()),
-                        );
-                    } else {
-                        this_row.insert(
-                            name,
-                            serde_json::Value::Number(
-                                serde_json::Number::from_f64(0.0_f64).unwrap(),
-                            ),
-                        );
-                    }
-                }
-                "CHAR" | "VARCHAR" | "TEXT" => {
-                    if let Ok(v) = row.try_get::<String, &str>(col.name()) {
-                        this_row.insert(name, serde_json::Value::String(v));
-                    } else {
-                        this_row.insert(name, serde_json::Value::Null);
-                    }
-                }
-                "TIMESTAMP" => {
-                    let v = row.try_get::<chrono::DateTime<chrono::Utc>, &str>(col.name());
-                    if let Ok(v) = v {
-                        this_row.insert(name, serde_json::Value::String(v.to_string()));
-                    } else {
-                        this_row.insert(name, serde_json::Value::Null);
-                    }
-                }
-                "DATE" => {
-                    let v = row.try_get::<chrono::NaiveDate, &str>(col.name());
-                    if let Ok(v) = v {
-                        this_row.insert(name, serde_json::Value::String(v.to_string()));
-                    } else {
-                        this_row.insert(name, serde_json::Value::Null);
-                    }
-                }
-                "TIME" => {
-                    let v = row.try_get::<chrono::NaiveTime, &str>(col.name());
-                    if let Ok(v) = v {
-                        this_row.insert(name, serde_json::Value::String(v.to_string()));
-                    } else {
-                        this_row.insert(name, serde_json::Value::Null);
-                    }
-                }
-                "DATETIME" => {
-                    let v = row.try_get::<chrono::NaiveDateTime, &str>(col.name());
-
-                    if let Ok(v) = v {
-                        this_row.insert(
-                            col.name().to_owned(),
-                            serde_json::Value::String(v.to_string()),
-                        );
-                    } else {
-                        this_row.insert(col.name().to_owned(), serde_json::Value::Null);
-                    }
-                }
-                "VARBINARY" | "BINARY" | "BLOB" => {
-                    // TODO find a means to represent binary
-                }
-                _ => {
-                    log::debug!("not mapped {:#?}", col.type_info());
-                }
-            }
-        }
-
-        serde_json::Value::Object(this_row)
-    }
-
-    fn row_to_insert_value(&self, row: &SqliteRow) -> ColumnAndValue {
+    fn row_to_field_value(&self, row: &SqliteRow) -> ColumnAndValue {
         let mut this_row = HashMap::new();
 
         for col in row.columns() {

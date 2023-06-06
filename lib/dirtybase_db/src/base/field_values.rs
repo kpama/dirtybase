@@ -16,7 +16,7 @@ pub mod to_raw_values;
 pub use insert_value::InsertValueBuilder;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(tag = "type", content = "value")]
+#[serde(untagged)]
 pub enum FieldValue {
     #[serde(rename(serialize = "null"))]
     Null,
