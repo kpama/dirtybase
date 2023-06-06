@@ -237,10 +237,10 @@ impl SqliteSchemaManager {
 
         match result {
             Ok(r) => {
-                dbg!(r);
+                log::debug!("{} result: {:#?}", query.action(), r);
             }
             Err(e) => {
-                dbg!(e);
+                log::debug!("{} failed: {}", query.action(), e);
             }
         }
     }
@@ -729,7 +729,7 @@ impl SqliteSchemaManager {
                     // TODO find a means to represent binary
                 }
                 _ => {
-                    dbg!("not mapped {:#?}", col.type_info());
+                    log::debug!("not mapped {:#?}", col.type_info());
                 }
             }
         }
@@ -829,7 +829,7 @@ impl SqliteSchemaManager {
                 "VARBINARY" | "BINARY" | "BLOB" => {}
                 // TODO find a means to represent binary
                 _ => {
-                    dbg!(
+                    log::debug!(
                         "not mapped {:#?}",
                         col.type_info().to_string().to_ascii_uppercase()
                     );

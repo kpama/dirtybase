@@ -1,4 +1,4 @@
-use crate::{app::dirtybase::DirtyBaseWeb, http::http_helpers::pluck_jwt_token};
+use crate::{app::DirtyBaseWeb, http::http_helpers::pluck_jwt_token};
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     Error,

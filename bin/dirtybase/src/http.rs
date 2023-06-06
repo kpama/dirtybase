@@ -1,5 +1,5 @@
 use crate::{
-    app::dirtybase::DirtyBase,
+    app::DirtyBase,
     http::middleware::{api_auth_middleware, tenant_middleware},
 };
 use actix_files as fs;

@@ -2,16 +2,21 @@
 
 mod config;
 mod entity;
+mod event;
+mod event_subscribers;
 mod fields;
+mod the_app;
 
-pub mod dirtybase;
 pub mod setup_database;
-pub use config::Config;
-pub use config::ConfigBuilder;
 pub mod setup_defaults;
 
+pub use config::Config;
+pub use config::ConfigBuilder;
+pub use event::*;
+pub use the_app::{DirtyBase, DirtyBaseWeb};
+
 /// Setup database application using configs in .env files
-pub async fn setup() -> dirtybase::DirtyBase {
+pub async fn setup() -> the_app::DirtyBase {
     let config = Config::default();
     setup_using(config).await
 }
@@ -26,8 +31,8 @@ pub async fn setup() -> dirtybase::DirtyBase {
 ///                     .build();
 /// ```
 ///
-pub async fn setup_using(config: Config) -> dirtybase::DirtyBase {
-    match dirtybase::DirtyBase::new(config).await {
+pub async fn setup_using(config: Config) -> the_app::DirtyBase {
+    match the_app::DirtyBase::new(config).await {
         Ok(app) => {
             app.db_setup().await;
             app

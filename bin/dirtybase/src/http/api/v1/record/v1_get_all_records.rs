@@ -1,5 +1,5 @@
 use crate::{
-    app::dirtybase::DirtyBase,
+    app::DirtyBase,
     http::http_helpers::{field_string_to_vec, pluck_from_query_string},
 };
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};

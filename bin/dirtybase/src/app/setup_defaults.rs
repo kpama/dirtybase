@@ -1,6 +1,6 @@
 use super::{
-    dirtybase::DirtyBase,
     entity::{company::CompanyEntity, role::ROLE_ADMIN},
+    the_app::DirtyBase,
 };
 
 pub async fn setup_default_entities(app: &DirtyBase) {

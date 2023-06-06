@@ -3,7 +3,7 @@ use super::{
     query_join_types::JoinType, query_operators::Operator, types::ColumnAndValue,
     where_join_operators::WhereJoinOperator,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 #[derive(Debug)]
 pub enum WhereJoin {
@@ -17,6 +17,21 @@ pub enum QueryAction {
     Create,
     Update,
     Delete,
+}
+
+impl Display for QueryAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                QueryAction::Create => "Create",
+                QueryAction::Query => "Query",
+                QueryAction::Update => "Update",
+                QueryAction::Delete => "Delete",
+            }
+        )
+    }
 }
 
 #[derive(Debug)]

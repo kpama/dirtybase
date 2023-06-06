@@ -1,4 +1,4 @@
-use crate::app::dirtybase::DirtyBase;
+use crate::app::DirtyBase;
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
