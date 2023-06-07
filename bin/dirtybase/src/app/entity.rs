@@ -1,4 +1,5 @@
 pub mod app;
+pub mod audit_log;
 pub mod company;
 pub mod role;
 pub mod role_user;
