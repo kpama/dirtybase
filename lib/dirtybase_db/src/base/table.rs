@@ -253,6 +253,18 @@ impl BaseTable {
     //     self
     // }
 
+    pub fn index(&mut self, columns: &[&str]) -> &mut Self {
+        if self.indexes.is_none() {
+            self.indexes = Some(Vec::new());
+        }
+
+        if let Some(indexes) = &mut self.indexes {
+            indexes.push(IndexType::Index(IndexProp::new(columns, false)));
+        }
+
+        self
+    }
+
     pub fn primary_index(&mut self, columns: &[&str]) -> &mut Self {
         if self.indexes.is_none() {
             self.indexes = Some(Vec::new());
