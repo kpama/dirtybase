@@ -8,6 +8,7 @@ members = [
   "bin/dirtybase-tos/front",
   "bin/dirtybase-tos/app",
   "bin/dirtybase-tos/server",
+  "bin/ui",
 ]
 resolver = "2"
 
@@ -68,3 +69,6 @@ leptos_router = { version = "0.3", default-features = false, features = [
 ] }
 leptos_dom = { version = "0.3", default-features = false }
 leptos_actix = { version = "0.3" }
+busybody = { version = "0.2.3" }
+orsomafo = { version = "0.1.4" }
+fama = { version = "0.2.0" }
