@@ -19,7 +19,7 @@ pub trait GraphDbTrait<T> {
 }
 
 #[async_trait]
-pub trait SchemaManagerTrait {
+pub trait SchemaManagerTrait: Send + Sync {
     // update an existing table
     fn fetch_table_for_update(&self, name: &str) -> BaseTable;
 
