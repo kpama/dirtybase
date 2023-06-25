@@ -75,6 +75,33 @@ impl UserRepository {
         }
     }
 
+    pub async fn find_by_username_or_email(
+        &mut self,
+        username: &str,
+        email: &str,
+    ) -> Result<UserEntity, anyhow::Error> {
+        if !username.is_empty() || !email.is_empty() {
+            match self
+                .manager_mut()
+                .select_from_table(USER_TABLE, |q| {
+                    q.select_all();
+                    if !email.is_empty() {
+                        q.eq(USER_TABLE_EMAIL_FIELD, email);
+                    } else {
+                        q.eq(USER_TABLE_USERNAME_FIELD, username);
+                    }
+                })
+                .fetch_one()
+                .await
+            {
+                Ok(field) => Ok(UserEntity::from_column_value(field)),
+                Err(e) => Err(e),
+            }
+        } else {
+            Err(anyhow::anyhow!("Both username and email values are empty"))
+        }
+    }
+
     pub async fn find_by_username_and_email(
         &mut self,
         username: &str,
