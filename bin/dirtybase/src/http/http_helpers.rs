@@ -1,7 +1,10 @@
 #![allow(dead_code)]
-
 use actix_web::dev::ServiceRequest;
 use std::collections::HashMap;
+
+mod api_response;
+
+pub use api_response::*;
 
 /// Returns a HashMap of the query strings as key value
 pub(crate) fn split_query_string(req: &ServiceRequest) -> HashMap<String, Option<&str>> {

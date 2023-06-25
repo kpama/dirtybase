@@ -1,6 +1,7 @@
 use super::entity::{
     app::setup_applications_table, audit_log::setup_audit_log_table, company::setup_company_table,
-    role::setup_roles_table, role_user::setup_role_users_table, sys_admin::setup_sysadmins_table,
+    dirtybase_user::setup_dirtybase_user_table, role::setup_roles_table,
+    role_user::setup_role_users_table, sys_admin::setup_sysadmins_table,
 };
 use dirtybase_db::{base::manager::Manager, entity::user::setup_users_table};
 
@@ -81,4 +82,5 @@ pub(crate) async fn create_data_tables(manager: Manager) {
     setup_roles_table(&manager).await;
     setup_role_users_table(&manager).await;
     setup_sysadmins_table(&manager).await;
+    setup_dirtybase_user_table(&manager).await;
 }

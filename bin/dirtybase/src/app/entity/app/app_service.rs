@@ -1,7 +1,6 @@
+use super::{AppEntity, AppRepository};
 use anyhow::anyhow;
 use dirtybase_db::{base::helper::generate_ulid, entity::user::UserEntity};
-
-use super::{AppEntity, AppRepository};
 
 pub struct AppService {
     app_repo: AppRepository,
@@ -76,5 +75,14 @@ impl AppService {
 
         app.editor_id = Some(blame.id.unwrap());
         self.app_repo_mut().update(id, app).await
+    }
+}
+
+#[busybody::async_trait]
+impl busybody::Injectable for AppService {
+    async fn inject(ci: &busybody::ServiceContainer) -> Self {
+        let app_repo = ci.provide::<AppRepository>().await;
+
+        Self::new(app_repo)
     }
 }

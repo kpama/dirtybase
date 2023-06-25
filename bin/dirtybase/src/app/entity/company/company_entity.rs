@@ -1,3 +1,4 @@
+use busybody::ServiceContainer;
 use chrono::{DateTime, Utc};
 use dirtybase_db::base::{
     field_values::FieldValue,
@@ -41,6 +42,13 @@ impl Default for CompanyEntity {
             updated_at: None,
             deleted_at: None,
         }
+    }
+}
+
+#[busybody::async_trait]
+impl busybody::Injectable for CompanyEntity {
+    async fn inject(_: &ServiceContainer) -> Self {
+        Self::default()
     }
 }
 

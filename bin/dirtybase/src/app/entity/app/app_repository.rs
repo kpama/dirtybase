@@ -1,3 +1,5 @@
+use crate::app::DirtyBase;
+
 use super::{AppEntity, APP_TABLE, APP_TABLE_ID_FIELD};
 use dirtybase_db::base::{
     field_values::FieldValue, manager::Manager, types::FromColumnAndValue,
@@ -59,5 +61,13 @@ impl AppRepository {
             .await;
 
         self.find_by_id(id).await
+    }
+}
+
+#[busybody::async_trait]
+impl busybody::Injectable for AppRepository {
+    async fn inject(ci: &busybody::ServiceContainer) -> Self {
+        let app = ci.get::<DirtyBase>().unwrap();
+        Self::new(app.schema_manger())
     }
 }

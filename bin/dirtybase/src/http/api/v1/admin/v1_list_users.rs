@@ -1,5 +1,8 @@
-use crate::app::DirtyBase;
-use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
+use crate::app::{
+    entity::dirtybase_user::dirtybase_user_helpers::jwt_manager::JWTManager, DirtyBase,
+};
+use actix_web::{get, HttpRequest, HttpResponse, Responder};
+use busybody::helpers::provide;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -21,7 +24,9 @@ impl FakeUser {
 }
 
 #[get("/_admin/users")]
-async fn list_users_handler(_req: HttpRequest, app: web::Data<DirtyBase>) -> impl Responder {
+async fn list_users_handler(_req: HttpRequest) -> impl Responder {
+    let jwt_manager = provide::<JWTManager>().await;
+
     let mut users = Vec::<FakeUser>::new();
 
     for id in 0..=255 {
@@ -32,7 +37,7 @@ async fn list_users_handler(_req: HttpRequest, app: web::Data<DirtyBase>) -> imp
         claim.insert("t".into(), "Default Tenant".into());
         claim.insert("a".into(), "Default App".into());
 
-        if let Some(jwt) = app.sign_to_jwt(claim) {
+        if let Some(jwt) = jwt_manager.sign_to_jwt(claim) {
             users.push(FakeUser::mock(id.to_string(), &jwt));
         }
     }

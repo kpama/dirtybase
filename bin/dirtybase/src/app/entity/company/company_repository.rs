@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use crate::app::DirtyBase;
+
 use super::{
     CompanyEntity, COMPANY_TABLE, COMPANY_TABLE_DELETED_AT_FIELD, COMPANY_TABLE_ID_FIELD,
     COMPANY_TABLE_INTERNAL_ID_FIELD,
@@ -83,5 +85,13 @@ impl CompanyRepository {
             .await;
 
         self.find_by_id(id).await
+    }
+}
+
+#[busybody::async_trait]
+impl busybody::Injectable for CompanyRepository {
+    async fn inject(c: &busybody::ServiceContainer) -> Self {
+        let app = c.get::<DirtyBase>().unwrap();
+        Self::new(app.schema_manger())
     }
 }

@@ -1,8 +1,12 @@
-use crate::{app::DirtyBaseWeb, http::http_helpers::pluck_jwt_token};
+use crate::{
+    app::entity::dirtybase_user::dirtybase_user_helpers::jwt_manager::JWTManager,
+    http::http_helpers::pluck_jwt_token,
+};
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
     Error,
 };
+use busybody::helpers::provide;
 use futures_util::future::LocalBoxFuture;
 use std::future::{ready, Ready};
 
@@ -51,17 +55,18 @@ where
     fn call(&self, req: ServiceRequest) -> Self::Future {
         println!("Hi from start. You requested: {}", req.path());
         let jwt = pluck_jwt_token(&req).unwrap_or_default();
-        let app = req.app_data::<DirtyBaseWeb>().unwrap();
-        let claims = app.verify_jwt(&jwt).unwrap_or_default();
-
-        // TODO Validate the clams as per the app's logic
-
-        log::debug!("{:#?}", &claims);
-        log::debug!("JWT token: {}", &jwt);
 
         let fut = self.service.call(req);
 
         Box::pin(async move {
+            let jwt_manager = provide::<JWTManager>().await;
+            let claims = jwt_manager.verify_jwt(&jwt).unwrap_or_default();
+
+            // TODO: Validate the clams as per the app's logic
+
+            log::debug!("{:#?}", &claims);
+            log::debug!("JWT token: {}", &jwt);
+
             let res = fut.await?;
 
             println!("Hi from response");

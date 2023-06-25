@@ -64,3 +64,11 @@ impl CompanyService {
         self.company_repo.update(id, company).await
     }
 }
+
+#[busybody::async_trait]
+impl busybody::Injectable for CompanyService {
+    async fn inject(c: &busybody::ServiceContainer) -> Self {
+        let (company_repo,) = c.inject_all::<(CompanyRepository,)>().await;
+        Self::new(company_repo)
+    }
+}

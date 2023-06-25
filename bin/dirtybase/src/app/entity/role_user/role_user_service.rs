@@ -60,3 +60,12 @@ impl RoleUserService {
         self.role_user_repo_mut().update(role_user).await
     }
 }
+
+#[busybody::async_trait]
+impl busybody::Injectable for RoleUserService {
+    async fn inject(ci: &busybody::ServiceContainer) -> Self {
+        let role_user_repo = ci.provide::<RoleUserRepository>().await;
+
+        Self::new(role_user_repo)
+    }
+}

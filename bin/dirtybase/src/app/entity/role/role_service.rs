@@ -99,3 +99,12 @@ impl RoleService {
         self.role_repo.update(id, role).await
     }
 }
+
+#[busybody::async_trait]
+impl busybody::Injectable for RoleService {
+    async fn inject(ci: &busybody::ServiceContainer) -> Self {
+        let role_repo = ci.provide::<RoleRepository>().await;
+
+        Self::new(role_repo)
+    }
+}

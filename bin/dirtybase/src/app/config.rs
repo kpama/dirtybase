@@ -3,6 +3,8 @@
 use dirtybase_db::entity::user::hash_password;
 use std::env;
 
+use super::DirtyBase;
+
 /// Loads configuration from .env files.
 /// Multiple .env files are check in the following order
 ///  - .env.defaults
@@ -29,6 +31,8 @@ pub struct Config {
     admin_user: String,
     admin_email: String,
     admin_password: String,
+    web_port: u16,
+    web_ip_address: String,
 }
 
 impl Default for Config {
@@ -39,6 +43,16 @@ impl Default for Config {
             max.parse().unwrap_or(5)
         } else {
             5
+        };
+        let web_port = if let Ok(p) = env::var("DTY_WEB_PORT") {
+            p.parse().unwrap_or(8080)
+        } else {
+            8080
+        };
+        let web_ip_address = if let Ok(p) = env::var("DTY_WEB_IP_ADDRESS") {
+            p.parse().unwrap_or("127.0.0.1".to_string())
+        } else {
+            "127.0.0.1".to_owned()
         };
         let secret = env::var("DTY_SECRET").unwrap_or_default();
         let admin_user = env::var("DTY_SYS_ADMIN_USERNAME").unwrap_or_default();
@@ -54,6 +68,8 @@ impl Default for Config {
             admin_user,
             admin_email,
             admin_password,
+            web_port,
+            web_ip_address,
         }
     }
 }
@@ -84,6 +100,14 @@ impl Config {
     pub fn admin_password(&self) -> &String {
         &self.admin_password
     }
+
+    pub fn web_port(&self) -> u16 {
+        self.web_port
+    }
+
+    pub fn web_ip_address(&self) -> &String {
+        &self.web_ip_address
+    }
 }
 pub struct ConfigBuilder {
     app_name: Option<String>,
@@ -93,6 +117,8 @@ pub struct ConfigBuilder {
     admin_user: Option<String>,
     admin_email: Option<String>,
     admin_password: Option<String>,
+    web_port: Option<u16>,
+    web_ip_address: Option<String>,
 }
 
 impl Default for ConfigBuilder {
@@ -105,6 +131,8 @@ impl Default for ConfigBuilder {
             admin_user: None,
             admin_email: None,
             admin_password: None,
+            web_port: None,
+            web_ip_address: None,
         }
     }
 }
@@ -148,6 +176,14 @@ impl ConfigBuilder {
         self.admin_password = Some(hash_password(admin_password));
         self
     }
+    pub fn web_ip_address(mut self, address: &str) -> Self {
+        self.web_ip_address = Some(address.into());
+        self
+    }
+    pub fn web_port(mut self, port: u16) -> Self {
+        self.web_port = Some(port);
+        self
+    }
 
     pub fn build(self) -> Config {
         let mut config = Config::default();
@@ -159,7 +195,16 @@ impl ConfigBuilder {
         config.admin_user = self.admin_user.unwrap_or(config.admin_user);
         config.admin_email = self.admin_email.unwrap_or(config.admin_email);
         config.admin_password = self.admin_password.unwrap_or(config.admin_password);
+        config.web_ip_address = self.web_ip_address.unwrap_or(config.web_ip_address);
+        config.web_port = self.web_port.unwrap_or(config.web_port);
 
         config
+    }
+}
+
+#[busybody::async_trait]
+impl busybody::Injectable for Config {
+    async fn inject(c: &busybody::ServiceContainer) -> Self {
+        c.get::<DirtyBase>().unwrap().config()
     }
 }

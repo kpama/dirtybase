@@ -3,6 +3,8 @@ use dirtybase_db::base::{
     types::IntoColumnAndValue,
 };
 
+use crate::app::DirtyBase;
+
 use super::{
     RoleUserEntity, ROLE_USER_TABLE, ROLE_USER_TABLE_CORE_APP_ROLE_ID_FIELD,
     ROLE_USER_TABLE_CORE_USER_ID_FIELD, ROLE_USER_TABLE_DELETED_AT_FIELD,
@@ -84,5 +86,14 @@ impl RoleUserRepository {
 
         self.find_by_user_and_app_ids(&user_id, &app_id, false)
             .await
+    }
+}
+
+#[busybody::async_trait]
+impl busybody::Injectable for RoleUserRepository {
+    async fn inject(ci: &busybody::ServiceContainer) -> Self {
+        let app = ci.get::<DirtyBase>().unwrap();
+
+        Self::new(app.schema_manger())
     }
 }

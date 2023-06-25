@@ -1,3 +1,5 @@
+use crate::app::DirtyBase;
+
 use super::{RoleEntity, ROLE_TABLE, ROLE_TABLE_DELETED_AT_FIELD, ROLE_TABLE_ID_FIELD};
 use dirtybase_db::base::{
     field_values::FieldValue, manager::Manager, types::FromColumnAndValue,
@@ -70,5 +72,14 @@ impl RoleRepository {
             .await;
 
         self.find_by_id(id, false).await
+    }
+}
+
+#[busybody::async_trait]
+impl busybody::Injectable for RoleRepository {
+    async fn inject(ci: &busybody::ServiceContainer) -> Self {
+        let app = ci.get::<DirtyBase>().unwrap();
+
+        Self::new(app.schema_manger())
     }
 }

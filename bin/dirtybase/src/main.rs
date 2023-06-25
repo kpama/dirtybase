@@ -13,11 +13,11 @@ async fn main() -> std::io::Result<()> {
     match &args.command {
         Some(Commands::Serve) => {
             let dirty_app = app::setup().await;
-            dirty_app.event_dispatcher().whisper("system_ready");
             let _ = http::init(dirty_app).await;
         }
         Some(Commands::Migrate { action }) => {
             let _dirty_app = app::setup().await;
+
             match action {
                 MigrateDirection::Up => {
                     // TODO: implement migrating up
