@@ -3,11 +3,11 @@ use super::{
 };
 
 pub struct Manager {
-    schema: Box<dyn SchemaManagerTrait>,
+    schema: Box<dyn SchemaManagerTrait + Send>,
 }
 
 impl Manager {
-    pub fn new(schema: Box<dyn SchemaManagerTrait>) -> Self {
+    pub fn new(schema: Box<dyn SchemaManagerTrait + Send>) -> Self {
         Self { schema }
     }
 

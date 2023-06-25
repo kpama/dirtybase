@@ -37,7 +37,7 @@ pub struct SqlitePoolManager {
 }
 
 impl ConnectionPoolTrait for SqlitePoolManager {
-    fn schema_manger(&self) -> Box<dyn crate::base::schema::SchemaManagerTrait> {
+    fn schema_manger(&self) -> Box<dyn crate::base::schema::SchemaManagerTrait + Send + Sync> {
         Box::new(SqliteSchemaManager::new(self.db_pool.clone()))
     }
 

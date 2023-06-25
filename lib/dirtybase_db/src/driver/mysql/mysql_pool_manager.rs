@@ -34,7 +34,7 @@ pub struct MysqlPoolManager {
 
 #[async_trait]
 impl ConnectionPoolTrait for MysqlPoolManager {
-    fn schema_manger(&self) -> Box<dyn SchemaManagerTrait> {
+    fn schema_manger(&self) -> Box<dyn SchemaManagerTrait + Send + Sync> {
         Box::new(MySqlSchemaManager::new(self.db_pool.clone()))
     }
     fn id(&self) -> String {

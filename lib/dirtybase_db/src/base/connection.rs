@@ -11,6 +11,6 @@ pub trait ConnectionPoolRegisterTrait: Send {
 #[async_trait]
 pub trait ConnectionPoolTrait: Debug + Send + Sync {
     /// Calls by the ConnectionManagerCollection
-    fn schema_manger(&self) -> Box<dyn SchemaManagerTrait>;
+    fn schema_manger(&self) -> Box<dyn SchemaManagerTrait + Send + Sync>;
     fn id(&self) -> String;
 }
