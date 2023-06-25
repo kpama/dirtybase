@@ -86,3 +86,9 @@ impl Display for UserStatus {
         }
     }
 }
+
+impl Default for UserStatus {
+    fn default() -> Self {
+        Self::Pending
+    }
+}
