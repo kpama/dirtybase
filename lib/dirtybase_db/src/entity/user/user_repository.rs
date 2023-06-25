@@ -85,6 +85,7 @@ impl UserRepository {
                 .manager_mut()
                 .select_from_table(USER_TABLE, |q| {
                     q.select_all();
+                    q.and_is_null(USER_TABLE_DELETED_AT_FIELD);
                     if !email.is_empty() {
                         q.eq(USER_TABLE_EMAIL_FIELD, email);
                     } else {
