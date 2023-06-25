@@ -14,7 +14,7 @@ pub use user_repository::UserRepository;
 pub use user_service::UserService;
 
 // Core User table name
-pub static USER_TABLE: &str = "core_user";
+pub const USER_TABLE: &str = "core_user";
 
 // Fields
 pub const USER_TABLE_USERNAME_FIELD: &str = "username";
@@ -32,8 +32,8 @@ pub fn hash_password(raw: &str) -> String {
     bcrypt::hash(raw, 8).unwrap()
 }
 
-pub fn verify_password(raw: &str, hash: &str) {
-    bcrypt::verify(raw, hash).unwrap();
+pub fn verify_password(raw: &str, hash: &str) -> bool {
+    bcrypt::verify(raw, hash).unwrap()
 }
 
 // We need to have this table in the orm lib as
