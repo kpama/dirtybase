@@ -44,7 +44,7 @@ impl From<AuthenticationErrorStatus> for ApiError {
                 value.to_string().as_str(),
             ),
             AuthenticationErrorStatus::AccountSuspended => ApiError::new(
-                "password_incorrent",
+                "password_incorrect",
                 value.to_string().as_str(),
                 value.to_string().as_str(),
             ),
