@@ -78,7 +78,7 @@ impl DirtybaseUserService {
                     Err(AuthenticationErrorStatus::AuthenticationFailed)
                 }
             }
-            Err(e) => return Err(AuthenticationErrorStatus::UserNotFound),
+            Err(_) => return Err(AuthenticationErrorStatus::UserNotFound),
         }
     }
 }
