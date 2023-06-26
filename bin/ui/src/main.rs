@@ -55,6 +55,9 @@ async fn main() -> std::io::Result<()> {
         config.web_port()
     );
 
+    dirtybase::http::display_welcome_info(config.web_ip_address(), config.web_port());
+    println!("This version comes with a web GUI");
+
     HttpServer::new(|| {
         App::new()
             .service(home)

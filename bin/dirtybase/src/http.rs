@@ -26,6 +26,8 @@ pub async fn init(app: busybody::Service<DirtyBase>) -> std::io::Result<()> {
         config.web_port()
     );
 
+    display_welcome_info(&config.web_ip_address(), config.web_port());
+
     HttpServer::new(move || {
         App::new()
             .app_data(data.clone())
@@ -38,6 +40,22 @@ pub async fn init(app: busybody::Service<DirtyBase>) -> std::io::Result<()> {
     .bind((config.web_ip_address().as_str(), config.web_port()))?
     .run()
     .await
+}
+
+pub fn display_welcome_info(address: &str, port: u16) {
+    const VERSION: &str = env!("CARGO_PKG_VERSION");
+    println!(
+        r"
+    ____  _      __        ____                     
+   / __ \(_)____/ /___  __/ __ )____ _________      
+  / / / / / ___/ __/ / / / __  / __ `/ ___/ _ \     
+ / /_/ / / /  / /_/ /_/ / /_/ / /_/ (__  )  __/     
+/_____/_/_/   \__/\__, /_____/\__,_/____/\___/      
+                 /____/                             
+"
+    );
+    println!("version: {}", VERSION);
+    println!("Http server running at : {} on port: {}", address, port);
 }
 
 pub fn register_rest_endpoints() -> actix_web::Scope<
