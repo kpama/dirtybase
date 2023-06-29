@@ -76,7 +76,7 @@ impl FieldValue {
         return Self::from_ref_option_ref(field).clone().into();
     }
 
-    /// Returns a the FieldValue if Some `NotSet` when None
+    /// Returns the FieldValue if Some and `NotSet` when None
     pub fn from_ref_option<'a>(field: Option<&'a FieldValue>) -> FieldValue {
         if let Some(f) = field {
             f.clone()
