@@ -1,6 +1,5 @@
-use std::cell::RefCell;
-
 use super::{field_values::FieldValue, types::ColumnAndValue};
+use std::cell::RefCell;
 
 pub struct ColumnAndValueBuilder {
     data: RefCell<ColumnAndValue>,
