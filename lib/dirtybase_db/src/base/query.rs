@@ -1,7 +1,7 @@
 use super::{
     field_values::FieldValue, join_builder::JoinQueryBuilder, query_conditions::Condition,
-    query_join_types::JoinType, query_operators::Operator, types::ColumnAndValue,
-    where_join_operators::WhereJoinOperator,
+    query_join_types::JoinType, query_operators::Operator, table::DELETED_AT_FIELD,
+    types::ColumnAndValue, where_join_operators::WhereJoinOperator,
 };
 use std::{collections::HashMap, fmt::Display};
 
@@ -334,6 +334,15 @@ impl QueryBuilder {
             FieldValue::Null,
             Some(WhereJoin::Or),
         )
+    }
+
+    pub fn without_trash(&mut self) -> &mut Self {
+        self.is_null(DELETED_AT_FIELD)
+    }
+
+    pub fn with_trash(&mut self) -> &mut Self {
+        self.is_null(DELETED_AT_FIELD)
+            .or_is_not_null(DELETED_AT_FIELD)
     }
 
     pub fn is_not_null(&mut self, column: &str) -> &mut Self {
