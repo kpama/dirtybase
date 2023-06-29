@@ -9,13 +9,13 @@ pub struct JoinQueryBuilder {
 }
 
 impl JoinQueryBuilder {
-    pub fn new(
+    pub fn new<T: ToString>(
         table: &str,
         left_table: &str,
         operator: &str,
         right_table: &str,
         join_type: JoinType,
-        select_columns: Option<&[&str]>,
+        select_columns: Option<&[T]>,
     ) -> Self {
         Self {
             table: table.to_owned(),

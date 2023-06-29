@@ -517,14 +517,14 @@ impl QueryBuilder {
         self.where_(WhereJoinOperator::And(condition))
     }
 
-    pub fn join(
+    pub fn join<T: ToString>(
         &mut self,
         table: &str,
         left_table: &str,
         operator: &str,
         right_table: &str,
         join_type: JoinType,
-        select_columns: Option<&[&str]>,
+        select_columns: Option<&[T]>,
     ) -> &mut Self {
         if self.joins.is_none() {
             self.joins = Some(Vec::new());
@@ -550,7 +550,7 @@ impl QueryBuilder {
         operator: &str,
         right_table: &str,
     ) -> &mut Self {
-        self.join(
+        self.join::<String>(
             table,
             left_table,
             operator,
@@ -560,13 +560,13 @@ impl QueryBuilder {
         )
     }
 
-    pub fn inner_join_and_select(
+    pub fn inner_join_and_select<T: ToString>(
         &mut self,
         table: &str,
         left_table: &str,
         operator: &str,
         right_table: &str,
-        select_columns: &[&str],
+        select_columns: &[T],
     ) -> &mut Self {
         self.join(
             table,
@@ -585,7 +585,7 @@ impl QueryBuilder {
         operator: &str,
         right_table: &str,
     ) -> &mut Self {
-        self.join(
+        self.join::<String>(
             table,
             left_table,
             operator,
@@ -595,13 +595,13 @@ impl QueryBuilder {
         )
     }
 
-    pub fn left_join_and_select(
+    pub fn left_join_and_select<T: ToString>(
         &mut self,
         table: &str,
         left_table: &str,
         operator: &str,
         right_table: &str,
-        select_columns: &[&str],
+        select_columns: &[T],
     ) -> &mut Self {
         self.join(
             table,
@@ -620,7 +620,7 @@ impl QueryBuilder {
         operator: &str,
         right_table: &str,
     ) -> &mut Self {
-        self.join(
+        self.join::<String>(
             table,
             left_table,
             operator,
@@ -630,13 +630,13 @@ impl QueryBuilder {
         )
     }
 
-    pub fn right_join_and_select(
+    pub fn right_join_and_select<T: ToString>(
         &mut self,
         table: &str,
         left_table: &str,
         operator: &str,
         right_table: &str,
-        select_columns: &[&str],
+        select_columns: &[T],
     ) -> &mut Self {
         self.join(
             table,
