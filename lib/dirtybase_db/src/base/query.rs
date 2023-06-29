@@ -490,8 +490,20 @@ impl QueryBuilder {
         let condition = Condition::new(column, operator, value.into());
         match and_or {
             Some(j) => match j {
-                WhereJoin::And => self.and_where(condition),
-                WhereJoin::Or => self.or_where(condition),
+                WhereJoin::And => {
+                    if self.where_clauses.is_empty() {
+                        self.first_or_and(condition)
+                    } else {
+                        self.and_where(condition)
+                    }
+                }
+                WhereJoin::Or => {
+                    if self.where_clauses.is_empty() {
+                        self.first_or_and(condition)
+                    } else {
+                        self.or_where(condition)
+                    }
+                }
             },
             _ => self.first_or_and(condition),
         }
