@@ -53,7 +53,6 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        println!("Hi from start. You requested: {}", req.path());
         let jwt = pluck_jwt_token(&req).unwrap_or_default();
 
         let fut = self.service.call(req);
@@ -69,7 +68,6 @@ where
 
             let res = fut.await?;
 
-            println!("Hi from response");
             Ok(res)
         })
     }
