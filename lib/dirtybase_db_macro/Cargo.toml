@@ -9,7 +9,7 @@ edition = { workspace = true }
 proc-macro = true
 
 [dependencies]
-dirtybase_db_internal = { path = "../dirtybase_db_internal" }
+dirtybase_db_types = { path = "../dirtybase_db_types" }
 quote = { workspace = true }
 syn = { workspace = true }
 sqlx = { workspace = true }
