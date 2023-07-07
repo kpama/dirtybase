@@ -7,7 +7,7 @@ edition = { workspace = true }
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dirtybase_db_internal = { path = "../dirtybase_db_internal" }
+dirtybase_db_types = { path = "../dirtybase_db_types" }
 dirtybase_db_macro = { path = "../dirtybase_db_macro" }
 async-trait = { workspace = true }
 futures = { workspace = true }
