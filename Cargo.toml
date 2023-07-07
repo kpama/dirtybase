@@ -4,7 +4,7 @@ members = [
   "bin/dirtybase-ui",
   "lib/dirtybase_db",
   "lib/dirtybase_db_macro",
-  "lib/dirtybase_db_internal",
+  "lib/dirtybase_db_types",
   "bin/dirtybase-tos/front",
   "bin/dirtybase-tos/app",
   "bin/dirtybase-tos/server",
