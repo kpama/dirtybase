@@ -8,9 +8,9 @@ pub struct Condition {
 }
 
 impl Condition {
-    pub fn new<T: Into<QueryValue>>(column: &str, operator: Operator, value: T) -> Self {
+    pub fn new<T: Into<QueryValue>, C: ToString>(column: C, operator: Operator, value: T) -> Self {
         Self {
-            column: column.to_owned(),
+            column: column.to_string(),
             operator,
             value: value.into(),
         }
