@@ -285,10 +285,12 @@ pub(crate) fn pluck_table_name(input: &DeriveInput) -> String {
             Meta::List(the_list) => {
                 if the_list.path.is_ident("dirty") {
                     let mut walker = the_list.tokens.clone().into_iter();
-                    if let Some(arg) = walker.next() {
+                    while let Some(arg) = walker.next() {
                         if arg.to_string() == "table" {
-                            if let Some(tbl) = walker.nth(1) {
+                            _ = walker.next();
+                            if let Some(tbl) = walker.next() {
                                 table_name = tbl.to_string().replace("\"", "");
+                                break;
                             }
                         }
                     }
@@ -300,4 +302,68 @@ pub(crate) fn pluck_table_name(input: &DeriveInput) -> String {
     }
 
     table_name
+}
+
+pub(crate) fn pluck_id_column(input: &DeriveInput) -> String {
+    let mut id_field = "".to_owned();
+
+    for attr in &input.attrs {
+        match &attr.meta {
+            Meta::List(the_list) => {
+                if the_list.path.is_ident("dirty") {
+                    let mut walker = the_list.tokens.clone().into_iter();
+                    while let Some(arg) = walker.next() {
+                        if arg.to_string() == "id" {
+                            _ = walker.next();
+                            if let Some(tbl) = walker.next() {
+                                id_field = tbl.to_string().replace("\"", "");
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+            _ => (),
+        }
+    }
+
+    id_field
+}
+
+pub(crate) fn build_id_method(input: &DeriveInput) -> TokenStream {
+    let id_field = pluck_id_column(input);
+
+    if id_field.is_empty() {
+        quote! {
+            fn id_column() -> Option<&'static str> {
+                None
+            }
+        }
+    } else {
+        quote! {
+            fn id_column() -> Option<&'static str> {
+                Some(#id_field)
+            }
+        }
+    }
+}
+
+pub(crate) fn build_foreign_id_method(input: &DeriveInput, table_name: &str) -> TokenStream {
+    let id_field = pluck_id_column(input);
+
+    if id_field.is_empty() {
+        quote! {
+            fn foreign_id_column() -> Option<&'static str> {
+                None
+            }
+        }
+    } else {
+        let name = format!("{}_{}", table_name, &id_field);
+        quote! {
+            fn foreign_id_column() -> Option<&'static str> {
+                Some(#name)
+            }
+        }
+    }
 }

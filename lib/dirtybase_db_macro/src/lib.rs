@@ -11,6 +11,9 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
 
     let table_name = pluck_table_name(&input);
+    let id_column_method = build_id_method(&input);
+    let foreign_id_method = build_foreign_id_method(&input, &table_name);
+
     let columns_attributes = pluck_columns(&input);
     let column = pluck_names(&columns_attributes);
 
@@ -34,6 +37,11 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
 
       // TableEntityTrait
       impl #ty_generics ::dirtybase_db_types::TableEntityTrait for #name  #ty_generics #where_clause {
+
+        #id_column_method
+
+        #foreign_id_method
+
         fn table_name() -> &'static str {
           #table_name
         }
