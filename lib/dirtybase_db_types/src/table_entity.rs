@@ -13,8 +13,8 @@ pub trait TableEntityTrait: FromColumnAndValue + IntoColumnAndValue {
         None
     }
 
-    fn prefix_with_tbl(subject: &str) -> String {
-        format!("{}.{}", Self::table_name(), subject)
+    fn prefix_with_tbl<T: ToString>(subject: T) -> String {
+        format!("{}.{}", Self::table_name(), subject.to_string())
     }
 
     fn table_column_full_names() -> Vec<String> {
@@ -24,8 +24,13 @@ pub trait TableEntityTrait: FromColumnAndValue + IntoColumnAndValue {
             .collect()
     }
 
-    fn column_aliases<'a>(prefix: Option<&'a str>) -> Vec<String> {
-        let pre = prefix.unwrap_or(Self::table_name());
+    fn column_aliases<T: ToString>(prefix: Option<T>) -> Vec<String> {
+        let pre: String = if let Some(t) = prefix {
+            t.to_string()
+        } else {
+            Self::table_name().to_owned()
+        };
+
         Self::table_columns()
             .iter()
             .map(|c| format!("{0}.{2} as '{1}.{2}'", Self::table_name(), pre, c))
