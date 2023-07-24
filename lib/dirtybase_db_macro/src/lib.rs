@@ -25,11 +25,13 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let from_cvs = build_from_handlers(&columns_attributes);
     let into_field_values = build_into_handlers(&columns_attributes);
     let into_cv_for_calls = build_into_for_calls(&columns_attributes);
+    let special_column_methods = build_special_column_methods(&columns_attributes);
 
     let expanded = quote! {
 
       // From columValue methods for each field
       impl #ty_generics #name  #ty_generics #where_clause {
+
         #(#from_cvs)*
 
         #(#into_field_values)*
@@ -41,6 +43,8 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
         #id_column_method
 
         #foreign_id_method
+
+        #(#special_column_methods)*
 
         fn table_name() -> &'static str {
           #table_name

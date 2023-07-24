@@ -1,6 +1,7 @@
 use crate::attribute_type::DirtybaseAttributes;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
+use std::collections::HashMap;
 use syn::{Data, DeriveInput, GenericArgument, Meta, MetaList, PathArguments};
 
 pub(crate) fn pluck_columns(input: &DeriveInput) -> Vec<(String, DirtybaseAttributes)> {
@@ -366,4 +367,72 @@ pub(crate) fn build_foreign_id_method(input: &DeriveInput, table_name: &str) -> 
             }
         }
     }
+}
+
+pub(crate) fn build_special_column_methods(
+    columns_attributes: &Vec<(String, DirtybaseAttributes)>,
+) -> Vec<proc_macro2::TokenStream> {
+    let mut built: HashMap<&str, proc_macro2::TokenStream> = HashMap::new();
+
+    for x in columns_attributes.iter() {
+        if built.contains_key(x.1.name.as_str()) {
+            continue;
+        }
+
+        match x.1.name.as_str() {
+            "created_at" => {
+                built.insert(
+                    "created_at",
+                    quote! {
+                        fn created_at_column() -> Option<&'static str> {
+                            Some("created_at")
+                        }
+                    },
+                );
+            }
+            "updated_at" => {
+                built.insert(
+                    "updated_at",
+                    quote! {
+                        fn updated_at_column() -> Option<&'static str> {
+                            Some("updated_at")
+                        }
+                    },
+                );
+            }
+            "deleted_at" => {
+                built.insert(
+                    "deleted_at",
+                    quote! {
+                        fn deleted_at_column() -> Option<&'static str> {
+                            Some("deleted_at")
+                        }
+                    },
+                );
+            }
+            "creator_id" => {
+                built.insert(
+                    "creator_id",
+                    quote! {
+                        fn creator_id_column() -> Option<&'static str> {
+                            Some("creator_id")
+                        }
+                    },
+                );
+            }
+            "editor_id" => {
+                built.insert(
+                    "editor_id",
+                    quote! {
+                        fn editor_id_column() -> Option<&'static str> {
+                            Some("editor_id")
+                        }
+                    },
+                );
+            }
+            _ => (),
+        }
+    }
+
+    built.into_values().collect()
 }

@@ -1,15 +1,39 @@
 use crate::types::{FromColumnAndValue, IntoColumnAndValue};
 
 pub trait TableEntityTrait: FromColumnAndValue + IntoColumnAndValue {
+    /// Tables table's column names without prefix
     fn table_columns() -> &'static [&'static str];
 
+    /// Table name
     fn table_name() -> &'static str;
 
+    /// Table's ID column. Usually `id`
     fn id_column() -> Option<&'static str> {
         None
     }
 
+    /// Table's foreign column name `table name + _ + id`
     fn foreign_id_column() -> Option<&'static str> {
+        None
+    }
+
+    fn created_at_column() -> Option<&'static str> {
+        None
+    }
+
+    fn updated_at_column() -> Option<&'static str> {
+        None
+    }
+
+    fn deleted_at_column() -> Option<&'static str> {
+        None
+    }
+
+    fn creator_id_column() -> Option<&'static str> {
+        None
+    }
+
+    fn editor_id_column() -> Option<&'static str> {
         None
     }
 
@@ -24,7 +48,7 @@ pub trait TableEntityTrait: FromColumnAndValue + IntoColumnAndValue {
             .collect()
     }
 
-    fn column_aliases<T: ToString>(prefix: Option<T>) -> Vec<String> {
+    fn column_aliases(prefix: Option<&str>) -> Vec<String> {
         let pre: String = if let Some(t) = prefix {
             t.to_string()
         } else {
