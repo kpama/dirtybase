@@ -5,6 +5,14 @@ pub trait TableEntityTrait: FromColumnAndValue + IntoColumnAndValue {
 
     fn table_name() -> &'static str;
 
+    fn id_column() -> Option<&'static str> {
+        None
+    }
+
+    fn foreign_id_column() -> Option<&'static str> {
+        None
+    }
+
     fn prefix_with_tbl(subject: &str) -> String {
         format!("{}.{}", Self::table_name(), subject)
     }
