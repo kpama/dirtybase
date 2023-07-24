@@ -7,7 +7,7 @@ use dirtybase_db_types::types::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, DirtyTable)]
-#[dirty(table = "core_user")]
+#[dirty(table = "core_user", id = "id")]
 pub struct UserEntity {
     pub internal_id: InternalIdField,
     pub id: UlidField,
