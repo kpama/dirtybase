@@ -473,7 +473,7 @@ impl MySqlSchemaManager {
             let name = col.name().to_owned();
             match col.type_info().to_string().as_str() {
                 "BOOLEAN" | "TINYINT(1)" => {
-                    let v: bool = row.get(col.name());
+                    let v: bool = row.try_get::<i8, &str>(col.name()).unwrap_or_default() > 0;
                     this_row.insert(name, FieldValue::Boolean(v));
                 }
                 "TINYINT" => {
