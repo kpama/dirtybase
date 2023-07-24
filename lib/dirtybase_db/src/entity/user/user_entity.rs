@@ -1,24 +1,14 @@
+use super::UserStatus;
+use crate::base::helper::generate_ulid;
+use dirtybase_db_macro::DirtyTable;
+use dirtybase_db_types::types::{
+    BooleanField, DateTimeField, InternalIdField, StringField, UlidField,
+};
 use serde::{Deserialize, Serialize};
 
-use super::{
-    UserStatus, USER_TABLE_CREATED_AT_FIELD, USER_TABLE_DELETED_AT_FIELD, USER_TABLE_EMAIL_FIELD,
-    USER_TABLE_ID_FIELD, USER_TABLE_INTERNAL_ID_FIELD, USER_TABLE_PASSWORD_FIELD,
-    USER_TABLE_RESET_PASSWORD_FIELD, USER_TABLE_STATUS_FIELD, USER_TABLE_UPDATED_AT_FIELD,
-    USER_TABLE_USERNAME_FIELD,
-};
-use crate::base::{
-    field_values::FieldValue,
-    helper::generate_ulid,
-    types::{
-        BooleanField, ColumnAndValue, DateTimeField, FromColumnAndValue, InternalIdField,
-        IntoColumnAndValue, StringField, UlidField,
-    },
-    ColumnAndValueBuilder,
-};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, DirtyTable)]
+#[dirty(table = "core_user")]
 pub struct UserEntity {
-    #[serde(skip)]
     pub internal_id: InternalIdField,
     pub id: UlidField,
     pub username: StringField,
@@ -58,50 +48,5 @@ impl UserEntity {
             status: Some(UserStatus::Pending),
             ..Self::default()
         }
-    }
-}
-
-impl FromColumnAndValue for UserEntity {
-    fn from_column_value(column_and_value: ColumnAndValue) -> Self {
-        Self {
-            internal_id: FieldValue::from_ref_option_into(
-                column_and_value.get(USER_TABLE_INTERNAL_ID_FIELD),
-            ),
-            id: FieldValue::from_ref_option_into(column_and_value.get(USER_TABLE_ID_FIELD)),
-            username: FieldValue::from_ref_option_into(
-                column_and_value.get(USER_TABLE_USERNAME_FIELD),
-            ),
-            email: FieldValue::from_ref_option_into(column_and_value.get(USER_TABLE_EMAIL_FIELD)),
-            reset_password: FieldValue::from_ref_option_into(
-                column_and_value.get(USER_TABLE_RESET_PASSWORD_FIELD),
-            ),
-            status: FieldValue::from_ref_option_into(column_and_value.get(USER_TABLE_STATUS_FIELD)),
-            password: FieldValue::from_ref_option_into(
-                column_and_value.get(USER_TABLE_PASSWORD_FIELD),
-            ),
-            created_at: FieldValue::from_ref_option_into(
-                column_and_value.get(USER_TABLE_CREATED_AT_FIELD),
-            ),
-            updated_at: FieldValue::from_ref_option_into(
-                column_and_value.get(USER_TABLE_UPDATED_AT_FIELD),
-            ),
-            deleted_at: FieldValue::from_ref_option_into(
-                column_and_value.get(USER_TABLE_DELETED_AT_FIELD),
-            ),
-        }
-    }
-}
-
-impl IntoColumnAndValue for UserEntity {
-    fn into_column_value(self) -> crate::base::types::ColumnAndValue {
-        ColumnAndValueBuilder::new()
-            .try_to_insert(USER_TABLE_ID_FIELD, self.id)
-            .try_to_insert(USER_TABLE_USERNAME_FIELD, self.username)
-            .try_to_insert(USER_TABLE_EMAIL_FIELD, self.email)
-            .try_to_insert(USER_TABLE_PASSWORD_FIELD, self.password)
-            .try_to_insert(USER_TABLE_STATUS_FIELD, self.status)
-            .try_to_insert(USER_TABLE_RESET_PASSWORD_FIELD, self.reset_password)
-            .try_to_insert(USER_TABLE_DELETED_AT_FIELD, self.deleted_at)
-            .build()
     }
 }

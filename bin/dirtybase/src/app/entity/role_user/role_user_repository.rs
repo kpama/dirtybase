@@ -1,13 +1,11 @@
-use dirtybase_db::base::{
-    field_values::FieldValue, manager::Manager, types::FromColumnAndValue,
-    types::IntoColumnAndValue,
-};
-
-use crate::app::DirtyBase;
-
 use super::{
     RoleUserEntity, ROLE_USER_TABLE, ROLE_USER_TABLE_CORE_APP_ROLE_ID_FIELD,
     ROLE_USER_TABLE_CORE_USER_ID_FIELD, ROLE_USER_TABLE_DELETED_AT_FIELD,
+};
+use crate::app::DirtyBase;
+use dirtybase_db::{
+    base::manager::Manager,
+    dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue},
 };
 
 pub struct RoleUserRepository {
@@ -28,13 +26,12 @@ impl RoleUserRepository {
     }
 
     pub async fn find_by_user_and_app_ids(
-        &mut self,
+        &self,
         user_id: &str,
         app_id: &str,
         with_trashed: bool,
     ) -> Result<RoleUserEntity, anyhow::Error> {
-        match self
-            .manager_mut()
+        self.manager()
             .select_from_table(ROLE_USER_TABLE, |q| {
                 q.select_all()
                     .eq(ROLE_USER_TABLE_CORE_USER_ID_FIELD, user_id)
@@ -43,16 +40,12 @@ impl RoleUserRepository {
                     q.is_null(ROLE_USER_TABLE_DELETED_AT_FIELD);
                 }
             })
-            .fetch_one()
+            .fetch_one_to()
             .await
-        {
-            Ok(result) => Ok(RoleUserEntity::from_column_value(result)),
-            Err(e) => Err(e),
-        }
     }
 
     pub async fn create(
-        &mut self,
+        &self,
         record: impl IntoColumnAndValue,
     ) -> Result<RoleUserEntity, anyhow::Error> {
         let kv = record.into_column_value();
@@ -67,7 +60,7 @@ impl RoleUserRepository {
     }
 
     pub async fn update(
-        &mut self,
+        &self,
         record: impl IntoColumnAndValue,
     ) -> Result<RoleUserEntity, anyhow::Error> {
         let kv = record.into_column_value();

@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::http::http_helpers::ApiError;
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize)]
 #[serde(tag = "code")]
 pub enum AuthenticationErrorStatus {
     UserNotFound,

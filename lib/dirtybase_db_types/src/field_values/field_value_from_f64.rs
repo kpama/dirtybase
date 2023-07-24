@@ -6,50 +6,51 @@ impl From<f64> for FieldValue {
     }
 }
 
-impl From<Option<f64>> for FieldValue {
-    fn from(value: Option<f64>) -> Self {
-        if let Some(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl From<Option<f64>> for FieldValue {
+//     fn from(value: Option<f64>) -> Self {
+//         if let Some(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
-impl<E> From<Result<f64, E>> for FieldValue {
-    fn from(value: Result<f64, E>) -> Self {
-        if let Ok(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl<E> From<Result<f64, E>> for FieldValue {
+//     fn from(value: Result<f64, E>) -> Self {
+//         if let Ok(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
+
 impl From<Vec<f64>> for FieldValue {
     fn from(value: Vec<f64>) -> Self {
         Self::F64s(value.into_iter().map(|x| x.into()).collect())
     }
 }
 
-impl From<Option<Vec<f64>>> for FieldValue {
-    fn from(value: Option<Vec<f64>>) -> Self {
-        if let Some(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl From<Option<Vec<f64>>> for FieldValue {
+//     fn from(value: Option<Vec<f64>>) -> Self {
+//         if let Some(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
-impl<E> From<Result<Vec<f64>, E>> for FieldValue {
-    fn from(value: Result<Vec<f64>, E>) -> Self {
-        if let Ok(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl<E> From<Result<Vec<f64>, E>> for FieldValue {
+//     fn from(value: Result<Vec<f64>, E>) -> Self {
+//         if let Ok(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
 impl FromIterator<f64> for FieldValue {
     fn from_iter<T: IntoIterator<Item = f64>>(iter: T) -> Self {

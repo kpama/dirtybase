@@ -6,6 +6,8 @@
     "dirtybase",
     "dotenv",
     "dotenvy",
+    "dtos",
+    "fama",
     "hmac",
     "replacen",
     "sqlx"

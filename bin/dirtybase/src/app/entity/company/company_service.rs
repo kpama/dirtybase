@@ -21,7 +21,7 @@ impl CompanyService {
     }
 
     pub async fn create(
-        &mut self,
+        &self,
         mut company: CompanyEntity,
         company_user: UserEntity,
         blame: UserEntity,
@@ -50,7 +50,7 @@ impl CompanyService {
     }
 
     pub async fn update(
-        &mut self,
+        &self,
         mut company: CompanyEntity,
         id: &str,
         blame: UserEntity,

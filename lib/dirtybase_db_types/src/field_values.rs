@@ -76,6 +76,17 @@ impl FieldValue {
         return Self::from_ref_option_ref(field).clone().into();
     }
 
+    pub fn from_ref_option_into_option<'a, T>(field: Option<&'a FieldValue>) -> Option<T>
+    where
+        Self: Into<T>,
+    {
+        if field.is_some() {
+            Some(Self::from_ref_option_into(field))
+        } else {
+            None
+        }
+    }
+
     /// Returns the FieldValue if Some and `NotSet` when None
     pub fn from_ref_option<'a>(field: Option<&'a FieldValue>) -> FieldValue {
         if let Some(f) = field {
@@ -168,33 +179,46 @@ impl From<bool> for FieldValue {
     }
 }
 
-impl From<Option<bool>> for FieldValue {
-    fn from(value: Option<bool>) -> Self {
-        if let Some(b) = value {
-            b.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl From<Option<bool>> for FieldValue {
+//     fn from(value: Option<bool>) -> Self {
+//         if let Some(b) = value {
+//             b.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
-impl<E> From<Result<bool, E>> for FieldValue {
-    fn from(value: Result<bool, E>) -> Self {
-        if let Ok(b) = value {
-            b.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl<E> From<Result<bool, E>> for FieldValue {
+//     fn from(value: Result<bool, E>) -> Self {
+//         if let Ok(b) = value {
+//             b.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
 impl From<()> for FieldValue {
     fn from(_value: ()) -> Self {
         Self::Null
     }
 }
-impl From<Option<()>> for FieldValue {
-    fn from(value: Option<()>) -> Self {
+// impl From<Option<()>> for FieldValue {
+//     fn from(value: Option<()>) -> Self {
+//         if let Some(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
+
+impl<T> From<Option<T>> for FieldValue
+where
+    T: Into<FieldValue>,
+{
+    fn from(value: Option<T>) -> Self {
         if let Some(v) = value {
             v.into()
         } else {
@@ -203,8 +227,11 @@ impl From<Option<()>> for FieldValue {
     }
 }
 
-impl<E> From<Result<(), E>> for FieldValue {
-    fn from(value: Result<(), E>) -> Self {
+impl<T, E> From<Result<T, E>> for FieldValue
+where
+    T: Into<FieldValue>,
+{
+    fn from(value: Result<T, E>) -> Self {
         if let Ok(v) = value {
             v.into()
         } else {
@@ -212,6 +239,16 @@ impl<E> From<Result<(), E>> for FieldValue {
         }
     }
 }
+
+// impl<E> From<Result<(), E>> for FieldValue {
+//     fn from(value: Result<(), E>) -> Self {
+//         if let Ok(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
 impl From<HashMap<String, FieldValue>> for FieldValue {
     fn from(value: HashMap<String, FieldValue>) -> Self {
@@ -224,25 +261,25 @@ impl From<HashMap<String, FieldValue>> for FieldValue {
     }
 }
 
-impl From<Option<HashMap<String, FieldValue>>> for FieldValue {
-    fn from(value: Option<HashMap<String, FieldValue>>) -> Self {
-        if let Some(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl From<Option<HashMap<String, FieldValue>>> for FieldValue {
+//     fn from(value: Option<HashMap<String, FieldValue>>) -> Self {
+//         if let Some(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
-impl<E> From<Result<HashMap<String, FieldValue>, E>> for FieldValue {
-    fn from(value: Result<HashMap<String, FieldValue>, E>) -> Self {
-        if let Ok(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl<E> From<Result<HashMap<String, FieldValue>, E>> for FieldValue {
+//     fn from(value: Result<HashMap<String, FieldValue>, E>) -> Self {
+//         if let Ok(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
 impl FromIterator<HashMap<String, FieldValue>> for FieldValue {
     fn from_iter<T: IntoIterator<Item = HashMap<String, FieldValue>>>(iter: T) -> Self {
@@ -282,25 +319,25 @@ impl<'a> From<HashMap<&'a str, FieldValue>> for FieldValue {
     }
 }
 
-impl<'a> From<Option<HashMap<&'a str, FieldValue>>> for FieldValue {
-    fn from(value: Option<HashMap<&'a str, FieldValue>>) -> Self {
-        if let Some(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl<'a> From<Option<HashMap<&'a str, FieldValue>>> for FieldValue {
+//     fn from(value: Option<HashMap<&'a str, FieldValue>>) -> Self {
+//         if let Some(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
-impl<'a, E> From<Result<HashMap<&'a str, FieldValue>, E>> for FieldValue {
-    fn from(value: Result<HashMap<&'a str, FieldValue>, E>) -> Self {
-        if let Ok(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl<'a, E> From<Result<HashMap<&'a str, FieldValue>, E>> for FieldValue {
+//     fn from(value: Result<HashMap<&'a str, FieldValue>, E>) -> Self {
+//         if let Ok(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
 impl<'a> FromIterator<HashMap<&'a str, FieldValue>> for FieldValue {
     fn from_iter<T: IntoIterator<Item = HashMap<&'a str, FieldValue>>>(iter: T) -> Self {

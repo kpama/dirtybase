@@ -1,15 +1,13 @@
 #![allow(dead_code)]
 
-use crate::app::DirtyBase;
-
 use super::{
     CompanyEntity, COMPANY_TABLE, COMPANY_TABLE_DELETED_AT_FIELD, COMPANY_TABLE_ID_FIELD,
     COMPANY_TABLE_INTERNAL_ID_FIELD,
 };
-use dirtybase_db::base::{
-    field_values::FieldValue,
-    manager::Manager,
-    types::{FromColumnAndValue, IntoColumnAndValue},
+use crate::app::DirtyBase;
+use dirtybase_db::{
+    base::manager::Manager,
+    dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue},
 };
 
 pub struct CompanyRepository {
@@ -29,40 +27,30 @@ impl CompanyRepository {
         &mut self.manager
     }
 
-    pub async fn find_by_internal_id(&mut self, id: u64) -> Result<CompanyEntity, anyhow::Error> {
-        match self
-            .manager_mut()
+    pub async fn find_by_internal_id(&self, id: u64) -> Result<CompanyEntity, anyhow::Error> {
+        self.manager()
             .select_from_table(COMPANY_TABLE, |q| {
                 q.select_all()
                     .eq(COMPANY_TABLE_INTERNAL_ID_FIELD, id)
                     .and_is_null(COMPANY_TABLE_DELETED_AT_FIELD);
             })
-            .fetch_one()
+            .fetch_one_to()
             .await
-        {
-            Ok(result) => Ok(CompanyEntity::from_column_value(result)),
-            Err(e) => Err(e),
-        }
     }
 
-    pub async fn find_by_id(&mut self, id: &str) -> Result<CompanyEntity, anyhow::Error> {
-        match self
-            .manager_mut()
+    pub async fn find_by_id(&self, id: &str) -> Result<CompanyEntity, anyhow::Error> {
+        self.manager()
             .select_from_table(COMPANY_TABLE, |q| {
                 q.select_all()
                     .eq(COMPANY_TABLE_ID_FIELD, id)
                     .and_is_null(COMPANY_TABLE_DELETED_AT_FIELD);
             })
-            .fetch_one()
+            .fetch_one_to()
             .await
-        {
-            Ok(result) => Ok(CompanyEntity::from_column_value(result)),
-            Err(e) => Err(e),
-        }
     }
 
     pub async fn create(
-        &mut self,
+        &self,
         record: impl IntoColumnAndValue,
     ) -> Result<CompanyEntity, anyhow::Error> {
         let kv = record.into_column_value();
@@ -73,7 +61,7 @@ impl CompanyRepository {
     }
 
     pub async fn update(
-        &mut self,
+        &self,
         id: &str,
         record: impl IntoColumnAndValue,
     ) -> Result<CompanyEntity, anyhow::Error> {

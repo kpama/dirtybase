@@ -1,10 +1,3 @@
-mod app_entity;
-mod app_repository;
-mod app_service;
-
-pub use app_entity::AppEntity;
-pub use app_repository::AppRepository;
-pub use app_service::AppService;
 use dirtybase_db::base::{
     manager::Manager,
     table::{
@@ -12,6 +5,14 @@ use dirtybase_db::base::{
         INTERNAL_ID_FIELD, UPDATED_AT_FIELD,
     },
 };
+
+mod app_entity;
+mod app_repository;
+mod app_service;
+
+pub use app_entity::AppEntity;
+pub use app_repository::AppRepository;
+pub use app_service::AppService;
 
 use super::company::COMPANY_TABLE;
 

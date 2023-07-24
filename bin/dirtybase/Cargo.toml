@@ -7,6 +7,7 @@ edition = { workspace = true }
 
 [dependencies]
 dirtybase_db = { path = "../../lib/dirtybase_db" }
+dirtybase_db_types = { path = "../../lib/dirtybase_db_types" }
 actix-web = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }

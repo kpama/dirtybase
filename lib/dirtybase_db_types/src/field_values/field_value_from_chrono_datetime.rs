@@ -8,21 +8,22 @@ impl From<DateTime<Utc>> for FieldValue {
     }
 }
 
-impl From<Option<DateTime<Utc>>> for FieldValue {
-    fn from(value: Option<DateTime<Utc>>) -> Self {
-        if let Some(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
-impl<E> From<Result<DateTime<Utc>, E>> for FieldValue {
-    fn from(value: Result<DateTime<Utc>, E>) -> Self {
-        if let Ok(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl From<Option<DateTime<Utc>>> for FieldValue {
+//     fn from(value: Option<DateTime<Utc>>) -> Self {
+//         if let Some(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
+
+// impl<E> From<Result<DateTime<Utc>, E>> for FieldValue {
+//     fn from(value: Result<DateTime<Utc>, E>) -> Self {
+//         if let Ok(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }

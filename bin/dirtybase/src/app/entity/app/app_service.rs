@@ -24,12 +24,12 @@ impl AppService {
     }
 
     pub async fn create(
-        &mut self,
+        &self,
         mut app: AppEntity,
         blame: UserEntity,
     ) -> Result<AppEntity, anyhow::Error> {
         // TODO: Validation....
-        if app.company_id.is_none() {
+        if app.core_company_id.is_none() {
             return Err(anyhow!("An application requires a company"));
         }
 
@@ -49,17 +49,17 @@ impl AppService {
 
         app.creator_id = Some(blame.id.unwrap());
 
-        return self.app_repo_mut().create(app).await;
+        return self.app_repo().create(app).await;
     }
 
     pub async fn update(
-        &mut self,
+        &self,
         mut app: AppEntity,
         id: &str,
         blame: UserEntity,
     ) -> Result<AppEntity, anyhow::Error> {
         // TODO: Validation
-        if app.company_id.is_none() {
+        if app.core_company_id.is_none() {
             return Err(anyhow!("An application requires a company"));
         }
 
@@ -74,7 +74,7 @@ impl AppService {
         }
 
         app.editor_id = Some(blame.id.unwrap());
-        self.app_repo_mut().update(id, app).await
+        self.app_repo().update(id, app).await
     }
 }
 

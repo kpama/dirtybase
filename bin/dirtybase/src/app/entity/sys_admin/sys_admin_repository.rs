@@ -1,9 +1,8 @@
-use crate::app::DirtyBase;
-
 use super::{SysAdminEntity, SYS_ADMIN_TABLE, SYS_ADMIN_TABLE_USER_ID_FIELD};
-use dirtybase_db::base::{
-    field_values::FieldValue, manager::Manager, types::FromColumnAndValue,
-    types::IntoColumnAndValue,
+use crate::app::DirtyBase;
+use dirtybase_db::{
+    base::manager::Manager,
+    dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue},
 };
 
 pub struct SysAdminRepository {
@@ -23,22 +22,17 @@ impl SysAdminRepository {
         &mut self.manager
     }
 
-    pub async fn find_by_user_id(&mut self, id: &str) -> Result<SysAdminEntity, anyhow::Error> {
-        match self
-            .manager_mut()
+    pub async fn find_by_user_id(&self, id: &str) -> Result<SysAdminEntity, anyhow::Error> {
+        self.manager()
             .select_from_table(SYS_ADMIN_TABLE, |q| {
                 q.select_all().eq(SYS_ADMIN_TABLE_USER_ID_FIELD, id);
             })
-            .fetch_one()
+            .fetch_one_to()
             .await
-        {
-            Ok(result) => Ok(SysAdminEntity::from_column_value(result)),
-            Err(e) => Err(e),
-        }
     }
 
     pub async fn create(
-        &mut self,
+        &self,
         record: impl IntoColumnAndValue,
     ) -> Result<SysAdminEntity, anyhow::Error> {
         let kv = record.into_column_value();
@@ -49,7 +43,7 @@ impl SysAdminRepository {
         self.find_by_user_id(&user_id).await
     }
 
-    pub async fn delete(&mut self, user_id: &str) -> Result<bool, anyhow::Error> {
+    pub async fn delete(&self, user_id: &str) -> Result<bool, anyhow::Error> {
         self.manager
             .delete(SYS_ADMIN_TABLE, |q| {
                 q.eq(SYS_ADMIN_TABLE_USER_ID_FIELD, user_id);

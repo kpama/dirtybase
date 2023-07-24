@@ -1,10 +1,17 @@
-use crate::app::DirtyBase;
-
 use super::{AppEntity, APP_TABLE, APP_TABLE_ID_FIELD};
-use dirtybase_db::base::{
-    field_values::FieldValue, manager::Manager, types::FromColumnAndValue,
-    types::IntoColumnAndValue,
+use crate::app::{
+    entity::{app_role::AppRoleEntity, role_user::RoleUserEntity},
+    DirtyBase,
 };
+use dirtybase_db::{
+    base::manager::Manager,
+    dirtybase_db_types::{
+        field_values::FieldValue,
+        types::{IntoColumnAndValue, StructuredColumnAndValue},
+    },
+    entity::user::{UserEntity, USER_TABLE},
+};
+use dirtybase_db_types::TableEntityTrait;
 
 pub struct AppRepository {
     manager: Manager,
@@ -23,22 +30,45 @@ impl AppRepository {
         &mut self.manager
     }
 
-    pub async fn find_by_id(&mut self, id: &str) -> Result<AppEntity, anyhow::Error> {
-        match self
-            .manager_mut()
+    pub async fn find_all_by_user(
+        &self,
+        core_user_id: &str,
+    ) -> Result<Vec<StructuredColumnAndValue>, anyhow::Error> {
+        self.manager()
+            .select_from_table(USER_TABLE, |q| {
+                let app_columns = AppEntity::table_column_full_names()
+                    .iter()
+                    .enumerate()
+                    .map(|x| {
+                        if x.0 == 0 {
+                            format!("distinct {}", x.1)
+                        } else {
+                            x.1.clone()
+                        }
+                    })
+                    .collect::<Vec<String>>();
+
+                q.select_multiple(&app_columns)
+                    .left_join_table::<RoleUserEntity, UserEntity>("core_user_id", "id")
+                    .left_join_table::<AppRoleEntity, RoleUserEntity>("id", "core_app_role_id")
+                    .left_join_table::<AppEntity, AppRoleEntity>("id", "core_app_id")
+                    .eq("core_user.id", core_user_id);
+            })
+            .fetch_all()
+            .await
+    }
+
+    pub async fn find_by_id(&self, id: &str) -> Result<AppEntity, anyhow::Error> {
+        self.manager()
             .select_from_table(APP_TABLE, |q| {
                 q.select_all().eq(APP_TABLE_ID_FIELD, id);
             })
-            .fetch_one()
+            .fetch_one_to()
             .await
-        {
-            Ok(result) => Ok(AppEntity::from_column_value(result)),
-            Err(e) => Err(e),
-        }
     }
 
     pub async fn create(
-        &mut self,
+        &self,
         record: impl IntoColumnAndValue,
     ) -> Result<AppEntity, anyhow::Error> {
         let kv = record.into_column_value();
@@ -49,7 +79,7 @@ impl AppRepository {
     }
 
     pub async fn update(
-        &mut self,
+        &self,
         id: &str,
         record: impl IntoColumnAndValue,
     ) -> Result<AppEntity, anyhow::Error> {

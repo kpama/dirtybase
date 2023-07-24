@@ -1,6 +1,6 @@
 use super::{query_operators::Operator, query_values::QueryValue};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Condition {
     pub column: String,
     pub operator: Operator,

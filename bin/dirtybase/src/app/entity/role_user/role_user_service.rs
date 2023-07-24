@@ -25,7 +25,7 @@ impl RoleUserService {
     }
 
     pub async fn create(
-        &mut self,
+        &self,
         mut role_user: RoleUserEntity,
         blame: UserEntity,
     ) -> Result<RoleUserEntity, anyhow::Error> {
@@ -39,11 +39,11 @@ impl RoleUserService {
 
         role_user.creator_id = Some(blame.id.unwrap());
 
-        self.role_user_repo_mut().create(role_user).await
+        self.role_user_repo().create(role_user).await
     }
 
     pub async fn update(
-        &mut self,
+        &self,
         mut role_user: RoleUserEntity,
         blame: UserEntity,
     ) -> Result<RoleUserEntity, anyhow::Error> {
@@ -57,7 +57,7 @@ impl RoleUserService {
 
         role_user.editor_id = Some(blame.id.unwrap());
 
-        self.role_user_repo_mut().update(role_user).await
+        self.role_user_repo().update(role_user).await
     }
 }
 

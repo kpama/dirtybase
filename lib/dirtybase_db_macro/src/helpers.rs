@@ -1,0 +1,303 @@
+use crate::attribute_type::DirtybaseAttributes;
+use proc_macro2::TokenStream;
+use quote::{format_ident, quote};
+use syn::{Data, DeriveInput, GenericArgument, Meta, MetaList, PathArguments};
+
+pub(crate) fn pluck_columns(input: &DeriveInput) -> Vec<(String, DirtybaseAttributes)> {
+    let mut columns = Vec::new();
+
+    match &input.data {
+        Data::Struct(data) => match &data.fields {
+            syn::Fields::Named(fields) => {
+                for a_field in fields.named.iter() {
+                    if let Some(a_col) = get_real_column_name(a_field) {
+                        columns.push(a_col);
+                    }
+                }
+            }
+            _ => (),
+        },
+        _ => (),
+    }
+
+    columns
+}
+
+pub(crate) fn get_real_column_name(field: &syn::Field) -> Option<(String, DirtybaseAttributes)> {
+    let name = field.ident.as_ref().unwrap().to_string();
+
+    let mut dirty_attribute = DirtybaseAttributes::default();
+    dirty_attribute.from_handler = format!("from_column_for_{}", &name);
+    dirty_attribute.into_handler = format!("into_column_for_{}", &name);
+    dirty_attribute.name = name.clone();
+
+    let mut include_column = false;
+
+    if field.attrs.len() > 0 {
+        for attr in &field.attrs {
+            if let Meta::List(the_list) = &attr.meta {
+                include_column = field_attributes(&field, Some(the_list), &mut dirty_attribute);
+            }
+        }
+    } else {
+        include_column = field_attributes(&field, None, &mut dirty_attribute);
+    }
+
+    if include_column {
+        Some((name, dirty_attribute))
+    } else {
+        None
+    }
+}
+
+pub(crate) fn field_attributes(
+    field: &syn::Field,
+    metalist: Option<&MetaList>,
+    dirty_attribute: &mut DirtybaseAttributes,
+) -> bool {
+    let mut include = true;
+    let name = field.ident.as_ref().unwrap().to_string();
+    if !name.is_empty() {
+        dirty_attribute.name = name;
+    }
+
+    if let Some(meta) = metalist {
+        if meta.path.is_ident("dirty") {
+            let walker = meta.tokens.clone().into_iter();
+            include = attribute_to_attribute_type(walker, field, dirty_attribute);
+        } else {
+            make_column_name_attribute_type(field, dirty_attribute);
+        }
+    } else {
+        make_column_name_attribute_type(field, dirty_attribute);
+    }
+
+    include
+}
+
+pub(crate) fn attribute_to_attribute_type(
+    mut walker: proc_macro2::token_stream::IntoIter,
+    field: &syn::Field,
+    dirty_attribute: &mut DirtybaseAttributes,
+) -> bool {
+    let mut include = true;
+    if let Some(key) = walker.next() {
+        match key.to_string().as_str() {
+            "col" => {
+                _ = walker.next();
+                dirty_attribute.name = walker.next().unwrap().to_string().replace("\"", "");
+            }
+            "from" => {
+                _ = walker.next();
+                let from_handler = walker.next().unwrap().to_string().replace("\"", "");
+                dirty_attribute.from_handler = from_handler;
+                dirty_attribute.has_custom_from_handler = true;
+            }
+            "into" => {
+                _ = walker.next();
+                let into_handler = walker.next().unwrap().to_string().replace("\"", "");
+                dirty_attribute.into_handler = into_handler;
+                dirty_attribute.has_custom_into_handler = true;
+            }
+            "skip_select" => {
+                dirty_attribute.skip_select = true;
+            }
+            "skip_insert" => {
+                dirty_attribute.skip_insert = true;
+            }
+            "skip" => {
+                include = false;
+            }
+            _ => (),
+        };
+
+        if let Some(x) = walker.next() {
+            if x.to_string() == "," {
+                attribute_to_attribute_type(walker, field, dirty_attribute);
+            }
+        }
+
+        make_column_name_attribute_type(field, dirty_attribute);
+    }
+
+    include
+}
+
+pub(crate) fn make_column_name_attribute_type(
+    field: &syn::Field,
+    dirty_attribute: &mut DirtybaseAttributes,
+) {
+    match field.ty {
+        syn::Type::Path(ref p) => {
+            if &p.path.segments[0].ident.to_string() == "Option" {
+                if let PathArguments::AngleBracketed(a) = &p.path.segments[0].arguments {
+                    if let GenericArgument::Type(ag) = &a.args[0] {
+                        if let syn::Type::Path(p) = ag {
+                            dirty_attribute.optional = true;
+                            dirty_attribute.the_type =
+                                p.path.get_ident().as_ref().unwrap().to_string();
+                        }
+                    }
+                }
+            } else {
+                dirty_attribute.the_type = p.path.segments[0].ident.to_string();
+            }
+        }
+        _ => (),
+    }
+}
+
+pub(crate) fn pluck_names(columns_attributes: &Vec<(String, DirtybaseAttributes)>) -> Vec<String> {
+    columns_attributes
+        .iter()
+        .filter(|c| c.1.skip_select == false)
+        .map(|c| c.1.name.clone())
+        .collect::<Vec<String>>()
+}
+
+pub(crate) fn names_of_from_cv_handlers(
+    columns_attributes: &Vec<(String, DirtybaseAttributes)>,
+) -> Vec<TokenStream> {
+    columns_attributes
+        .iter()
+        .map(|item| {
+            //   #(#struct_fields.0 : Self::#from_cv_for_names(cv.get(#struct_fields.1))),*,
+            let struct_field = format_ident!("{}", &item.0);
+            let column = item.1.name.clone();
+            let handler = format_ident!("{}", &item.1.from_handler);
+            let field_name = item.0.clone();
+            if item.0 == item.1.name {
+                quote! {
+                    #struct_field: Self::#handler(cv.get(#column))
+                }
+            } else {
+                quote! {
+                    #struct_field: if let Some(v) =  cv.get(#column) {
+                        Self::#handler(Some(v))
+                    } else {
+                        Self::#handler(cv.get(#field_name))
+                    }
+                }
+            }
+        })
+        .collect()
+}
+
+pub(crate) fn build_from_handlers(
+    columns_attributes: &Vec<(String, DirtybaseAttributes)>,
+) -> Vec<proc_macro2::TokenStream> {
+    let mut built: Vec<proc_macro2::TokenStream> = Vec::new();
+    for item in columns_attributes.iter() {
+        let returns = format_ident!("{}", &item.1.the_type);
+        let fn_name = format_ident!("{}", &item.1.from_handler);
+
+        if item.1.has_custom_from_handler {
+            continue;
+        }
+
+        built.push(
+                    if item.1.optional {
+                        quote! {
+                            pub fn #fn_name <'a>(field: Option<&'a dirtybase_db_types::field_values::FieldValue>) -> Option<#returns> {
+                                dirtybase_db_types::field_values::FieldValue::from_ref_option_into_option(field)
+                            }
+                        }
+                    } else {
+                        quote! {
+                            pub fn #fn_name <'a> (field: Option<&'a dirtybase_db_types::field_values::FieldValue>) -> #returns {
+                                dirtybase_db_types::field_values::FieldValue::from_ref_option_into(field)
+                            }
+                        }
+                    });
+    }
+
+    built
+}
+
+// TODO: implement "into handler"
+pub(crate) fn build_into_handlers(
+    columns_attributes: &Vec<(String, DirtybaseAttributes)>,
+) -> Vec<proc_macro2::TokenStream> {
+    let mut built: Vec<proc_macro2::TokenStream> = Vec::new();
+
+    for item in columns_attributes.iter() {
+        let fn_name = format_ident!("{}", &item.1.into_handler);
+        let struct_field = format_ident!("{}", &item.0);
+
+        if item.1.has_custom_into_handler {
+            continue;
+        }
+
+        built.push(if item.1.optional {
+            quote! {
+                    pub fn #fn_name(&self) ->Option<dirtybase_db_types::field_values::FieldValue> {
+                        if let Some(value) = &self.#struct_field {
+                            Some(value.clone().into())
+                        } else {
+                            None
+                        }
+                    }
+            }
+        } else {
+            quote! {
+                    pub fn #fn_name(&self) ->Option<dirtybase_db_types::field_values::FieldValue> {
+                        Some(self.#struct_field.clone().into())
+                    }
+            }
+        });
+    }
+
+    built
+}
+
+pub(crate) fn build_into_for_calls(
+    columns_attributes: &Vec<(String, DirtybaseAttributes)>,
+) -> Vec<proc_macro2::TokenStream> {
+    let mut built: Vec<proc_macro2::TokenStream> = Vec::new();
+    for x in columns_attributes.iter() {
+        let name = x.1.name.clone();
+        // let struct_field_name = format_ident!("{}", &x.0);
+        let method_name = format_ident!("{}", &x.1.into_handler);
+
+        built.push(quote! {
+            try_to_insert_field_value(#name, self.#method_name())
+        });
+
+        // built.push(if x.1.optional {
+        //     quote! {
+        //         try_to_insert(#name, self.#struct_field_name)
+        //     }
+        // } else {
+        //     quote! {
+        //         insert(#name, self.#struct_field_name)
+        //     }
+        // });
+    }
+
+    built
+}
+
+pub(crate) fn pluck_table_name(input: &DeriveInput) -> String {
+    let mut table_name = "".to_owned();
+
+    for attr in &input.attrs {
+        match &attr.meta {
+            Meta::List(the_list) => {
+                if the_list.path.is_ident("dirty") {
+                    let mut walker = the_list.tokens.clone().into_iter();
+                    if let Some(arg) = walker.next() {
+                        if arg.to_string() == "table" {
+                            if let Some(tbl) = walker.nth(1) {
+                                table_name = tbl.to_string().replace("\"", "");
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+            _ => (),
+        }
+    }
+
+    table_name
+}

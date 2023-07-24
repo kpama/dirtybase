@@ -25,7 +25,7 @@ impl RoleService {
     }
 
     pub async fn create_defaults(
-        &mut self,
+        &self,
         app: AppEntity,
         blame: UserEntity,
     ) -> Result<Vec<RoleEntity>, anyhow::Error> {
@@ -58,7 +58,7 @@ impl RoleService {
     }
 
     pub async fn create(
-        &mut self,
+        &self,
         mut role: RoleEntity,
         blame: UserEntity,
     ) -> Result<RoleEntity, anyhow::Error> {
@@ -85,7 +85,7 @@ impl RoleService {
     }
 
     pub async fn update(
-        &mut self,
+        &self,
         mut role: RoleEntity,
         id: &str,
         blame: UserEntity,

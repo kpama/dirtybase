@@ -1,9 +1,8 @@
-use crate::base::field_values::FieldValue;
+use dirtybase_db_types::field_values::FieldValue;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
-#[serde(untagged)]
 pub enum UserStatus {
     #[serde(rename(serialize = "active"))]
     Active,
@@ -55,22 +54,6 @@ impl From<&FieldValue> for UserStatus {
         match value {
             FieldValue::String(v) => FieldValue::from(v).into(),
             _ => UserStatus::Unknown,
-        }
-    }
-}
-
-impl From<FieldValue> for Option<UserStatus> {
-    fn from(value: FieldValue) -> Self {
-        match value {
-            FieldValue::String(s) => match s.to_ascii_lowercase().as_str() {
-                USER_STATUS_ACTIVE => Some(UserStatus::Active),
-                USER_STATUS_INACTIVE => Some(UserStatus::Inactive),
-                USER_STATUS_SUSPENDED => Some(UserStatus::Suspended),
-                USER_STATUS_PENDING => Some(UserStatus::Pending),
-                USER_STATUS_UNKNOWN => Some(UserStatus::Unknown),
-                _ => None,
-            },
-            _ => None,
         }
     }
 }

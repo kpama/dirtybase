@@ -1,9 +1,8 @@
-use crate::app::DirtyBase;
-
 use super::{RoleEntity, ROLE_TABLE, ROLE_TABLE_DELETED_AT_FIELD, ROLE_TABLE_ID_FIELD};
-use dirtybase_db::base::{
-    field_values::FieldValue, manager::Manager, types::FromColumnAndValue,
-    types::IntoColumnAndValue,
+use crate::app::DirtyBase;
+use dirtybase_db::{
+    base::manager::Manager,
+    dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue},
 };
 
 pub struct RoleRepository {
@@ -23,33 +22,28 @@ impl RoleRepository {
         &mut self.manager
     }
 
-    pub async fn find_by_id_with_trashed(&mut self, id: &str) -> Result<RoleEntity, anyhow::Error> {
+    pub async fn find_by_id_with_trashed(&self, id: &str) -> Result<RoleEntity, anyhow::Error> {
         self.find_by_id(id, true).await
     }
 
     pub async fn find_by_id(
-        &mut self,
+        &self,
         id: &str,
         with_trashed: bool,
     ) -> Result<RoleEntity, anyhow::Error> {
-        match self
-            .manager_mut()
+        self.manager()
             .select_from_table(ROLE_TABLE, |q| {
                 q.select_all().eq(ROLE_TABLE_ID_FIELD, id);
                 if !with_trashed {
                     q.is_null(ROLE_TABLE_DELETED_AT_FIELD);
                 }
             })
-            .fetch_one()
+            .fetch_one_to()
             .await
-        {
-            Ok(result) => Ok(RoleEntity::from_column_value(result)),
-            Err(e) => Err(e),
-        }
     }
 
     pub async fn create(
-        &mut self,
+        &self,
         record: impl IntoColumnAndValue,
     ) -> Result<RoleEntity, anyhow::Error> {
         let kv = record.into_column_value();
@@ -60,7 +54,7 @@ impl RoleRepository {
     }
 
     pub async fn update(
-        &mut self,
+        &self,
         id: &str,
         record: impl IntoColumnAndValue,
     ) -> Result<RoleEntity, anyhow::Error> {

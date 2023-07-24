@@ -1,19 +1,19 @@
 use crate::base::{
     column::{BaseColumn, ColumnDefault, ColumnType},
-    field_values::FieldValue,
     query::{QueryAction, QueryBuilder},
     query_conditions::Condition,
     query_operators::Operator,
     query_values::QueryValue,
     schema::{RelationalDbTrait, SchemaManagerTrait},
     table::BaseTable,
-    types::ColumnAndValue,
 };
 use async_trait::async_trait;
+use dirtybase_db_types::{field_values::FieldValue, types::ColumnAndValue};
 use futures::stream::TryStreamExt;
 use sqlx::{any::AnyKind, mysql::MySqlRow, types::chrono, Column, MySql, Pool, Row};
 use std::{collections::HashMap, sync::Arc};
 
+#[derive(Debug, Clone)]
 struct ActiveQuery {
     statement: String,
     params: Vec<String>,
@@ -31,15 +31,11 @@ impl ActiveQuery {
 }
 pub struct MySqlSchemaManager {
     db_pool: Arc<Pool<MySql>>,
-    active_query: Option<ActiveQuery>,
 }
 
 impl MySqlSchemaManager {
     pub fn new(db_pool: Arc<Pool<MySql>>) -> Self {
-        Self {
-            db_pool,
-            active_query: None,
-        }
+        Self { db_pool }
     }
 }
 
@@ -72,60 +68,51 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         self.do_commit(table).await
     }
 
-    fn query(&mut self, query: QueryBuilder) -> &dyn SchemaManagerTrait
-    where
-        Self: Sized,
-    {
-        let mut params = Vec::new();
-        let statement = self.build_query(&query, &mut params);
-
-        self.active_query = Some(ActiveQuery { statement, params });
-
-        self
-    }
-
     async fn execute(&self, query: QueryBuilder) {
         self.do_execute(query).await
     }
 
-    async fn fetch_all(&self) -> Result<Vec<HashMap<String, FieldValue>>, anyhow::Error> {
+    async fn fetch_all(
+        &self,
+        query_builder: &QueryBuilder,
+    ) -> Result<Vec<HashMap<String, FieldValue>>, anyhow::Error> {
         let mut results = Vec::new();
 
-        match &self.active_query {
-            Some(active_query) => {
-                let mut query = sqlx::query(&active_query.statement);
-                for p in &active_query.params {
-                    query = query.bind::<&str>(p);
-                }
+        let mut params = Vec::new();
+        let statement = self.build_query(&query_builder, &mut params);
 
-                let mut rows = query.fetch(self.db_pool.as_ref());
-                while let Ok(result) = rows.try_next().await {
-                    if let Some(row) = result {
-                        results.push(self.row_to_insert_value(&row));
-                    } else {
-                        break;
-                    }
-                }
+        let mut query = sqlx::query(&statement);
+        for p in &params {
+            query = query.bind::<&str>(p);
+        }
+
+        let mut rows = query.fetch(self.db_pool.as_ref());
+        while let Ok(result) = rows.try_next().await {
+            if let Some(row) = result {
+                results.push(self.row_to_field_value(&row));
+            } else {
+                break;
             }
-            None => (),
         }
 
         Ok(results)
     }
 
-    async fn fetch_one(&self) -> Result<ColumnAndValue, anyhow::Error> {
-        if let Some(active_query) = &self.active_query {
-            let mut query = sqlx::query(&active_query.statement);
-            for p in &active_query.params {
-                query = query.bind::<&str>(p);
-            }
-            return match query.fetch_one(self.db_pool.as_ref()).await {
-                Ok(row) => Ok(self.row_to_insert_value(&row)),
-                Err(e) => Err(e.into()),
-            };
-        }
+    async fn fetch_one(
+        &self,
+        query_builder: &QueryBuilder,
+    ) -> Result<ColumnAndValue, anyhow::Error> {
+        let mut params = Vec::new();
+        let statement = self.build_query(&query_builder, &mut params);
 
-        Err(anyhow::anyhow!("No query to execute"))
+        let mut query = sqlx::query(&statement);
+        for p in &params {
+            query = query.bind::<&str>(p);
+        }
+        return match query.fetch_one(self.db_pool.as_ref()).await {
+            Ok(row) => Ok(self.row_to_field_value(&row)),
+            Err(e) => Err(e.into()),
+        };
     }
 }
 
@@ -479,7 +466,7 @@ impl MySqlSchemaManager {
         }
     }
 
-    fn row_to_insert_value(&self, row: &MySqlRow) -> ColumnAndValue {
+    fn row_to_field_value(&self, row: &MySqlRow) -> ColumnAndValue {
         let mut this_row = HashMap::new();
 
         for col in row.columns() {

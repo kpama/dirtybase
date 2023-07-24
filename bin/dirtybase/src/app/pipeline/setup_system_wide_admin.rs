@@ -139,7 +139,7 @@ async fn create_default_app_add_user(
 
         let mut app_entity = app_service.new_app();
         app_entity.name = Some(format!("{} app", &config.app_name()));
-        app_entity.company_id = Some(company.id.unwrap());
+        app_entity.core_company_id = Some(company.id.unwrap());
         app_entity.is_system_app = Some(true);
         app_entity.description = Some("This is the core/main application".into());
 

@@ -6,25 +6,25 @@ impl From<i32> for FieldValue {
     }
 }
 
-impl From<Option<i32>> for FieldValue {
-    fn from(value: Option<i32>) -> Self {
-        if let Some(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl From<Option<i32>> for FieldValue {
+//     fn from(value: Option<i32>) -> Self {
+//         if let Some(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
-impl<E> From<Result<i32, E>> for FieldValue {
-    fn from(value: Result<i32, E>) -> Self {
-        if let Ok(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl<E> From<Result<i32, E>> for FieldValue {
+//     fn from(value: Result<i32, E>) -> Self {
+//         if let Ok(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
 impl From<Vec<i32>> for FieldValue {
     fn from(value: Vec<i32>) -> Self {
@@ -32,25 +32,25 @@ impl From<Vec<i32>> for FieldValue {
     }
 }
 
-impl From<Option<Vec<i32>>> for FieldValue {
-    fn from(value: Option<Vec<i32>>) -> Self {
-        if let Some(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl From<Option<Vec<i32>>> for FieldValue {
+//     fn from(value: Option<Vec<i32>>) -> Self {
+//         if let Some(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
-impl<E> From<Result<Vec<i32>, E>> for FieldValue {
-    fn from(value: Result<Vec<i32>, E>) -> Self {
-        if let Ok(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl<E> From<Result<Vec<i32>, E>> for FieldValue {
+//     fn from(value: Result<Vec<i32>, E>) -> Self {
+//         if let Ok(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
 impl FromIterator<i32> for FieldValue {
     fn from_iter<T: IntoIterator<Item = i32>>(iter: T) -> Self {

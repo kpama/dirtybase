@@ -1,17 +1,23 @@
 #![allow(dead_code)]
 
 mod config;
+mod event_handler;
 mod fields;
-mod pipeline;
 mod the_app;
 
 pub mod entity;
+pub mod pipeline;
 pub mod setup_database;
 pub mod setup_defaults;
 
 pub use config::Config;
 pub use config::ConfigBuilder;
+use dirtybase_db::event::UserCreatedEvent;
+use orsomafo::Dispatchable;
+use serde::de::IntoDeserializer;
 pub use the_app::DirtyBase;
+
+use self::event_handler::register_event_handlers;
 
 /// Setup database application using configs in .env files
 pub async fn setup() -> busybody::Service<the_app::DirtyBase> {
@@ -32,6 +38,10 @@ pub async fn setup() -> busybody::Service<the_app::DirtyBase> {
 pub async fn setup_using(config: Config) -> busybody::Service<the_app::DirtyBase> {
     match the_app::DirtyBase::new(config).await {
         Ok(app) => {
+            register_event_handlers(orsomafo::EventDispatcherBuilder::new())
+                .build()
+                .await;
+
             app.db_setup().await;
             app
         }

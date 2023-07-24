@@ -24,3 +24,6 @@ tokio = { workspace = true }
 bcrypt = { workspace = true }
 chrono = { workspace = true }
 anyhow = { workspace = true }
+busybody = { workspace = true }
+orsomafo = { workspace = true }
+fama = { workspace = true }

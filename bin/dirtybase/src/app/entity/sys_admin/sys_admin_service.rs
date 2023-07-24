@@ -22,20 +22,17 @@ impl SysAdminService {
         SysAdminEntity::new()
     }
 
-    pub async fn add_user(&mut self, user_id: &str) -> Result<SysAdminEntity, anyhow::Error> {
+    pub async fn add_user(&self, user_id: &str) -> Result<SysAdminEntity, anyhow::Error> {
         let mut sys_admin = self.new_sys_admin();
         sys_admin.core_user_id = Some(user_id.into());
         self.create(sys_admin).await
     }
 
-    pub async fn remove_user(&mut self, user_id: &str) -> Result<bool, anyhow::Error> {
+    pub async fn remove_user(&self, user_id: &str) -> Result<bool, anyhow::Error> {
         self.sys_admin_repo.delete(user_id).await
     }
 
-    pub async fn create(
-        &mut self,
-        sys_admin: SysAdminEntity,
-    ) -> Result<SysAdminEntity, anyhow::Error> {
+    pub async fn create(&self, sys_admin: SysAdminEntity) -> Result<SysAdminEntity, anyhow::Error> {
         if sys_admin.core_user_id.is_none() {
             return Err(anyhow!("Sys admin permission requires a user"));
         }

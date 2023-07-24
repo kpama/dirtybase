@@ -1,6 +1,7 @@
-use super::{field_values::FieldValue, query::QueryBuilder};
+use super::query::QueryBuilder;
+use dirtybase_db_types::field_values::FieldValue;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum QueryValue {
     Field(FieldValue),
     SubQuery(QueryBuilder),

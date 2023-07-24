@@ -6,25 +6,25 @@ impl From<&str> for FieldValue {
     }
 }
 
-impl From<Option<&str>> for FieldValue {
-    fn from(value: Option<&str>) -> Self {
-        if let Some(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl From<Option<&str>> for FieldValue {
+//     fn from(value: Option<&str>) -> Self {
+//         if let Some(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
-impl<E> From<Result<&str, E>> for FieldValue {
-    fn from(value: Result<&str, E>) -> Self {
-        if let Ok(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl<E> From<Result<&str, E>> for FieldValue {
+//     fn from(value: Result<&str, E>) -> Self {
+//         if let Ok(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
 impl From<Vec<&str>> for FieldValue {
     fn from(value: Vec<&str>) -> Self {
@@ -32,15 +32,15 @@ impl From<Vec<&str>> for FieldValue {
     }
 }
 
-impl From<Option<Vec<&str>>> for FieldValue {
-    fn from(value: Option<Vec<&str>>) -> Self {
-        if let Some(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl From<Option<Vec<&str>>> for FieldValue {
+//     fn from(value: Option<Vec<&str>>) -> Self {
+//         if let Some(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
 impl<'a> FromIterator<&'a str> for FieldValue {
     fn from_iter<T: IntoIterator<Item = &'a str>>(iter: T) -> Self {

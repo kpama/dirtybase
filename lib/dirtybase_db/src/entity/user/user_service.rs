@@ -1,4 +1,6 @@
-use crate::base::helper::generate_ulid;
+use orsomafo::Dispatchable;
+
+use crate::{base::helper::generate_ulid, event::UserCreatedEvent};
 
 use super::{hash_password, user_repository::UserRepository, UserEntity};
 
@@ -68,6 +70,10 @@ impl UserService {
         if user.id.is_none() {
             user.id = Some(generate_ulid());
         }
+
+        // TODO: dispatch user created event
+        let event = UserCreatedEvent::new(user.id.as_ref().unwrap());
+        event.dispatch_event();
 
         self.user_repo.create(user).await
     }

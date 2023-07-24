@@ -1,4 +1,5 @@
-use crate::base::{field_values::FieldValue, query_values::QueryValue};
+use crate::base::query_values::QueryValue;
+use dirtybase_db_types::field_values::FieldValue;
 
 impl QueryValue {
     // Transform base field value to string

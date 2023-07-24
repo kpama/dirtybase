@@ -1,6 +1,9 @@
 use super::{
-    query::QueryBuilder, schema::SchemaManagerTrait, table::BaseTable, types::ColumnAndValue,
+    query::QueryBuilder,
+    schema::{SchemaManagerTrait, SchemaWrapper},
+    table::BaseTable,
 };
+use dirtybase_db_types::types::ColumnAndValue;
 
 pub struct Manager {
     schema: Box<dyn SchemaManagerTrait + Send>,
@@ -8,15 +11,15 @@ pub struct Manager {
 
 impl Manager {
     pub fn new(schema: Box<dyn SchemaManagerTrait + Send>) -> Self {
-        Self { schema }
+        Self { schema: schema }
     }
 
-    pub fn inner(&mut self) -> &dyn SchemaManagerTrait {
-        self.schema.as_mut()
+    pub fn inner_ref(&self) -> &dyn SchemaManagerTrait {
+        self.schema.as_ref()
     }
 
     // Get a table or view for querying
-    pub fn select_from_table<F>(&mut self, table: &str, callback: F) -> &dyn SchemaManagerTrait
+    pub fn select_from_table<F>(&self, table: &str, callback: F) -> SchemaWrapper
     where
         F: FnMut(&mut QueryBuilder),
     {
@@ -24,17 +27,17 @@ impl Manager {
     }
 
     // Get tables or view for querying
-    pub fn select_from_tables<F>(
-        &mut self,
-        tables: Vec<String>,
-        mut callback: F,
-    ) -> &dyn SchemaManagerTrait
+    pub fn select_from_tables<F>(&self, tables: Vec<String>, mut callback: F) -> SchemaWrapper
     where
         F: FnMut(&mut QueryBuilder),
     {
-        let mut query = QueryBuilder::new(tables, super::query::QueryAction::Query);
-        callback(&mut query);
-        self.schema.query(query)
+        let mut query_builder = QueryBuilder::new(tables, super::query::QueryAction::Query);
+        callback(&mut query_builder);
+
+        SchemaWrapper {
+            query_builder,
+            inner: self.schema.as_ref(),
+        }
     }
 
     // Create a new table

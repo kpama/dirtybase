@@ -6,25 +6,25 @@ impl From<i64> for FieldValue {
     }
 }
 
-impl From<Option<i64>> for FieldValue {
-    fn from(value: Option<i64>) -> Self {
-        if let Some(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl From<Option<i64>> for FieldValue {
+//     fn from(value: Option<i64>) -> Self {
+//         if let Some(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
-impl<E> From<Result<i64, E>> for FieldValue {
-    fn from(value: Result<i64, E>) -> Self {
-        if let Ok(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl<E> From<Result<i64, E>> for FieldValue {
+//     fn from(value: Result<i64, E>) -> Self {
+//         if let Ok(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
 impl From<Vec<i64>> for FieldValue {
     fn from(value: Vec<i64>) -> Self {
@@ -32,25 +32,25 @@ impl From<Vec<i64>> for FieldValue {
     }
 }
 
-impl From<Option<Vec<i64>>> for FieldValue {
-    fn from(value: Option<Vec<i64>>) -> Self {
-        if let Some(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl From<Option<Vec<i64>>> for FieldValue {
+//     fn from(value: Option<Vec<i64>>) -> Self {
+//         if let Some(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
-impl<E> From<Result<Vec<i64>, E>> for FieldValue {
-    fn from(value: Result<Vec<i64>, E>) -> Self {
-        if let Ok(v) = value {
-            v.into()
-        } else {
-            Self::NotSet
-        }
-    }
-}
+// impl<E> From<Result<Vec<i64>, E>> for FieldValue {
+//     fn from(value: Result<Vec<i64>, E>) -> Self {
+//         if let Ok(v) = value {
+//             v.into()
+//         } else {
+//             Self::NotSet
+//         }
+//     }
+// }
 
 impl FromIterator<i64> for FieldValue {
     fn from_iter<T: IntoIterator<Item = i64>>(iter: T) -> Self {

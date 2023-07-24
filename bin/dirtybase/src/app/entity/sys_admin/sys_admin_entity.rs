@@ -1,6 +1,6 @@
-use dirtybase_db::base::{
+use dirtybase_db::dirtybase_db_types::{
     field_values::FieldValue,
-    types::{FromColumnAndValue, IntoColumnAndValue},
+    types::{ColumnAndValue, FromColumnAndValue, IntoColumnAndValue},
     ColumnAndValueBuilder,
 };
 
@@ -24,7 +24,7 @@ impl SysAdminEntity {
 }
 
 impl FromColumnAndValue for SysAdminEntity {
-    fn from_column_value(column_and_value: dirtybase_db::base::types::ColumnAndValue) -> Self {
+    fn from_column_value(column_and_value: ColumnAndValue) -> Self {
         Self {
             core_user_id: FieldValue::from_ref_option_into(
                 column_and_value.get(SYS_ADMIN_TABLE_USER_ID_FIELD),
@@ -34,7 +34,7 @@ impl FromColumnAndValue for SysAdminEntity {
 }
 
 impl IntoColumnAndValue for SysAdminEntity {
-    fn into_column_value(self) -> dirtybase_db::base::types::ColumnAndValue {
+    fn into_column_value(self) -> ColumnAndValue {
         ColumnAndValueBuilder::new()
             .try_to_insert(SYS_ADMIN_TABLE_USER_ID_FIELD, self.core_user_id)
             .build()

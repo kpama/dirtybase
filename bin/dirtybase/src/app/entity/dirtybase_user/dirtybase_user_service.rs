@@ -1,27 +1,24 @@
-use std::collections::HashMap;
-
 use super::{
     dirtybase_user_entity::DirtybaseUserEntity,
     dirtybase_user_helpers::{
         authentication_error_status::AuthenticationErrorStatus, jwt_manager::JWTManager,
     },
     dirtybase_user_repository::DirtybaseUserRepository,
-    logged_in_user_dto::LoggedInUser,
-    user_login_payload_dto::UserLoginPayload,
+    in_dtos::UserLoginPayload,
+    out_dtos::LoggedInUser,
 };
-use crate::app::DirtyBase;
 use anyhow::anyhow;
-use busybody::{helpers::provide, Service};
-use dirtybase_db::entity::user::verify_password;
+use busybody::helpers::provide;
+use dirtybase_db::entity::user::{verify_password, UserEntity};
+use std::collections::HashMap;
 
 pub struct DirtybaseUserService {
     repo: DirtybaseUserRepository,
-    app: Service<DirtyBase>,
 }
 
 impl DirtybaseUserService {
-    pub fn new(repo: DirtybaseUserRepository, app: Service<DirtyBase>) -> Self {
-        Self { repo, app }
+    pub fn new(repo: DirtybaseUserRepository) -> Self {
+        Self { repo }
     }
 
     pub fn dirtybase_user_repo(&self) -> &DirtybaseUserRepository {
@@ -41,10 +38,18 @@ impl DirtybaseUserService {
         entity: DirtybaseUserEntity,
     ) -> Result<DirtybaseUserEntity, anyhow::Error> {
         if entity.core_user_id.is_some() {
-            // TODO: Implement!!
+            return self.repo.create(entity).await;
         }
 
         Err(anyhow!("Core user ID is required"))
+    }
+
+    pub async fn authenticate_password(&self, password: &str, user: &UserEntity) -> bool {
+        if password.trim().is_empty() {
+            false
+        } else {
+            verify_password(password, user.password.as_ref().unwrap())
+        }
     }
 
     pub async fn login(
@@ -53,13 +58,15 @@ impl DirtybaseUserService {
     ) -> Result<LoggedInUser, AuthenticationErrorStatus> {
         let username = payload.username.unwrap_or_default();
         let email = payload.email.unwrap_or_default();
-        let password = payload.password.unwrap_or_default();
+        let password = payload.password;
+
+        if password.is_empty() {
+            return Err(AuthenticationErrorStatus::AuthenticationFailed);
+        }
 
         match self
-            .app
-            .user_service()
-            .user_repo_mut()
-            .find_by_username_or_email(&username, &email)
+            .dirtybase_user_repo()
+            .find_by_username_or_email(&username, &email, true)
             .await
         {
             Ok(user) => {
@@ -87,7 +94,6 @@ impl DirtybaseUserService {
 impl busybody::Injectable for DirtybaseUserService {
     async fn inject(ci: &busybody::ServiceContainer) -> Self {
         let repo = ci.provide::<DirtybaseUserRepository>().await;
-        let app = ci.get::<DirtyBase>().unwrap();
-        Self::new(repo, app)
+        Self::new(repo)
     }
 }
