@@ -12,7 +12,7 @@ struct Address {
 }
 
 #[derive(DirtyTable, Default, Debug)]
-#[dirty(table = "person")]
+#[dirty(table = "person", id = "id")]
 struct Person {
     #[dirty(col = "internal_id")]
     id: u64,
