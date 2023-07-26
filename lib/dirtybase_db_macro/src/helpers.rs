@@ -2,7 +2,7 @@ use crate::attribute_type::DirtybaseAttributes;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use std::collections::HashMap;
-use syn::{Data, DeriveInput, GenericArgument, Meta, MetaList, PathArguments};
+use syn::{Data, DeriveInput, GenericArgument, Meta, MetaList, PathArguments, TypePath};
 
 pub(crate) fn pluck_columns(input: &DeriveInput) -> Vec<(String, DirtybaseAttributes)> {
     let mut columns = Vec::new();
@@ -58,6 +58,7 @@ pub(crate) fn field_attributes(
 ) -> bool {
     let mut include = true;
     let name = field.ident.as_ref().unwrap().to_string();
+
     if !name.is_empty() {
         dirty_attribute.name = name;
     }
@@ -130,21 +131,41 @@ pub(crate) fn make_column_name_attribute_type(
 ) {
     match field.ty {
         syn::Type::Path(ref p) => {
-            if &p.path.segments[0].ident.to_string() == "Option" {
-                if let PathArguments::AngleBracketed(a) = &p.path.segments[0].arguments {
-                    if let GenericArgument::Type(ag) = &a.args[0] {
-                        if let syn::Type::Path(p) = ag {
-                            dirty_attribute.optional = true;
-                            dirty_attribute.the_type =
-                                p.path.get_ident().as_ref().unwrap().to_string();
-                        }
-                    }
-                }
-            } else {
-                dirty_attribute.the_type = p.path.segments[0].ident.to_string();
-            }
+            walk_and_find_type(p, dirty_attribute);
         }
         _ => (),
+    }
+}
+
+fn walk_and_find_type(p: &TypePath, dirty_attribute: &mut DirtybaseAttributes) {
+    if &p.path.segments[0].ident.to_string() == "Option" {
+        dirty_attribute.optional = true;
+
+        if let PathArguments::AngleBracketed(a) = &p.path.segments[0].arguments {
+            if let GenericArgument::Type(ag) = &a.args[0] {
+                if let syn::Type::Path(p) = ag {
+                    if let Some(f) = p.path.get_ident() {
+                        dirty_attribute.the_type = f.to_string();
+                    } else {
+                        walk_and_find_type(p, dirty_attribute);
+                    }
+                }
+            }
+        }
+    } else {
+        let name = p.path.segments[0].ident.to_string();
+        if name == "Vec" {
+            if let PathArguments::AngleBracketed(a) = &p.path.segments[0].arguments {
+                if let GenericArgument::Type(ag) = &a.args[0] {
+                    if let syn::Type::Path(p) = ag {
+                        dirty_attribute.the_type = p.path.segments[0].ident.to_string();
+                        dirty_attribute.is_vec = true;
+                    }
+                }
+            }
+        } else {
+            dirty_attribute.the_type = p.path.segments[0].ident.to_string();
+        }
     }
 }
 
@@ -198,16 +219,33 @@ pub(crate) fn build_from_handlers(
 
         built.push(
                     if item.1.optional {
+                        if item.1.is_vec {
+                        quote! {
+                            pub fn #fn_name <'a>(field: Option<&'a dirtybase_db_types::field_values::FieldValue>) -> Option<Vec<#returns>> {
+                                dirtybase_db_types::field_values::FieldValue::from_ref_option_into_option(field)
+                            }
+                        }
+                        } else {
+
                         quote! {
                             pub fn #fn_name <'a>(field: Option<&'a dirtybase_db_types::field_values::FieldValue>) -> Option<#returns> {
                                 dirtybase_db_types::field_values::FieldValue::from_ref_option_into_option(field)
                             }
                         }
+                        }
                     } else {
-                        quote! {
-                            pub fn #fn_name <'a> (field: Option<&'a dirtybase_db_types::field_values::FieldValue>) -> #returns {
-                                dirtybase_db_types::field_values::FieldValue::from_ref_option_into(field)
+                        if item.1.is_vec {
+                            quote! {
+                                pub fn #fn_name <'a> (field: Option<&'a dirtybase_db_types::field_values::FieldValue>) -> Vec<#returns> {
+                                    dirtybase_db_types::field_values::FieldValue::from_ref_option_into(field)
+                                }
                             }
+                        } else {
+                            quote! {
+                                pub fn #fn_name <'a> (field: Option<&'a dirtybase_db_types::field_values::FieldValue>) -> #returns {
+                                    dirtybase_db_types::field_values::FieldValue::from_ref_option_into(field)
+                                }
+                        }
                         }
                     });
     }
@@ -263,16 +301,6 @@ pub(crate) fn build_into_for_calls(
         built.push(quote! {
             try_to_insert_field_value(#name, self.#method_name())
         });
-
-        // built.push(if x.1.optional {
-        //     quote! {
-        //         try_to_insert(#name, self.#struct_field_name)
-        //     }
-        // } else {
-        //     quote! {
-        //         insert(#name, self.#struct_field_name)
-        //     }
-        // });
     }
 
     built
