@@ -23,6 +23,7 @@ struct Person {
     status: bool,
     #[dirty(into = "override_date_to_fieldvalue")]
     created_at: Option<DateCreated>,
+    optional_foo: Option<Vec<u64>>,
     updated_at: Option<DateCreated>,
 }
 
