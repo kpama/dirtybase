@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use super::schema::SchemaManagerTrait;
+use super::schema::{DatabaseKind, SchemaManagerTrait};
 use async_trait::async_trait;
 
 #[async_trait]
@@ -12,5 +12,5 @@ pub trait ConnectionPoolRegisterTrait: Send {
 pub trait ConnectionPoolTrait: Debug + Send + Sync {
     /// Calls by the ConnectionManagerCollection
     fn schema_manger(&self) -> Box<dyn SchemaManagerTrait + Send + Sync>;
-    fn id(&self) -> String;
+    fn id(&self) -> DatabaseKind;
 }

@@ -15,6 +15,8 @@ mod role_entity;
 mod role_repository;
 mod role_service;
 
+pub mod dtos;
+
 pub use role_entity::RoleEntity;
 pub use role_repository::RoleRepository;
 pub use role_service::RoleService;

@@ -1,16 +1,16 @@
+use crate::app::token_claim::{ClaimBuilder, JWTClaim};
+
 use super::{
     dirtybase_user_entity::DirtybaseUserEntity,
-    dirtybase_user_helpers::{
-        authentication_error_status::AuthenticationErrorStatus, jwt_manager::JWTManager,
-    },
+    dirtybase_user_helpers::authentication_error_status::AuthenticationErrorStatus,
     dirtybase_user_repository::DirtybaseUserRepository,
-    in_dtos::UserLoginPayload,
-    out_dtos::LoggedInUser,
+    dtos::{
+        in_switch_app_dto::SwitchAppDto, in_user_login_payload_dto::UserLoginPayload,
+        out_logged_in_user_dto::LoggedInUser, out_switch_app_result_dto::SwitchAppResultDto,
+    },
 };
 use anyhow::anyhow;
-use busybody::helpers::provide;
 use dirtybase_db::entity::user::{verify_password, UserEntity};
-use std::collections::HashMap;
 
 pub struct DirtybaseUserService {
     repo: DirtybaseUserRepository,
@@ -34,7 +34,7 @@ impl DirtybaseUserService {
     }
 
     pub async fn create(
-        &mut self,
+        &self,
         entity: DirtybaseUserEntity,
     ) -> Result<DirtybaseUserEntity, anyhow::Error> {
         if entity.core_user_id.is_some() {
@@ -49,6 +49,25 @@ impl DirtybaseUserService {
             false
         } else {
             verify_password(password, user.password.as_ref().unwrap())
+        }
+    }
+
+    pub async fn generate_app_token(
+        &self,
+        core_user_id: &str,
+        payload: SwitchAppDto,
+    ) -> Result<SwitchAppResultDto, anyhow::Error> {
+        // TODO: Validation
+        if let Ok(user) = self.repo.find_by_core_user_id(core_user_id).await {
+            Ok(ClaimBuilder::new(&user)
+                .set_app(&payload.app_id)
+                .set_role(&payload.role_id)
+                .generate()
+                .await
+                .unwrap()
+                .into())
+        } else {
+            Err(anyhow::anyhow!("Error generating user's applicaiton token"))
         }
     }
 
@@ -70,15 +89,15 @@ impl DirtybaseUserService {
             .await
         {
             Ok(user) => {
-                if verify_password(&password, &user.password.as_ref().unwrap()) {
-                    let jwt_manager = provide::<JWTManager>().await;
-                    let mut dto = LoggedInUser::from(user);
+                if verify_password(&password, &user.user.password.as_ref().unwrap()) {
+                    let mut dto: LoggedInUser = user.clone().into();
 
-                    // TODO: This shouldn't be here....
-                    let mut claim = HashMap::new();
-                    claim.insert("foo".into(), "bar".into());
-
-                    dto.token = jwt_manager.sign_to_jwt(claim);
+                    // JWT token
+                    dto.token = ClaimBuilder::new(&user)
+                        .set_allow(JWTClaim::CanSwitchAp)
+                        .generate()
+                        .await
+                        .unwrap();
 
                     Ok(dto)
                 } else {

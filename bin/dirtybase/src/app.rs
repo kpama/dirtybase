@@ -9,6 +9,7 @@ pub mod entity;
 pub mod pipeline;
 pub mod setup_database;
 pub mod setup_defaults;
+pub mod token_claim;
 
 pub use config::Config;
 pub use config::ConfigBuilder;

@@ -1,11 +1,12 @@
 use actix_web::Scope;
 
-mod v1_open_user_login;
+mod v1_user_public;
+mod v1_user_secure;
 
 pub fn register_routes(scope: Scope) -> Scope {
-    scope
+    scope.service(v1_user_secure::switch_app_handler)
 }
 
 pub fn register_public_routes(scope: Scope) -> Scope {
-    scope.service(v1_open_user_login::user_login_handler)
+    scope.service(v1_user_public::user_login_handler)
 }

@@ -4,13 +4,13 @@ use crate::base::{
     query_conditions::Condition,
     query_operators::Operator,
     query_values::QueryValue,
-    schema::{RelationalDbTrait, SchemaManagerTrait},
+    schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
     table::BaseTable,
 };
 use async_trait::async_trait;
 use dirtybase_db_types::{field_values::FieldValue, types::ColumnAndValue};
 use futures::stream::TryStreamExt;
-use sqlx::{any::AnyKind, mysql::MySqlRow, types::chrono, Column, MySql, Pool, Row};
+use sqlx::{mysql::MySqlRow, types::chrono, Column, MySql, Pool, Row};
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Debug, Clone)]
@@ -41,9 +41,8 @@ impl MySqlSchemaManager {
 
 #[async_trait]
 impl RelationalDbTrait for MySqlSchemaManager {
-    fn kind(&self) -> AnyKind {
-        AnyKind::MySql
-        // self.db_pool.any_kind()
+    fn kind(&self) -> DatabaseKind {
+        DatabaseKind::Mysql
     }
 }
 
@@ -436,9 +435,6 @@ impl MySqlSchemaManager {
             if *condition.operator() == Operator::In || *condition.operator() == Operator::NotIn {
                 let length = match &condition.value() {
                     QueryValue::Field(field) => match field {
-                        FieldValue::I64s(v) => v.len(),
-                        FieldValue::U64s(v) => v.len(),
-                        FieldValue::Strings(v) => v.len(),
                         FieldValue::Array(v) => v.len(),
                         _ => 1,
                     },
@@ -470,7 +466,7 @@ impl MySqlSchemaManager {
         let mut this_row = HashMap::new();
 
         for col in row.columns() {
-            let name = col.name().to_owned();
+            let name = col.name().to_string();
             match col.type_info().to_string().as_str() {
                 "BOOLEAN" | "TINYINT(1)" => {
                     let v: bool = row.try_get::<i8, &str>(col.name()).unwrap_or_default() > 0;

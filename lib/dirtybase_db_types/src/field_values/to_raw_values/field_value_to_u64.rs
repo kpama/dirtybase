@@ -20,18 +20,10 @@ impl From<&FieldValue> for u64 {
 
 impl From<FieldValue> for Option<u64> {
     fn from(value: FieldValue) -> Self {
-        match value {
-            FieldValue::U64(v) => Some(v),
-            _ => None,
-        }
-    }
-}
-
-impl From<FieldValue> for Vec<u64> {
-    fn from(value: FieldValue) -> Self {
-        match value {
-            FieldValue::U64s(v) => v,
-            _ => Vec::new(),
+        if FieldValue::NotSet == value {
+            None
+        } else {
+            Some(value.into())
         }
     }
 }

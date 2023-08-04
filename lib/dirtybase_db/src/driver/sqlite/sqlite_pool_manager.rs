@@ -1,9 +1,11 @@
 use std::{str::FromStr, sync::Arc};
 
-use crate::base::connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait};
+use crate::base::{
+    connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait},
+    schema::DatabaseKind,
+};
 use async_trait::async_trait;
 use sqlx::{
-    any::AnyKind,
     sqlite::SqliteJournalMode,
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
     Pool, Sqlite,
@@ -16,18 +18,16 @@ pub struct SqlitePoolManagerRegisterer;
 #[async_trait]
 impl ConnectionPoolRegisterTrait for SqlitePoolManagerRegisterer {
     async fn register(&self, conn_str: &str, max: u32) -> Option<Box<dyn ConnectionPoolTrait>> {
-        if let Ok(kind) = AnyKind::from_str(conn_str) {
-            if kind == AnyKind::Sqlite {
-                return match db_connect(conn_str, max).await {
-                    Ok(db_pool) => Some(Box::new(SqlitePoolManager {
-                        db_pool: Arc::new(db_pool),
-                    })),
-                    Err(_) => None,
-                };
-            }
+        if conn_str.starts_with("sqlite:") {
+            return match db_connect(conn_str, max).await {
+                Ok(db_pool) => Some(Box::new(SqlitePoolManager {
+                    db_pool: Arc::new(db_pool),
+                })),
+                Err(_) => None,
+            };
+        } else {
+            None
         }
-
-        None
     }
 }
 
@@ -41,8 +41,8 @@ impl ConnectionPoolTrait for SqlitePoolManager {
         Box::new(SqliteSchemaManager::new(self.db_pool.clone()))
     }
 
-    fn id(&self) -> String {
-        "sqlite".into()
+    fn id(&self) -> DatabaseKind {
+        DatabaseKind::Sqlite
     }
 }
 

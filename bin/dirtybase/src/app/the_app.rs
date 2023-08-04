@@ -3,16 +3,15 @@ use super::setup_defaults::setup_default_entities;
 use super::Config;
 use dirtybase_db::base::connection::ConnectionPoolRegisterTrait;
 use dirtybase_db::base::manager::Manager;
+use dirtybase_db::base::schema::DatabaseKind;
 use dirtybase_db::driver::mysql::mysql_pool_manager::MySqlPoolManagerRegisterer;
 use dirtybase_db::driver::sqlite::sqlite_pool_manager::SqlitePoolManagerRegisterer;
 use dirtybase_db::entity::user::{UserRepository, UserService};
 use dirtybase_db::ConnectionPoolManager;
-use sqlx::any::AnyKind;
-use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct DirtyBase {
-    default_db: String,
+    default_db: DatabaseKind,
     config: Config,
     pool_manager: ConnectionPoolManager,
 }
@@ -20,32 +19,27 @@ pub struct DirtyBase {
 impl DirtyBase {
     pub async fn new(config: Config) -> anyhow::Result<busybody::Service<Self>> {
         let mut connection_pools: Vec<Box<dyn ConnectionPoolRegisterTrait>> = Vec::new();
-        let default;
-
-        match AnyKind::from_str(config.db_connection()) {
-            Ok(kind) => match kind {
-                AnyKind::MySql => {
-                    connection_pools.push(Box::new(MySqlPoolManagerRegisterer));
-                    default = "mysql"
-                }
-                AnyKind::Sqlite => {
-                    connection_pools.push(Box::new(SqlitePoolManagerRegisterer));
-                    default = "sqlite"
-                }
-            },
-            Err(_) => panic!("Could not determine database kind"),
-        }
+        let default = match DatabaseKind::from(config.db_connection().as_ref()) {
+            DatabaseKind::Mysql => {
+                connection_pools.push(Box::new(MySqlPoolManagerRegisterer));
+                DatabaseKind::Mysql
+            }
+            DatabaseKind::Sqlite => {
+                connection_pools.push(Box::new(SqlitePoolManagerRegisterer));
+                DatabaseKind::Sqlite
+            }
+        };
 
         let pool_manager = ConnectionPoolManager::new(
             connection_pools,
-            default,
+            default.clone(),
             &config.db_connection(),
             config.max_db_pool(),
         )
         .await;
 
         let instance = Self {
-            default_db: default.into(),
+            default_db: default,
             pool_manager,
             config,
         };
@@ -56,7 +50,7 @@ impl DirtyBase {
             .unwrap())
     }
 
-    pub fn default_db(&self) -> &String {
+    pub fn default_db(&self) -> &DatabaseKind {
         &self.default_db
     }
 

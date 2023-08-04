@@ -1,28 +1,38 @@
 use super::{
-    dirtybase_user_entity::DirtybaseUserEntity, in_dtos::UserLoginPayload, out_dtos::LoggedInUser,
-    DIRTYBASE_USER_TABLE, DIRTYBASE_USER_TABLE_CORE_USER_FIELD,
+    dirtybase_user_entity::DirtybaseUserEntity,
+    dtos::{out_logged_in_user_dto::LoggedInUser, out_user_app::UserAppDto},
 };
-use crate::app::DirtyBase;
+use crate::app::{
+    entity::{
+        app::AppEntity, company::CompanyEntity, role::RoleEntity, role_user::RoleUserEntity,
+        sys_admin::SysAdminEntity,
+    },
+    DirtyBase,
+};
 use dirtybase_db::{
     base::{manager::Manager, query::QueryBuilder},
     dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue},
-    entity::user::{
-        UserEntity, UserRepository, USER_TABLE, USER_TABLE_EMAIL_FIELD, USER_TABLE_USERNAME_FIELD,
-    },
+    entity::user::UserEntity,
 };
+use dirtybase_db_types::{
+    types::{FromColumnAndValue, StructuredColumnAndValue},
+    TableEntityTrait,
+};
+use std::collections::HashMap;
+
+const USER_JOIN_PREFIX: &str = "user";
+const SYS_ADMIN_JOIN_PREFIX: &str = "sys_admin_entity";
+const APPS_JOIN_PREFIX: &str = "apps";
+const ROLES_JOIN_PREFIX: &str = "apps.roles";
+const COMPANY_JOIN_PREFIX: &str = "apps.company";
 
 pub struct DirtybaseUserRepository {
     manager: Manager,
-    user_repo: UserRepository,
 }
 
 impl DirtybaseUserRepository {
-    pub fn new(manager: Manager, user_repo: UserRepository) -> Self {
-        Self { manager, user_repo }
-    }
-
-    pub fn user_repo(&self) -> &UserRepository {
-        &self.user_repo
+    pub fn new(manager: Manager) -> Self {
+        Self { manager }
     }
 
     pub async fn find_by_username_or_email(
@@ -30,52 +40,69 @@ impl DirtybaseUserRepository {
         username: &str,
         email: &str,
         without_trash: bool,
-    ) -> Result<UserEntity, anyhow::Error> {
+    ) -> Result<DirtybaseUserEntity, anyhow::Error> {
         if !username.is_empty() || !email.is_empty() {
-            self.user_repo()
-                .manager()
-                .select_from_table(USER_TABLE, |q| {
-                    q.select_all();
-                    if without_trash {
-                        q.without_trash();
-                    }
+            self.manager
+                .select_from_table(DirtybaseUserEntity::table_name(), |query| {
+                    self.build_query(query, without_trash);
                     if !email.is_empty() {
-                        q.eq(USER_TABLE_EMAIL_FIELD, email);
+                        query.eq(
+                            UserEntity::prefix_with_tbl(UserEntity::col_name_for_email()),
+                            email,
+                        );
                     } else {
-                        q.eq(USER_TABLE_USERNAME_FIELD, username);
+                        query.eq(
+                            UserEntity::prefix_with_tbl(UserEntity::col_name_for_username()),
+                            username,
+                        );
                     }
                 })
-                .fetch_one_to()
+                .fetch_all()
                 .await
+                .and_then(|list| {
+                    if list.is_empty() {
+                        Err(anyhow::anyhow!("User not found"))
+                    } else {
+                        Ok(self.build_entity_result(list))
+                    }
+                })
         } else {
             Err(anyhow::anyhow!("Both username and email values are empty"))
         }
     }
 
-    pub async fn find_user_for_login(
-        &self,
-        _payload: &UserLoginPayload,
-    ) -> Result<LoggedInUser, anyhow::Error> {
-        //    let result=  self.manager.select_from_table(USER_TABLE, |q|{
-        //         q.select("core_user.id")
-        //             .select("core_user.username")
-        //             .select("core_user.status")
-        //             .select("core_app_role.core_app_id")
-        //             .left_join_and_select("core_app_role", "core_app_role" , "=" , right_table, select_columns)
+    // pub async fn find_by_id_and_salt(&self, user_id: &str, salt: &str) -> Result {
 
-        //    }).fetch_one().await;
-        //    dbg!(result);
-        Ok(LoggedInUser::default())
+    // }
+
+    pub async fn get_user_logged_in_info(
+        &self,
+        user_id: &str,
+    ) -> Result<LoggedInUser, anyhow::Error> {
+        self.manager
+            .select_from_table(DirtybaseUserEntity::table_name(), |query| {
+                self.build_query(query, true);
+                query.eq(DirtybaseUserEntity::user_id_column(), user_id);
+            })
+            .fetch_all()
+            .await
+            .and_then(|list| {
+                if list.is_empty() {
+                    Err(anyhow::anyhow!("User not found"))
+                } else {
+                    Ok(self.build_dto_result(list))
+                }
+            })
     }
 
-    pub async fn fin_by_core_user_id(
+    pub async fn find_by_core_user_id(
         &self,
         core_user_id: &str,
     ) -> Result<DirtybaseUserEntity, anyhow::Error> {
         self.manager
-            .select_from_table(DIRTYBASE_USER_TABLE, |q| {
+            .select_from_table(DirtybaseUserEntity::table_name(), |q| {
                 q.select_all();
-                q.eq(DIRTYBASE_USER_TABLE_CORE_USER_FIELD, core_user_id);
+                q.eq(UserEntity::foreign_id_column().unwrap(), core_user_id);
             })
             .fetch_one_to()
             .await
@@ -83,21 +110,133 @@ impl DirtybaseUserRepository {
 
     pub async fn create(
         &self,
-        record: impl IntoColumnAndValue,
+        record: DirtybaseUserEntity,
     ) -> Result<DirtybaseUserEntity, anyhow::Error> {
+        let core_user_id = record.core_user_id.as_ref().unwrap().clone();
         let column_and_values = record.into_column_value();
-        let core_user_id: String = FieldValue::from_ref_option_into(
-            column_and_values.get(DIRTYBASE_USER_TABLE_CORE_USER_FIELD),
-        );
+
         self.manager
-            .insert(DIRTYBASE_USER_TABLE, column_and_values)
+            .insert(DirtybaseUserEntity::table_name(), column_and_values)
             .await;
 
-        self.fin_by_core_user_id(&core_user_id).await
+        self.find_by_core_user_id(&core_user_id).await
     }
 
-    fn build_query(query: &mut QueryBuilder) {
-        // TODO: ADD joins here
+    fn build_dto_result(&self, list: Vec<StructuredColumnAndValue>) -> LoggedInUser {
+        let mut base = LoggedInUser::default();
+        let mut apps: HashMap<String, UserAppDto> = HashMap::new();
+
+        for mut entry in list.into_iter().enumerate() {
+            if entry.0 == 0 {
+                base = LoggedInUser::from_struct_column_value(&mut entry.1.clone(), None).unwrap();
+                base.is_sys_admin = self.is_sys_admin(entry.1.get(SYS_ADMIN_JOIN_PREFIX));
+            }
+
+            self.build_app_map(&mut apps, &mut entry.1);
+        }
+
+        base.apps = apps.into_iter().map(|e| e.1).collect();
+
+        base
+    }
+
+    fn build_entity_result(&self, list: Vec<StructuredColumnAndValue>) -> DirtybaseUserEntity {
+        let mut base = DirtybaseUserEntity::default();
+        let mut apps: HashMap<String, UserAppDto> = HashMap::new();
+
+        for mut entry in list.into_iter().enumerate() {
+            if entry.0 == 0 {
+                base = DirtybaseUserEntity::from_struct_column_value(&mut entry.1, None).unwrap();
+                base.is_sys_admin = self.is_sys_admin(entry.1.get(SYS_ADMIN_JOIN_PREFIX));
+            }
+
+            self.build_app_map(&mut apps, &mut entry.1);
+        }
+
+        base.apps = apps.into_iter().map(|e| e.1).collect();
+        base
+    }
+
+    fn build_query(&self, query: &mut QueryBuilder, without_trash: bool) {
+        if without_trash {
+            query.without_table_trash::<UserEntity>();
+        }
+        query
+            .select_multiple(&DirtybaseUserEntity::table_column_full_names())
+            .left_join_table_and_select::<UserEntity, DirtybaseUserEntity>(
+                UserEntity::id_column().unwrap(),
+                UserEntity::foreign_id_column().unwrap(),
+                Some(USER_JOIN_PREFIX),
+            )
+            .left_join_table_and_select::<SysAdminEntity, UserEntity>(
+                UserEntity::foreign_id_column().unwrap(),
+                UserEntity::id_column().unwrap(),
+                Some(SYS_ADMIN_JOIN_PREFIX),
+            )
+            .left_join_table::<RoleUserEntity, UserEntity>(
+                RoleUserEntity::role_user_fk_column(),
+                UserEntity::id_column().unwrap(),
+            )
+            .left_join_table_and_select::<RoleEntity, RoleUserEntity>(
+                RoleEntity::id_column().unwrap(),
+                RoleUserEntity::app_role_fk_column(),
+                Some(ROLES_JOIN_PREFIX),
+            )
+            .left_join_table_and_select::<AppEntity, RoleEntity>(
+                AppEntity::id_column().unwrap(),
+                AppEntity::foreign_id_column().unwrap(),
+                Some(APPS_JOIN_PREFIX),
+            )
+            .left_join_table_and_select::<CompanyEntity, AppEntity>(
+                CompanyEntity::id_column().unwrap(),
+                CompanyEntity::foreign_id_column().unwrap(),
+                Some(COMPANY_JOIN_PREFIX),
+            )
+            .without_table_trash::<AppEntity>()
+            .without_table_trash::<CompanyEntity>()
+            .without_table_trash::<RoleUserEntity>();
+    }
+
+    fn is_sys_admin(&self, field_value: Option<&FieldValue>) -> bool {
+        if let Some(FieldValue::Object(obj)) = field_value {
+            if let Some(value) = obj.get(SysAdminEntity::col_name_for_core_user_id()) {
+                match value {
+                    FieldValue::String(_) => true,
+                    _ => false,
+                }
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    fn build_app_map(
+        &self,
+        apps: &mut HashMap<String, UserAppDto>,
+        data: &mut StructuredColumnAndValue,
+    ) {
+        if let Some(app) = data.get(APPS_JOIN_PREFIX) {
+            if let FieldValue::Object(app_obj) = app {
+                let id = if let Some(i) = app_obj.get("id") {
+                    i.to_string()
+                } else {
+                    "".into()
+                };
+
+                if apps.get(&id).is_none() {
+                    apps.insert(id.clone(), UserAppDto::from_column_value(app_obj.clone()));
+                }
+
+                if app_obj.contains_key("roles") {
+                    apps.get_mut(&id)
+                        .unwrap()
+                        .roles
+                        .push(app_obj.get("roles").unwrap().into());
+                }
+            }
+        }
     }
 }
 
@@ -106,9 +245,6 @@ impl busybody::Injectable for DirtybaseUserRepository {
     async fn inject(ci: &busybody::ServiceContainer) -> Self {
         let app = ci.get::<DirtyBase>().unwrap();
 
-        Self::new(
-            app.schema_manger(),
-            UserRepository::new(app.schema_manger()),
-        )
+        Self::new(app.schema_manger())
     }
 }

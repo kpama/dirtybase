@@ -30,30 +30,6 @@ impl QueryValue {
                 FieldValue::F64(_) => params.push(self.field_to_param(field)),
                 FieldValue::String(v) => params.push(v.clone()),
                 FieldValue::Boolean(_) => params.push(self.field_to_param(field)),
-                FieldValue::U64s(v) => params.extend(
-                    v.as_slice()
-                        .iter()
-                        .map(|x| x.to_string())
-                        .collect::<Vec<String>>(),
-                ),
-                FieldValue::I64s(v) => params.extend(
-                    v.as_slice()
-                        .iter()
-                        .map(|x| x.to_string())
-                        .collect::<Vec<String>>(),
-                ),
-                FieldValue::F64s(v) => params.extend(
-                    v.as_slice()
-                        .iter()
-                        .map(|x| x.to_string())
-                        .collect::<Vec<String>>(),
-                ),
-                FieldValue::Strings(v) => params.extend(
-                    v.as_slice()
-                        .iter()
-                        .map(|x| x.clone())
-                        .collect::<Vec<String>>(),
-                ),
                 FieldValue::DateTime(v) => params.push(v.to_string()),
                 FieldValue::Date(v) => params.push(v.to_string()),
                 FieldValue::Time(v) => params.push(v.to_string()),

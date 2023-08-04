@@ -49,3 +49,19 @@ impl ApiError {
         }
     }
 }
+
+impl From<String> for ApiError {
+    fn from(value: String) -> Self {
+        Self {
+            code: value.clone().replace(' ', "_").to_ascii_lowercase(),
+            message: value.clone(),
+            short_message: value.clone(),
+        }
+    }
+}
+
+impl From<&str> for ApiError {
+    fn from(value: &str) -> Self {
+        value.to_owned().into()
+    }
+}

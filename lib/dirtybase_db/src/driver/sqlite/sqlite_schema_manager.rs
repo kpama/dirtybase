@@ -5,13 +5,13 @@ use crate::base::{
     query_conditions::Condition,
     query_operators::Operator,
     query_values::QueryValue,
-    schema::{RelationalDbTrait, SchemaManagerTrait},
+    schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
     table::{BaseTable, UPDATED_AT_FIELD},
 };
 use async_trait::async_trait;
 use dirtybase_db_types::{field_values::FieldValue, types::ColumnAndValue};
 use futures::stream::TryStreamExt;
-use sqlx::{any::AnyKind, sqlite::SqliteRow, types::chrono, Column, Pool, Row, Sqlite};
+use sqlx::{sqlite::SqliteRow, types::chrono, Column, Pool, Row, Sqlite};
 use std::{collections::HashMap, sync::Arc};
 
 struct ActiveQuery {
@@ -42,8 +42,8 @@ impl SqliteSchemaManager {
 
 #[async_trait]
 impl RelationalDbTrait for SqliteSchemaManager {
-    fn kind(&self) -> AnyKind {
-        AnyKind::Sqlite
+    fn kind(&self) -> DatabaseKind {
+        DatabaseKind::Sqlite
     }
 }
 
@@ -489,9 +489,6 @@ impl SqliteSchemaManager {
             if *condition.operator() == Operator::In || *condition.operator() == Operator::NotIn {
                 let length = match &condition.value() {
                     QueryValue::Field(field) => match field {
-                        FieldValue::I64s(v) => v.len(),
-                        FieldValue::U64s(v) => v.len(),
-                        FieldValue::Strings(v) => v.len(),
                         FieldValue::Array(v) => v.len(),
                         _ => 1,
                     },

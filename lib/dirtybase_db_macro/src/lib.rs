@@ -26,6 +26,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let into_field_values = build_into_handlers(&columns_attributes);
     let into_cv_for_calls = build_into_for_calls(&columns_attributes);
     let special_column_methods = build_special_column_methods(&columns_attributes);
+    let column_name_methods = build_prop_column_names_getter(&columns_attributes);
 
     let expanded = quote! {
 
@@ -35,6 +36,20 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
         #(#from_cvs)*
 
         #(#into_field_values)*
+
+        #(#column_name_methods)*
+
+        pub fn from_struct_column_value(mut cv: &mut ::dirtybase_db_types::types::StructuredColumnAndValue, key: Option<&str>) -> Option<Self> {
+          if let Some(name) = key {
+              if let Some(values) = cv.get(name) {
+                    Some(values.clone().into())
+                } else {
+                    None
+                }
+          } else {
+            Some(::dirtybase_db_types::types::FromColumnAndValue::from_column_value(cv.clone().fields()))
+          }
+        }
       }
 
       // TableEntityTrait
@@ -83,6 +98,16 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
           fn from(value: ::dirtybase_db_types::field_values::FieldValue) -> Self {
               match value {
                   ::dirtybase_db_types::field_values::FieldValue::Object(v) => ::dirtybase_db_types::types::FromColumnAndValue::from_column_value(v),
+                  _ =>  Self::default()
+              }
+          }
+      }
+
+      impl #ty_generics From<&::dirtybase_db_types::field_values::FieldValue> for #name  #ty_generics #where_clause {
+
+          fn from(value: &::dirtybase_db_types::field_values::FieldValue) -> Self {
+              match value {
+                  ::dirtybase_db_types::field_values::FieldValue::Object(v) => ::dirtybase_db_types::types::FromColumnAndValue::from_column_value(v.clone()),
                   _ =>  Self::default()
               }
           }

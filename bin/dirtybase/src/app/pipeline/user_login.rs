@@ -1,6 +1,6 @@
 use crate::app::entity::dirtybase_user::{
     dirtybase_user_helpers::authentication_error_status::AuthenticationErrorStatus,
-    in_dtos::UserLoginPayload, DirtybaseUserService,
+    dtos::in_user_login_payload_dto::UserLoginPayload, DirtybaseUserService,
 };
 use fama::PipeContent;
 

@@ -20,27 +20,10 @@ impl From<&FieldValue> for String {
 
 impl From<FieldValue> for Option<String> {
     fn from(value: FieldValue) -> Self {
-        match value {
-            FieldValue::String(v) => Some(v),
-            _ => None,
-        }
-    }
-}
-
-impl From<&FieldValue> for Option<String> {
-    fn from(value: &FieldValue) -> Self {
-        match value {
-            FieldValue::String(v) => Some(v.clone()),
-            _ => None,
-        }
-    }
-}
-
-impl From<FieldValue> for Vec<String> {
-    fn from(value: FieldValue) -> Self {
-        match value {
-            FieldValue::Strings(v) => v,
-            _ => Vec::new(),
+        if FieldValue::NotSet == value {
+            None
+        } else {
+            Some(value.into())
         }
     }
 }

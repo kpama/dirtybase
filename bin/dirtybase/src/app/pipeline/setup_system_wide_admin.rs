@@ -85,7 +85,7 @@ async fn find_or_create_admin_user(
 async fn add_user_to_system_wide_admin(
     new_admin_data: NewSysAdminData,
     mut pipe: PipeContent,
-    mut sys_admin_service: SysAdminService,
+    sys_admin_service: SysAdminService,
 ) -> Option<PipeContent> {
     if new_admin_data.user.is_some() {
         if sys_admin_service
@@ -103,7 +103,7 @@ async fn add_user_to_system_wide_admin(
 
 async fn create_default_company(
     mut new_admin_data: NewSysAdminData,
-    mut company_service: CompanyService,
+    company_service: CompanyService,
     mut new_company: CompanyEntity,
     pipe: PipeContent,
     config: Config,
@@ -128,9 +128,9 @@ async fn create_default_company(
 
 async fn create_default_app_add_user(
     new_admin_data: NewSysAdminData,
-    mut app_service: AppService,
-    mut role_service: RoleService,
-    mut role_user_service: RoleUserService,
+    app_service: AppService,
+    role_service: RoleService,
+    role_user_service: RoleUserService,
     config: Config,
 ) -> Option<PipeContent> {
     if new_admin_data.user.is_some() && new_admin_data.company.is_some() {

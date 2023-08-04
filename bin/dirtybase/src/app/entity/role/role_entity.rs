@@ -4,7 +4,7 @@ use dirtybase_db::{
 use dirtybase_db_types::types::{DateTimeField, StringField, UlidField};
 
 #[derive(Debug, Clone, Default, DirtyTable)]
-#[dirty(table = "core_app_role")]
+#[dirty(table = "core_app_role", id = "id")]
 pub struct RoleEntity {
     pub internal_id: InternalIdField,
     pub id: UlidField,

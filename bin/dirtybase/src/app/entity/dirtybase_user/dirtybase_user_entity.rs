@@ -1,53 +1,56 @@
-use super::{DIRTYBASE_USER_TABLE_CORE_USER_FIELD, DIRTYBASE_USER_TABLE_LOGIN_ATTEMPT_FIELD};
-use crate::app::entity::dirtybase_user::DIRTYBASE_USER_TABLE_LAST_LOGIN_FIELD;
-use dirtybase_db::dirtybase_db_types::{
-    field_values::FieldValue,
-    types::{
-        ColumnAndValue, DateTimeField, FromColumnAndValue, IntoColumnAndValue, SingedIntegerField,
-        UlidField,
-    },
-    ColumnAndValueBuilder,
+use super::dtos::out_user_app::UserAppDto;
+use dirtybase_db::{
+    base::helper::generate_ulid,
+    dirtybase_db_types::types::{DateTimeField, UlidField},
+    dirtybase_db_types::TableEntityTrait,
+    entity::user::UserEntity,
+    macros::DirtyTable,
 };
+use dirtybase_db_types::types::StructuredColumnAndValue;
+use sha2::{Digest, Sha256};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Default, DirtyTable)]
+#[dirty(table = "core_dirtybase_user")]
 pub struct DirtybaseUserEntity {
     pub core_user_id: UlidField,
-    pub login_attempt: SingedIntegerField,
+    pub login_attempt: u64,
     pub last_login_at: DateTimeField,
+    pub salt: String,
+    #[dirty(skip_select, skip_insert)]
+    pub apps: Vec<UserAppDto>,
+    #[dirty(skip_select, skip_insert)]
+    pub user: UserEntity,
+    #[dirty(skip)]
+    pub is_sys_admin: bool,
 }
 
-impl Default for DirtybaseUserEntity {
-    fn default() -> Self {
-        Self {
-            core_user_id: None,
-            login_attempt: None,
-            last_login_at: None,
+impl DirtybaseUserEntity {
+    pub fn user_id_column() -> String {
+        format!(
+            "{}",
+            Self::prefix_with_tbl(UserEntity::foreign_id_column().unwrap())
+        )
+    }
+
+    pub fn append_from_structured(&mut self, cv: &mut StructuredColumnAndValue) {
+        let mut apps = Vec::new();
+        if let Some(app) = UserAppDto::from_struct_column_value(cv, Some("app")) {
+            apps.push(app);
         }
     }
-}
 
-impl FromColumnAndValue for DirtybaseUserEntity {
-    fn from_column_value(column_and_value: ColumnAndValue) -> Self {
-        Self {
-            core_user_id: FieldValue::from_ref_option_into(
-                column_and_value.get(DIRTYBASE_USER_TABLE_CORE_USER_FIELD),
-            ),
-            login_attempt: FieldValue::from_ref_option_into(
-                column_and_value.get(DIRTYBASE_USER_TABLE_LOGIN_ATTEMPT_FIELD),
-            ),
-            last_login_at: FieldValue::from_ref_option_into(
-                column_and_value.get(DIRTYBASE_USER_TABLE_LAST_LOGIN_FIELD),
-            ),
+    pub fn append_app(&mut self, cv: &mut StructuredColumnAndValue) -> Vec<UserAppDto> {
+        let mut apps = Vec::new();
+        if let Some(app) = UserAppDto::from_struct_column_value(cv, Some("app")) {
+            apps.push(app);
         }
-    }
-}
 
-impl IntoColumnAndValue for DirtybaseUserEntity {
-    fn into_column_value(self) -> ColumnAndValue {
-        ColumnAndValueBuilder::new()
-            .try_to_insert(DIRTYBASE_USER_TABLE_CORE_USER_FIELD, self.core_user_id)
-            .try_to_insert(DIRTYBASE_USER_TABLE_LOGIN_ATTEMPT_FIELD, self.login_attempt)
-            .try_to_insert(DIRTYBASE_USER_TABLE_LAST_LOGIN_FIELD, self.last_login_at)
-            .build()
+        return apps;
+    }
+
+    pub fn generate_salt(&mut self) {
+        let mut salt_hasher = Sha256::new();
+        salt_hasher.update(generate_ulid().as_bytes());
+        self.salt = format!("{:x}", salt_hasher.finalize());
     }
 }

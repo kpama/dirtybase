@@ -9,39 +9,30 @@ use dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue};
 
 pub struct UserRepository {
     manager: Manager,
-    no_trashed: bool,
 }
 
 impl UserRepository {
     pub fn new(manager: Manager) -> Self {
-        Self {
-            manager,
-            no_trashed: true,
-        }
+        Self { manager }
     }
 
     pub fn manager(&self) -> &Manager {
         &self.manager
     }
 
-    /// Included soft deleted records
-    pub fn with_trash(&mut self) -> &mut Self {
-        self.no_trashed = true;
-        self
-    }
-
-    /// Do not include soft deleted records
-    pub fn without_trash(&mut self) -> &mut Self {
-        self.no_trashed = false;
-        self
-    }
-
-    pub async fn find_on_by_internal_id(&mut self, id: u64) -> Result<UserEntity, anyhow::Error> {
+    pub async fn find_on_by_internal_id(
+        &mut self,
+        id: u64,
+        without_trash: bool,
+    ) -> Result<UserEntity, anyhow::Error> {
         self.manager()
             .select_from_table(USER_TABLE, |q| {
                 q.select_all()
                     .eq(USER_TABLE_INTERNAL_ID_FIELD, id)
                     .and_is_null(USER_TABLE_DELETED_AT_FIELD);
+                if without_trash {
+                    q.without_table_trash::<UserEntity>();
+                }
             })
             .fetch_one_to()
             .await
@@ -69,7 +60,7 @@ impl UserRepository {
                 .select_from_table(USER_TABLE, |q| {
                     q.select_all();
                     if without_trash {
-                        q.without_trash();
+                        q.without_table_trash::<UserEntity>();
                     }
                     if !email.is_empty() {
                         q.eq(USER_TABLE_EMAIL_FIELD, email);
@@ -88,6 +79,7 @@ impl UserRepository {
         &self,
         username: &str,
         email: &str,
+        without_trash: bool,
     ) -> Result<UserEntity, anyhow::Error> {
         self.manager()
             .select_from_table(USER_TABLE, |q| {
@@ -95,6 +87,9 @@ impl UserRepository {
                     .eq(USER_TABLE_USERNAME_FIELD, username)
                     .eq(USER_TABLE_EMAIL_FIELD, email)
                     .is_null(USER_TABLE_DELETED_AT_FIELD);
+                if without_trash {
+                    q.without_table_trash::<UserEntity>();
+                }
             })
             .fetch_one_to()
             .await

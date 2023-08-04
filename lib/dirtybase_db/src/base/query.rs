@@ -1,3 +1,5 @@
+use crate::entity::user::UserEntity;
+
 use super::{
     join_builder::JoinQueryBuilder, query_conditions::Condition, query_join_types::JoinType,
     query_operators::Operator, table::DELETED_AT_FIELD, where_join_operators::WhereJoinOperator,
@@ -401,6 +403,13 @@ impl QueryBuilder {
         self.is_null(DELETED_AT_FIELD)
     }
 
+    pub fn without_table_trash<T: TableEntityTrait>(&mut self) -> &mut Self {
+        if let Some(field) = T::deleted_at_column() {
+            self.is_null(T::prefix_with_tbl(field));
+        }
+        self
+    }
+
     // TODO: Test this feature. Also allow optional prefix?
     pub fn with_trash(&mut self) -> &mut Self {
         self.is_null(DELETED_AT_FIELD)
@@ -585,6 +594,17 @@ impl QueryBuilder {
 
     fn and_where(&mut self, condition: Condition) -> &mut Self {
         self.where_(WhereJoinOperator::And(condition))
+    }
+
+    pub fn with_creator<L: TableEntityTrait>(&mut self, prefix: Option<&str>) -> &mut Self {
+        if let Some(field) = L::creator_id_column() {
+            self.left_join_table_and_select::<UserEntity, L>(
+                UserEntity::id_column().unwrap(),
+                &L::prefix_with_tbl(&field),
+                prefix,
+            );
+        }
+        self
     }
 
     pub fn join<T: ToString>(

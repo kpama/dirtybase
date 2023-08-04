@@ -22,7 +22,7 @@ pub trait FromColumnAndValue {
     fn from_column_value(column_and_value: ColumnAndValue) -> Self;
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, Clone)]
 pub struct StructuredColumnAndValue {
     #[serde(flatten)]
     fields: ColumnAndValue,
@@ -83,49 +83,54 @@ impl FromColumnAndValue for StructuredColumnAndValue {
     }
 }
 
-fn build_object(obj: &mut FieldValue, mut pieces: Vec<&str>, value: FieldValue) {
-    if pieces.len() == 0 {
-        return;
-    }
-
-    match obj {
-        FieldValue::Object(o) => {
-            let current = pieces.remove(0);
-            if pieces.len() > 0 {
-                if o.contains_key(current) {
-                    build_object(o.get_mut(current).unwrap(), pieces, value);
-                } else {
-                    o.insert(current.to_string(), FieldValue::Object(HashMap::new()));
-                }
-            } else {
-                o.insert(current.to_string(), value);
-            }
-        }
-        _ => (),
-    }
-}
-
 fn build_structure(
     mut built: ColumnAndValue,
     mut pieces: Vec<&str>,
     value: FieldValue,
 ) -> ColumnAndValue {
-    if pieces.len() == 0 {
-        return built;
-    }
-
-    let current = pieces.remove(0);
-    if pieces.len() > 0 {
-        if built.contains_key(current) {
-            build_object(built.get_mut(current).unwrap(), pieces, value);
+    if pieces.len() > 1 {
+        let name = pieces.remove(0);
+        if built.contains_key(name) {
+            if let FieldValue::Object(obj) = built.get_mut(name).unwrap() {
+                *obj = build_structure(obj.clone(), pieces, value);
+            } else {
+                dbg!("shouldn't get this far");
+            }
         } else {
             built.insert(
-                current.to_string(),
+                name.to_string(),
                 FieldValue::Object(build_structure(ColumnAndValue::new(), pieces, value)),
             );
         }
-    } else {
-        built.insert(current.to_string(), value);
+    } else if pieces.len() == 1 {
+        let name = pieces.remove(0);
+        built.insert(name.to_string(), value);
     }
+
     built
 }
+
+// fn build_structure_old(
+//     mut built: ColumnAndValue,
+//     mut pieces: Vec<&str>,
+//     value: FieldValue,
+// ) -> ColumnAndValue {
+//     if pieces.len() == 0 {
+//         return built;
+//     }
+
+//     let current = pieces.remove(0);
+//     if pieces.len() > 0 {
+//         if built.contains_key(current) {
+//             build_object(built.get_mut(current).unwrap(), pieces, value);
+//         } else {
+//             built.insert(
+//                 current.to_string(),
+//                 FieldValue::Object(build_structure(ColumnAndValue::new(), pieces, value)),
+//             );
+//         }
+//     } else {
+//         built.insert(current.to_string(), value);
+//     }
+//     built
+// }

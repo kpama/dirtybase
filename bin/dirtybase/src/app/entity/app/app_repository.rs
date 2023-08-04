@@ -1,6 +1,6 @@
 use super::{AppEntity, APP_TABLE, APP_TABLE_ID_FIELD};
 use crate::app::{
-    entity::{app_role::AppRoleEntity, role_user::RoleUserEntity},
+    entity::{role::RoleEntity, role_user::RoleUserEntity},
     DirtyBase,
 };
 use dirtybase_db::{
@@ -50,8 +50,8 @@ impl AppRepository {
 
                 q.select_multiple(&app_columns)
                     .left_join_table::<RoleUserEntity, UserEntity>("core_user_id", "id")
-                    .left_join_table::<AppRoleEntity, RoleUserEntity>("id", "core_app_role_id")
-                    .left_join_table::<AppEntity, AppRoleEntity>("id", "core_app_id")
+                    .left_join_table::<RoleEntity, RoleUserEntity>("id", "core_app_role_id")
+                    .left_join_table::<AppEntity, RoleEntity>("id", "core_app_id")
                     .eq("core_user.id", core_user_id);
             })
             .fetch_all()

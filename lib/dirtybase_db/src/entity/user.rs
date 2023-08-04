@@ -8,6 +8,8 @@ mod user_helpers;
 mod user_repository;
 mod user_service;
 
+pub mod dtos;
+
 pub use user_entity::UserEntity;
 pub use user_helpers::*;
 pub use user_repository::UserRepository;

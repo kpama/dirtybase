@@ -1,29 +1,27 @@
 use super::mysql_schema_manager::MySqlSchemaManager;
 use crate::base::{
     connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait},
-    schema::SchemaManagerTrait,
+    schema::{DatabaseKind, SchemaManagerTrait},
 };
 use async_trait::async_trait;
-use sqlx::{any::AnyKind, mysql::MySqlPoolOptions, MySql, Pool};
-use std::{str::FromStr, sync::Arc};
+use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
+use std::sync::Arc;
 
 pub struct MySqlPoolManagerRegisterer;
 
 #[async_trait]
 impl ConnectionPoolRegisterTrait for MySqlPoolManagerRegisterer {
     async fn register(&self, conn_str: &str, max: u32) -> Option<Box<dyn ConnectionPoolTrait>> {
-        if let Ok(kind) = AnyKind::from_str(conn_str) {
-            if kind == AnyKind::MySql {
-                return match db_connect(conn_str, max).await {
-                    Ok(db_pool) => Some(Box::new(MysqlPoolManager {
-                        db_pool: Arc::new(db_pool),
-                    })),
-                    Err(_) => None,
-                };
-            }
+        if conn_str.starts_with("mysql:") || conn_str.starts_with("mariadb:") {
+            return match db_connect(conn_str, max).await {
+                Ok(db_pool) => Some(Box::new(MysqlPoolManager {
+                    db_pool: Arc::new(db_pool),
+                })),
+                Err(_) => None,
+            };
+        } else {
+            None
         }
-
-        None
     }
 }
 
@@ -37,8 +35,8 @@ impl ConnectionPoolTrait for MysqlPoolManager {
     fn schema_manger(&self) -> Box<dyn SchemaManagerTrait + Send + Sync> {
         Box::new(MySqlSchemaManager::new(self.db_pool.clone()))
     }
-    fn id(&self) -> String {
-        "mysql".into()
+    fn id(&self) -> DatabaseKind {
+        DatabaseKind::Mysql
     }
 }
 

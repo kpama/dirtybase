@@ -24,20 +24,12 @@ pub enum FieldValue {
     NotSet,
     #[serde(rename(serialize = "u64"))]
     U64(u64),
-    #[serde(rename(serialize = "u64_array"))]
-    U64s(Vec<u64>),
     #[serde(rename(serialize = "i64"))]
     I64(i64),
-    #[serde(rename(serialize = "i64_array"))]
-    I64s(Vec<i64>),
     #[serde(rename(serialize = "f64"))]
     F64(f64),
-    #[serde(rename(serialize = "f64_array"))]
-    F64s(Vec<f64>),
     #[serde(rename(serialize = "string"))]
     String(String),
-    #[serde(rename(serialize = "string_array"))]
-    Strings(Vec<String>),
     #[serde(rename(serialize = "boolean"))]
     Boolean(bool),
     #[serde(rename(serialize = "object"))]
@@ -108,41 +100,6 @@ impl Display for FieldValue {
             Self::Boolean(v) => {
                 write!(f, "{}", if *v { 1 } else { 0 })
             }
-            Self::U64s(v) => write!(
-                f,
-                "[{}]",
-                v.as_slice()
-                    .iter()
-                    .map(|x| x.to_string())
-                    .collect::<Vec<String>>()
-                    .join(",")
-            ),
-            Self::I64s(v) => write!(
-                f,
-                "[{}]",
-                v.as_slice()
-                    .iter()
-                    .map(|x| x.to_string())
-                    .collect::<Vec<String>>()
-                    .join(",")
-            ),
-            Self::F64s(v) => write!(
-                f,
-                "[{}]",
-                v.as_slice()
-                    .iter()
-                    .map(|x| x.to_string())
-                    .collect::<Vec<String>>()
-                    .join(",")
-            ),
-            Self::Strings(v) => write!(
-                f,
-                "[{}]",
-                v.iter()
-                    .map(|e| format!("\"{}\"", e))
-                    .collect::<Vec<String>>()
-                    .join(",")
-            ),
             Self::Object(v) => {
                 let mut data = "".to_owned();
                 for entry in v {
@@ -179,40 +136,11 @@ impl From<bool> for FieldValue {
     }
 }
 
-// impl From<Option<bool>> for FieldValue {
-//     fn from(value: Option<bool>) -> Self {
-//         if let Some(b) = value {
-//             b.into()
-//         } else {
-//             Self::NotSet
-//         }
-//     }
-// }
-
-// impl<E> From<Result<bool, E>> for FieldValue {
-//     fn from(value: Result<bool, E>) -> Self {
-//         if let Ok(b) = value {
-//             b.into()
-//         } else {
-//             Self::NotSet
-//         }
-//     }
-// }
-
 impl From<()> for FieldValue {
     fn from(_value: ()) -> Self {
         Self::Null
     }
 }
-// impl From<Option<()>> for FieldValue {
-//     fn from(value: Option<()>) -> Self {
-//         if let Some(v) = value {
-//             v.into()
-//         } else {
-//             Self::NotSet
-//         }
-//     }
-// }
 
 impl<T> From<Option<T>> for FieldValue
 where
@@ -224,6 +152,15 @@ where
         } else {
             Self::NotSet
         }
+    }
+}
+
+impl<T> From<Vec<T>> for FieldValue
+where
+    T: Into<FieldValue>,
+{
+    fn from(value: Vec<T>) -> Self {
+        Self::Array(value.into_iter().map(|i| i.into()).collect())
     }
 }
 
@@ -240,16 +177,6 @@ where
     }
 }
 
-// impl<E> From<Result<(), E>> for FieldValue {
-//     fn from(value: Result<(), E>) -> Self {
-//         if let Ok(v) = value {
-//             v.into()
-//         } else {
-//             Self::NotSet
-//         }
-//     }
-// }
-
 impl From<HashMap<String, FieldValue>> for FieldValue {
     fn from(value: HashMap<String, FieldValue>) -> Self {
         let mut obj = HashMap::new();
@@ -260,26 +187,6 @@ impl From<HashMap<String, FieldValue>> for FieldValue {
         Self::Object(obj)
     }
 }
-
-// impl From<Option<HashMap<String, FieldValue>>> for FieldValue {
-//     fn from(value: Option<HashMap<String, FieldValue>>) -> Self {
-//         if let Some(v) = value {
-//             v.into()
-//         } else {
-//             Self::NotSet
-//         }
-//     }
-// }
-
-// impl<E> From<Result<HashMap<String, FieldValue>, E>> for FieldValue {
-//     fn from(value: Result<HashMap<String, FieldValue>, E>) -> Self {
-//         if let Ok(v) = value {
-//             v.into()
-//         } else {
-//             Self::NotSet
-//         }
-//     }
-// }
 
 impl FromIterator<HashMap<String, FieldValue>> for FieldValue {
     fn from_iter<T: IntoIterator<Item = HashMap<String, FieldValue>>>(iter: T) -> Self {
@@ -318,26 +225,6 @@ impl<'a> From<HashMap<&'a str, FieldValue>> for FieldValue {
         Self::Object(obj)
     }
 }
-
-// impl<'a> From<Option<HashMap<&'a str, FieldValue>>> for FieldValue {
-//     fn from(value: Option<HashMap<&'a str, FieldValue>>) -> Self {
-//         if let Some(v) = value {
-//             v.into()
-//         } else {
-//             Self::NotSet
-//         }
-//     }
-// }
-
-// impl<'a, E> From<Result<HashMap<&'a str, FieldValue>, E>> for FieldValue {
-//     fn from(value: Result<HashMap<&'a str, FieldValue>, E>) -> Self {
-//         if let Ok(v) = value {
-//             v.into()
-//         } else {
-//             Self::NotSet
-//         }
-//     }
-// }
 
 impl<'a> FromIterator<HashMap<&'a str, FieldValue>> for FieldValue {
     fn from_iter<T: IntoIterator<Item = HashMap<&'a str, FieldValue>>>(iter: T) -> Self {

@@ -1,5 +1,9 @@
-use dirtybase_db::macros::DirtyTable;
-use dirtybase_db_types::types::{DateTimeField, UlidField};
+use crate::app::entity::role::RoleEntity;
+use dirtybase_db::{entity::user::UserEntity, macros::DirtyTable};
+use dirtybase_db_types::{
+    types::{DateTimeField, UlidField},
+    TableEntityTrait,
+};
 
 #[derive(Debug, Clone, Default, DirtyTable)]
 #[dirty(table = "core_role_user")]
@@ -16,5 +20,13 @@ pub struct RoleUserEntity {
 impl RoleUserEntity {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn app_role_fk_column() -> &'static str {
+        RoleEntity::foreign_id_column().unwrap()
+    }
+
+    pub fn role_user_fk_column() -> &'static str {
+        UserEntity::foreign_id_column().unwrap()
     }
 }

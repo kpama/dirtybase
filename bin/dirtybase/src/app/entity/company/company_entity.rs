@@ -7,7 +7,7 @@ use dirtybase_db::{
 };
 
 #[derive(Debug, Clone, Default, DirtyTable, serde::Serialize, serde::Deserialize)]
-#[dirty(table = "core_company")]
+#[dirty(table = "core_company", id = "id")]
 pub struct CompanyEntity {
     pub internal_id: InternalIdField,
     pub id: UlidField,

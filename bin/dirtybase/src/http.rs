@@ -1,23 +1,31 @@
-use crate::app::{
-    entity::{
-        app::{AppEntity, AppRepository},
-        app_role::AppRoleEntity,
-        company::CompanyEntity,
-        role::RoleEntity,
-        role_user::RoleUserEntity,
+use crate::{
+    app::{
+        entity::{
+            app::{AppEntity, AppRepository},
+            company::CompanyEntity,
+            dirtybase_user::{
+                dtos::out_logged_in_user_dto::LoggedInUser, DirtybaseUserEntity,
+                DirtybaseUserRepository,
+            },
+            role::RoleEntity,
+            role_user::RoleUserEntity,
+        },
+        DirtyBase,
     },
-    DirtyBase,
+    http::middleware::api_auth_middleware,
 };
 use actix_files as fs;
 use actix_web::{
-    body::BoxBody, dev::ServiceFactory, get, web as a_web, App, HttpResponse, HttpServer, Responder,
+    body::BoxBody,
+    dev::ServiceFactory,
+    get,
+    web::{self as a_web, Data},
+    App, HttpResponse, HttpServer, Responder,
 };
 use busybody::helpers::{provide, service};
 use dirtybase_db::{
-    dirtybase_db_types::field_values::FieldValue,
     dirtybase_db_types::TableEntityTrait,
     entity::user::{UserEntity, USER_TABLE},
-    macros::DirtyTable,
 };
 
 use std::env;
@@ -97,13 +105,13 @@ async fn hello() -> impl Responder {
 #[get("/users")]
 async fn serve_users() -> impl Responder {
     let app = service::<DirtyBase>().await;
-    let mut manager = app.schema_manger();
+    let manager = app.schema_manger();
     let result = manager
         .select_from_table(USER_TABLE, |q| {
             q.select_table::<UserEntity>()
                 .left_join_table::<RoleUserEntity, UserEntity>("core_user_id", "id")
-                .left_join_table::<AppRoleEntity, RoleUserEntity>("id", "core_app_role_id")
-                .left_join_table_and_select::<AppEntity, AppRoleEntity>(
+                .left_join_table::<RoleEntity, RoleUserEntity>("id", "core_app_role_id")
+                .left_join_table_and_select::<AppEntity, RoleEntity>(
                     "id",
                     "core_app_id",
                     Some("app"),
@@ -124,50 +132,37 @@ async fn serve_users() -> impl Responder {
 
 #[get("/d-users")]
 async fn serve_d_users() -> impl Responder {
-    // let app = service::<DirtyBase>().await;
-    // let mut manager = app.schema_manger();
-    // let result = manager
-    //     .select_from_table(DIRTYBASE_USER_TABLE, |q| {
-    //         q.select_multiple(&[
-    //             "core_dirtybase_user.login_attemp",
-    //             "core_dirtybase_user.last_login_at",
-    //         ])
-    //         .eq("core_user_id", "01h4qpe1gr7nm7d6zkpq7gxedx");
-
-    //         q.left_join_and_select(
-    //             "core_user",
-    //             "core_user.id",
-    //             "=",
-    //             "core_dirtybase_user.core_user_id",
-    //             &[
-    //                 "core_user.id as 'core_user.id'",
-    //                 "core_user.username as 'core_user.username'",
-    //             ],
-    //         );
-    //     })
-    //     .fetch_one()
-    //     .await;
-
     let core_user_id = "01h4qpe1gr7nm7d6zkpq7gxedx";
-    let mut repo = provide::<AppRepository>().await;
-    let result = repo.find_all_by_user(core_user_id).await;
+    let app = service::<DirtyBase>().await;
+    let repo = provide::<AppRepository>().await;
+    let dirty_user_repo: DirtybaseUserRepository = provide().await;
 
-    HttpResponse::Ok().json(result.unwrap())
-}
+    let result = dirty_user_repo
+        .get_user_logged_in_info(core_user_id)
+        .await
+        .unwrap_or_else(|e| {
+            log::error!("{}", e);
+            LoggedInUser::default()
+        });
 
-#[derive(Debug, Default, DirtyTable, serde::Serialize)]
-#[dirty(table = "children")]
-struct Children {
-    #[dirty(from = "hide_parent_id")]
-    parent_id: String,
-    age: u64,
-    grade: u64,
-}
+    // let result = dirty_user_repo.fake(core_user_id).await;
 
-impl Children {
-    pub fn hide_parent_id<'a>(_value: Option<&'a FieldValue>) -> String {
-        "01***********".into()
-    }
+    // let result = app
+    //     .schema_manger()
+    //     .select_from_table(DirtybaseUserEntity::table_name(), |q| {
+    //         q.select_multiple(&DirtybaseUserEntity::table_column_full_names())
+    //             .left_join_table_and_select::<UserEntity, DirtybaseUserEntity>(
+    //                 UserEntity::id_column().unwrap(),
+    //                 UserEntity::foreign_id_column().unwrap(),
+    //                 Some("user"),
+    //             );
+    //     })
+    //     .fetch_all_to::<LoggedInUser>()
+    //     .await
+    //     .unwrap();
+    // let result = repo.find_all_by_user(core_user_id).await;
+
+    HttpResponse::Ok().json(result)
 }
 
 #[get("/d-children")]
@@ -175,24 +170,43 @@ async fn serve_d_children() -> impl Responder {
     let app = service::<DirtyBase>().await;
     let manager = app.schema_manger();
 
-    let query_result: Vec<CompanyEntity> = manager
-        // let query_result = manager
-        .select_from_table(CompanyEntity::table_name(), |q| {
-            q.select_multiple(&CompanyEntity::table_column_full_names());
-            q.left_join_table_and_select::<UserEntity, CompanyEntity>(
-                "id",
-                "creator_id",
-                Some("creator"),
-            );
-            // q.left_join_and_select(
-            //     UserEntity::table_name(),
-            //     &UserEntity::prefix_with_tbl("id"),
-            //     "=",
-            //     &CompanyEntity::prefix_with_tbl("creator_id"),
-            //     &UserEntity::column_aliases(Some("creator")),
-            // );
+    let core_user_id = "01h4qpe1gr7nm7d6zkpq7gxedx";
+
+    let query_result = manager
+        .select_from_table(DirtybaseUserEntity::table_name(), |query| {
+            query
+                .select_multiple(&DirtybaseUserEntity::table_column_full_names())
+                .left_join_table_and_select::<UserEntity, DirtybaseUserEntity>(
+                    UserEntity::id_column().unwrap(),
+                    UserEntity::foreign_id_column().unwrap(),
+                    Some("user"),
+                )
+                .left_join_table::<RoleUserEntity, UserEntity>(
+                    RoleUserEntity::role_user_fk_column(),
+                    UserEntity::id_column().unwrap(),
+                )
+                .left_join_table_and_select::<RoleEntity, RoleUserEntity>(
+                    RoleEntity::id_column().unwrap(),
+                    RoleUserEntity::app_role_fk_column(),
+                    Some("app.role"),
+                )
+                .left_join_table_and_select::<AppEntity, RoleEntity>(
+                    AppEntity::id_column().unwrap(),
+                    AppEntity::foreign_id_column().unwrap(),
+                    Some("app"),
+                )
+                .left_join_table_and_select::<CompanyEntity, AppEntity>(
+                    CompanyEntity::id_column().unwrap(),
+                    CompanyEntity::foreign_id_column().unwrap(),
+                    Some("app.company"),
+                )
+                .without_table_trash::<AppEntity>()
+                .without_table_trash::<CompanyEntity>()
+                .without_table_trash::<UserEntity>()
+                .without_table_trash::<RoleUserEntity>()
+                .eq(DirtybaseUserEntity::user_id_column(), core_user_id);
         })
-        .fetch_all_to()
+        .fetch_all()
         .await
         .unwrap();
 

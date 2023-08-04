@@ -1,9 +1,10 @@
 pub mod app;
-pub mod app_role;
 pub mod audit_log;
 pub mod company;
 pub mod dirtybase_user;
+pub mod permission;
 pub mod role;
+pub mod role_permission;
 pub mod role_user;
 pub mod sys_admin;
 

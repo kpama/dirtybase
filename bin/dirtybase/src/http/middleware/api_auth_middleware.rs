@@ -1,19 +1,26 @@
 use crate::{
-    app::entity::dirtybase_user::dirtybase_user_helpers::jwt_manager::JWTManager,
+    app::entity::{
+        dirtybase_user::dirtybase_user_helpers::jwt_manager::JWTManager,
+        permission::{permission_service::PermissionService, PermissionValidator},
+    },
     http::http_helpers::pluck_jwt_token,
 };
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    Error,
+    Error, HttpMessage,
 };
 use busybody::helpers::provide;
 use futures_util::future::LocalBoxFuture;
-use std::future::{ready, Ready};
+use std::{
+    future::{ready, Ready},
+    rc::Rc,
+};
 
 // There are two steps in middleware processing.
 // 1. Middleware initialization, middleware factory gets called with
 //    next service in chain as parameter.
 // 2. Middleware's call method gets called with normal request.
+#[derive(Debug, Clone)]
 pub struct JWTAuth;
 
 // Middleware factory is `Transform` trait
@@ -21,7 +28,7 @@ pub struct JWTAuth;
 // `B` - type of response's body
 impl<S, B> Transform<S, ServiceRequest> for JWTAuth
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
     B: 'static,
 {
@@ -32,17 +39,20 @@ where
     type Future = Ready<Result<Self::Transform, Self::InitError>>;
 
     fn new_transform(&self, service: S) -> Self::Future {
-        ready(Ok(ApiAuthMiddleware { service }))
+        ready(Ok(ApiAuthMiddleware {
+            service: Rc::new(service),
+        }))
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct ApiAuthMiddleware<S> {
-    service: S,
+    service: Rc<S>,
 }
 
 impl<S, B> Service<ServiceRequest> for ApiAuthMiddleware<S>
 where
-    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
     B: 'static,
 {
@@ -55,20 +65,25 @@ where
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let jwt = pluck_jwt_token(&req).unwrap_or_default();
 
-        let fut = self.service.call(req);
+        let service = Rc::clone(&self.service);
+
+        // let fut = self.service.call(req);
 
         Box::pin(async move {
             let jwt_manager = provide::<JWTManager>().await;
-            let claims = jwt_manager.verify_jwt(&jwt).unwrap_or_default();
 
-            // TODO: Validate the clams as per the app's logic
+            if let Some(result) = jwt_manager.verify_jwt(&jwt) {
+                let permission_service: PermissionService = provide().await;
+                let permission_validator =
+                    PermissionValidator::new(result.into(), permission_service);
 
-            log::debug!("{:#?}", &claims);
-            log::debug!("JWT token: {}", &jwt);
+                req.extensions_mut().insert(permission_validator);
 
-            let res = fut.await?;
-
-            Ok(res)
+                Ok(service.call(req).await?)
+            } else {
+                // TODO: Figure out the right return type
+                panic!("*** Authentication failed ***")
+            }
         })
     }
 }

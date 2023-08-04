@@ -4,7 +4,7 @@ use dirtybase_db_types::field_values::FieldValue;
 use dirtybase_db_types::types::IntoColumnAndValue;
 use dirtybase_db_types::TableEntityTrait;
 
-#[derive(DirtyTable, Default, Debug)]
+#[derive(DirtyTable, Default, Clone, Debug)]
 #[dirty(table = "address")]
 struct Address {
     id: u64,
@@ -18,12 +18,12 @@ struct Person {
     id: u64,
     age: u64,
     #[dirty(col = "address_id", skip_select)]
-    address: Option<Address>,
+    addresses: Vec<Address>,
     #[dirty(from = "field_into_status", col = "is_active")]
     status: bool,
     #[dirty(into = "override_date_to_fieldvalue")]
     created_at: Option<DateCreated>,
-    optional_foo: Option<Vec<u64>>,
+    optional_foo: Vec<u64>,
     updated_at: Option<DateCreated>,
 }
 

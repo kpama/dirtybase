@@ -183,7 +183,6 @@ pub(crate) fn names_of_from_cv_handlers(
     columns_attributes
         .iter()
         .map(|item| {
-            //   #(#struct_fields.0 : Self::#from_cv_for_names(cv.get(#struct_fields.1))),*,
             let struct_field = format_ident!("{}", &item.0);
             let column = item.1.name.clone();
             let handler = format_ident!("{}", &item.1.from_handler);
@@ -293,10 +292,13 @@ pub(crate) fn build_into_for_calls(
     columns_attributes: &Vec<(String, DirtybaseAttributes)>,
 ) -> Vec<proc_macro2::TokenStream> {
     let mut built: Vec<proc_macro2::TokenStream> = Vec::new();
-    for x in columns_attributes.iter() {
-        let name = x.1.name.clone();
-        // let struct_field_name = format_ident!("{}", &x.0);
-        let method_name = format_ident!("{}", &x.1.into_handler);
+    for item in columns_attributes.iter() {
+        let name = item.1.name.clone();
+        let method_name = format_ident!("{}", &item.1.into_handler);
+
+        if item.1.skip_insert {
+            continue;
+        }
 
         built.push(quote! {
             try_to_insert_field_value(#name, self.#method_name())
@@ -463,4 +465,24 @@ pub(crate) fn build_special_column_methods(
     }
 
     built.into_values().collect()
+}
+
+/// Builds static method for each field/prop in the struct
+/// that corresponds to a table column
+pub(crate) fn build_prop_column_names_getter(
+    columns_attributes: &Vec<(String, DirtybaseAttributes)>,
+) -> Vec<proc_macro2::TokenStream> {
+    let mut built: Vec<proc_macro2::TokenStream> = Vec::new();
+
+    for item in columns_attributes.iter() {
+        let fn_name = format_ident!("col_name_for_{}", item.0);
+        let col_name = item.1.name.clone();
+        built.push(quote! {
+                pub fn #fn_name() -> &'static str {
+                    #col_name
+                }
+        })
+    }
+
+    built
 }

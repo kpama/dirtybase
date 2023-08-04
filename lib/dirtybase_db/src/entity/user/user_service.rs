@@ -31,7 +31,7 @@ impl UserService {
     ) -> Result<(bool, UserEntity), anyhow::Error> {
         if let Ok(user) = self
             .user_repo
-            .find_by_username_and_email(username, email)
+            .find_by_username_and_email(username, email, true)
             .await
         {
             Ok((false, user))

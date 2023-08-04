@@ -13,6 +13,8 @@ mod company_entity;
 mod company_repository;
 mod company_service;
 
+pub mod dto;
+
 pub use company_entity::CompanyEntity;
 pub use company_repository::CompanyRepository;
 pub use company_service::CompanyService;

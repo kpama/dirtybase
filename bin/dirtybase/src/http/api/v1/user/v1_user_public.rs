@@ -1,8 +1,11 @@
 use crate::{
-    app::entity::dirtybase_user::{
-        in_dtos::UserLoginPayload, out_dtos::LoggedInUser, DirtybaseUserService,
+    app::entity::dirtybase_user::DirtybaseUserService,
+    app::{
+        entity::dirtybase_user::dtos::{
+            in_user_login_payload_dto::UserLoginPayload, out_logged_in_user_dto::LoggedInUser,
+        },
+        pipeline,
     },
-    app::pipeline,
     http::http_helpers::ApiResponse,
 };
 use actix_web::{post, web::Json, HttpResponse, Responder};
@@ -10,7 +13,7 @@ use busybody::helpers::provide;
 
 #[post("/user/login")]
 async fn user_login_handler(payload: Json<UserLoginPayload>) -> impl Responder {
-    let service = provide::<DirtybaseUserService>().await;
+    let service: DirtybaseUserService = provide().await;
 
     // TODO: Implement pipeline
     _ = pipeline::user_login::pass_through_user_login_pipeline(payload.0.clone()).await;

@@ -1,12 +1,27 @@
 use super::{query::QueryBuilder, table::BaseTable};
 use async_trait::async_trait;
 use dirtybase_db_types::types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue};
-use sqlx::any::AnyKind;
 use std::sync::Arc;
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub enum DatabaseKind {
+    Mysql,
+    Sqlite,
+}
+
+impl From<&str> for DatabaseKind {
+    fn from(value: &str) -> Self {
+        match value {
+            _ if value.starts_with("mysql:") || value.starts_with("mariadb:") => Self::Mysql,
+            _ if value.starts_with("sqlite:") => Self::Sqlite,
+            _ => panic!("Unknown database type"),
+        }
+    }
+}
 
 #[async_trait]
 pub trait RelationalDbTrait: SchemaManagerTrait {
-    fn kind(&self) -> AnyKind;
+    fn kind(&self) -> DatabaseKind;
 }
 
 pub trait GraphDbTrait<T> {

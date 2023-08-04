@@ -18,10 +18,6 @@ impl RoleRepository {
         &self.manager
     }
 
-    pub fn manager_mut(&mut self) -> &mut Manager {
-        &mut self.manager
-    }
-
     pub async fn find_by_id_with_trashed(&self, id: &str) -> Result<RoleEntity, anyhow::Error> {
         self.find_by_id(id, true).await
     }

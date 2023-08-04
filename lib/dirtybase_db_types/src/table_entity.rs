@@ -1,4 +1,4 @@
-use crate::types::{FromColumnAndValue, IntoColumnAndValue};
+use crate::types::{FromColumnAndValue, IntoColumnAndValue, StructuredColumnAndValue};
 
 pub trait TableEntityTrait: FromColumnAndValue + IntoColumnAndValue {
     /// Tables table's column names without prefix
