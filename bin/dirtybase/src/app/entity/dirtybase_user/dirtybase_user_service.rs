@@ -67,7 +67,30 @@ impl DirtybaseUserService {
                 .unwrap()
                 .into())
         } else {
-            Err(anyhow::anyhow!("Error generating user's applicaiton token"))
+            Err(anyhow::anyhow!("Error generating user's application token"))
+        }
+    }
+
+    pub async fn log_user_in(
+        &self,
+        user: DirtybaseUserEntity,
+        password: &str,
+    ) -> Result<LoggedInUser, AuthenticationErrorStatus> {
+        if verify_password(password, &user.user.password.as_ref().unwrap()) {
+            let mut out_dto: LoggedInUser = user.clone().into();
+
+            // JWT token
+            if let Some(token) = ClaimBuilder::new(&user)
+                .set_allow(JWTClaim::CanSwitchAp)
+                .generate()
+                .await
+            {
+                out_dto.token = token;
+            }
+
+            Ok(out_dto)
+        } else {
+            Err(AuthenticationErrorStatus::AuthenticationFailed)
         }
     }
 
@@ -88,22 +111,7 @@ impl DirtybaseUserService {
             .find_by_username_or_email(&username, &email, true)
             .await
         {
-            Ok(user) => {
-                if verify_password(&password, &user.user.password.as_ref().unwrap()) {
-                    let mut dto: LoggedInUser = user.clone().into();
-
-                    // JWT token
-                    dto.token = ClaimBuilder::new(&user)
-                        .set_allow(JWTClaim::CanSwitchAp)
-                        .generate()
-                        .await
-                        .unwrap();
-
-                    Ok(dto)
-                } else {
-                    Err(AuthenticationErrorStatus::AuthenticationFailed)
-                }
-            }
+            Ok(user) => self.log_user_in(user, &password).await,
             Err(_) => return Err(AuthenticationErrorStatus::UserNotFound),
         }
     }
