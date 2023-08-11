@@ -168,7 +168,7 @@ impl MySqlSchemaManager {
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
             }
             QueryAction::Delete => {
-                sql = format!("DELETE FROM {} (", query.tables().join(","));
+                sql = format!("DELETE FROM {} ", query.tables().join(","));
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
             }
             _ => {
