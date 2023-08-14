@@ -1,5 +1,7 @@
 use crate::{
     app::{
+        cache_manager::CacheManager,
+        core::time::now,
         entity::{
             app::{AppEntity, AppRepository},
             company::CompanyEntity,
@@ -28,7 +30,7 @@ use dirtybase_db::{
     entity::user::{UserEntity, USER_TABLE},
 };
 
-use std::env;
+use std::{collections::HashMap, env};
 
 pub mod api;
 pub mod http_helpers;
@@ -61,6 +63,7 @@ pub async fn init(app: busybody::Service<DirtyBase>) -> std::io::Result<()> {
             .service(serve_users)
             .service(serve_d_users)
             .service(serve_d_children)
+            .service(cache_endpoint)
     })
     .bind((config.web_ip_address().as_str(), config.web_port()))?
     .run()
@@ -211,4 +214,45 @@ async fn serve_d_children() -> impl Responder {
         .unwrap();
 
     HttpResponse::Ok().json(query_result)
+}
+
+#[get("/cache")]
+async fn cache_endpoint() -> impl Responder {
+    let cache_manager: CacheManager = provide().await;
+
+    let status: serde_json::Value = cache_manager
+        .store("db")
+        .remember("uptime", None, || async {
+            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+            UptimeStatus {
+                is_up: true,
+                msg: "Version 1".into(),
+            }
+        })
+        .await;
+
+    log::debug!("status: {:#?}", &status);
+
+    let mut f = UptimeStatus {
+        is_up: false,
+        msg: "Version 2".into(),
+    };
+    let time = now();
+    _ = cache_manager
+        .store("db")
+        .add("uptime", &f, time.add_days(20).into())
+        .await;
+
+    let status = cache_manager
+        .store("db")
+        .many(&["server1", "server2", "server3"])
+        .await;
+
+    HttpResponse::Ok().json(status)
+}
+
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+pub(crate) struct UptimeStatus {
+    is_up: bool,
+    msg: String,
 }

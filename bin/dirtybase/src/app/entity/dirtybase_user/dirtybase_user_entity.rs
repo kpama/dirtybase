@@ -49,8 +49,17 @@ impl DirtybaseUserEntity {
     }
 
     pub fn generate_salt(&mut self) {
-        let mut salt_hasher = Sha256::new();
-        salt_hasher.update(generate_ulid().as_bytes());
-        self.salt = format!("{:x}", salt_hasher.finalize());
+        let mut hash = Sha256::new();
+        hash.update(generate_ulid().as_bytes());
+        self.salt = format!("{:x}", hash.finalize());
+    }
+
+    pub fn reflect_login_success(&mut self) {
+        self.last_login_at = Some(chrono::Utc::now());
+        self.login_attempt = 0;
+    }
+
+    pub fn reflect_login_failure(&mut self) {
+        self.login_attempt += 1;
     }
 }

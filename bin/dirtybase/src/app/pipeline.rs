@@ -1,2 +1,1 @@
-pub mod setup_system_wide_admin;
-pub mod user_login;
+pub mod setup_system_wide_admin_pipeline;

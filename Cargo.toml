@@ -33,12 +33,12 @@ async-trait = "0.1.64"
 pretty_env_logger = "0.5.0"
 log = "0.4.17"
 actix-files = "0.6.2"
-bcrypt = "0.14.0"
+bcrypt = "0.15.0"
 rand = "0.8.5"
 futures = "0.3.27"
 futures-util = "0.3.27"
 ulid = { version = "1.0.0", features = ["serde", "rand", "std"] }
-tokio-tungstenite = { version = "0.19.0", features = ["native-tls"] }
+tokio-tungstenite = { version = "0.20.0", features = ["native-tls"] }
 futures-channel = "0.3.28"
 native-tls = "0.2.11"
 tokio = { version = "1.27.0", features = ["sync"] }
@@ -52,3 +52,4 @@ dotenvy = "0.15"
 busybody = { version = "0.2.3" }
 orsomafo = { version = "0.2.0" }
 fama = { version = "0.2.2" }
+redis = { version = "0.23.1", features = ["tokio-comp", "tls-native-tls"] }

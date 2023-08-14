@@ -1,5 +1,6 @@
 pub mod app;
 pub mod audit_log;
+pub mod cache_db_store;
 pub mod company;
 pub mod dirtybase_user;
 pub mod permission;
