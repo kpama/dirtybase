@@ -32,10 +32,7 @@ impl CacheDbStoreRepository {
             .fetch_one_to()
             .await
         {
-            Ok(result) => {
-                log::info!("result from db: {:#?}", &result);
-                Some(result)
-            }
+            Ok(result) => Some(result),
             _ => None,
         }
     }
@@ -140,11 +137,17 @@ impl CacheDbStoreRepository {
         payload.insert(CacheDbStoreEntity::col_name_for_key().into(), key.into());
 
         if !data.is_empty() {
-            payload.insert("value".into(), data.into());
+            payload.insert(
+                CacheDbStoreEntity::col_name_for_content().to_string(),
+                data.into(),
+            );
         }
 
         if expiration.is_some() {
-            payload.insert("expiration".into(), expiration.unwrap().into());
+            payload.insert(
+                CacheDbStoreEntity::col_name_for_expiration().to_string(),
+                expiration.unwrap().into(),
+            );
         }
 
         payload

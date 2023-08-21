@@ -1,5 +1,3 @@
-use std::time::SystemTime;
-
 use chrono::{DateTime, Duration, Utc};
 
 #[derive(Debug, Clone, Copy)]
@@ -9,9 +7,6 @@ pub struct Time {
 
 impl Time {
     pub fn now() -> Self {
-        let t = SystemTime::now();
-        dbg!("system time: {:#?} -> {:#?}", t, Utc::now());
-
         Self { now: Utc::now() }
     }
 

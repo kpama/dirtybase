@@ -1,3 +1,5 @@
+use crate::app::core::time::now;
+
 #[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CacheEntry {
     pub key: String,
@@ -12,5 +14,16 @@ impl CacheEntry {
             value: value.to_string(),
             expiration,
         }
+    }
+
+    pub fn has_expired(&self) -> bool {
+        if self.expiration.is_some() {
+            return self.expiration.unwrap() < now().timestamp();
+        }
+        false
+    }
+
+    pub fn still_hot(&self) -> bool {
+        !self.has_expired()
     }
 }

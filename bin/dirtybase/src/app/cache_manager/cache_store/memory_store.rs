@@ -36,12 +36,14 @@ impl From<CacheEntry> for Entry {
 
 pub struct MemoryStore {
     storage: RwLock<HashMap<String, Entry>>,
+    tags: RwLock<HashMap<String, Vec<String>>>,
 }
 
 impl MemoryStore {
     pub fn new() -> Self {
         Self {
             storage: RwLock::new(HashMap::default()),
+            tags: RwLock::default(),
         }
     }
 }
@@ -56,7 +58,13 @@ impl CacheStoreTrait for MemoryStore {
     }
 
     /// Add the entry if it does not already exist
-    async fn put(&self, key: &str, content: String, expiration: Option<i64>) -> bool {
+    async fn put(
+        &self,
+        key: &str,
+        content: String,
+        expiration: Option<i64>,
+        tags: Option<&[&str]>,
+    ) -> bool {
         let mut lock = self.storage.write().await;
         lock.insert(
             key.into(),
@@ -69,9 +77,14 @@ impl CacheStoreTrait for MemoryStore {
         return true;
     }
 
-    async fn put_many(&self, kv: &HashMap<String, String>, duration: Option<i64>) -> bool {
+    async fn put_many(
+        &self,
+        kv: &HashMap<String, String>,
+        duration: Option<i64>,
+        tags: Option<&[&str]>,
+    ) -> bool {
         for entry in kv {
-            self.put(entry.0, entry.1.clone(), duration).await;
+            self.put(entry.0, entry.1.clone(), duration, tags).await;
         }
         true
     }
@@ -101,7 +114,13 @@ impl CacheStoreTrait for MemoryStore {
     }
 
     // Add or replace existing entry
-    async fn add(&self, key: &str, content: String, expiration: Option<i64>) -> bool {
+    async fn add(
+        &self,
+        key: &str,
+        content: String,
+        expiration: Option<i64>,
+        tags: Option<&[&str]>,
+    ) -> bool {
         let mut lock = self.storage.write().await;
         if !lock.contains_key(key) {
             lock.insert(
@@ -126,7 +145,7 @@ impl CacheStoreTrait for MemoryStore {
     }
 
     // Delete all entries
-    async fn flush(&self) -> bool {
+    async fn flush(&self, tags: Option<&[&str]>) -> bool {
         let mut lock = self.storage.write().await;
         lock.drain();
         true

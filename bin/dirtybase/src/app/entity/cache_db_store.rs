@@ -14,7 +14,7 @@ pub async fn setup_cache_db_store_table(manager: &Manager) {
                 .string(CacheDbStoreEntity::id_column().unwrap())
                 .set_is_unique(true);
             table
-                .json(CacheDbStoreEntity::col_name_for_value())
+                .text(CacheDbStoreEntity::col_name_for_content())
                 .set_is_nullable(true);
             table
                 .integer(CacheDbStoreEntity::col_name_for_expiration())

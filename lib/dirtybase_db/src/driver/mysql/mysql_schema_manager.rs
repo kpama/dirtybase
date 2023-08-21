@@ -586,7 +586,11 @@ impl MySqlSchemaManager {
                 "VARBINARY" | "BINARY" | "BLOB" => {}
                 // TODO find a means to represent binary
                 _ => {
-                    dbg!("not mapped {:#?}", col.type_info());
+                    dbg!(
+                        "not mapped field: {:#?} => value: {:#?}",
+                        name,
+                        col.type_info()
+                    );
                 }
             }
         }

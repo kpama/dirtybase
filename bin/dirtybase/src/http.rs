@@ -4,6 +4,7 @@ use crate::{
         core::time::now,
         entity::{
             app::{AppEntity, AppRepository},
+            cache_db_store::CacheDbStoreRepository,
             company::CompanyEntity,
             dirtybase_user::{
                 dtos::out_logged_in_user_dto::LoggedInUser, DirtybaseUserEntity,
@@ -220,6 +221,8 @@ async fn serve_d_children() -> impl Responder {
 async fn cache_endpoint() -> impl Responder {
     let cache_manager: CacheManager = provide().await;
 
+    let tag_cache = cache_manager.tags(&["foo"]);
+
     let status: serde_json::Value = cache_manager
         .store("db")
         .remember("uptime", None, || async {
@@ -231,9 +234,7 @@ async fn cache_endpoint() -> impl Responder {
         })
         .await;
 
-    log::debug!("status: {:#?}", &status);
-
-    let mut f = UptimeStatus {
+    let f = UptimeStatus {
         is_up: false,
         msg: "Version 2".into(),
     };
@@ -241,11 +242,6 @@ async fn cache_endpoint() -> impl Responder {
     _ = cache_manager
         .store("db")
         .add("uptime", &f, time.add_days(20).into())
-        .await;
-
-    let status = cache_manager
-        .store("db")
-        .many(&["server1", "server2", "server3"])
         .await;
 
     HttpResponse::Ok().json(status)

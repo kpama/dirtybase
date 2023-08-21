@@ -34,16 +34,33 @@ pub trait CacheStoreTrait: Send + Sync {
     async fn many(&self, keys: &[&str]) -> Option<Vec<CacheEntry>>;
 
     /// Add the entry if it does not already exist
-    async fn put(&self, key: &str, value: String, duration: Option<i64>) -> bool;
+    async fn put(
+        &self,
+        key: &str,
+        value: String,
+        expiration: Option<i64>,
+        tags: Option<&[&str]>,
+    ) -> bool;
 
-    async fn put_many(&self, kv: &HashMap<String, String>, duration: Option<i64>) -> bool;
+    async fn put_many(
+        &self,
+        kv: &HashMap<String, String>,
+        expiration: Option<i64>,
+        tags: Option<&[&str]>,
+    ) -> bool;
 
     // Add or replace existing entry
-    async fn add(&self, key: &str, value: String, duration: Option<i64>) -> bool;
+    async fn add(
+        &self,
+        key: &str,
+        value: String,
+        expiration: Option<i64>,
+        tags: Option<&[&str]>,
+    ) -> bool;
 
     // Delete an entry
     async fn forget(&self, key: &str) -> bool;
 
     // Delete all entries
-    async fn flush(&self) -> bool;
+    async fn flush(&self, tags: Option<&[&str]>) -> bool;
 }

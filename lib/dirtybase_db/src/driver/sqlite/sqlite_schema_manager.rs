@@ -608,9 +608,10 @@ impl SqliteSchemaManager {
                 "VARBINARY" | "BINARY" | "BLOB" => {}
                 // TODO find a means to represent binary
                 _ => {
-                    log::debug!(
-                        "not mapped {:#?}",
-                        col.type_info().to_string().to_ascii_uppercase()
+                    dbg!(
+                        "not mapped field: {:#?} => value: {:#?}",
+                        name,
+                        col.type_info()
                     );
                 }
             }

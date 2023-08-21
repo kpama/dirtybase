@@ -6,7 +6,7 @@ use crate::app::cache_manager::cache_entry::CacheEntry;
 #[dirty(table = "core_cache", id = "key")]
 pub struct CacheDbStoreEntity {
     pub(crate) key: String,
-    pub(crate) value: String,
+    pub(crate) content: String,
     pub(crate) expiration: Option<i64>,
 }
 
@@ -14,7 +14,7 @@ impl From<CacheEntry> for CacheDbStoreEntity {
     fn from(value: CacheEntry) -> Self {
         Self {
             key: value.key,
-            value: value.value,
+            content: value.value,
             expiration: value.expiration,
         }
     }
@@ -22,12 +22,12 @@ impl From<CacheEntry> for CacheDbStoreEntity {
 
 impl From<CacheDbStoreEntity> for CacheEntry {
     fn from(value: CacheDbStoreEntity) -> Self {
-        Self::new(&value.key, &value.value, value.expiration)
+        Self::new(&value.key, &value.content, value.expiration)
     }
 }
 
 impl From<&CacheDbStoreEntity> for CacheEntry {
     fn from(value: &CacheDbStoreEntity) -> Self {
-        Self::new(&value.key, &value.value, value.expiration)
+        Self::new(&value.key, &value.content, value.expiration)
     }
 }

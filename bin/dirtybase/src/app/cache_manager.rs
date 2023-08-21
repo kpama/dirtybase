@@ -1,11 +1,15 @@
 use self::cache_store::{CacheStoreTrait, DatabaseStore, MemoryStore};
+use super::cache_manager::cache_tag_manager::CacheTagManager;
 use busybody::helpers::provide;
 use std::collections::HashMap;
 use std::future::Future;
 use std::sync::Arc;
 
+use super::core::time::{now, Time};
+
 pub mod cache_entry;
 pub mod cache_store;
+pub mod cache_tag_manager;
 
 type StoreDriver = Arc<Box<dyn CacheStoreTrait + Send + Sync>>;
 
@@ -21,7 +25,8 @@ impl CacheManager {
         //       The application suppose to pass the list of stores'
         //       Drivers
         let mut stores: HashMap<String, StoreDriver> = HashMap::new();
-        let default_store = MemoryStore::store_name().to_string();
+        // let default_store = MemoryStore::store_name().to_string();
+        let default_store = DatabaseStore::store_name().to_string();
 
         stores.insert(
             default_store.clone(),
@@ -68,22 +73,30 @@ impl CacheManager {
     }
 
     pub async fn get(&self, key: &str) -> Option<serde_json::Value> {
-        if let Some(value) = self.default_store().get(key).await {
-            return match serde_json::from_str(&value.value) {
-                Ok(v) => Some(v),
-                _ => None,
-            };
+        if let Some(entry) = self.default_store().get(key).await {
+            if entry.still_hot() {
+                return match serde_json::from_str(&entry.value) {
+                    Ok(v) => Some(v),
+                    _ => None,
+                };
+            }
         }
 
         None
+    }
+
+    pub async fn tags(&self, tags: &[&str]) -> CacheTagManager {
+        CacheTagManager::new(tags).await
     }
 
     pub async fn many(&self, keys: &[&str]) -> Option<HashMap<String, serde_json::Value>> {
         if let Some(map) = self.default_store().many(keys).await {
             let mut built = HashMap::new();
             for entry in map {
-                if let Ok(value) = serde_json::from_str(&entry.value) {
-                    built.insert(entry.key.clone(), value);
+                if entry.still_hot() {
+                    if let Ok(value) = serde_json::from_str(&entry.value) {
+                        built.insert(entry.key.clone(), value);
+                    }
                 }
             }
 
@@ -95,16 +108,24 @@ impl CacheManager {
     }
 
     // Tries to add the value if the value does not already exist
-    pub async fn add<V>(&self, key: &str, value: &V, duration: Option<i64>) -> bool
+    pub async fn add<V>(&self, key: &str, value: &V, expiration: Option<i64>) -> bool
     where
         V: serde::Serialize,
     {
-        dbg!("ts: {:#?}", &duration);
+        self.do_add(key, value, expiration, None).await
+    }
 
-        match serde_json::to_string(value) {
-            Ok(v) => self.default_store().add(key, v, duration).await,
-            _ => false,
-        }
+    pub async fn tag_and_add<V>(
+        &self,
+        tags: &[&str],
+        key: &str,
+        value: &V,
+        expiration: Option<i64>,
+    ) -> bool
+    where
+        V: serde::Serialize,
+    {
+        self.do_add(key, value, expiration, Some(tags)).await
     }
 
     /// Check is an entry exist
@@ -174,10 +195,17 @@ impl CacheManager {
         value: &V,
         expiration: Option<i64>,
     ) -> bool {
-        match serde_json::to_string(value) {
-            Ok(v) => self.default_store().put(key, v, expiration).await,
-            _ => false,
-        }
+        self.do_put(key, value, expiration, None).await
+    }
+
+    pub async fn tag_and_put<V: serde::Serialize>(
+        &self,
+        tags: &[&str],
+        key: &str,
+        value: &V,
+        expiration: Option<i64>,
+    ) -> bool {
+        self.do_put(key, value, expiration, Some(tags)).await
     }
 
     pub async fn put_many<V: serde::Serialize>(
@@ -185,14 +213,16 @@ impl CacheManager {
         kv: &HashMap<String, V>,
         expiration: Option<i64>,
     ) -> bool {
-        let built = kv
-            .iter()
-            .map(|entry| (entry.0.clone(), serde_json::to_string(entry.1)))
-            .filter(|entry| entry.1.is_ok())
-            .map(|entry| (entry.0, entry.1.unwrap()))
-            .collect();
+        self.do_put_many(kv, expiration, None).await
+    }
 
-        self.default_store().put_many(&built, expiration).await
+    pub async fn tag_and_put_many<V: serde::Serialize>(
+        &self,
+        tags: &[&str],
+        kv: &HashMap<String, V>,
+        expiration: Option<i64>,
+    ) -> bool {
+        self.do_put_many(kv, expiration, Some(tags)).await
     }
 
     pub async fn forever<V: serde::Serialize>(&self, key: &str, value: &V) -> bool {
@@ -206,7 +236,11 @@ impl CacheManager {
 
     /// Delete everything in the store
     pub async fn flush(&self) -> bool {
-        self.default_store().flush().await
+        self.default_store().flush(None).await
+    }
+
+    pub async fn flush_tags(&self, tags: &[&str]) -> bool {
+        self.default_store().flush(Some(tags)).await
     }
 
     async fn inc_or_dec(&self, key: &str, by: f64, incrementing: bool) -> bool {
@@ -220,7 +254,8 @@ impl CacheManager {
                         } else {
                             real -= by;
                         }
-                        return self.default_store().put(key, real.to_string(), None).await;
+
+                        return self.do_add(key, &real.to_string(), None, None).await;
                     }
                     false
                 }
@@ -228,6 +263,57 @@ impl CacheManager {
             };
         }
         false
+    }
+
+    pub(super) fn now(&self) -> Time {
+        now()
+    }
+
+    pub(super) async fn do_add<V>(
+        &self,
+        key: &str,
+        value: &V,
+        expiration: Option<i64>,
+        tags: Option<&[&str]>,
+    ) -> bool
+    where
+        V: serde::Serialize,
+    {
+        match serde_json::to_string(value) {
+            Ok(v) => self.default_store().add(key, v, expiration, tags).await,
+            _ => false,
+        }
+    }
+
+    pub(super) async fn do_put<V: serde::Serialize>(
+        &self,
+        key: &str,
+        value: &V,
+        expiration: Option<i64>,
+        tags: Option<&[&str]>,
+    ) -> bool {
+        match serde_json::to_string(value) {
+            Ok(v) => self.default_store().put(key, v, expiration, tags).await,
+            _ => false,
+        }
+    }
+
+    pub(super) async fn do_put_many<V: serde::Serialize>(
+        &self,
+        kv: &HashMap<String, V>,
+        expiration: Option<i64>,
+        tags: Option<&[&str]>,
+    ) -> bool {
+        let built = kv
+            .iter()
+            .map(|entry| (entry.0.clone(), serde_json::to_string(entry.1)))
+            .filter(|entry| entry.1.is_ok())
+            .map(|entry| (entry.0, entry.1.unwrap()))
+            .collect();
+
+        self.default_store()
+            .put_many(&built, expiration, tags)
+            .await
     }
 }
 

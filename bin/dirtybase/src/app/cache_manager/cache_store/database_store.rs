@@ -30,16 +30,33 @@ impl CacheStoreTrait for DatabaseStore {
     }
 
     /// Add the entry if it does not already exist
-    async fn put(&self, key: &str, value: String, expiration: Option<i64>) -> bool {
+    async fn put(
+        &self,
+        key: &str,
+        value: String,
+        expiration: Option<i64>,
+        tags: Option<&[&str]>,
+    ) -> bool {
         self.repo.insert(key, &value, expiration).await
     }
 
-    async fn put_many(&self, kv: &HashMap<String, String>, expiration: Option<i64>) -> bool {
+    async fn put_many(
+        &self,
+        kv: &HashMap<String, String>,
+        expiration: Option<i64>,
+        tags: Option<&[&str]>,
+    ) -> bool {
         self.repo.update_many(kv, expiration).await
     }
 
     // Add or replace existing entry
-    async fn add(&self, key: &str, value: String, expiration: Option<i64>) -> bool {
+    async fn add(
+        &self,
+        key: &str,
+        value: String,
+        expiration: Option<i64>,
+        tags: Option<&[&str]>,
+    ) -> bool {
         self.repo.update(key, &value, expiration).await
     }
 
@@ -60,7 +77,7 @@ impl CacheStoreTrait for DatabaseStore {
     }
 
     // Delete all entries
-    async fn flush(&self) -> bool {
+    async fn flush(&self, tags: Option<&[&str]>) -> bool {
         self.repo.delete_all().await
     }
 }
