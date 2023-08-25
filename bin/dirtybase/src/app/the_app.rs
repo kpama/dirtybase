@@ -70,4 +70,8 @@ impl DirtyBase {
     pub fn config(&self) -> Config {
         self.config.clone()
     }
+
+    pub fn ref_config(&self) -> &Config {
+        &self.config
+    }
 }
