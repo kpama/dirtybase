@@ -22,6 +22,28 @@ fn load_dot_env() {
     let _ = dotenvy::from_filename_override(".env.prod");
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum Environment {
+    Production,
+    Development,
+}
+
+impl Default for Environment {
+    fn default() -> Self {
+        Self::Development
+    }
+}
+
+impl Environment {
+    pub fn is_prod(&self) -> bool {
+        *self == Self::Production
+    }
+
+    pub fn is_dev(&self) -> bool {
+        *self == Self::Development
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Config {
     app_name: String,
@@ -33,6 +55,7 @@ pub struct Config {
     admin_password: String,
     web_port: u16,
     web_ip_address: String,
+    environment: Environment,
 }
 
 impl Default for Config {
@@ -59,6 +82,11 @@ impl Default for Config {
         let admin_email = env::var("DTY_SYS_ADMIN_EMAIL").unwrap_or_default();
         let admin_password = env::var("DTY_SYS_ADMIN_PASSWORD").unwrap_or("changeme!!".into());
         let app_name: String = env::var("DTY_APP_NAME").unwrap_or("Default Company".into());
+        let environment = match env::var("DTY_ENV").unwrap_or_default().as_str() {
+            "dev" | "development" => Environment::Development,
+            "prod" | "production" => Environment::Production,
+            _ => Environment::Development,
+        };
 
         Self {
             app_name,
@@ -70,6 +98,7 @@ impl Default for Config {
             admin_password,
             web_port,
             web_ip_address,
+            environment,
         }
     }
 }
@@ -108,6 +137,10 @@ impl Config {
     pub fn web_ip_address(&self) -> &String {
         &self.web_ip_address
     }
+
+    pub fn environment(&self) -> &Environment {
+        &self.environment
+    }
 }
 pub struct ConfigBuilder {
     app_name: Option<String>,
@@ -119,6 +152,7 @@ pub struct ConfigBuilder {
     admin_password: Option<String>,
     web_port: Option<u16>,
     web_ip_address: Option<String>,
+    environment: Option<Environment>,
 }
 
 impl Default for ConfigBuilder {
@@ -133,6 +167,7 @@ impl Default for ConfigBuilder {
             admin_password: None,
             web_port: None,
             web_ip_address: None,
+            environment: None,
         }
     }
 }
@@ -144,6 +179,11 @@ impl ConfigBuilder {
 
     pub fn app_name(mut self, app_name: &str) -> Self {
         self.app_name = Some(app_name.into());
+        self
+    }
+
+    pub fn environment(mut self, env: Environment) -> Self {
+        self.environment = Some(env);
         self
     }
 
@@ -197,6 +237,7 @@ impl ConfigBuilder {
         config.admin_password = self.admin_password.unwrap_or(config.admin_password);
         config.web_ip_address = self.web_ip_address.unwrap_or(config.web_ip_address);
         config.web_port = self.web_port.unwrap_or(config.web_port);
+        config.environment = self.environment.unwrap_or(config.environment);
 
         config
     }
