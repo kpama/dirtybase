@@ -6,6 +6,7 @@ pub async fn make_redis_client(config: &Config) {
     if busybody::helpers::service_container()
         .get::<redis::Client>()
         .is_none()
+        && !config.redis_connection().is_empty()
     {
         let connection = config.redis_connection();
 
