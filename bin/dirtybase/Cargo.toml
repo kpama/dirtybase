@@ -31,3 +31,4 @@ tokio = { workspace = true }
 busybody = { workspace = true }
 orsomafo = { workspace = true }
 fama = { workspace = true }
+redis = { workspace = true }
