@@ -56,12 +56,14 @@ pub struct Config {
     web_port: u16,
     web_ip_address: String,
     environment: Environment,
+    redis_connection: String,
 }
 
 impl Default for Config {
     fn default() -> Self {
         load_dot_env();
         let db_connection = env::var("DTY_DATABASE").unwrap_or_default();
+        let redis_connection = env::var("DTY_REDIS").unwrap_or_default();
         let max_db_pool: u32 = if let Ok(max) = env::var("DTY_DATABASE_MAX_POOL_CONNECTION") {
             max.parse().unwrap_or(5)
         } else {
@@ -99,6 +101,7 @@ impl Default for Config {
             web_port,
             web_ip_address,
             environment,
+            redis_connection,
         }
     }
 }
@@ -141,6 +144,10 @@ impl Config {
     pub fn environment(&self) -> &Environment {
         &self.environment
     }
+
+    pub fn redis_connection(&self) -> &String {
+        &self.redis_connection
+    }
 }
 pub struct ConfigBuilder {
     app_name: Option<String>,
@@ -153,6 +160,7 @@ pub struct ConfigBuilder {
     web_port: Option<u16>,
     web_ip_address: Option<String>,
     environment: Option<Environment>,
+    redis_connection: Option<String>,
 }
 
 impl Default for ConfigBuilder {
@@ -168,6 +176,7 @@ impl Default for ConfigBuilder {
             web_port: None,
             web_ip_address: None,
             environment: None,
+            redis_connection: None,
         }
     }
 }
@@ -225,6 +234,11 @@ impl ConfigBuilder {
         self
     }
 
+    pub fn redis_connection(mut self, conn: String) -> Self {
+        self.redis_connection = Some(conn);
+        self
+    }
+
     pub fn build(self) -> Config {
         let mut config = Config::default();
 
@@ -238,6 +252,7 @@ impl ConfigBuilder {
         config.web_ip_address = self.web_ip_address.unwrap_or(config.web_ip_address);
         config.web_port = self.web_port.unwrap_or(config.web_port);
         config.environment = self.environment.unwrap_or(config.environment);
+        config.redis_connection = self.redis_connection.unwrap_or(config.redis_connection);
 
         config
     }
