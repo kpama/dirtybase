@@ -6,6 +6,7 @@ mod fields;
 mod the_app;
 
 pub mod cache_manager;
+pub mod clients;
 pub mod core;
 pub mod entity;
 pub mod pipeline;
