@@ -1,3 +1,4 @@
+use super::clients::redis_client::make_redis_client;
 use super::setup_database::create_data_tables;
 use super::setup_defaults::setup_default_entities;
 use super::Config;
@@ -41,10 +42,12 @@ impl DirtyBase {
         let instance = Self {
             default_db: default,
             pool_manager,
-            config,
+            config: config.clone(),
         };
 
         busybody::helpers::service_container().set(instance);
+        make_redis_client(&config).await;
+
         Ok(busybody::helpers::service_container()
             .get::<Self>()
             .unwrap())
