@@ -52,4 +52,9 @@ dotenvy = "0.15"
 busybody = { version = "0.2.3" }
 orsomafo = { version = "0.2.0" }
 fama = { version = "0.2.2" }
-redis = { version = "0.23.1", features = ["tokio-comp", "tls-native-tls"] }
+redis = { version = "0.23.1", features = [
+  "tokio-comp",
+  "aio",
+  # "tls-native-tls",
+  "cluster-async",
+] }
