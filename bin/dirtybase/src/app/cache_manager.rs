@@ -1,5 +1,5 @@
-use self::cache_store::{CacheStoreTrait, DatabaseStore, MemoryStore};
-use super::cache_manager::cache_tag_manager::CacheTagManager;
+use self::cache_store::{CacheStoreTrait, DatabaseStore, MemoryStore, RedisStore};
+use super::{cache_manager::cache_tag_manager::CacheTagManager, Config, DirtyBase};
 use busybody::helpers::provide;
 use std::collections::HashMap;
 use std::future::Future;
@@ -15,69 +15,53 @@ type StoreDriver = Arc<Box<dyn CacheStoreTrait + Send + Sync>>;
 
 #[derive(Clone)]
 pub struct CacheManager {
-    stores: HashMap<String, StoreDriver>,
-    default_store: String,
+    store: StoreDriver,
+    prefix: Option<String>,
 }
 
 impl CacheManager {
-    pub async fn new() -> Self {
-        // TODO: Move some of this logic outside of the method
-        //       The application suppose to pass the list of stores'
-        //       Drivers
-        let mut stores: HashMap<String, StoreDriver> = HashMap::new();
-        // let default_store = MemoryStore::store_name().to_string();
-        let default_store = DatabaseStore::store_name().to_string();
-
-        stores.insert(
-            default_store.clone(),
-            Arc::new(Box::new(MemoryStore::new())),
-        );
-        stores.insert(
-            DatabaseStore::store_name().into(),
-            Arc::new(Box::new(provide::<DatabaseStore>().await)),
-        );
-
-        Self {
-            stores,
-            default_store,
+    async fn get_store(store_name: &str) -> StoreDriver {
+        match store_name {
+            "db" => Arc::new(Box::new(provide::<DatabaseStore>().await)),
+            "redis" => Arc::new(Box::new(provide::<RedisStore>().await)),
+            _ => Arc::new(Box::new(provide::<MemoryStore>().await)),
         }
     }
 
-    fn make(store: StoreDriver, name: &str) -> Self {
-        let mut stores = HashMap::new();
-        stores.insert(name.to_string(), store);
-
+    pub async fn new(config: &Config) -> Self {
         Self {
-            stores,
-            default_store: name.into(),
+            store: Self::get_store(&config.cache_store()).await,
+            prefix: None,
         }
     }
 
-    pub fn store(&self, name: &str) -> Self {
-        Self::make(
-            if let Some(store) = self.stores.get(name) {
-                store.clone()
-            } else {
-                self.default_store()
-            },
-            name,
-        )
+    pub async fn prefix(&self, prefix: &str) -> Self {
+        Self {
+            store: self.store.clone(),
+            prefix: Some(prefix.to_string()),
+        }
     }
 
-    pub fn default_store(&self) -> StoreDriver {
-        self.stores.get(&self.default_store).unwrap().clone()
+    pub async fn store(&self, store_name: &str) -> Self {
+        Self {
+            store: Self::get_store(store_name).await,
+            prefix: self.prefix.clone(),
+        }
     }
 
-    pub fn has_store(&self, name: &str) -> bool {
-        self.stores.contains_key(name)
-    }
-
-    pub async fn get(&self, key: &str) -> Option<serde_json::Value> {
-        if let Some(entry) = self.default_store().get(key).await {
+    pub async fn get<R>(&self, key: &str) -> Option<R>
+    where
+        R: serde::de::DeserializeOwned,
+    {
+        let key = self.prefix_a_key(key);
+        if let Some(entry) = self.store.get(key).await {
             if entry.still_hot() {
                 return match serde_json::from_str(&entry.value) {
                     Ok(v) => Some(v),
-                    _ => None,
+                    Err(e) => {
+                        log::error!("{}", e);
+                        None
+                    }
                 };
             }
         }
@@ -85,12 +69,38 @@ impl CacheManager {
         None
     }
 
-    pub async fn tags(&self, tags: &[&str]) -> CacheTagManager {
-        CacheTagManager::new(tags).await
+    fn prefix_keys(&self, keys: &[&str]) -> Vec<String> {
+        let prefix = self.prefix.as_ref().unwrap_or(&"core".to_string()).clone();
+
+        keys.iter()
+            .map(|e| prefix.clone() + ":" + *e)
+            .collect::<Vec<String>>()
     }
 
-    pub async fn many(&self, keys: &[&str]) -> Option<HashMap<String, serde_json::Value>> {
-        if let Some(map) = self.default_store().many(keys).await {
+    fn prefix_tags(&self, tags: Option<&[&str]>) -> Option<Vec<String>> {
+        if tags.is_some() {
+            return Some(self.prefix_keys(tags.unwrap()));
+        }
+
+        None
+    }
+
+    fn prefix_a_key(&self, key: &str) -> String {
+        let prefix = self.prefix.as_ref().unwrap_or(&"core".to_string()).clone();
+        prefix + ":" + key
+    }
+
+    pub async fn tags(&self, tags: &[&str]) -> CacheTagManager {
+        CacheTagManager::new(tags, self.clone()).await
+    }
+
+    pub async fn many<R: serde::de::DeserializeOwned>(
+        &self,
+        keys: &[&str],
+    ) -> Option<HashMap<String, R>> {
+        let the_keys = self.prefix_keys(keys);
+
+        if let Some(map) = self.store.many(&the_keys).await {
             let mut built = HashMap::new();
             for entry in map {
                 if entry.still_hot() {
@@ -130,11 +140,12 @@ impl CacheManager {
 
     /// Check is an entry exist
     pub async fn has(&self, key: &str) -> bool {
-        self.default_store().get(key).await.is_some()
+        let key = self.prefix_a_key(key);
+        self.store.get(key).await.is_some()
     }
 
     // Fetches and deletes the entry with the key specified
-    pub async fn pull(&self, key: &str) -> Option<serde_json::Value> {
+    pub async fn pull<R: serde::de::DeserializeOwned>(&self, key: &str) -> Option<R> {
         let value = self.get(key).await;
         if value.is_some() {
             self.forget(key).await;
@@ -144,7 +155,7 @@ impl CacheManager {
     }
 
     pub async fn increment(&self, key: &str) -> bool {
-        self.increment_by(key, 1.0).await
+        self.increment_by(&key, 1.0).await
     }
 
     pub async fn increment_by(&self, key: &str, by: f64) -> bool {
@@ -160,29 +171,17 @@ impl CacheManager {
     }
 
     /// Try fetching the stored value or fallback to the default
-    pub async fn remember<F, R>(
-        &self,
-        key: &str,
-        expiration: Option<i64>,
-        default: F,
-    ) -> serde_json::Value
+    pub async fn remember<F, R>(&self, key: &str, expiration: Option<i64>, default: F) -> R
     where
-        R: serde::Serialize,
+        R: serde::Serialize + serde::de::DeserializeOwned,
         F: FallbackFn<(), R>,
     {
-        let value = self.get(key).await;
-        if value.is_none() {
-            let result = serde_json::to_value(default.call(()).await).unwrap();
-            self.put(key, &result, expiration).await;
-            return result;
-        } else {
-            value.unwrap()
-        }
+        self.do_remember(key, expiration, default, None).await
     }
 
-    pub async fn remember_forever<F, R>(&self, key: &str, default: F) -> serde_json::Value
+    pub async fn remember_forever<F, R>(&self, key: &str, default: F) -> R
     where
-        R: serde::Serialize,
+        R: serde::Serialize + serde::de::DeserializeOwned,
         F: FallbackFn<(), R>,
     {
         self.remember(key, None, default).await
@@ -231,16 +230,17 @@ impl CacheManager {
 
     /// Deletes the entry for this key
     pub async fn forget(&self, key: &str) -> bool {
-        self.default_store().forget(key).await
+        self.store.forget(key.into()).await
     }
 
     /// Delete everything in the store
     pub async fn flush(&self) -> bool {
-        self.default_store().flush(None).await
+        self.store.flush(None).await
     }
 
     pub async fn flush_tags(&self, tags: &[&str]) -> bool {
-        self.default_store().flush(Some(tags)).await
+        let tags = self.prefix_tags(Some(tags));
+        self.store.flush(tags.as_deref()).await
     }
 
     async fn inc_or_dec(&self, key: &str, by: f64, incrementing: bool) -> bool {
@@ -279,8 +279,11 @@ impl CacheManager {
     where
         V: serde::Serialize,
     {
+        let key = self.prefix_a_key(key);
+        let tags = self.prefix_tags(tags);
+
         match serde_json::to_string(value) {
-            Ok(v) => self.default_store().add(key, v, expiration, tags).await,
+            Ok(v) => self.store.add(key, v, expiration, tags.as_deref()).await,
             _ => false,
         }
     }
@@ -292,9 +295,15 @@ impl CacheManager {
         expiration: Option<i64>,
         tags: Option<&[&str]>,
     ) -> bool {
+        let key = self.prefix_a_key(key);
+        let tags = self.prefix_tags(tags);
+
         match serde_json::to_string(value) {
-            Ok(v) => self.default_store().put(key, v, expiration, tags).await,
-            _ => false,
+            Ok(v) => self.store.put(key, v, expiration, tags.as_deref()).await,
+            Err(e) => {
+                log::error!("{}", e);
+                false
+            }
         }
     }
 
@@ -304,6 +313,8 @@ impl CacheManager {
         expiration: Option<i64>,
         tags: Option<&[&str]>,
     ) -> bool {
+        let tags = self.prefix_tags(tags);
+
         let built = kv
             .iter()
             .map(|entry| (entry.0.clone(), serde_json::to_string(entry.1)))
@@ -311,9 +322,31 @@ impl CacheManager {
             .map(|entry| (entry.0, entry.1.unwrap()))
             .collect();
 
-        self.default_store()
-            .put_many(&built, expiration, tags)
+        self.store
+            .put_many(&built, expiration, tags.as_deref())
             .await
+    }
+
+    pub async fn do_remember<F, R>(
+        &self,
+        key: &str,
+        expiration: Option<i64>,
+        default: F,
+        tags: Option<&[&str]>,
+    ) -> R
+    where
+        R: serde::Serialize + serde::de::DeserializeOwned,
+        F: FallbackFn<(), R>,
+    {
+        let value = self.get(key).await;
+        if value.is_none() {
+            let new_value = default.call(()).await;
+            let result = serde_json::to_value(&new_value).unwrap();
+            self.do_put(key, &result, expiration, tags).await;
+            return new_value;
+        } else {
+            value.unwrap()
+        }
     }
 }
 
@@ -323,7 +356,10 @@ impl busybody::Injectable for CacheManager {
         if let Some(manager) = container.get_type::<CacheManager>() {
             return manager;
         } else {
-            let manager = Self::new().await;
+            let app = container.get::<DirtyBase>().unwrap();
+            let config = app.ref_config();
+            let manager = Self::new(config).await;
+
             return container
                 .set_type(manager)
                 .get_type::<CacheManager>()

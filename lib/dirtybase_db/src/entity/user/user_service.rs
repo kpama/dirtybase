@@ -71,11 +71,21 @@ impl UserService {
             user.id = Some(generate_ulid());
         }
 
-        // TODO: dispatch user created event
-        let event = UserCreatedEvent::new(user.id.as_ref().unwrap());
-        event.dispatch_event();
+        dbg!("core user entity: {:#?}", &user);
 
-        self.user_repo.create(user).await
+        let result = self.user_repo.create(user).await;
+
+        if result.is_ok() {
+            let event = UserCreatedEvent::new(result.as_ref().unwrap().id.as_ref().unwrap());
+            event.dispatch_event();
+        } else {
+            log::error!(
+                "could not create user: {:#?}",
+                result.as_ref().err().unwrap()
+            );
+        }
+
+        result
     }
 
     pub async fn update(

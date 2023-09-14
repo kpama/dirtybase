@@ -2,7 +2,10 @@ use crate::app::cache_manager::cache_entry::CacheEntry;
 
 use super::CacheStoreTrait;
 use async_trait::async_trait;
-use std::collections::HashMap;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 use tokio::sync::RwLock;
 
 #[derive(Debug, Default)]
@@ -34,16 +37,46 @@ impl From<CacheEntry> for Entry {
     }
 }
 
+#[derive(Clone)]
 pub struct MemoryStore {
-    storage: RwLock<HashMap<String, Entry>>,
-    tags: RwLock<HashMap<String, Vec<String>>>,
+    storage: Arc<RwLock<HashMap<String, Entry>>>,
+    tags: Arc<RwLock<HashMap<String, HashSet<String>>>>,
 }
 
 impl MemoryStore {
     pub fn new() -> Self {
         Self {
-            storage: RwLock::new(HashMap::default()),
-            tags: RwLock::default(),
+            storage: Arc::new(RwLock::new(HashMap::default())),
+            tags: Arc::new(RwLock::default()),
+        }
+    }
+
+    async fn tag_key(&self, tags: Option<&[String]>, key: String) {
+        let mut lock = self.tags.write().await;
+        if let Some(list) = tags {
+            for a_tag in list {
+                if !lock.contains_key(a_tag) {
+                    lock.insert(a_tag.clone(), HashSet::default());
+                }
+
+                if let Some(set) = lock.get_mut(a_tag) {
+                    set.insert(key.clone());
+                }
+            }
+        }
+    }
+
+    async fn delete_tags(&self, tags: Option<&[String]>) {
+        let mut lock = self.tags.write().await;
+
+        if let Some(list) = tags {
+            for a_tag in list {
+                if let Some(set) = lock.get_mut(a_tag) {
+                    for an_entry in set.iter() {
+                        self.forget(an_entry.clone()).await;
+                    }
+                }
+            }
         }
     }
 }
@@ -60,20 +93,23 @@ impl CacheStoreTrait for MemoryStore {
     /// Add the entry if it does not already exist
     async fn put(
         &self,
-        key: &str,
+        key: String,
         content: String,
         expiration: Option<i64>,
-        tags: Option<&[&str]>,
+        tags: Option<&[String]>,
     ) -> bool {
         let mut lock = self.storage.write().await;
         lock.insert(
-            key.into(),
+            key.clone(),
             Entry {
                 expiration,
                 content,
-                key: key.into(),
+                key: key.clone(),
             },
         );
+
+        self.tag_key(tags, key).await;
+
         return true;
     }
 
@@ -81,27 +117,28 @@ impl CacheStoreTrait for MemoryStore {
         &self,
         kv: &HashMap<String, String>,
         duration: Option<i64>,
-        tags: Option<&[&str]>,
+        tags: Option<&[String]>,
     ) -> bool {
         for entry in kv {
-            self.put(entry.0, entry.1.clone(), duration, tags).await;
+            self.put(entry.0.clone(), entry.1.clone(), duration, tags)
+                .await;
         }
         true
     }
 
-    async fn get(&self, key: &str) -> Option<CacheEntry> {
+    async fn get(&self, key: String) -> Option<CacheEntry> {
         let lock = self.storage.read().await;
-        if let Some(entry) = lock.get(key) {
+        if let Some(entry) = lock.get(&key) {
             return Some(entry.into());
         }
 
         None
     }
 
-    async fn many(&self, keys: &[&str]) -> Option<Vec<CacheEntry>> {
+    async fn many(&self, keys: &[String]) -> Option<Vec<CacheEntry>> {
         let mut results = Vec::<CacheEntry>::new();
         for a_key in keys {
-            if let Some(entry) = self.get(&a_key).await {
+            if let Some(entry) = self.get(a_key.into()).await {
                 results.push(entry);
             }
         }
@@ -116,19 +153,21 @@ impl CacheStoreTrait for MemoryStore {
     // Add or replace existing entry
     async fn add(
         &self,
-        key: &str,
+        key: String,
         content: String,
         expiration: Option<i64>,
-        tags: Option<&[&str]>,
+        tags: Option<&[String]>,
     ) -> bool {
         let mut lock = self.storage.write().await;
-        if !lock.contains_key(key) {
+        self.tag_key(tags, key.clone()).await;
+
+        if !lock.contains_key(&key) {
             lock.insert(
-                key.into(),
+                key.clone(),
                 Entry {
                     expiration,
                     content,
-                    key: key.to_string(),
+                    key: key,
                 },
             );
             return true;
@@ -138,16 +177,29 @@ impl CacheStoreTrait for MemoryStore {
     }
 
     // Delete an entry
-    async fn forget(&self, key: &str) -> bool {
+    async fn forget(&self, key: String) -> bool {
         let mut lock = self.storage.write().await;
-        lock.remove(key);
+        lock.remove(&key);
         true
     }
 
     // Delete all entries
-    async fn flush(&self, tags: Option<&[&str]>) -> bool {
-        let mut lock = self.storage.write().await;
-        lock.drain();
+    async fn flush(&self, tags: Option<&[String]>) -> bool {
+        // Only delete on "tags" scope
+        self.delete_tags(tags).await;
+
         true
+    }
+}
+
+#[busybody::async_trait]
+impl busybody::Injectable for MemoryStore {
+    async fn inject(container: &busybody::ServiceContainer) -> Self {
+        if let Some(store) = container.get_type::<Self>() {
+            return store;
+        } else {
+            let store = Self::new();
+            return container.set_type(store).get_type::<Self>().unwrap();
+        }
     }
 }

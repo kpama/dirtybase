@@ -6,9 +6,9 @@ mod fields;
 mod the_app;
 
 pub mod cache_manager;
-pub mod clients;
+pub mod client;
 pub mod core;
-pub mod entity;
+pub mod model;
 pub mod pipeline;
 pub mod setup_database;
 pub mod setup_defaults;

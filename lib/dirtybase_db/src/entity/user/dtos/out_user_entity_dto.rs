@@ -4,7 +4,7 @@ use serde::Serialize;
 
 use crate::entity::user::UserEntity;
 
-#[derive(Debug, Clone, Serialize, Default, DirtyTable)]
+#[derive(Debug, Clone, serde::Deserialize, Serialize, Default, DirtyTable)]
 pub struct OutUserEntityDto {
     id: String,
     username: String,

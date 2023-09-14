@@ -17,7 +17,7 @@ impl CacheEntry {
     }
 
     pub fn has_expired(&self) -> bool {
-        if self.expiration.is_some() {
+        if self.expiration.is_some() && self.expiration.unwrap() > 0 {
             return self.expiration.unwrap() < now().timestamp();
         }
         false

@@ -10,6 +10,8 @@
     "fama",
     "hmac",
     "replacen",
+    "sadd",
+    "smembers",
     "sqlx"
   ],
 }

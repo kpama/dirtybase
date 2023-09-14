@@ -1,6 +1,6 @@
 use super::query_join_types::JoinType;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct JoinQueryBuilder {
     table: String,
     join_clause: String,

@@ -18,6 +18,16 @@ impl FromIterator<String> for FieldValue {
     }
 }
 
+impl<'a> From<Option<&'a [String]>> for FieldValue {
+    fn from(value: Option<&'a [String]>) -> Self {
+        if value.is_some() {
+            Self::Array(value.unwrap().iter().map(|x| x.into()).collect())
+        } else {
+            Self::NotSet
+        }
+    }
+}
+
 impl FromIterator<Option<String>> for FieldValue {
     fn from_iter<T: IntoIterator<Item = Option<String>>>(iter: T) -> Self {
         Self::Array(

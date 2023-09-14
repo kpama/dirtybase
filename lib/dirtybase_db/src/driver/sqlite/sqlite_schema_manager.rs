@@ -68,18 +68,6 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         self.do_commit(table).await
     }
 
-    // fn query(&mut self, query: QueryBuilder) -> &dyn SchemaManagerTrait
-    // where
-    //     Self: Sized,
-    // {
-    //     let mut params = Vec::new();
-    //     let statement = self.build_query(&query, &mut params);
-
-    //     self.active_query = Some(ActiveQuery { statement, params });
-
-    //     self
-    // }
-
     async fn execute(&self, query: QueryBuilder) {
         self.do_execute(query).await
     }
@@ -140,35 +128,53 @@ impl SqliteSchemaManager {
     }
 
     async fn do_execute(&self, query: QueryBuilder) {
-        let mut columns = Vec::new();
         let mut params = Vec::new();
-        if let Some(list) = query.set_columns() {
-            for entry in list {
-                if *entry.1 != FieldValue::NotSet {
-                    columns.push(entry.0);
-                    params.push(entry.1.to_string());
-                }
-            }
-        }
 
         let mut sql;
         match query.action() {
-            QueryAction::Create => {
-                sql = format!("INSERT INTO {} (", query.tables().join(","));
-                for entry in columns.iter().enumerate() {
-                    if entry.0 > 0 {
-                        sql = format!("{}, `{}`", sql, *entry.1);
-                    } else {
-                        sql = format!("{} `{}`", sql, *entry.1);
+            QueryAction::Create {
+                rows,
+                do_soft_insert,
+            } => {
+                sql = format!(
+                    "INSERT {} INTO {} ",
+                    if *do_soft_insert { "OR IGNORE" } else { "" },
+                    query.tables().join(",")
+                );
+                if !rows.is_empty() {
+                    let keys = rows
+                        .first()
+                        .unwrap()
+                        .keys()
+                        .map(|e| e.clone())
+                        .collect::<Vec<String>>();
+
+                    let placeholders = keys.iter().map(|_| "?").collect::<Vec<&str>>().join(",");
+                    let columns = keys
+                        .iter()
+                        .map(|e| format!("`{}`", e))
+                        .collect::<Vec<String>>()
+                        .join(",");
+
+                    sql = format!("{} ({}) VALUES ", sql, columns);
+
+                    for a_row in rows.iter().enumerate() {
+                        let values = keys.iter().map(|col| a_row.1.get(col).unwrap().to_string());
+                        let separator = if a_row.0 > 0 { "," } else { "" };
+
+                        params.extend(values);
+                        sql = format!("{} {} ({})", sql, separator, &placeholders);
                     }
                 }
-                sql = format!(
-                    "{} ) VALUES ({})",
-                    sql,
-                    params.iter().map(|_| "?").collect::<Vec<&str>>().join(",")
-                );
             }
-            QueryAction::Update => {
+            QueryAction::Update(column_values) => {
+                let mut columns = Vec::new();
+                for entry in column_values {
+                    if *entry.1 != FieldValue::NotSet {
+                        columns.push(entry.0);
+                        params.push(entry.1.to_string());
+                    }
+                }
                 sql = format!("UPDATE `{}` SET ", query.tables().join(","));
                 for entry in columns.iter().enumerate() {
                     if entry.0 > 0 {
@@ -181,7 +187,10 @@ impl SqliteSchemaManager {
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
             }
             QueryAction::Delete => {
-                sql = format!("DELETE FROM {} (", query.tables().join(","));
+                sql = format!("DELETE {0} FROM {0} ", query.tables().join(","));
+                // joins
+                sql = format!("{} {}", sql, self.build_join(&query, &mut params));
+                // where
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
             }
             _ => {
@@ -423,14 +432,19 @@ impl SqliteSchemaManager {
         let mut sql = "SELECT".to_owned();
 
         // fields
-        match query.select_columns() {
-            Some(fields) => sql = format!("{} {}", sql, fields.join(",")),
-            None => {
-                if query.all_columns() {
+        match query.action() {
+            QueryAction::Query {
+                columns,
+                select_all,
+            } => {
+                if *select_all {
                     sql = format!("{} *", sql) // Select all columns by default
+                } else if let Some(fields) = columns {
+                    sql = format!("{} {}", sql, fields.join(","));
                 }
             }
-        };
+            _ => (),
+        }
 
         // join fields
         if let Some(joins) = query.joins() {
@@ -448,10 +462,20 @@ impl SqliteSchemaManager {
         sql = format!("{} FROM {}", sql, query.tables().join(","));
 
         // joins
+        sql = format!("{} {}", sql, self.build_join(query, params));
+
+        // wheres
+        sql = format!("{} {}", sql, self.build_where_clauses(query, params));
+
+        sql
+    }
+
+    fn build_join(&self, query: &QueryBuilder, _params: &mut Vec<String>) -> String {
+        let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
             for a_join in joins {
                 sql = format!(
-                    "{} {} join {} on {}",
+                    "{} {} JOIN {} ON {}",
                     sql,
                     a_join.join_type(),
                     a_join.table(),
@@ -459,9 +483,6 @@ impl SqliteSchemaManager {
                 );
             }
         }
-
-        // wheres
-        sql = format!("{} {}", sql, self.build_where_clauses(query, params));
 
         sql
     }

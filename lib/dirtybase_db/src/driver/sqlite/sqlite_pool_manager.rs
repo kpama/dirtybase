@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc};
+use std::{str::FromStr, sync::Arc, time::Duration};
 
 use crate::base::{
     connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait},
@@ -53,7 +53,9 @@ pub async fn db_connect(conn: &str, max_connection: u32) -> anyhow::Result<Pool<
             SqliteConnectOptions::from_str(conn)
                 .unwrap()
                 .create_if_missing(true)
-                .journal_mode(SqliteJournalMode::Wal),
+                .journal_mode(SqliteJournalMode::Wal)
+                .foreign_keys(true)
+                .busy_timeout(Duration::from_secs(5)),
         )
         .await
     {

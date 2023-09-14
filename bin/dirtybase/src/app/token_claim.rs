@@ -1,4 +1,4 @@
-use super::entity::dirtybase_user::{
+use super::model::dirtybase_user::{
     dirtybase_user_helpers::jwt_manager::JWTManager, DirtybaseUserEntity,
 };
 use busybody::helpers::provide;

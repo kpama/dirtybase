@@ -4,24 +4,13 @@ use async_trait::async_trait;
 
 mod database_store;
 mod memory_store;
+mod redis_store;
 
 pub use database_store::DatabaseStore;
 pub use memory_store::MemoryStore;
+pub use redis_store::RedisStore;
 
 use super::cache_entry::CacheEntry;
-
-/*
-  [x] public function get($key) {}
-  [x] public function many(array $keys) {}
-  [x] public function put($key, $value, $seconds) {}
-  [x] public function putMany(array $values, $seconds) {}
-  [x] (implemented in the cache store manager) public function increment($key, $value = 1) {}
-  [x] (implemented in the cache store manager) public function decrement($key, $value = 1) {}
-  [x] (implemented in the cache store manager) public function forever($key, $value) {}
-  [x]  public function forget($key) {}
-  [x] (flush implemented as `flush`) public function flush() {}
-  [] (implemented in the cache store manager) public function getPrefix() {}
-*/
 
 #[async_trait]
 pub trait CacheStoreTrait: Send + Sync {
@@ -29,38 +18,38 @@ pub trait CacheStoreTrait: Send + Sync {
     where
         Self: Sized;
 
-    async fn get(&self, key: &str) -> Option<CacheEntry>;
+    async fn get(&self, key: String) -> Option<CacheEntry>;
 
-    async fn many(&self, keys: &[&str]) -> Option<Vec<CacheEntry>>;
+    async fn many(&self, keys: &[String]) -> Option<Vec<CacheEntry>>;
 
     /// Add the entry if it does not already exist
     async fn put(
         &self,
-        key: &str,
+        key: String,
         value: String,
         expiration: Option<i64>,
-        tags: Option<&[&str]>,
+        tags: Option<&[String]>,
     ) -> bool;
 
     async fn put_many(
         &self,
         kv: &HashMap<String, String>,
         expiration: Option<i64>,
-        tags: Option<&[&str]>,
+        tags: Option<&[String]>,
     ) -> bool;
 
     // Add or replace existing entry
     async fn add(
         &self,
-        key: &str,
+        key: String,
         value: String,
         expiration: Option<i64>,
-        tags: Option<&[&str]>,
+        tags: Option<&[String]>,
     ) -> bool;
 
     // Delete an entry
-    async fn forget(&self, key: &str) -> bool;
+    async fn forget(&self, key: String) -> bool;
 
     // Delete all entries
-    async fn flush(&self, tags: Option<&[&str]>) -> bool;
+    async fn flush(&self, tags: Option<&[String]>) -> bool;
 }

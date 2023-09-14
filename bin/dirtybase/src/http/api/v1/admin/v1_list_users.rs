@@ -1,4 +1,4 @@
-use crate::app::entity::dirtybase_user::dirtybase_user_helpers::jwt_manager::JWTManager;
+use crate::app::model::dirtybase_user::dirtybase_user_helpers::jwt_manager::JWTManager;
 use actix_web::{get, HttpRequest, HttpResponse, Responder};
 use busybody::helpers::provide;
 use serde::{Deserialize, Serialize};

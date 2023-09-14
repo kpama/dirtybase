@@ -1,5 +1,5 @@
 use crate::app::{
-    entity::{
+    model::{
         app::{AppEntity, AppService},
         company::{CompanyEntity, CompanyService},
         role::{RoleEntity, RoleService, ROLE_ADMIN},
@@ -84,7 +84,7 @@ async fn find_or_create_admin_user(
 
 async fn add_user_to_system_wide_admin(
     new_admin_data: NewSysAdminData,
-    mut pipe: PipeContent,
+    pipe: PipeContent,
     sys_admin_service: SysAdminService,
 ) -> Option<PipeContent> {
     if new_admin_data.user.is_some() {
@@ -97,8 +97,7 @@ async fn add_user_to_system_wide_admin(
             log::error!("could not add user to system wide admin");
         }
     }
-
-    Some(pipe)
+    None
 }
 
 async fn create_default_company(

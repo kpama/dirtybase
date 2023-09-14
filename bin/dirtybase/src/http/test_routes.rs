@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use actix_web::{get, HttpResponse, Responder, Scope};
 use busybody::helpers::{provide, service};
 use dirtybase_db::entity::user::{UserEntity, USER_TABLE};
@@ -6,7 +8,7 @@ use dirtybase_db_types::TableEntityTrait;
 use crate::app::{
     cache_manager::CacheManager,
     core::time::now,
-    entity::{
+    model::{
         app::{AppEntity, AppRepository},
         company::CompanyEntity,
         dirtybase_user::{
@@ -27,12 +29,11 @@ pub fn register_routes(scope: Scope) -> Scope {
 async fn cache_endpoint() -> impl Responder {
     let cache_manager: CacheManager = provide().await;
 
-    let tag_cache = cache_manager.tags(&["foo"]);
+    let tag_cache_manager = cache_manager.tags(&["tag_one"]).await;
 
-    let status: serde_json::Value = cache_manager
-        .store("db")
+    let status: UptimeStatus = tag_cache_manager
         .remember("uptime", None, || async {
-            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
             UptimeStatus {
                 is_up: true,
                 msg: "Version 1".into(),
@@ -46,7 +47,6 @@ async fn cache_endpoint() -> impl Responder {
     };
     let time = now();
     _ = cache_manager
-        .store("db")
         .add("uptime", &f, time.add_days(20).into())
         .await;
 

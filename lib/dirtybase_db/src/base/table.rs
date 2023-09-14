@@ -1,10 +1,13 @@
+use dirtybase_db_types::TableEntityTrait;
+
+use crate::entity::user::USER_TABLE;
+
 use super::{
     column::{BaseColumn, ColumnType, RelationType},
     helper::to_fk_column,
     index::{IndexProp, IndexType},
     query::QueryBuilder,
 };
-use crate::entity::user::USER_TABLE;
 use std::fmt::Debug;
 
 pub const ULID_STRING_LENGTH: usize = 26;
@@ -133,7 +136,7 @@ impl BaseTable {
     }
     pub fn string(&mut self, name: &'static str) -> &mut BaseColumn {
         self.column(name, |column| {
-            column.set_type(ColumnType::String(255));
+            column.set_type(ColumnType::String(256));
         })
     }
 
@@ -145,7 +148,7 @@ impl BaseTable {
 
     pub fn text(&mut self, name: &'static str) -> &mut BaseColumn {
         self.column(name, |column| {
-            column.set_type(ColumnType::String(512));
+            column.set_type(ColumnType::Text);
         })
     }
 
@@ -156,7 +159,7 @@ impl BaseTable {
     }
 
     pub fn ulid_fk(&mut self, foreign_table: &str, cascade_delete: bool) -> &mut BaseColumn {
-        let name = to_fk_column(foreign_table);
+        let name = to_fk_column(foreign_table, None);
 
         self.column_string(name, |column| {
             column.set_type(ColumnType::Char(ULID_STRING_LENGTH));
@@ -164,6 +167,36 @@ impl BaseTable {
                 column.references_with_cascade_delete(foreign_table, ID_FIELD);
             } else {
                 column.references_without_cascade_delete(foreign_table, ID_FIELD);
+            }
+        })
+    }
+
+    pub fn ulid_table_fk<F: TableEntityTrait>(&mut self, cascade_delete: bool) -> &mut BaseColumn {
+        let foreign_table = F::table_name();
+        let id = F::id_column().unwrap();
+        let name = to_fk_column(foreign_table, Some(id));
+
+        self.column_string(name, |column| {
+            column.set_type(ColumnType::Char(ULID_STRING_LENGTH));
+            if cascade_delete {
+                column.references_with_cascade_delete(foreign_table, id);
+            } else {
+                column.references_without_cascade_delete(foreign_table, id);
+            }
+        })
+    }
+
+    pub fn id_table_fk<F: TableEntityTrait>(&mut self, cascade_delete: bool) -> &mut BaseColumn {
+        let foreign_table = F::table_name();
+        let id = F::id_column().unwrap();
+        let name = to_fk_column(foreign_table, Some(id));
+
+        self.column_string(name, |column| {
+            column.set_type(ColumnType::Integer);
+            if cascade_delete {
+                column.references_with_cascade_delete(foreign_table, id);
+            } else {
+                column.references_without_cascade_delete(foreign_table, id);
             }
         })
     }

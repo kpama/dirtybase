@@ -11,7 +11,7 @@ pub struct Manager {
 
 impl Manager {
     pub fn new(schema: Box<dyn SchemaManagerTrait + Send>) -> Self {
-        Self { schema: schema }
+        Self { schema }
     }
 
     pub fn inner_ref(&self) -> &dyn SchemaManagerTrait {
@@ -31,7 +31,13 @@ impl Manager {
     where
         F: FnMut(&mut QueryBuilder),
     {
-        let mut query_builder = QueryBuilder::new(tables, super::query::QueryAction::Query);
+        let mut query_builder = QueryBuilder::new(
+            tables,
+            super::query::QueryAction::Query {
+                columns: None,
+                select_all: false,
+            },
+        );
         callback(&mut query_builder);
 
         SchemaWrapper {
@@ -71,7 +77,10 @@ impl Manager {
     ) {
         let mut query = QueryBuilder::new(
             vec![from_table.to_owned()],
-            super::query::QueryAction::Query,
+            super::query::QueryAction::Query {
+                columns: None,
+                select_all: false,
+            },
         );
         callback(&mut query);
         let mut table = self.schema.fetch_table_for_update(name);
@@ -81,12 +90,22 @@ impl Manager {
 
     // TODO: Return a result ...
     pub async fn insert(&self, table_name: &str, column_and_values: ColumnAndValue) {
-        let mut query = QueryBuilder::new(
-            vec![table_name.to_owned()],
-            super::query::QueryAction::Create,
-        );
-        query.set_multiple(column_and_values);
-        self.schema.execute(query).await;
+        self.insert_multi(table_name, vec![column_and_values]).await;
+    }
+
+    pub async fn insert_multi(&self, table_name: &str, rows: Vec<ColumnAndValue>) {
+        self.create_insert_query(table_name, rows, false).await
+    }
+
+    /// Insert a row gracefully ignore insert duplicate
+    pub async fn soft_insert(&self, table_name: &str, column_and_values: ColumnAndValue) {
+        self.create_insert_query(table_name, vec![column_and_values], true)
+            .await
+    }
+
+    /// Insert rows gracefully ignore insert duplicates
+    pub async fn soft_insert_multi(&self, table_name: &str, rows: Vec<ColumnAndValue>) {
+        self.create_insert_query(table_name, rows, true).await
     }
 
     // TODO: Return a result ...
@@ -98,9 +117,8 @@ impl Manager {
     ) {
         let mut query = QueryBuilder::new(
             vec![table_name.to_owned()],
-            super::query::QueryAction::Update,
+            super::query::QueryAction::Update(column_and_values),
         );
-        query.set_multiple(column_and_values);
         callback(&mut query);
         self.schema.execute(query).await;
     }
@@ -116,5 +134,22 @@ impl Manager {
 
     pub async fn has_table(&self, name: &str) -> bool {
         self.schema.has_table(name).await
+    }
+
+    async fn create_insert_query(
+        &self,
+        table_name: &str,
+        rows: Vec<ColumnAndValue>,
+        do_soft_insert: bool,
+    ) {
+        let query = QueryBuilder::new(
+            vec![table_name.to_owned()],
+            super::query::QueryAction::Create {
+                rows,
+                do_soft_insert,
+            },
+        );
+
+        self.schema.execute(query).await;
     }
 }

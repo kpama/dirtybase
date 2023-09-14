@@ -25,14 +25,16 @@ impl ColumnAndValueBuilder {
 
     pub fn try_to_insert<V: Into<FieldValue>>(self, key: &str, value: Option<V>) -> Self {
         if let Some(value) = value {
-            return self.insert(key, value);
+            return self.try_to_insert_field_value(key, Some(value.into()));
         }
         self
     }
 
     pub fn try_to_insert_field_value(self, key: &str, field: Option<FieldValue>) -> Self {
         if let Some(f) = field {
-            self.data.borrow_mut().insert(key.into(), f);
+            if f != FieldValue::NotSet {
+                self.data.borrow_mut().insert(key.into(), f);
+            }
         }
 
         self

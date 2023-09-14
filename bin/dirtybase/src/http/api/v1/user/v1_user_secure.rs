@@ -1,5 +1,5 @@
 use crate::{
-    app::entity::{
+    app::model::{
         dirtybase_user::{
             dtos::{
                 in_switch_app_dto::SwitchAppDto, out_switch_app_result_dto::SwitchAppResultDto,

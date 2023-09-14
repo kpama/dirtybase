@@ -1,5 +1,5 @@
 use crate::{
-    app::entity::{
+    app::model::{
         dirtybase_user::dirtybase_user_helpers::jwt_manager::JWTManager,
         permission::{permission_service::PermissionService, PermissionValidator},
     },

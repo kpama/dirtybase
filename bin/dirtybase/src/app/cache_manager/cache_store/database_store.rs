@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::app::{
-    cache_manager::cache_entry::CacheEntry, entity::cache_db_store::CacheDbStoreRepository,
+    cache_manager::cache_entry::CacheEntry, model::cache_db_store::CacheDbStoreRepository,
 };
 
 use super::CacheStoreTrait;
@@ -32,65 +32,65 @@ impl CacheStoreTrait for DatabaseStore {
     /// Add the entry if it does not already exist
     async fn put(
         &self,
-        key: &str,
+        key: String,
         value: String,
         expiration: Option<i64>,
-        tags: Option<&[&str]>,
+        tags: Option<&[String]>,
     ) -> bool {
-        self.repo.insert(key, &value, expiration).await
+        self.repo.create(&key, &value, expiration, tags).await
     }
 
     async fn put_many(
         &self,
         kv: &HashMap<String, String>,
         expiration: Option<i64>,
-        tags: Option<&[&str]>,
+        tags: Option<&[String]>,
     ) -> bool {
-        self.repo.update_many(kv, expiration).await
+        self.repo.update_many(kv, expiration, tags).await
     }
 
     // Add or replace existing entry
     async fn add(
         &self,
-        key: &str,
+        key: String,
         value: String,
         expiration: Option<i64>,
-        tags: Option<&[&str]>,
+        tags: Option<&[String]>,
     ) -> bool {
-        self.repo.update(key, &value, expiration).await
+        self.repo.update(&key, &value, expiration, tags).await
     }
 
-    async fn get(&self, key: &str) -> Option<CacheEntry> {
-        let result = self.repo.get(key, false).await;
+    async fn get(&self, key: String) -> Option<CacheEntry> {
+        let result = self.repo.get(&key, false).await;
         result.map_or(None, |e| Some(CacheEntry::from(e)))
     }
 
-    async fn many(&self, keys: &[&str]) -> Option<Vec<CacheEntry>> {
+    async fn many(&self, keys: &[String]) -> Option<Vec<CacheEntry>> {
         self.repo.get_many(keys, false).await.map_or(None, |list| {
             Some(list.into_iter().map(|e| CacheEntry::from(e)).collect())
         })
     }
 
     // Delete an entry
-    async fn forget(&self, key: &str) -> bool {
-        self.repo.delete(key).await
+    async fn forget(&self, key: String) -> bool {
+        self.repo.delete(&key).await
     }
 
     // Delete all entries
-    async fn flush(&self, tags: Option<&[&str]>) -> bool {
-        self.repo.delete_all().await
+    async fn flush(&self, tags: Option<&[String]>) -> bool {
+        self.repo.delete_all(tags).await
     }
 }
 
 #[busybody::async_trait]
 impl busybody::Injectable for DatabaseStore {
     async fn inject(container: &busybody::ServiceContainer) -> Self {
-        if let Some(manager) = container.get_type::<Self>() {
-            return manager;
+        if let Some(store) = container.get_type::<Self>() {
+            return store;
         } else {
             let repo: CacheDbStoreRepository = container.provide().await;
-            let manager = Self::new(repo);
-            return container.set_type(manager).get_type::<Self>().unwrap();
+            let store = Self::new(repo);
+            return container.set_type(store).get_type::<Self>().unwrap();
         }
     }
 }

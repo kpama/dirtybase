@@ -57,6 +57,7 @@ pub struct Config {
     web_ip_address: String,
     environment: Environment,
     redis_connection: String,
+    cache_store: String,
 }
 
 impl Default for Config {
@@ -89,6 +90,7 @@ impl Default for Config {
             "prod" | "production" => Environment::Production,
             _ => Environment::Development,
         };
+        let cache_store = env::var("DTY_CACHE_STORE").unwrap_or("memory".to_string());
 
         Self {
             app_name,
@@ -102,6 +104,7 @@ impl Default for Config {
             web_ip_address,
             environment,
             redis_connection,
+            cache_store,
         }
     }
 }
@@ -148,6 +151,10 @@ impl Config {
     pub fn redis_connection(&self) -> &String {
         &self.redis_connection
     }
+
+    pub fn cache_store(&self) -> &String {
+        &self.cache_store
+    }
 }
 pub struct ConfigBuilder {
     app_name: Option<String>,
@@ -161,6 +168,7 @@ pub struct ConfigBuilder {
     web_ip_address: Option<String>,
     environment: Option<Environment>,
     redis_connection: Option<String>,
+    cache_store: Option<String>,
 }
 
 impl Default for ConfigBuilder {
@@ -177,6 +185,7 @@ impl Default for ConfigBuilder {
             web_ip_address: None,
             environment: None,
             redis_connection: None,
+            cache_store: None,
         }
     }
 }
@@ -239,6 +248,11 @@ impl ConfigBuilder {
         self
     }
 
+    pub fn cache_store(mut self, store: &str) -> Self {
+        self.cache_store = Some(store.into());
+        self
+    }
+
     pub fn build(self) -> Config {
         let mut config = Config::default();
 
@@ -253,6 +267,7 @@ impl ConfigBuilder {
         config.web_port = self.web_port.unwrap_or(config.web_port);
         config.environment = self.environment.unwrap_or(config.environment);
         config.redis_connection = self.redis_connection.unwrap_or(config.redis_connection);
+        config.cache_store = self.cache_store.unwrap_or(config.cache_store);
 
         config
     }

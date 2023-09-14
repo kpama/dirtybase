@@ -1,4 +1,4 @@
-use crate::app::entity::dirtybase_user::DirtybaseUserService;
+use crate::app::model::dirtybase_user::DirtybaseUserService;
 use busybody::helpers::provide;
 use dirtybase_db::event::UserCreatedEvent;
 

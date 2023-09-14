@@ -13,11 +13,17 @@ pub enum WhereJoin {
     Or,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum QueryAction {
-    Query,
-    Create,
-    Update,
+    Query {
+        columns: Option<Vec<String>>,
+        select_all: bool,
+    },
+    Create {
+        rows: Vec<ColumnAndValue>,
+        do_soft_insert: bool,
+    },
+    Update(HashMap<String, FieldValue>),
     Delete,
 }
 
@@ -27,9 +33,15 @@ impl Display for QueryAction {
             f,
             "{}",
             match self {
-                QueryAction::Create => "Create",
-                QueryAction::Query => "Query",
-                QueryAction::Update => "Update",
+                QueryAction::Create {
+                    rows: _,
+                    do_soft_insert: _,
+                } => "Create",
+                QueryAction::Query {
+                    columns: _,
+                    select_all: _,
+                } => "Query",
+                QueryAction::Update(_) => "Update",
                 QueryAction::Delete => "Delete",
             }
         )
@@ -40,9 +52,6 @@ impl Display for QueryAction {
 pub struct QueryBuilder {
     where_clauses: Vec<WhereJoinOperator>,
     tables: Vec<String>,
-    select_columns: Option<Vec<String>>,
-    set_columns: Option<HashMap<String, FieldValue>>, // TODO: refactored name !!!
-    all_columns: bool,
     joins: Option<Vec<JoinQueryBuilder>>,
     action: QueryAction,
 }
@@ -52,36 +61,37 @@ impl QueryBuilder {
         Self {
             where_clauses: Vec::new(),
             tables,
-            select_columns: None,
-            set_columns: None,
-            all_columns: false,
             joins: None,
             action,
         }
     }
 
-    pub fn action(&self) -> QueryAction {
-        self.action
+    pub fn action(&self) -> &QueryAction {
+        &self.action
     }
 
     pub fn tables(&self) -> &Vec<String> {
         &self.tables
     }
 
-    pub fn select_columns(&self) -> &Option<Vec<String>> {
-        &self.select_columns
-    }
-
-    pub fn set_columns(&self) -> &Option<HashMap<String, FieldValue>> {
-        &self.set_columns
-    }
-
     pub fn all_columns(&self) -> bool {
-        self.all_columns
+        match self.action {
+            QueryAction::Query {
+                select_all,
+                columns: _,
+            } => select_all,
+            _ => false,
+        }
     }
 
     pub fn select_all(&mut self) -> &mut Self {
-        self.all_columns = true;
+        match &mut self.action {
+            QueryAction::Query {
+                select_all,
+                columns: _,
+            } => *select_all = true,
+            _ => (),
+        }
         self
     }
 
@@ -89,92 +99,129 @@ impl QueryBuilder {
         &self.joins
     }
 
-    pub fn set<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
-        if self.set_columns.is_none() {
-            self.set_columns = Some(HashMap::new());
-        }
-
-        if let Some(columns) = &mut self.set_columns {
-            columns.insert(column.to_string(), value.into());
-        }
-
-        self
-    }
-
-    pub fn set_multiple(&mut self, column_and_values: ColumnAndValue) -> &mut Self {
-        if self.set_columns.is_none() {
-            self.set_columns = Some(HashMap::new());
-        }
-
-        if let Some(columns) = &mut self.set_columns {
-            for entry in column_and_values {
-                columns.insert(entry.0, entry.1);
+    /// Set a column/value for update
+    pub fn set_column<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
+        match &mut self.action {
+            QueryAction::Update(columns) => {
+                columns.insert(column.to_string(), value.into());
             }
+            _ => (),
         }
-
         self
     }
 
+    /// Set multiple column/value for update
+    pub fn set_columns(&mut self, column_and_values: ColumnAndValue) -> &mut Self {
+        match &mut self.action {
+            QueryAction::Update(columns) => {
+                columns.extend(column_and_values);
+            }
+            _ => (),
+        }
+        self
+    }
+
+    /// Set multiple rows for insert/create
+    pub fn set_insert_rows(&mut self, rows_to_insert: Vec<ColumnAndValue>) -> &mut Self {
+        match &mut self.action {
+            QueryAction::Create {
+                rows,
+                do_soft_insert: _,
+            } => {
+                *rows = rows_to_insert;
+            }
+            _ => (),
+        }
+        self
+    }
+
+    /// Returns a reference to the `where` clauses vec
     pub fn where_clauses(&self) -> &Vec<WhereJoinOperator> {
         &self.where_clauses
     }
 
+    /// Returns a mut reference to the `where` clauses vec
     pub fn where_clauses_mut(&mut self) -> &mut Vec<WhereJoinOperator> {
         &mut self.where_clauses
     }
 
+    /// Replaces the existing `where` clauses vec with the provided one
     pub fn set_where_clauses(&mut self, where_classes: Vec<WhereJoinOperator>) -> &mut Self {
         self.where_clauses = where_classes;
         self
     }
 
+    /// Adds a column that should be selected
     pub fn select<T: ToString>(&mut self, column: T) -> &mut Self {
-        self.init_select_columns_vec();
-
-        if let Some(columns) = &mut self.select_columns {
-            columns.push(column.to_string());
+        match &mut self.action {
+            QueryAction::Query {
+                columns,
+                select_all,
+            } => {
+                *select_all = false;
+                if let Some(list) = columns {
+                    list.push(column.to_string())
+                } else {
+                    *columns = Some(vec![column.to_string()]);
+                }
+            }
+            _ => (),
         }
 
         self
     }
 
+    /// Adds a table to the list of tables to select from
     pub fn select_table<T: TableEntityTrait>(&mut self) -> &mut Self {
         self.select_multiple(&T::table_column_full_names())
     }
 
-    pub fn select_multiple<T: ToString>(&mut self, columns: &[T]) -> &mut Self {
-        self.init_select_columns_vec();
-        if let Some(existing) = &mut self.select_columns {
-            existing.extend(
-                columns
-                    .iter()
-                    .map(|x| x.to_string())
-                    .collect::<Vec<String>>(),
-            );
+    /// Adds multiple columns to be selected
+    pub fn select_multiple<T: ToString>(&mut self, columns_to_select: &[T]) -> &mut Self {
+        match &mut self.action {
+            QueryAction::Query {
+                columns,
+                select_all,
+            } => {
+                *select_all = false;
+                if let Some(list) = columns {
+                    list.extend(columns_to_select.iter().map(|c| c.to_string()))
+                } else {
+                    *columns = Some(
+                        columns_to_select
+                            .iter()
+                            .map(|c| c.to_string())
+                            .collect::<Vec<String>>(),
+                    );
+                }
+            }
+            _ => (),
         }
 
         self
     }
 
-    // WHERE field equals value
+    /// `WHERE` column equals value
     pub fn eq<T: Into<FieldValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::Equal, value, None)
     }
 
-    // AND WHERE field equals value
+    /// `AND WHERE` column equals value
     pub fn and_eq<T: Into<FieldValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::Equal, value, Some(WhereJoin::And))
     }
 
-    // OR WHERE field equals value
+    /// `OR WHERE` column equals value
     pub fn or_eq<T: Into<FieldValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::Equal, value, Some(WhereJoin::Or))
     }
 
+    /// `NOT EQUAL` column not equal value
     pub fn not_eq<T: Into<FieldValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotEqual, value, None)
     }
 
+    /// `AND NOT EQUAL` column not equal value
     pub fn and_not_eq<T: Into<FieldValue>, C: ToString>(
         &mut self,
         column: C,
@@ -183,6 +230,7 @@ impl QueryBuilder {
         self.where_operator(column, Operator::NotEqual, value, Some(WhereJoin::And))
     }
 
+    /// `OR NOT EQUAL` column not equal value
     pub fn or_not_eq<T: Into<FieldValue>, C: ToString>(
         &mut self,
         column: C,
@@ -191,33 +239,42 @@ impl QueryBuilder {
         self.where_operator(column, Operator::NotEqual, value, Some(WhereJoin::Or))
     }
 
+    /// `GREATER THAN` column is greater than value
     pub fn gt<T: Into<FieldValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::Greater, value, None)
     }
 
+    /// `AND GREATER THAN` column is greater than value
     pub fn and_gt<T: Into<FieldValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::Greater, value, Some(WhereJoin::And))
     }
 
+    /// `OR GREATER THAN` column is greater than value
     pub fn or_gt<T: Into<FieldValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::Greater, value, Some(WhereJoin::Or))
     }
 
+    /// `NOT GREATER THAN` column is not greater than value
     pub fn ngt<T: Into<FieldValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotGreater, value, None)
     }
+
+    /// `AND NOT GREATER THAN` column is not greater than value
     pub fn and_ngt<T: Into<FieldValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotGreater, value, Some(WhereJoin::And))
     }
 
+    /// `OR NOT GREATER THAN` column is not greater than value
     pub fn or_ngt<T: Into<FieldValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::NotGreater, value, Some(WhereJoin::Or))
     }
 
+    /// `GREATER THAN OR EQUAL TO` column is greater than or equal the value
     pub fn gt_or_eq<T: Into<FieldValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::GreaterOrEqual, value, None)
     }
 
+    /// `AND GREATER THAN OR EQUAL TO` column is greater than or equal the value
     pub fn and_gt_or_eq<T: Into<FieldValue>, C: ToString>(
         &mut self,
         column: C,
@@ -230,6 +287,8 @@ impl QueryBuilder {
             Some(WhereJoin::And),
         )
     }
+
+    /// `OR GREATER THAN OR EQUAL TO` column is greater than or equal the value
     pub fn or_gt_or_eq<T: Into<FieldValue>, C: ToString>(
         &mut self,
         column: C,
@@ -238,6 +297,7 @@ impl QueryBuilder {
         self.where_operator(column, Operator::GreaterOrEqual, value, Some(WhereJoin::Or))
     }
 
+    /// `NOT GREATER THAN OR EQUAL TO` column is not greater than or equal the value
     pub fn not_gt_or_eq<T: Into<FieldValue>, C: ToString>(
         &mut self,
         column: C,
@@ -246,6 +306,7 @@ impl QueryBuilder {
         self.where_operator(column, Operator::NotGreaterOrEqual, value, None)
     }
 
+    /// `AND NOT GREATER THAN OR EQUAL TO` column is not greater than or equal the value
     pub fn and_not_gt_or_eq<T: Into<FieldValue>, C: ToString>(
         &mut self,
         column: C,
@@ -259,6 +320,7 @@ impl QueryBuilder {
         )
     }
 
+    /// `OR NOT GREATER THAN OR EQUAL TO` column is not greater than or equal the value
     pub fn or_not_gt_or_eq<T: Into<FieldValue>, C: ToString>(
         &mut self,
         column: C,
@@ -272,21 +334,27 @@ impl QueryBuilder {
         )
     }
 
+    /// `LESS THAN` column is less than the value
     pub fn le<T: Into<FieldValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::Less, value, None)
     }
 
+    /// `AND LESS THAN` column is less than the value
     pub fn and_le<T: Into<FieldValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::Less, value, Some(WhereJoin::And))
     }
+
+    /// `OR LESS THAN` column is less than the value
     pub fn or_le<T: Into<FieldValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::Less, value, Some(WhereJoin::Or))
     }
 
+    /// `LESS THAN OR EQUAL` column is less than or equal value
     pub fn le_or_eq<T: Into<FieldValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::LessOrEqual, value, None)
     }
 
+    /// `AND LESS THAN OR EQUAL` column is less than or equal value
     pub fn and_le_or_eq<T: Into<FieldValue>, C: ToString>(
         &mut self,
         column: C,
@@ -295,6 +363,7 @@ impl QueryBuilder {
         self.where_operator(column, Operator::LessOrEqual, value, Some(WhereJoin::And))
     }
 
+    /// `OR LESS THAN OR EQUAL` column is less than or equal value
     pub fn or_le_or_eq<T: Into<FieldValue>, C: ToString>(
         &mut self,
         column: C,
@@ -819,12 +888,5 @@ impl QueryBuilder {
             &R::prefix_with_tbl(right_field),
             &L::column_aliases(left_tbl_columns_prefix),
         )
-    }
-
-    fn init_select_columns_vec(&mut self) {
-        if self.select_columns.is_none() {
-            self.select_columns = Some(Vec::new());
-            self.all_columns = false;
-        }
     }
 }
