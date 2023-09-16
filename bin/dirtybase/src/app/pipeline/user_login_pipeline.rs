@@ -1,3 +1,4 @@
+use crate::app::model::dirtybase_user::dirtybase_user_cache::can_login_cache::CanLoginCachedData;
 use crate::app::model::dirtybase_user::DirtybaseUserEntity;
 use crate::app::model::dirtybase_user::{
     dirtybase_user_helpers::authentication_error_status::AuthenticationErrorStatus,
@@ -18,81 +19,82 @@ impl From<AuthenticationErrorStatus> for AuthResult {
 
 pub(crate) async fn execute(payload: UserLoginPayload) -> AuthResult {
     fama::Pipeline::pass(payload)
-        // Validate data
-        .through_fn(validate_payload)
+        .ok_fn(validate_payload)
         .await
-        // 0. Find cached user's data
-        .through_fn(find_cached_user_data)
+        .store_fn(inject_user_email)
         .await
-        // 1. If the user is blocked
-        //   1.1 End the process
-        .through_fn(check_if_user_is_blocked)
+        .store_fn(find_can_user_login_cache_data)
         .await
-        // 2. Find the user actual data
-        .through_fn(find_user)
+        .next_fn(check_if_user_can_login)
         .await
-        //   2.1. Try logging in the user
-        //   2.2. If login is successful
-        //     2.2.1 Reset user attempt count
-        //     2.2.2 Log last login timestamp
-        //     2.2.3 Dispatch login succeeded  event
-        // 2.3 If login failed
-        //     2.3.1 increment login attempt count
-        //     2.3.2 If the user has exceeded their attempt
-        //         2.3.2.1 Block the user from further login attempt
-        //         2.3.2.2 Notify app Admin if the user is logging in to an app directly
-        //         2.3.2.3 Dispatch login failed event
-        // 2.4 Cache the user data
-        .through_fn(try_logging_user_in)
+        .some_fn(find_user)
         .await
-        // 2.5 Return result
-        .deliver_as::<AuthResult>()
+        .ok_fn(try_logging_user_in)
+        .await
+        .try_deliver_as::<AuthResult>()
+        .unwrap_or_else(|| AuthenticationErrorStatus::AuthenticationFailed.into())
 }
 
-async fn validate_payload(mut pipe: PipeContent) -> Option<PipeContent> {
-    let payload: UserLoginPayload = pipe.container().get_type().unwrap();
+async fn validate_payload(
+    payload: UserLoginPayload,
+) -> Result<UserLoginPayload, AuthenticationErrorStatus> {
     let result = payload.validate();
     if result.is_err() {
-        pipe.store::<AuthResult>(result.err().unwrap().into());
-        pipe.stop_the_flow();
+        return Err(result.err().unwrap());
     }
 
-    Some(pipe)
+    Ok(payload)
 }
 
-async fn find_cached_user_data(
-    pipe: PipeContent,
+async fn inject_user_email(
+    mut payload: UserLoginPayload,
+    service: DirtybaseUserService,
+) -> UserLoginPayload {
+    if payload.email.is_none() {
+        match service
+            .user_service()
+            .get_user_by_username(payload.username.as_ref().unwrap(), true)
+            .await
+        {
+            Ok(user) => payload.email = user.email,
+            Err(_) => (),
+        }
+    }
+
+    payload
+}
+
+async fn find_can_user_login_cache_data(
     payload: UserLoginPayload,
     service: DirtybaseUserService,
-) -> Option<PipeContent> {
-    let cache_id = payload.cache_id();
-    log::debug!(
-        target: LOG_TARGET,
-        " 0. Find cached user's data"
-    );
-
-    if let Some(user) = service.cache().get::<LoggedInUser>(&cache_id).await {
-        // TODO: check the cached version
-        dbg!("cached user data: {:#?}", user);
+) -> Option<CanLoginCachedData> {
+    if let Some(email) = payload.email.as_ref() {
+        return CanLoginCachedData::fetch(service.cache(), email).await;
     }
-
-    Some(pipe)
+    None
 }
 
-async fn check_if_user_is_blocked(pipe: PipeContent) -> Option<PipeContent> {
-    log::debug!(
-        target: LOG_TARGET,
-        "1. If the user is blocked"
-    );
+async fn check_if_user_can_login(pipe: PipeContent) -> bool {
+    let result = pipe.container().get_type::<Option<CanLoginCachedData>>();
 
-    Some(pipe)
+    match result.unwrap() {
+        Some(data) => {
+            if !data.allow {
+                pipe.store::<AuthResult>(AuthResult::Err(data.error));
+                return false;
+            }
+        }
+        None => (),
+    }
+
+    return true;
 }
 
 async fn find_user(
-    mut pipe: PipeContent,
+    pipe: PipeContent,
     payload: UserLoginPayload,
     service: DirtybaseUserService,
-) -> Option<PipeContent> {
+) -> Option<DirtybaseUserEntity> {
     let username = payload.username.unwrap_or_default();
     let email = payload.email.unwrap_or_default();
 
@@ -101,59 +103,65 @@ async fn find_user(
         "2. Find the user actual data"
     );
 
-    let result = service
+    match service
         .dirtybase_user_repo()
         .find_by_username_or_email(&username, &email, true)
         .await
-        .map_err(|_| AuthenticationErrorStatus::UserNotFound);
-
-    if result.is_ok() {
-        pipe.store(result.unwrap());
-    } else {
-        pipe.store(AuthResult::Err(result.err().unwrap()));
-        pipe.stop_the_flow();
+    {
+        Ok(dirty_user) => Some(dirty_user),
+        Err(_) => {
+            pipe.store::<AuthResult>(AuthResult::Err(AuthenticationErrorStatus::UserNotFound));
+            None
+        }
     }
-
-    Some(pipe)
 }
 
 async fn try_logging_user_in(
-    mut pipe: PipeContent,
+    pipe: PipeContent,
     service: DirtybaseUserService,
     payload: UserLoginPayload,
-) -> Option<PipeContent> {
+) -> AuthResult {
     log::debug!(
         target: LOG_TARGET,
         "2. Find the user actual data"
     );
-    // let service: DirtybaseUserService = provide().await;
-    // let payload: UserLoginPayload = pipe.container().get_type().unwrap();
-    let cache_id = payload.cache_id();
+    let user = pipe
+        .container()
+        .get_type::<Option<DirtybaseUserEntity>>()
+        .unwrap()
+        .unwrap();
+    let result = service.log_user_in(user.clone(), &payload.password).await;
 
-    if let Some(user) = pipe.container().get_type::<DirtybaseUserEntity>() {
-        let result = service.log_user_in(user.clone(), &payload.password).await;
-        if result.is_err() {
-            // TODO: !!!
-            // 2.3 If login failed
-            //     2.3.1 increment login attempt count
-            //     2.3.2 If the user has exceeded their attempt
-            //         2.3.2.1 Block the user from further login attempt
-            //         2.3.2.2 Notify app Admin if the user is logging in to an app directly
-            //         2.3.2.3 Dispatch login failed event
+    // 2.3 If login failed
+    //     2.3.1 increment login attempt count
+    //     2.3.2 If the user has exceeded their attempt
+    //         2.3.2.1 Block the user from further login attempt
+    //         2.3.2.2 Notify app Admin if the user is logging in to an app directly
+    //         2.3.2.3 Dispatch login failed event
+    // 2.4 Cache the user data
 
-            pipe.store(AuthResult::Err(result.err().unwrap()));
-        } else {
-            service
-                .cache()
-                .put(&cache_id, result.as_ref().unwrap(), None)
-                .await;
-            pipe.store(AuthResult::Ok(result.unwrap()));
+    if result.is_err() {
+        let error = result.err().unwrap();
+
+        match service.can_login(&user.into()).await {
+            Ok(_) => AuthResult::Err(error),
+            Err(e) => {
+                if let Some(email) = payload.email.as_ref() {
+                    CanLoginCachedData::store(service.cache(), email, false, e.clone()).await;
+                }
+                Err(e.into())
+            }
         }
     } else {
-        pipe.store::<AuthResult>(AuthenticationErrorStatus::AuthenticationFailed.into());
-        pipe.stop_the_flow();
+        let logged_in_user = result.unwrap();
+        match service.can_login(&logged_in_user).await {
+            Ok(_) => AuthResult::Ok(logged_in_user),
+            Err(e) => {
+                if let Some(email) = payload.email.as_ref() {
+                    CanLoginCachedData::store(service.cache(), email, false, e.clone()).await;
+                }
+                Err(e.into())
+            }
+        }
     }
-
-    Some(pipe)
 }
-struct CachedLoggedUser(LoggedInUser);
