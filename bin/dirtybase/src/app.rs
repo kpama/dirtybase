@@ -8,6 +8,7 @@ mod the_app;
 pub mod cache_manager;
 pub mod client;
 pub mod core;
+pub mod helper;
 pub mod model;
 pub mod pipeline;
 pub mod setup_database;
