@@ -54,7 +54,7 @@ impl busybody::Injectable for NewSysAdminData {
 async fn find_or_create_admin_user(
     app: Service<DirtyBase>,
     mut new_admin_data: NewSysAdminData,
-    mut pipe: PipeContent,
+    pipe: PipeContent,
 ) -> Option<PipeContent> {
     let config = app.config();
     let result = app
