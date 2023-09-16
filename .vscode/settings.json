@@ -8,11 +8,16 @@
     "dotenvy",
     "dtos",
     "fama",
+    "hasher",
     "hmac",
+    "Inno",
+    "longtext",
     "orsomafo",
     "replacen",
     "sadd",
     "smembers",
-    "sqlx"
+    "sqlx",
+    "TINYINT",
+    "VARBINARY"
   ],
 }

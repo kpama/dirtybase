@@ -44,15 +44,16 @@ futures-channel = "0.3.28"
 native-tls = "0.2.11"
 tokio = { version = "1.27.0", features = ["sync"] }
 hmac = "0.12.1"
+mime = "0.3.17"
 jwt = "0.16.0"
 sha2 = "0.10"
 quote = "1.0"
 syn = { version = "2.0", features = ["extra-traits"] }
 dotenvy = "0.15"
 # cookie = { version = "0.17", features= ["default", "secure-cookies"] }
-busybody = { version = "0.2.3" }
+busybody = { version = "0.3.0" }
 orsomafo = { version = "0.2.0" }
-fama = { version = "0.3.0" }
+fama = { version = "0.3.1" }
 redis = { version = "0.23.1", features = [
   "tokio-comp",
   "aio",

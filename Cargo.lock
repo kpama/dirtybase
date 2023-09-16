@@ -465,15 +465,15 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.13.0"
+version = "3.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3e2c3daef883ecc1b5d58c15adae93470a91d425f3532ba1695849656af3fc1"
+checksum = "7f30e7476521f6f8af1a1c4c0b8cc94f0bee37d91763d0ca2665f299b6cd8aec"
 
 [[package]]
 name = "busybody"
-version = "0.2.9"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f75766c471b60060b951ed4d01ffcf897807e2137839ec31a26d35fd84042b3"
+checksum = "44a293a0bed9b2c08320142c0b618ffd7e6feda43e75dda8aefdf2100339d487"
 dependencies = [
  "async-trait",
  "futures",
@@ -778,6 +778,7 @@ dependencies = [
  "hmac",
  "jwt",
  "log",
+ "mime",
  "orsomafo",
  "pretty_env_logger",
  "rand",
@@ -918,9 +919,9 @@ checksum = "0206175f82b8d6bf6652ff7d71a1e27fd2e4efde587fd368662814d6ec1d9ce0"
 
 [[package]]
 name = "fama"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ba47b39842802b23aaf9272ac64a80a5f81329252486769eb737114512861c6"
+checksum = "2ce15d4732996942e4d2e66213f0ca6c75769f9434d9279e9b25df8c0fdbfdf0"
 dependencies = [
  "async-trait",
  "busybody",
