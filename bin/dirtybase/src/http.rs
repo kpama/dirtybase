@@ -1,10 +1,13 @@
-use crate::app::DirtyBase;
+use crate::{
+    app::DirtyBase,
+    http::http_helpers::{ApiError, ApiResponse},
+};
 use actix_files as fs;
 use actix_web::{
     body::BoxBody,
     dev::ServiceFactory,
     web::{self as a_web},
-    App, HttpServer,
+    App, HttpResponse, HttpServer,
 };
 use std::env;
 
@@ -12,6 +15,8 @@ mod test_routes;
 
 pub mod api;
 pub mod http_helpers;
+use mime;
+
 pub mod middleware;
 pub mod web;
 
@@ -19,8 +24,25 @@ pub async fn init(app: busybody::Service<DirtyBase>) -> std::io::Result<()> {
     let static_assets_path =
         env::var("DTY_PUBLIC_DIRECTORY").unwrap_or_else(|_| String::from("./public"));
     let config = app.config();
-
     let data = actix_web::web::Data::new(app);
+
+    let json_config = actix_web::web::JsonConfig::default()
+        .content_type(|mime| mime == mime::APPLICATION_JSON)
+        .error_handler(|err, _req| {
+            let err_msg = err.to_string().to_lowercase();
+
+            actix_web::error::InternalError::from_response(
+                err,
+                HttpResponse::UnprocessableEntity()
+                    .json(ApiResponse::<String>::error(ApiError::new(
+                        "bad_payload",
+                        &err_msg,
+                        &err_msg,
+                    )))
+                    .into(),
+            )
+            .into()
+        });
 
     log::info!("Serving static file from: {}", static_assets_path);
     log::info!(
@@ -34,6 +56,7 @@ pub async fn init(app: busybody::Service<DirtyBase>) -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(data.clone())
+            .app_data(json_config.clone())
             .configure(web::configure_web)
             .service(register_rest_endpoints())
             .service(fs::Files::new("/_public", &static_assets_path).index_file("index.html"))
