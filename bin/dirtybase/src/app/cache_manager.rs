@@ -1,5 +1,5 @@
 use self::cache_store::{CacheStoreTrait, DatabaseStore, MemoryStore, RedisStore};
-use super::{cache_manager::cache_tag_manager::CacheTagManager, Config, DirtyBase};
+use super::{Config, DirtyBase};
 use busybody::helpers::provide;
 use std::collections::HashMap;
 use std::future::Future;
@@ -9,7 +9,6 @@ use super::core::time::{now, Time};
 
 pub mod cache_entry;
 pub mod cache_store;
-pub mod cache_tag_manager;
 
 type StoreDriver = Arc<Box<dyn CacheStoreTrait + Send + Sync>>;
 
@@ -17,6 +16,7 @@ type StoreDriver = Arc<Box<dyn CacheStoreTrait + Send + Sync>>;
 pub struct CacheManager {
     store: StoreDriver,
     prefix: Option<String>,
+    tags: Vec<String>,
 }
 
 impl CacheManager {
@@ -32,6 +32,7 @@ impl CacheManager {
         Self {
             store: Self::get_store(&config.cache_store()).await,
             prefix: None,
+            tags: Vec::new(),
         }
     }
 
@@ -39,6 +40,7 @@ impl CacheManager {
         Self {
             store: self.store.clone(),
             prefix: Some(prefix.to_string()),
+            tags: Vec::new(),
         }
     }
 
@@ -46,6 +48,7 @@ impl CacheManager {
         Self {
             store: Self::get_store(store_name).await,
             prefix: self.prefix.clone(),
+            tags: self.tags.clone(),
         }
     }
 
@@ -59,7 +62,7 @@ impl CacheManager {
                 return match serde_json::from_str(&entry.value) {
                     Ok(v) => Some(v),
                     Err(e) => {
-                        log::error!("{}", e);
+                        log::error!("Error parsing cache data. {}", e);
                         None
                     }
                 };
@@ -90,8 +93,12 @@ impl CacheManager {
         prefix + ":" + key
     }
 
-    pub async fn tags(&self, tags: &[&str]) -> CacheTagManager {
-        CacheTagManager::new(tags, self.clone()).await
+    pub async fn tags(&self, tags: &[&str]) -> Self {
+        Self {
+            store: self.store.clone(),
+            tags: tags.iter().map(|entry| entry.to_string()).collect(),
+            prefix: self.prefix.clone(),
+        }
     }
 
     pub async fn many<R: serde::de::DeserializeOwned>(
@@ -122,20 +129,8 @@ impl CacheManager {
     where
         V: serde::Serialize,
     {
-        self.do_add(key, value, expiration, None).await
-    }
-
-    pub async fn tag_and_add<V>(
-        &self,
-        tags: &[&str],
-        key: &str,
-        value: &V,
-        expiration: Option<i64>,
-    ) -> bool
-    where
-        V: serde::Serialize,
-    {
-        self.do_add(key, value, expiration, Some(tags)).await
+        self.do_add(key, value, expiration, Some(&self.tags_to_ref()))
+            .await
     }
 
     /// Check is an entry exist
@@ -176,7 +171,8 @@ impl CacheManager {
         R: serde::Serialize + serde::de::DeserializeOwned,
         F: FallbackFn<(), R>,
     {
-        self.do_remember(key, expiration, default, None).await
+        self.do_remember(key, expiration, default, Some(&self.tags_to_ref()))
+            .await
     }
 
     pub async fn remember_forever<F, R>(&self, key: &str, default: F) -> R
@@ -194,17 +190,8 @@ impl CacheManager {
         value: &V,
         expiration: Option<i64>,
     ) -> bool {
-        self.do_put(key, value, expiration, None).await
-    }
-
-    pub async fn tag_and_put<V: serde::Serialize>(
-        &self,
-        tags: &[&str],
-        key: &str,
-        value: &V,
-        expiration: Option<i64>,
-    ) -> bool {
-        self.do_put(key, value, expiration, Some(tags)).await
+        self.do_put(key, value, expiration, Some(&self.tags_to_ref()))
+            .await
     }
 
     pub async fn put_many<V: serde::Serialize>(
@@ -212,16 +199,8 @@ impl CacheManager {
         kv: &HashMap<String, V>,
         expiration: Option<i64>,
     ) -> bool {
-        self.do_put_many(kv, expiration, None).await
-    }
-
-    pub async fn tag_and_put_many<V: serde::Serialize>(
-        &self,
-        tags: &[&str],
-        kv: &HashMap<String, V>,
-        expiration: Option<i64>,
-    ) -> bool {
-        self.do_put_many(kv, expiration, Some(tags)).await
+        self.do_put_many(kv, expiration, Some(&self.tags_to_ref()))
+            .await
     }
 
     pub async fn forever<V: serde::Serialize>(&self, key: &str, value: &V) -> bool {
@@ -347,6 +326,10 @@ impl CacheManager {
         } else {
             value.unwrap()
         }
+    }
+
+    fn tags_to_ref(&self) -> Vec<&str> {
+        self.tags.iter().map(|s| s.as_ref()).collect::<Vec<&str>>()
     }
 }
 
