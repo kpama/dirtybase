@@ -12,20 +12,9 @@ pub struct UserLoginPayload {
 }
 
 impl UserLoginPayload {
-    pub(crate) fn cache_id(&self) -> String {
-        if let Some(username) = self.username.as_ref() {
-            username.clone()
-        } else if let Some(email) = self.email.as_ref() {
-            email.clone()
-        } else {
-            "".into()
-        }
-    }
-
     pub(crate) fn validate(&self) -> Result<bool, AuthenticationErrorStatus> {
-        if (self.username.is_none() && self.email.is_none())
-            || (self.username.as_ref().unwrap().is_empty()
-                && self.email.as_ref().unwrap().is_empty())
+        if (self.username.is_none() || self.username.as_ref().unwrap().is_empty())
+            && (self.email.is_none() || self.email.as_ref().unwrap().is_empty())
         {
             return Err(AuthenticationErrorStatus::CredentialIncorrect);
         }
