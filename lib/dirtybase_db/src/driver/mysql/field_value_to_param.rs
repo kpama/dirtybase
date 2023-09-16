@@ -31,6 +31,7 @@ impl QueryValue {
                 FieldValue::String(v) => params.push(v.clone()),
                 FieldValue::Boolean(_) => params.push(self.field_to_param(field)),
                 FieldValue::DateTime(v) => params.push(v.to_string()),
+                FieldValue::Timestamp(v) => params.push(v.to_string()),
                 FieldValue::Date(v) => params.push(v.to_string()),
                 FieldValue::Time(v) => params.push(v.to_string()),
                 FieldValue::Array(v) => params.extend(

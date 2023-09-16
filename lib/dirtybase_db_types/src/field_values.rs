@@ -38,6 +38,8 @@ pub enum FieldValue {
     Array(Vec<FieldValue>),
     #[serde(rename(serialize = "datetime"))]
     DateTime(chrono::DateTime<chrono::Utc>),
+    #[serde(rename(serialize = "timestamp"))]
+    Timestamp(chrono::DateTime<chrono::Utc>),
     #[serde(rename(serialize = "date"))]
     Date(chrono::NaiveDate),
     #[serde(rename(serialize = "time"))]
@@ -116,15 +118,10 @@ impl Display for FieldValue {
 
                 write!(f, "[{}]", data)
             }
-            Self::DateTime(v) => {
-                write!(f, "{}", v)
-            }
-            Self::Date(v) => {
-                write!(f, "{}", v)
-            }
-            Self::Time(v) => {
-                write!(f, "{}", v)
-            }
+            Self::DateTime(v) => write!(f, "{}", v),
+            Self::Timestamp(v) => write!(f, "{}", v),
+            Self::Date(v) => write!(f, "{}", v),
+            Self::Time(v) => write!(f, "{}", v),
             Self::NotSet => write!(f, ""),
         }
     }

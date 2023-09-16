@@ -159,7 +159,10 @@ impl MySqlSchemaManager {
                     sql = format!("{} ({}) VALUES ", sql, columns);
 
                     for a_row in rows.iter().enumerate() {
-                        let values = keys.iter().map(|col| a_row.1.get(col).unwrap().to_string());
+                        let values = keys.iter().map(|col| {
+                            let field = a_row.1.get(col).unwrap();
+                            self.field_value_to_string(field)
+                        });
                         let separator = if a_row.0 > 0 { "," } else { "" };
 
                         params.extend(values);
@@ -172,7 +175,7 @@ impl MySqlSchemaManager {
                 for entry in column_values {
                     if *entry.1 != FieldValue::NotSet {
                         columns.push(entry.0);
-                        params.push(entry.1.to_string());
+                        params.push(self.field_value_to_string(&entry.1));
                     }
                 }
                 sql = format!("UPDATE `{}` SET ", query.tables().join(","));
@@ -324,7 +327,8 @@ impl MySqlSchemaManager {
             ColumnType::Char(length) => {
                 the_type.push_str(&format!("char({}) COLLATE 'utf8mb4_unicode_ci'", length))
             }
-            ColumnType::Date => the_type.push_str("datetime"),
+            ColumnType::Datetime => the_type.push_str("datetime"),
+            ColumnType::Timestamp => the_type.push_str("timestamp"),
             // ColumnType::File() shouldn't be here
             // ColumnType::Float not sure
             ColumnType::Integer => the_type.push_str("bigint(20)"),
@@ -591,7 +595,7 @@ impl MySqlSchemaManager {
                 "TIMESTAMP" => {
                     let v = row.try_get::<chrono::DateTime<chrono::Utc>, &str>(col.name());
                     if let Ok(v) = v {
-                        this_row.insert(name, v.to_string().into());
+                        this_row.insert(name, FieldValue::Timestamp(v));
                     } else {
                         this_row.insert(name, FieldValue::Null);
                     }
@@ -599,9 +603,9 @@ impl MySqlSchemaManager {
                 "DATE" => {
                     let v = row.try_get::<chrono::NaiveDate, &str>(col.name());
                     if let Ok(v) = v {
-                        this_row.insert(col.name().to_owned(), FieldValue::Date(v));
+                        this_row.insert(name, FieldValue::Date(v));
                     } else {
-                        this_row.insert(col.name().to_owned(), FieldValue::Null);
+                        this_row.insert(name, FieldValue::Null);
                     }
                 }
                 "TIME" => {
@@ -632,5 +636,17 @@ impl MySqlSchemaManager {
             }
         }
         this_row
+    }
+
+    fn field_value_to_string(&self, field: &FieldValue) -> String {
+        match field {
+            FieldValue::DateTime(dt) => {
+                format!("{}", dt.format("%F %T"))
+            }
+            FieldValue::Timestamp(dt) => {
+                format!("{}", dt.format("%F %T"))
+            }
+            _ => field.to_string(),
+        }
     }
 }

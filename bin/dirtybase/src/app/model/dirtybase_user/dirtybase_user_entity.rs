@@ -1,12 +1,9 @@
 use super::dtos::out_user_app::UserAppDto;
 use dirtybase_db::{
-    base::helper::generate_ulid,
-    dirtybase_db_types::types::{DateTimeField, UlidField},
-    dirtybase_db_types::TableEntityTrait,
-    entity::user::UserEntity,
-    macros::DirtyTable,
+    base::helper::generate_ulid, dirtybase_db_types::types::UlidField,
+    dirtybase_db_types::TableEntityTrait, entity::user::UserEntity, macros::DirtyTable,
 };
-use dirtybase_db_types::types::StructuredColumnAndValue;
+use dirtybase_db_types::types::{StructuredColumnAndValue, TimestampField};
 use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone, Default, DirtyTable)]
@@ -14,7 +11,7 @@ use sha2::{Digest, Sha256};
 pub struct DirtybaseUserEntity {
     pub core_user_id: UlidField,
     pub login_attempt: i64,
-    pub last_login_at: DateTimeField,
+    pub last_login_at: TimestampField,
     pub salt: String,
     #[dirty(skip_select, skip_insert)]
     pub apps: Vec<UserAppDto>,
@@ -56,6 +53,10 @@ impl DirtybaseUserEntity {
 
     pub fn reflect_login_success(&mut self) {
         self.last_login_at = Some(chrono::Utc::now());
+        self.reset_login_attempts();
+    }
+
+    pub fn reset_login_attempts(&mut self) {
         self.login_attempt = 0;
     }
 

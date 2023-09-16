@@ -21,6 +21,16 @@ impl UserService {
         &mut self.user_repo
     }
 
+    pub async fn get_user_by_username(
+        &self,
+        username: &str,
+        without_trash: bool,
+    ) -> Result<UserEntity, anyhow::Error> {
+        self.user_repo
+            .find_by_username(username, without_trash)
+            .await
+    }
+
     /// Returns or create the default system administrator
     /// A result is returned where Result<(true => user was created, the user record), Error>`
     pub async fn create_admin_user(

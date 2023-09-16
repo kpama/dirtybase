@@ -12,6 +12,7 @@ pub type FloatField = Option<f64>;
 pub type StringField = Option<String>;
 pub type UlidField = Option<String>;
 pub type DateTimeField = Option<DateTime<Utc>>;
+pub type TimestampField = Option<DateTime<Utc>>;
 pub type BooleanField = Option<bool>;
 
 pub trait IntoColumnAndValue {
@@ -109,28 +110,3 @@ fn build_structure(
 
     built
 }
-
-// fn build_structure_old(
-//     mut built: ColumnAndValue,
-//     mut pieces: Vec<&str>,
-//     value: FieldValue,
-// ) -> ColumnAndValue {
-//     if pieces.len() == 0 {
-//         return built;
-//     }
-
-//     let current = pieces.remove(0);
-//     if pieces.len() > 0 {
-//         if built.contains_key(current) {
-//             build_object(built.get_mut(current).unwrap(), pieces, value);
-//         } else {
-//             built.insert(
-//                 current.to_string(),
-//                 FieldValue::Object(build_structure(ColumnAndValue::new(), pieces, value)),
-//             );
-//         }
-//     } else {
-//         built.insert(current.to_string(), value);
-//     }
-//     built
-// }

@@ -5,7 +5,7 @@ use super::{
     USER_TABLE_ID_FIELD, USER_TABLE_INTERNAL_ID_FIELD, USER_TABLE_USERNAME_FIELD,
 };
 use crate::base::manager::Manager;
-use dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue};
+use dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue, TableEntityTrait};
 
 pub struct UserRepository {
     manager: Manager,
@@ -75,6 +75,25 @@ impl UserRepository {
         }
     }
 
+    pub async fn find_by_username(
+        &self,
+        username: &str,
+        without_trash: bool,
+    ) -> Result<UserEntity, anyhow::Error> {
+        self.manager
+            .select_from_table(UserEntity::table_name(), |query| {
+                query
+                    .select_all()
+                    .eq(UserEntity::col_name_for_username(), username);
+
+                if without_trash {
+                    query.without_table_trash::<UserEntity>();
+                }
+            })
+            .fetch_one_to()
+            .await
+    }
+
     pub async fn find_by_username_and_email(
         &self,
         username: &str,
@@ -82,11 +101,10 @@ impl UserRepository {
         without_trash: bool,
     ) -> Result<UserEntity, anyhow::Error> {
         self.manager()
-            .select_from_table(USER_TABLE, |q| {
+            .select_from_table(UserEntity::table_name(), |q| {
                 q.select_all()
-                    .eq(USER_TABLE_USERNAME_FIELD, username)
-                    .eq(USER_TABLE_EMAIL_FIELD, email)
-                    .is_null(USER_TABLE_DELETED_AT_FIELD);
+                    .eq(UserEntity::col_name_for_username(), username)
+                    .eq(UserEntity::col_name_for_email(), email);
                 if without_trash {
                     q.without_table_trash::<UserEntity>();
                 }
@@ -100,9 +118,12 @@ impl UserRepository {
         record: impl IntoColumnAndValue,
     ) -> Result<UserEntity, anyhow::Error> {
         let column_and_values = record.into_column_value();
-        let id: String =
-            FieldValue::from_ref_option_into(column_and_values.get(USER_TABLE_ID_FIELD));
-        self.manager().insert(USER_TABLE, column_and_values).await;
+        let id: String = FieldValue::from_ref_option_into(
+            column_and_values.get(UserEntity::id_column().unwrap()),
+        );
+        self.manager()
+            .insert(UserEntity::table_name(), column_and_values)
+            .await;
 
         self.find_on_by_id(&id).await
     }
@@ -115,8 +136,8 @@ impl UserRepository {
     ) -> Result<UserEntity, anyhow::Error> {
         let kv = record.into_column_value();
         self.manager()
-            .update(USER_TABLE, kv, move |q| {
-                q.eq(USER_TABLE_ID_FIELD, id);
+            .update(UserEntity::table_name(), kv, move |q| {
+                q.eq(UserEntity::id_column().unwrap(), id);
             })
             .await;
         self.find_on_by_id(&id).await

@@ -2,14 +2,15 @@ use dirtybase_db_macro::DirtyTable;
 use dirtybase_db_types::types::DateTimeField;
 use serde::Serialize;
 
-use crate::entity::user::UserEntity;
+use crate::entity::user::{UserEntity, UserStatus};
 
-#[derive(Debug, Clone, serde::Deserialize, Serialize, Default, DirtyTable)]
+#[derive(Debug, Clone, Serialize, Default, DirtyTable)]
 pub struct OutUserEntityDto {
-    id: String,
-    username: String,
-    reset_password: bool,
-    created_at: DateTimeField,
+    pub id: String,
+    pub username: String,
+    pub status: UserStatus,
+    pub reset_password: bool,
+    pub created_at: DateTimeField,
 }
 
 impl From<UserEntity> for OutUserEntityDto {
@@ -23,6 +24,7 @@ impl From<UserEntity> for OutUserEntityDto {
             } else {
                 None
             },
+            status: value.status.unwrap_or_default(),
         }
     }
 }

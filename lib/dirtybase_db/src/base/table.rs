@@ -79,9 +79,15 @@ impl BaseTable {
         })
     }
 
-    pub fn date(&mut self, name: &'static str) -> &mut BaseColumn {
+    pub fn datetime(&mut self, name: &'static str) -> &mut BaseColumn {
         self.column(name, |column| {
-            column.set_type(ColumnType::Date);
+            column.set_type(ColumnType::Datetime);
+        })
+    }
+
+    pub fn timestamp(&mut self, name: &'static str) -> &mut BaseColumn {
+        self.column(name, |column| {
+            column.set_type(ColumnType::Timestamp);
         })
     }
 
@@ -219,13 +225,13 @@ impl BaseTable {
     }
 
     pub fn created_at(&mut self) -> &mut BaseColumn {
-        self.date(CREATED_AT_FIELD)
+        self.timestamp(CREATED_AT_FIELD)
             .set_is_nullable(false)
             .default_is_created_at()
     }
 
     pub fn updated_at(&mut self) -> &mut BaseColumn {
-        self.date(UPDATED_AT_FIELD)
+        self.timestamp(UPDATED_AT_FIELD)
             .set_is_nullable(false)
             .default_is_updated_at()
     }
@@ -248,7 +254,7 @@ impl BaseTable {
     }
 
     pub fn soft_deletable(&mut self) -> &mut BaseColumn {
-        self.date(DELETED_AT_FIELD).set_is_nullable(true)
+        self.timestamp(DELETED_AT_FIELD).set_is_nullable(true)
     }
 
     pub fn is_new(&self) -> bool {
