@@ -11,7 +11,6 @@ use actix_web::{post, web::Json, HttpResponse, Responder};
 
 #[post("/user/login")]
 async fn user_login_handler(payload: Json<UserLoginPayload>) -> impl Responder {
-    // let service: DirtybaseUserService = provide().await;
     let result = pipeline::user_login_pipeline::execute(payload.0.clone()).await;
 
     return match result {
