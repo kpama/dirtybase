@@ -2,6 +2,7 @@ mod dirtybase_user_entity;
 mod dirtybase_user_repository;
 mod dirtybase_user_service;
 
+pub mod dirtybase_user_cache;
 pub mod dirtybase_user_helpers;
 pub mod dtos;
 pub mod event;
@@ -43,7 +44,7 @@ pub async fn setup_dirtybase_user_table(manager: &Manager) {
 
             // Last time the user successfully logged in
             table
-                .date(DirtybaseUserEntity::col_name_for_last_login_at())
+                .timestamp(DirtybaseUserEntity::col_name_for_last_login_at())
                 .set_is_nullable(true);
 
             // The salt column. Used for salting tokens generated for this user
