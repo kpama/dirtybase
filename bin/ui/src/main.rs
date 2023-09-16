@@ -3,11 +3,11 @@ use busybody::{helpers::provide, Service};
 use dirtybase::app::{self, DirtyBase};
 use include_dir::{include_dir, Dir};
 
-static UI_EMBEDED_ASSETS: Dir = include_dir!("bin/ui/src/app/dist/spa");
+static UI_EMBEDDED_ASSETS: Dir = include_dir!("bin/ui/src/app/dist/spa");
 
 #[get("/")]
 async fn home() -> impl Responder {
-    if let Some(file) = UI_EMBEDED_ASSETS.get_file("index.html") {
+    if let Some(file) = UI_EMBEDDED_ASSETS.get_file("index.html") {
         let config = provide::<Service<DirtyBase>>().await.config();
         HttpResponse::Ok().body(
             file.contents_utf8()
@@ -22,7 +22,7 @@ async fn home() -> impl Responder {
 #[get("/_ui/{tail:.*}")]
 async fn assets(path: web::Path<String>) -> impl Responder {
     log::info!("serving: {}", &path.as_str());
-    if let Some(file) = UI_EMBEDED_ASSETS.get_file(path.as_str()) {
+    if let Some(file) = UI_EMBEDDED_ASSETS.get_file(path.as_str()) {
         let mut response = HttpResponse::Ok();
         let path_str = path.as_str();
         if path_str.ends_with(".js") {
