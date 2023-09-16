@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::http::http_helpers::ApiError;
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "code")]
 pub enum AuthenticationErrorStatus {
     UserNotFound,
@@ -11,6 +11,7 @@ pub enum AuthenticationErrorStatus {
     AccountInactive,
     AuthenticationFailed,
     CredentialIncorrect,
+    TooManyAttempts,
 }
 
 pub const AUTH_ERROR_USER_NOT_FOUND: &str = "User not found";
@@ -19,6 +20,7 @@ pub const AUTH_ERROR_ACCOUNT_SUSPENDED: &str = "Account suspended";
 pub const AUTH_ERROR_ACCOUNT_INACTIVE: &str = "Account inactive";
 pub const AUTH_ERROR_AUTHENTICATION_FAILED: &str = "Authentication failed";
 pub const AUTH_ERROR_CREDENTIAL_INCORRECT: &str = "Login credential incorrect";
+pub const AUTH_ERROR_TOO_MANY_ATTEMPTS: &str = "Too many attempts";
 
 impl Display for AuthenticationErrorStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -29,6 +31,7 @@ impl Display for AuthenticationErrorStatus {
             Self::AccountInactive => write!(f, "{}", AUTH_ERROR_ACCOUNT_INACTIVE),
             Self::AuthenticationFailed => write!(f, "{}", AUTH_ERROR_AUTHENTICATION_FAILED),
             Self::CredentialIncorrect => write!(f, "{}", AUTH_ERROR_CREDENTIAL_INCORRECT),
+            Self::TooManyAttempts => write!(f, "{}", AUTH_ERROR_TOO_MANY_ATTEMPTS),
         }
     }
 }
