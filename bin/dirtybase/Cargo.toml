@@ -32,3 +32,4 @@ busybody = { workspace = true }
 orsomafo = { workspace = true }
 fama = { workspace = true }
 redis = { workspace = true }
+mime = { workspace = true }
