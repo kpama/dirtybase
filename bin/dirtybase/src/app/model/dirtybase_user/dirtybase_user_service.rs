@@ -1,6 +1,7 @@
 use crate::app::{
-    cache_manager::{cache_tag_manager::CacheTagManager, CacheManager},
+    cache_manager::CacheManager,
     token_claim::{ClaimBuilder, JWTClaim},
+    DirtyBase,
 };
 
 use super::{
@@ -14,19 +15,30 @@ use super::{
 };
 use anyhow::anyhow;
 use busybody::helpers::provide;
-use dirtybase_db::entity::user::{verify_password, UserEntity};
+use dirtybase_db::entity::user::{
+    verify_password, UserEntity, UserRepository, UserService, UserStatus,
+};
 
 pub struct DirtybaseUserService {
     repo: DirtybaseUserRepository,
-    cache: CacheTagManager,
+    cache: CacheManager,
+    user_service: UserService,
 }
 
 impl DirtybaseUserService {
-    pub fn new(repo: DirtybaseUserRepository, cache: CacheTagManager) -> Self {
-        Self { repo, cache }
+    pub fn new(
+        repo: DirtybaseUserRepository,
+        cache: CacheManager,
+        user_service: UserService,
+    ) -> Self {
+        Self {
+            repo,
+            cache,
+            user_service,
+        }
     }
 
-    pub(crate) fn cache(&self) -> &CacheTagManager {
+    pub(crate) fn cache(&self) -> &CacheManager {
         &self.cache
     }
     pub fn dirtybase_user_repo(&self) -> &DirtybaseUserRepository {
@@ -35,6 +47,10 @@ impl DirtybaseUserService {
 
     pub fn dirtybase_user_repo_mut(&mut self) -> &mut DirtybaseUserRepository {
         &mut self.repo
+    }
+
+    pub fn user_service(&self) -> &UserService {
+        &self.user_service
     }
 
     pub fn new_user(&self) -> DirtybaseUserEntity {
@@ -102,9 +118,42 @@ impl DirtybaseUserService {
             Ok(out_dto)
         } else {
             user.reflect_login_failure();
-            _ = self.repo.update(user).await;
+            _ = self.repo.update(user.clone()).await;
             Err(AuthenticationErrorStatus::AuthenticationFailed)
         }
+    }
+
+    pub async fn reset_login_attempts(&self, core_user_id: &str) -> Result<bool, anyhow::Error> {
+        match self.repo.find_by_core_user_id(core_user_id).await {
+            Ok(mut user) => {
+                user.reset_login_attempts();
+                _ = self.repo.update(user).await;
+                Ok(true)
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn can_login(&self, user: &LoggedInUser) -> Result<bool, AuthenticationErrorStatus> {
+        // check
+
+        // 1. User attempts
+        // TODO: Make the hard coded `10` configurable
+        if user.login_attempt >= 10 {
+            log::error!("too many attempts");
+            return Err(AuthenticationErrorStatus::TooManyAttempts);
+        }
+        // 2. Account is suspended
+        if user.user.status == UserStatus::Suspended {
+            return Err(AuthenticationErrorStatus::AccountSuspended);
+        }
+
+        // 3. Account is inactive
+        if user.user.status == UserStatus::Inactive {
+            return Err(AuthenticationErrorStatus::AccountInactive);
+        }
+
+        Ok(true)
     }
 
     pub async fn login(
@@ -134,7 +183,11 @@ impl DirtybaseUserService {
 impl busybody::Injectable for DirtybaseUserService {
     async fn inject(ci: &busybody::ServiceContainer) -> Self {
         let repo = ci.provide::<DirtybaseUserRepository>().await;
+        let app = ci.get::<DirtyBase>().unwrap();
         let cache = provide::<CacheManager>().await.tags(&["dtb_user"]).await;
-        Self::new(repo, cache)
+
+        let user_service = UserService::new(UserRepository::new(app.schema_manger()));
+
+        Self::new(repo, cache, user_service)
     }
 }
