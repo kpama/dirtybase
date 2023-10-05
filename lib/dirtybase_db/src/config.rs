@@ -1,11 +1,4 @@
 #![allow(dead_code)]
-
-use std::{collections::HashMap, env};
-
-use dirtybase_config::CurrentEnvironment;
-
-use crate::base::schema::DatabaseKind;
-
 #[derive(Debug, serde::Deserialize)]
 pub struct BaseConfig {
     enable: bool,
@@ -24,7 +17,8 @@ pub struct SqliteConfig {
     busy_timeout: u64,
 }
 
-struct Config {
+#[derive(Debug, serde::Deserialize)]
+pub struct DirtybaseDbConfig {
     mysql_read: Option<BaseConfig>,
     mysql_write: Option<BaseConfig>,
     postgres_read: Option<BaseConfig>,

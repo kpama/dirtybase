@@ -895,6 +895,7 @@ dependencies = [
  "busybody",
  "config",
  "dotenvy",
+ "serde",
 ]
 
 [[package]]

@@ -3,9 +3,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
-mod config;
+mod dirtybase_config;
 
-pub use config::DirtyConfig;
+pub use dirtybase_config::DirtyConfig;
+
+pub use config;
 
 /// Loads configuration from .env files.
 /// Multiple .env files are check in the following order
@@ -20,6 +22,7 @@ pub use config::DirtyConfig;
 pub const APP_NAME_KEY: &str = "DTY_APP_NAME";
 pub const APP_DEFAULT_NAME: &str = "A Dirty App";
 pub const ENVIRONMENT_KEY: &str = "DTY_ENV";
+pub const CONFIG_DIR_KEY: &str = "DTY_CONFIG_DIR";
 
 pub(crate) const LOADED_FLAG_KEY: &str = "DTY_ENV_LOADED";
 pub(crate) const LOADED_FLAG_VALUE: &str = "DTY_YES";

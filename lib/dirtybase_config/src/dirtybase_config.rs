@@ -8,6 +8,7 @@ use crate::{load_dot_env, CurrentEnvironment};
 pub struct DirtyConfig {
     app_name: String,
     current_env: CurrentEnvironment,
+    config_dir: String,
 }
 
 impl Default for DirtyConfig {
@@ -20,6 +21,7 @@ impl Default for DirtyConfig {
                 .unwrap_or_default()
                 .as_str()
                 .into(),
+            config_dir: env::var(crate::CONFIG_DIR_KEY).unwrap_or_default(),
         }
     }
 }
@@ -40,6 +42,7 @@ impl DirtyConfig {
         Self {
             app_name: name.to_string(),
             current_env,
+            config_dir: env::var(crate::CONFIG_DIR_KEY).unwrap_or_default(),
         }
     }
 
@@ -62,6 +65,80 @@ impl DirtyConfig {
         config::Config::builder()
             .set_override(crate::ENVIRONMENT_KEY, env)
             .unwrap()
+    }
+
+    pub fn optional_file(
+        &self,
+        filename: &str,
+        dotenv_prefix: Option<&str>,
+    ) -> config::ConfigBuilder<DefaultState> {
+        let path = Path::new(&self.config_dir).join(filename);
+
+        let mut builder = if let Some(real) = path.to_str() {
+            self.builder()
+                .add_source(config::File::with_name(real).required(false))
+        } else {
+            self.builder()
+                .add_source(config::File::with_name(filename).required(false))
+        };
+
+        if let Some(prefix) = dotenv_prefix {
+            builder = builder.add_source(config::Environment::with_prefix(prefix));
+        }
+
+        return builder;
+    }
+
+    pub fn load_optional_file(
+        &self,
+        full_path: &str,
+        dotenv_prefix: Option<&str>,
+    ) -> config::ConfigBuilder<DefaultState> {
+        let mut builder = self
+            .builder()
+            .add_source(config::File::with_name(full_path).required(false));
+
+        if let Some(prefix) = dotenv_prefix {
+            builder = builder.add_source(config::Environment::with_prefix(prefix));
+        }
+
+        return builder;
+    }
+
+    pub fn require_file(
+        &self,
+        filename: &str,
+        dotenv_prefix: Option<&str>,
+    ) -> config::ConfigBuilder<DefaultState> {
+        let path = Path::new(&self.config_dir).join(filename);
+
+        let mut builder = if let Some(real) = path.to_str() {
+            self.builder().add_source(config::File::with_name(real))
+        } else {
+            self.builder().add_source(config::File::with_name(filename))
+        };
+
+        if let Some(prefix) = dotenv_prefix {
+            builder = builder.add_source(config::Environment::with_prefix(prefix));
+        }
+
+        return builder;
+    }
+
+    pub fn load_file(
+        &self,
+        full_path: &str,
+        dotenv_prefix: Option<&str>,
+    ) -> config::ConfigBuilder<DefaultState> {
+        let mut builder = self
+            .builder()
+            .add_source(config::File::with_name(full_path));
+
+        if let Some(prefix) = dotenv_prefix {
+            builder = builder.add_source(config::Environment::with_prefix(prefix));
+        }
+
+        return builder;
     }
 }
 

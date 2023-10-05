@@ -9,3 +9,4 @@ edition.workspace = true
 dotenvy = { workspace = true }
 busybody = { workspace = true }
 config = { workspace = true }
+serde = { workspace = true }
