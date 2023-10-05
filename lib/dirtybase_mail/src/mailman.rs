@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{adapter_manager::REGISTERED_ADAPTERS, email::Envelope, AdapterTrait, Email};
+use crate::{adapter_manager::REGISTERED_ADAPTERS, email::Envelope, Email};
 
 #[derive(Debug, Default)]
 pub struct Mailman {
