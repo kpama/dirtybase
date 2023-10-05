@@ -1,0 +1,44 @@
+# Mysql configuration
+[mysql_read]
+enable = false
+url = "mysql://root:dbpassword@db/dirtybase"
+max = 2
+sticky = true
+sticky_duration = 10
+
+[mysql_write]
+enable = false
+url = "mysql://root:dbpassword@db/dirtybase"
+max = 2
+sticky = true
+sticky_duration = 10
+
+# Sqlite configuration
+[sqlite_read]
+enable = true
+url = "sqlite:data/dirtybase.db"
+max = 2
+foreign_key = true
+busy_timeout = 60
+
+[sqlite_write]
+enable = true
+url = "sqlite:data/dirtybase.db"
+max = 2
+foreign_key = true
+busy_timeout = 60
+
+# Postgresql configuration
+[postgres_read]
+enable = false
+url = "postgres://root:dbpassword@db/dirtybase"
+max = 5
+sticky = true
+sticky_duration = 10
+
+[postgres_write]
+enable = false
+url = "postgres://root:dbpassword@db/dirtybase"
+max = 5
+sticky = true
+sticky_duration = 10

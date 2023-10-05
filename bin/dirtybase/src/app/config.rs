@@ -10,6 +10,7 @@ use super::DirtyBase;
 ///  - .env.defaults
 ///  - .env
 ///  - .env.dev
+///  - .env.stage
 ///  - .env.prod
 /// Values are merged from these files
 fn load_dot_env() {
@@ -17,14 +18,16 @@ fn load_dot_env() {
         return;
     }
     let _ = dotenvy::from_filename(".env.defaults");
-    let _ = dotenvy::from_filename_override(".env");
-    let _ = dotenvy::from_filename_override(".env.dev");
     let _ = dotenvy::from_filename_override(".env.prod");
+    let _ = dotenvy::from_filename_override(".env.stage");
+    let _ = dotenvy::from_filename_override(".env.dev");
+    let _ = dotenvy::from_filename_override(".env");
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Environment {
     Production,
+    Staging,
     Development,
 }
 
@@ -37,6 +40,10 @@ impl Default for Environment {
 impl Environment {
     pub fn is_prod(&self) -> bool {
         *self == Self::Production
+    }
+
+    pub fn is_staging(&self) -> bool {
+        *self == Self::Staging
     }
 
     pub fn is_dev(&self) -> bool {
@@ -62,6 +69,7 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
+        let config = dirtybase_config::DirtyConfig::new();
         load_dot_env();
         let db_connection = env::var("DTY_DATABASE").unwrap_or_default();
         let redis_connection = env::var("DTY_REDIS").unwrap_or_default();
@@ -88,6 +96,7 @@ impl Default for Config {
         let environment = match env::var("DTY_ENV").unwrap_or_default().as_str() {
             "dev" | "development" => Environment::Development,
             "prod" | "production" => Environment::Production,
+            "stage" | "staging" => Environment::Staging,
             _ => Environment::Development,
         };
         let cache_store = env::var("DTY_CACHE_STORE").unwrap_or("memory".to_string());

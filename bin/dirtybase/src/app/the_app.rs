@@ -12,7 +12,6 @@ use dirtybase_db::ConnectionPoolManager;
 
 #[derive(Debug)]
 pub struct DirtyBase {
-    default_db: DatabaseKind,
     config: Config,
     pool_manager: ConnectionPoolManager,
 }
@@ -29,6 +28,9 @@ impl DirtyBase {
                 connection_pools.push(Box::new(SqlitePoolManagerRegisterer));
                 DatabaseKind::Sqlite
             }
+            DatabaseKind::Postgres => {
+                todo!("Implement this bad boy")
+            }
         };
 
         let pool_manager = ConnectionPoolManager::new(
@@ -40,7 +42,6 @@ impl DirtyBase {
         .await;
 
         let instance = Self {
-            default_db: default,
             pool_manager,
             config: config.clone(),
         };
@@ -51,10 +52,6 @@ impl DirtyBase {
         Ok(busybody::helpers::service_container()
             .get::<Self>()
             .unwrap())
-    }
-
-    pub fn default_db(&self) -> &DatabaseKind {
-        &self.default_db
     }
 
     pub fn schema_manger(&self) -> Manager {

@@ -7,14 +7,38 @@ use std::sync::Arc;
 pub enum DatabaseKind {
     Mysql,
     Sqlite,
+    Postgres,
+}
+
+impl Default for DatabaseKind {
+    fn default() -> Self {
+        Self::Mysql
+    }
 }
 
 impl From<&str> for DatabaseKind {
     fn from(value: &str) -> Self {
-        match value {
+        match value.to_lowercase() {
             _ if value.starts_with("mysql:") || value.starts_with("mariadb:") => Self::Mysql,
             _ if value.starts_with("sqlite:") => Self::Sqlite,
+            _ if value.starts_with("postgres:") => Self::Postgres,
             _ => panic!("Unknown database type"),
+        }
+    }
+}
+
+impl From<DatabaseKind> for String {
+    fn from(value: DatabaseKind) -> Self {
+        String::from(&value)
+    }
+}
+
+impl From<&DatabaseKind> for String {
+    fn from(value: &DatabaseKind) -> Self {
+        match value {
+            DatabaseKind::Mysql => "mysql".to_string(),
+            DatabaseKind::Sqlite => "sqlite".to_string(),
+            DatabaseKind::Postgres => "postgres".to_string(),
         }
     }
 }

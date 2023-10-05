@@ -1,4 +1,4 @@
-use dirtybase_config::Config;
+use dirtybase_config::DirtyConfig;
 use std::env;
 
 fn main() {
@@ -10,10 +10,10 @@ fn main() {
 
     match std::fs::write(dir.join(".env"), content.as_bytes()) {
         Ok(_) => {
-            let config = Config::new_at_dir(env::temp_dir().join("dirty_config"));
+            let config = DirtyConfig::new_at_dir(env::temp_dir().join("dirty_config"));
 
             println!("app name: {}", config.app_name());
-            println!("environment: {:?}", config.environment());
+            println!("environment: {:?}", config.current_env());
         }
         Err(e) => panic!("could not write temp file: {}", e.to_string()),
     }

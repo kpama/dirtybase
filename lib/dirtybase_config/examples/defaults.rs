@@ -1,8 +1,8 @@
-use dirtybase_config::Config;
+use dirtybase_config::DirtyConfig;
 
 fn main() {
-    let config = Config::default();
+    let config = DirtyConfig::default();
 
     println!("app name: {:#?}", config.app_name());
-    println!("environment: {:#?}", config.environment());
+    println!("environment: {:#?}", config.current_env());
 }

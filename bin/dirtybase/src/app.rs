@@ -24,6 +24,7 @@ use self::event_handler::register_event_handlers;
 /// Setup database application using configs in .env files
 pub async fn setup() -> busybody::Service<the_app::DirtyBase> {
     let config = Config::default();
+    // setup email adapters
     setup_using(config).await
 }
 
@@ -43,6 +44,9 @@ pub async fn setup_using(config: Config) -> busybody::Service<the_app::DirtyBase
             register_event_handlers(orsomafo::EventDispatcherBuilder::new())
                 .build()
                 .await;
+
+            // email adapters
+            dirtybase_mail::register_mail_adapters().await;
 
             app.db_setup().await;
             app

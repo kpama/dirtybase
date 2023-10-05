@@ -21,7 +21,7 @@ struct Person {
     addresses: Vec<Address>,
     #[dirty(from = "field_into_status", col = "is_active")]
     status: bool,
-    #[dirty(into = "override_date_to_fieldvalue")]
+    #[dirty(into = "override_date_to_field_value")]
     created_at: Option<DateCreated>,
     optional_foo: Vec<u64>,
     updated_at: Option<DateCreated>,
@@ -32,7 +32,7 @@ impl Person {
         FieldValue::from_ref_option_into(column)
     }
 
-    pub fn override_date_to_fieldvalue(&self) -> Option<FieldValue> {
+    pub fn override_date_to_field_value(&self) -> Option<FieldValue> {
         if let Some(value) = &self.created_at {
             Some(match value {
                 DateCreated::Morning => FieldValue::String("A".into()),

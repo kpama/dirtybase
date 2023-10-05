@@ -1,20 +1,22 @@
 use std::{env, path::Path};
 
-use crate::{load_dot_env, Environment};
+use config::builder::DefaultState;
+
+use crate::{load_dot_env, CurrentEnvironment};
 
 #[derive(Debug, Clone)]
-pub struct Config {
+pub struct DirtyConfig {
     app_name: String,
-    environment: Environment,
+    current_env: CurrentEnvironment,
 }
 
-impl Default for Config {
+impl Default for DirtyConfig {
     fn default() -> Self {
         load_dot_env::<&str>(None);
 
         Self {
             app_name: env::var(crate::APP_NAME_KEY).unwrap_or(crate::APP_DEFAULT_NAME.into()),
-            environment: env::var(crate::ENVIRONMENT_KEY)
+            current_env: env::var(crate::ENVIRONMENT_KEY)
                 .unwrap_or_default()
                 .as_str()
                 .into(),
@@ -22,7 +24,7 @@ impl Default for Config {
     }
 }
 
-impl Config {
+impl DirtyConfig {
     pub fn new() -> Self {
         Self::default()
     }
@@ -33,11 +35,11 @@ impl Config {
         Self { ..Self::default() }
     }
 
-    pub fn new_with(name: &str, environment: Environment) -> Self {
+    pub fn new_with(name: &str, current_env: CurrentEnvironment) -> Self {
         env::set_var(super::LOADED_FLAG_KEY, super::LOADED_FLAG_VALUE);
         Self {
             app_name: name.to_string(),
-            environment,
+            current_env,
         }
     }
 
@@ -51,13 +53,20 @@ impl Config {
         &self.app_name
     }
 
-    pub fn environment(&self) -> &Environment {
-        &self.environment
+    pub fn current_env(&self) -> &CurrentEnvironment {
+        &self.current_env
+    }
+
+    pub fn builder(&self) -> config::ConfigBuilder<DefaultState> {
+        let env = String::from(self.current_env());
+        config::Config::builder()
+            .set_override(crate::ENVIRONMENT_KEY, env)
+            .unwrap()
     }
 }
 
 #[busybody::async_trait]
-impl busybody::Injectable for Config {
+impl busybody::Injectable for DirtyConfig {
     async fn inject(container: &busybody::ServiceContainer) -> Self {
         match container.get_type() {
             Some(config) => config,
@@ -89,32 +98,35 @@ mod test {
 
     fn test_default() {
         reset_env();
-        let config = Config::default();
+        let config = DirtyConfig::default();
 
-        assert_eq!(Environment::Development, config.environment().clone());
+        assert_eq!(
+            CurrentEnvironment::Development,
+            config.current_env().clone()
+        );
     }
 
     fn test_overriding() {
         reset_env();
         let app_name = "Test app";
-        let environment: String = Environment::Development.into();
+        let environment: String = CurrentEnvironment::Development.into();
 
         env::set_var(crate::APP_NAME_KEY, app_name);
         env::set_var(crate::ENVIRONMENT_KEY, environment);
         env::set_var(crate::LOADED_FLAG_KEY, crate::LOADED_FLAG_VALUE);
 
-        let config = Config::new();
+        let config = DirtyConfig::new();
 
         assert_eq!(config.app_name(), app_name);
-        assert_eq!(config.environment(), &Environment::Development);
+        assert_eq!(config.current_env(), &CurrentEnvironment::Development);
     }
 
     fn test_skipping() {
         reset_env();
-        let config = Config::new_skip();
+        let config = DirtyConfig::new_skip();
 
         assert_eq!(config.app_name(), crate::APP_DEFAULT_NAME);
-        assert_eq!(config.environment(), &Environment::Development);
+        assert_eq!(config.current_env(), &CurrentEnvironment::Development);
     }
 
     fn test_load_from_dir() {
@@ -128,9 +140,9 @@ mod test {
 
         match std::fs::write(dir.join(".env"), content.as_bytes()) {
             Ok(_) => {
-                let config = Config::new_at_dir(env::temp_dir().join("dirty_config"));
+                let config = DirtyConfig::new_at_dir(env::temp_dir().join("dirty_config"));
                 assert_eq!(config.app_name(), "My Temp App");
-                assert_eq!(config.environment(), &Environment::Production);
+                assert_eq!(config.current_env(), &CurrentEnvironment::Production);
             }
             Err(e) => panic!("could not write temp file: {}", e.to_string()),
         }

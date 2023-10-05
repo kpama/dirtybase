@@ -1,8 +1,8 @@
-use dirtybase_config::Config;
+use dirtybase_config::DirtyConfig;
 
 fn main() {
-    let config = Config::new_skip();
+    let config = DirtyConfig::new_skip();
 
     println!("default app name: {}", config.app_name());
-    println!("default environment: {:?}", config.environment());
+    println!("default environment: {:?}", config.current_env());
 }

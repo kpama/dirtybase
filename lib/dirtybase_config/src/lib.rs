@@ -5,15 +5,15 @@ use std::{
 
 mod config;
 
-pub use config::Config;
+pub use config::DirtyConfig;
 
 /// Loads configuration from .env files.
 /// Multiple .env files are check in the following order
 ///  - .env.defaults
+///  - .env.prod
+///  - .env.stage
 ///  - .env
 ///  - .env.dev
-///  - .env.stage
-///  - .env.prod
 /// Values are merged from these files
 ///
 
@@ -40,28 +40,28 @@ fn load_dot_env<P: AsRef<Path>>(mut dir: Option<P>) {
     }
 
     let _ = dotenvy::from_filename(path.join(".env.defaults"));
+    let _ = dotenvy::from_filename_override(path.join(".env.prod"));
+    let _ = dotenvy::from_filename_override(path.join(".env.stage"));
     let _ = dotenvy::from_filename_override(path.join(".env"));
     let _ = dotenvy::from_filename_override(path.join(".env.dev"));
-    let _ = dotenvy::from_filename_override(path.join(".env.stage"));
-    let _ = dotenvy::from_filename_override(path.join(".env.prod"));
 
     env::set_var(LOADED_FLAG_KEY, LOADED_FLAG_VALUE);
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Environment {
+pub enum CurrentEnvironment {
     Production,
     Staging,
     Development,
 }
 
-impl Default for Environment {
+impl Default for CurrentEnvironment {
     fn default() -> Self {
         Self::Development
     }
 }
 
-impl Environment {
+impl CurrentEnvironment {
     pub fn is_prod(&self) -> bool {
         *self == Self::Production
     }
@@ -75,29 +75,35 @@ impl Environment {
     }
 }
 
-impl From<Environment> for String {
-    fn from(value: Environment) -> Self {
+impl From<CurrentEnvironment> for String {
+    fn from(value: CurrentEnvironment) -> Self {
+        String::from(&value)
+    }
+}
+
+impl From<&CurrentEnvironment> for String {
+    fn from(value: &CurrentEnvironment) -> Self {
         match value {
-            Environment::Development => "dev".to_string(),
-            Environment::Production => "prod".to_string(),
-            Environment::Staging => "staging".to_string(),
+            CurrentEnvironment::Development => "dev".to_string(),
+            CurrentEnvironment::Production => "prod".to_string(),
+            CurrentEnvironment::Staging => "staging".to_string(),
         }
     }
 }
 
-impl From<String> for Environment {
+impl From<String> for CurrentEnvironment {
     fn from(value: String) -> Self {
         value.as_str().into()
     }
 }
 
-impl From<&str> for Environment {
+impl From<&str> for CurrentEnvironment {
     fn from(value: &str) -> Self {
         match value {
-            "dev" | "development" => Environment::Development,
-            "prod" | "production" => Environment::Production,
-            "stage" | "staging" => Environment::Staging,
-            _ => Environment::Development,
+            "dev" | "development" => CurrentEnvironment::Development,
+            "prod" | "production" => CurrentEnvironment::Production,
+            "stage" | "staging" => CurrentEnvironment::Staging,
+            _ => CurrentEnvironment::Development,
         }
     }
 }

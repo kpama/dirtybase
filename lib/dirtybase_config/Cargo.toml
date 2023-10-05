@@ -8,3 +8,4 @@ edition.workspace = true
 [dependencies]
 dotenvy = { workspace = true }
 busybody = { workspace = true }
+config = { workspace = true }

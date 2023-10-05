@@ -6,6 +6,7 @@ use base::{
 use std::collections::HashMap;
 
 pub mod base;
+pub mod config;
 pub mod driver;
 pub mod entity;
 pub mod event;
@@ -21,23 +22,18 @@ pub struct ConnectionPoolManager {
 
 impl ConnectionPoolManager {
     pub async fn new(
+        // config: DirtybaseDbConfig,
         list: Vec<Box<dyn ConnectionPoolRegisterTrait>>,
         default_pool: DatabaseKind,
         conn_str: &str,
         max: u32,
     ) -> Self {
         let mut connections = HashMap::new();
-        // let mut default = default_pool
+        // let default_pool = config.default_server().to_owned();
 
         for entry in list.into_iter() {
             if let Some(connection_pool) = entry.register(conn_str, max).await {
                 let id = connection_pool.id();
-                // if index == 0 {
-                //     default = id;
-                // }
-                // if id == default_pool {
-                //     default = id;
-                // }
                 connections.insert(id, connection_pool);
             }
         }

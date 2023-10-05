@@ -9,6 +9,7 @@ edition = { workspace = true }
 [dependencies]
 dirtybase_db_types = { path = "../dirtybase_db_types" }
 dirtybase_db_macro = { path = "../dirtybase_db_macro" }
+dirtybase_config = { path = "../dirtybase_config" }
 async-trait = { workspace = true }
 futures = { workspace = true }
 futures-util = { workspace = true }
