@@ -55,3 +55,17 @@ impl ConnectionPoolManager {
         }
     }
 }
+
+pub async fn setup(config: &dirtybase_config::DirtyConfig) {
+    let base_config: config::DirtybaseDbConfig = config
+        .optional_file("database.toml", Some("DTY_DB"))
+        .build()
+        .unwrap()
+        .try_deserialize()
+        .unwrap();
+    return setup_using(base_config).await;
+}
+
+pub async fn setup_using(config: config::DirtybaseDbConfig) {
+    dbg!(config);
+}
