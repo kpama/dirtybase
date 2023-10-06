@@ -1,9 +1,25 @@
 use base::{
     connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait},
     manager::Manager,
-    schema::DatabaseKind,
+    schema::{ClientType, DatabaseKind},
 };
-use std::collections::HashMap;
+use config::DirtybaseDbConfig;
+use driver::{
+    mysql::mysql_pool_manager::MySqlPoolManagerRegisterer,
+    postgres::postgres_pool_manager::PostgresPoolManagerRegisterer,
+    sqlite::sqlite_pool_manager::SqlitePoolManagerRegisterer,
+};
+use event::SchemeWroteEvent;
+use event_handler::HandleSchemaWroteEvent;
+use orsomafo::Dispatchable;
+use std::{
+    collections::HashMap,
+    sync::{Arc, OnceLock, RwLock},
+};
+
+mod event_handler;
+
+pub(crate) static LAST_WRITE_TS: OnceLock<RwLock<HashMap<DatabaseKind, i64>>> = OnceLock::new();
 
 pub mod base;
 pub mod config;
@@ -15,58 +31,83 @@ pub use dirtybase_config;
 pub use dirtybase_db_macro as macros;
 pub use dirtybase_db_types;
 
+pub type ConnectionsType = HashMap<DatabaseKind, HashMap<ClientType, Box<dyn ConnectionPoolTrait>>>;
+
 #[derive(Debug)]
 pub struct ConnectionPoolManager {
-    connections: HashMap<DatabaseKind, Box<dyn ConnectionPoolTrait>>,
-    default_pool: DatabaseKind,
+    pub(crate) connections: Arc<ConnectionsType>,
+    pub(crate) config: DirtybaseDbConfig,
 }
 
 impl ConnectionPoolManager {
-    pub async fn new(
-        // config: DirtybaseDbConfig,
-        list: Vec<Box<dyn ConnectionPoolRegisterTrait>>,
-        default_pool: DatabaseKind,
-        conn_str: &str,
-        max: u32,
-    ) -> Self {
-        let mut connections = HashMap::new();
-        // let default_pool = config.default_server().to_owned();
+    pub async fn new(config: DirtybaseDbConfig) -> Self {
+        let mut connections: ConnectionsType = HashMap::new();
 
-        for entry in list.into_iter() {
-            if let Some(connection_pool) = entry.register(conn_str, max).await {
-                let id = connection_pool.id();
-                connections.insert(id, connection_pool);
-            }
+        let mysql_pool_registerer = MySqlPoolManagerRegisterer;
+        let sqlite_pool_registerer = SqlitePoolManagerRegisterer;
+        let postgres_pool_registerer = PostgresPoolManagerRegisterer;
+
+        // mysql
+        if let Some(conn) = mysql_pool_registerer.register(&config).await {
+            connections.insert(DatabaseKind::Mysql, conn);
+        }
+
+        // sqlite
+        if let Some(conn) = sqlite_pool_registerer.register(&config).await {
+            connections.insert(DatabaseKind::Sqlite, conn);
+        }
+
+        // postgres
+        if let Some(conn) = postgres_pool_registerer.register(&config).await {
+            connections.insert(DatabaseKind::Postgres, conn);
         }
 
         Self {
-            connections,
-            default_pool,
+            connections: Arc::new(connections),
+            config,
         }
     }
 
     pub fn default_schema_manager(&self) -> Result<Manager, anyhow::Error> {
-        self.schema_manger(&self.default_pool)
+        self.schema_manger(self.config.default.as_ref().unwrap())
     }
 
-    pub fn schema_manger(&self, id: &DatabaseKind) -> Result<Manager, anyhow::Error> {
-        match self.connections.get(id) {
-            Some(conn_pool) => Ok(Manager::new(conn_pool.schema_manger())),
-            None => Err(anyhow::anyhow!("Could not find connection pool: {:?}", id)),
+    pub fn default_kind(&self) -> &Option<DatabaseKind> {
+        &self.config.default
+    }
+
+    pub fn schema_manger(&self, kind: &DatabaseKind) -> Result<Manager, anyhow::Error> {
+        if self.connections.contains_key(kind) {
+            Ok(Manager::new(
+                self.connections.clone(),
+                kind.clone(),
+                self.config.clone(),
+            ))
+        } else {
+            Err(anyhow::anyhow!(
+                "Could not find connection pool: {:?}",
+                kind
+            ))
         }
     }
 }
 
-pub async fn setup(config: &dirtybase_config::DirtyConfig) {
+pub async fn setup(config: &dirtybase_config::DirtyConfig) -> ConnectionPoolManager {
     let base_config: config::DirtybaseDbConfig = config
         .optional_file("database.toml", Some("DTY_DB"))
         .build()
         .unwrap()
         .try_deserialize()
         .unwrap();
-    return setup_using(base_config).await;
+
+    LAST_WRITE_TS.get_or_init(|| RwLock::new(HashMap::new()));
+
+    // event handlers
+    _ = SchemeWroteEvent::subscribe::<HandleSchemaWroteEvent>().await;
+
+    setup_using(base_config).await
 }
 
-pub async fn setup_using(config: config::DirtybaseDbConfig) {
-    dbg!(config);
+pub async fn setup_using(config: config::DirtybaseDbConfig) -> ConnectionPoolManager {
+    ConnectionPoolManager::new(config).await
 }

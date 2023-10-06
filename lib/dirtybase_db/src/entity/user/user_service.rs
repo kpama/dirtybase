@@ -65,9 +65,12 @@ impl UserService {
         password: &str,
         id: &str,
     ) -> Result<UserEntity, anyhow::Error> {
-        let mut user = UserEntity::default();
         // TODO: validate password
-        user.password = Some(hash_password(password));
+        let user = UserEntity {
+            password: Some(hash_password(password)),
+            ..UserEntity::default()
+        };
+        // user.password = Some(hash_password(password));
 
         self.update(user, id).await
     }

@@ -1,16 +1,9 @@
 use super::FieldValue;
 use std::collections::HashMap;
 
+#[derive(Default)]
 pub struct InsertValueBuilder {
     values: HashMap<String, FieldValue>,
-}
-
-impl Default for InsertValueBuilder {
-    fn default() -> Self {
-        Self {
-            values: HashMap::new(),
-        }
-    }
 }
 
 impl InsertValueBuilder {

@@ -7,18 +7,14 @@ use syn::{Data, DeriveInput, GenericArgument, Meta, MetaList, PathArguments, Typ
 pub(crate) fn pluck_columns(input: &DeriveInput) -> Vec<(String, DirtybaseAttributes)> {
     let mut columns = Vec::new();
 
-    match &input.data {
-        Data::Struct(data) => match &data.fields {
-            syn::Fields::Named(fields) => {
-                for a_field in fields.named.iter() {
-                    if let Some(a_col) = get_real_column_name(a_field) {
-                        columns.push(a_col);
-                    }
+    if let Data::Struct(data) = &input.data {
+        if let syn::Fields::Named(fields) = &data.fields {
+            for a_field in fields.named.iter() {
+                if let Some(a_col) = get_real_column_name(a_field) {
+                    columns.push(a_col);
                 }
             }
-            _ => (),
-        },
-        _ => (),
+        }
     }
 
     columns
@@ -27,21 +23,23 @@ pub(crate) fn pluck_columns(input: &DeriveInput) -> Vec<(String, DirtybaseAttrib
 pub(crate) fn get_real_column_name(field: &syn::Field) -> Option<(String, DirtybaseAttributes)> {
     let name = field.ident.as_ref().unwrap().to_string();
 
-    let mut dirty_attribute = DirtybaseAttributes::default();
-    dirty_attribute.from_handler = format!("from_column_for_{}", &name);
-    dirty_attribute.into_handler = format!("into_column_for_{}", &name);
-    dirty_attribute.name = name.clone();
+    let mut dirty_attribute = DirtybaseAttributes {
+        from_handler: format!("from_column_for_{}", &name),
+        into_handler: format!("into_column_for_{}", &name),
+        name: name.clone(),
+        ..DirtybaseAttributes::default()
+    };
 
     let mut include_column = false;
 
-    if field.attrs.len() > 0 {
+    if !field.attrs.is_empty() {
         for attr in &field.attrs {
             if let Meta::List(the_list) = &attr.meta {
-                include_column = field_attributes(&field, Some(the_list), &mut dirty_attribute);
+                include_column = field_attributes(field, Some(the_list), &mut dirty_attribute);
             }
         }
     } else {
-        include_column = field_attributes(&field, None, &mut dirty_attribute);
+        include_column = field_attributes(field, None, &mut dirty_attribute);
     }
 
     if include_column {
@@ -87,17 +85,17 @@ pub(crate) fn attribute_to_attribute_type(
         match key.to_string().as_str() {
             "col" => {
                 _ = walker.next();
-                dirty_attribute.name = walker.next().unwrap().to_string().replace("\"", "");
+                dirty_attribute.name = walker.next().unwrap().to_string().replace('\"', "");
             }
             "from" => {
                 _ = walker.next();
-                let from_handler = walker.next().unwrap().to_string().replace("\"", "");
+                let from_handler = walker.next().unwrap().to_string().replace('\"', "");
                 dirty_attribute.from_handler = from_handler;
                 dirty_attribute.has_custom_from_handler = true;
             }
             "into" => {
                 _ = walker.next();
-                let into_handler = walker.next().unwrap().to_string().replace("\"", "");
+                let into_handler = walker.next().unwrap().to_string().replace('\"', "");
                 dirty_attribute.into_handler = into_handler;
                 dirty_attribute.has_custom_into_handler = true;
             }
@@ -129,11 +127,8 @@ pub(crate) fn make_column_name_attribute_type(
     field: &syn::Field,
     dirty_attribute: &mut DirtybaseAttributes,
 ) {
-    match field.ty {
-        syn::Type::Path(ref p) => {
-            walk_and_find_type(p, dirty_attribute);
-        }
-        _ => (),
+    if let syn::Type::Path(ref p) = field.ty {
+        walk_and_find_type(p, dirty_attribute);
     }
 }
 
@@ -142,13 +137,11 @@ fn walk_and_find_type(p: &TypePath, dirty_attribute: &mut DirtybaseAttributes) {
         dirty_attribute.optional = true;
 
         if let PathArguments::AngleBracketed(a) = &p.path.segments[0].arguments {
-            if let GenericArgument::Type(ag) = &a.args[0] {
-                if let syn::Type::Path(p) = ag {
-                    if let Some(f) = p.path.get_ident() {
-                        dirty_attribute.the_type = f.to_string();
-                    } else {
-                        walk_and_find_type(p, dirty_attribute);
-                    }
+            if let GenericArgument::Type(syn::Type::Path(p)) = &a.args[0] {
+                if let Some(f) = p.path.get_ident() {
+                    dirty_attribute.the_type = f.to_string();
+                } else {
+                    walk_and_find_type(p, dirty_attribute);
                 }
             }
         }
@@ -156,11 +149,9 @@ fn walk_and_find_type(p: &TypePath, dirty_attribute: &mut DirtybaseAttributes) {
         let name = p.path.segments[0].ident.to_string();
         if name == "Vec" {
             if let PathArguments::AngleBracketed(a) = &p.path.segments[0].arguments {
-                if let GenericArgument::Type(ag) = &a.args[0] {
-                    if let syn::Type::Path(p) = ag {
-                        dirty_attribute.the_type = p.path.segments[0].ident.to_string();
-                        dirty_attribute.is_vec = true;
-                    }
+                if let GenericArgument::Type(syn::Type::Path(p)) = &a.args[0] {
+                    dirty_attribute.the_type = p.path.segments[0].ident.to_string();
+                    dirty_attribute.is_vec = true;
                 }
             }
         } else {
@@ -169,16 +160,16 @@ fn walk_and_find_type(p: &TypePath, dirty_attribute: &mut DirtybaseAttributes) {
     }
 }
 
-pub(crate) fn pluck_names(columns_attributes: &Vec<(String, DirtybaseAttributes)>) -> Vec<String> {
+pub(crate) fn pluck_names(columns_attributes: &[(String, DirtybaseAttributes)]) -> Vec<String> {
     columns_attributes
         .iter()
-        .filter(|c| c.1.skip_select == false)
+        .filter(|c| !c.1.skip_select)
         .map(|c| c.1.name.clone())
         .collect::<Vec<String>>()
 }
 
 pub(crate) fn names_of_from_cv_handlers(
-    columns_attributes: &Vec<(String, DirtybaseAttributes)>,
+    columns_attributes: &[(String, DirtybaseAttributes)],
 ) -> Vec<TokenStream> {
     columns_attributes
         .iter()
@@ -204,8 +195,31 @@ pub(crate) fn names_of_from_cv_handlers(
         .collect()
 }
 
-pub(crate) fn build_from_handlers(
+pub(crate) fn spread_default(
     columns_attributes: &Vec<(String, DirtybaseAttributes)>,
+    input: &DeriveInput,
+) -> TokenStream {
+    let length = match &input.data {
+        Data::Struct(data) => match &data.fields {
+            syn::Fields::Named(fields) => fields.named.iter().len(),
+            _ => 0,
+        },
+        _ => 0,
+    };
+
+    if length > 0 && length != columns_attributes.len() {
+        quote! {
+            ..Self::default()
+        }
+    } else {
+        quote! {
+            // Nothting do do
+        }
+    }
+}
+
+pub(crate) fn build_from_handlers(
+    columns_attributes: &[(String, DirtybaseAttributes)],
 ) -> Vec<proc_macro2::TokenStream> {
     let mut built: Vec<proc_macro2::TokenStream> = Vec::new();
     for item in columns_attributes.iter() {
@@ -232,8 +246,7 @@ pub(crate) fn build_from_handlers(
                             }
                         }
                         }
-                    } else {
-                        if item.1.is_vec {
+                    } else if item.1.is_vec {
                             quote! {
                                 pub fn #fn_name <'a> (field: Option<&'a dirtybase_db_types::field_values::FieldValue>) -> Vec<#returns> {
                                     dirtybase_db_types::field_values::FieldValue::from_ref_option_into(field)
@@ -245,7 +258,6 @@ pub(crate) fn build_from_handlers(
                                     dirtybase_db_types::field_values::FieldValue::from_ref_option_into(field)
                                 }
                         }
-                        }
                     });
     }
 
@@ -254,7 +266,7 @@ pub(crate) fn build_from_handlers(
 
 // TODO: implement "into handler"
 pub(crate) fn build_into_handlers(
-    columns_attributes: &Vec<(String, DirtybaseAttributes)>,
+    columns_attributes: &[(String, DirtybaseAttributes)],
 ) -> Vec<proc_macro2::TokenStream> {
     let mut built: Vec<proc_macro2::TokenStream> = Vec::new();
 
@@ -289,7 +301,7 @@ pub(crate) fn build_into_handlers(
 }
 
 pub(crate) fn build_into_for_calls(
-    columns_attributes: &Vec<(String, DirtybaseAttributes)>,
+    columns_attributes: &[(String, DirtybaseAttributes)],
 ) -> Vec<proc_macro2::TokenStream> {
     let mut built: Vec<proc_macro2::TokenStream> = Vec::new();
     for item in columns_attributes.iter() {
@@ -312,23 +324,20 @@ pub(crate) fn pluck_table_name(input: &DeriveInput) -> String {
     let mut table_name = "".to_owned();
 
     for attr in &input.attrs {
-        match &attr.meta {
-            Meta::List(the_list) => {
-                if the_list.path.is_ident("dirty") {
-                    let mut walker = the_list.tokens.clone().into_iter();
-                    while let Some(arg) = walker.next() {
-                        if arg.to_string() == "table" {
-                            _ = walker.next();
-                            if let Some(tbl) = walker.next() {
-                                table_name = tbl.to_string().replace("\"", "");
-                                break;
-                            }
+        if let Meta::List(the_list) = &attr.meta {
+            if the_list.path.is_ident("dirty") {
+                let mut walker = the_list.tokens.clone().into_iter();
+                while let Some(arg) = walker.next() {
+                    if arg.to_string() == "table" {
+                        _ = walker.next();
+                        if let Some(tbl) = walker.next() {
+                            table_name = tbl.to_string().replace('\"', "");
+                            break;
                         }
                     }
-                    break;
                 }
+                break;
             }
-            _ => (),
         }
     }
 
@@ -339,23 +348,20 @@ pub(crate) fn pluck_id_column(input: &DeriveInput) -> String {
     let mut id_field = "".to_owned();
 
     for attr in &input.attrs {
-        match &attr.meta {
-            Meta::List(the_list) => {
-                if the_list.path.is_ident("dirty") {
-                    let mut walker = the_list.tokens.clone().into_iter();
-                    while let Some(arg) = walker.next() {
-                        if arg.to_string() == "id" {
-                            _ = walker.next();
-                            if let Some(tbl) = walker.next() {
-                                id_field = tbl.to_string().replace("\"", "");
-                                break;
-                            }
+        if let Meta::List(the_list) = &attr.meta {
+            if the_list.path.is_ident("dirty") {
+                let mut walker = the_list.tokens.clone().into_iter();
+                while let Some(arg) = walker.next() {
+                    if arg.to_string() == "id" {
+                        _ = walker.next();
+                        if let Some(tbl) = walker.next() {
+                            id_field = tbl.to_string().replace('\"', "");
+                            break;
                         }
                     }
-                    break;
                 }
+                break;
             }
-            _ => (),
         }
     }
 
@@ -400,7 +406,7 @@ pub(crate) fn build_foreign_id_method(input: &DeriveInput, table_name: &str) -> 
 }
 
 pub(crate) fn build_special_column_methods(
-    columns_attributes: &Vec<(String, DirtybaseAttributes)>,
+    columns_attributes: &[(String, DirtybaseAttributes)],
 ) -> Vec<proc_macro2::TokenStream> {
     let mut built: HashMap<&str, proc_macro2::TokenStream> = HashMap::new();
 
@@ -470,7 +476,7 @@ pub(crate) fn build_special_column_methods(
 /// Builds static method for each field/prop in the struct
 /// that corresponds to a table column
 pub(crate) fn build_prop_column_names_getter(
-    columns_attributes: &Vec<(String, DirtybaseAttributes)>,
+    columns_attributes: &[(String, DirtybaseAttributes)],
 ) -> Vec<proc_macro2::TokenStream> {
     let mut built: Vec<proc_macro2::TokenStream> = Vec::new();
 

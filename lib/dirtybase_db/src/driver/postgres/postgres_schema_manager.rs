@@ -10,7 +10,7 @@ use crate::base::{
 use async_trait::async_trait;
 use dirtybase_db_types::{field_values::FieldValue, types::ColumnAndValue};
 use futures::stream::TryStreamExt;
-use sqlx::{mysql::MySqlRow, types::chrono, Column, MySql, Pool, Row};
+use sqlx::{postgres::PgRow, types::chrono, Column, Pool, Postgres, Row};
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Debug, Clone)]
@@ -29,25 +29,25 @@ impl ActiveQuery {
         query
     }
 }
-pub struct MySqlSchemaManager {
-    db_pool: Arc<Pool<MySql>>,
+pub struct PostgresSchemaManager {
+    db_pool: Arc<Pool<Postgres>>,
 }
 
-impl MySqlSchemaManager {
-    pub fn new(db_pool: Arc<Pool<MySql>>) -> Self {
+impl PostgresSchemaManager {
+    pub fn new(db_pool: Arc<Pool<Postgres>>) -> Self {
         Self { db_pool }
     }
 }
 
 #[async_trait]
-impl RelationalDbTrait for MySqlSchemaManager {
+impl RelationalDbTrait for PostgresSchemaManager {
     fn kind(&self) -> DatabaseKind {
-        DatabaseKind::Mysql
+        DatabaseKind::Postgres
     }
 }
 
 #[async_trait]
-impl SchemaManagerTrait for MySqlSchemaManager {
+impl SchemaManagerTrait for PostgresSchemaManager {
     fn fetch_table_for_update(&self, name: &str) -> BaseTable {
         BaseTable::new(name)
     }
@@ -115,7 +115,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
     }
 }
 
-impl MySqlSchemaManager {
+impl PostgresSchemaManager {
     async fn do_commit(&self, table: BaseTable) {
         if table.view_query.is_some() {
             // working with view table
@@ -498,7 +498,7 @@ impl MySqlSchemaManager {
         }
     }
 
-    fn row_to_field_value(&self, row: &MySqlRow) -> ColumnAndValue {
+    fn row_to_field_value(&self, row: &PgRow) -> ColumnAndValue {
         let mut this_row = HashMap::new();
 
         for col in row.columns() {
@@ -541,7 +541,7 @@ impl MySqlSchemaManager {
                     }
                 }
                 "TINYINT UNSIGNED" => {
-                    let v = row.try_get::<u8, &str>(col.name());
+                    let v = row.try_get::<i8, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, (v as u32).into());
                     } else {
@@ -549,7 +549,7 @@ impl MySqlSchemaManager {
                     }
                 }
                 "SMALLINT UNSIGNED" => {
-                    let v = row.try_get::<u16, &str>(col.name());
+                    let v = row.try_get::<i16, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, (v as u32).into());
                     } else {
@@ -557,7 +557,7 @@ impl MySqlSchemaManager {
                     }
                 }
                 "INT UNSIGNED" => {
-                    let v = row.try_get::<u32, &str>(col.name());
+                    let v = row.try_get::<i32, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, v.into());
                     } else {
@@ -565,7 +565,7 @@ impl MySqlSchemaManager {
                     }
                 }
                 "BIGINT UNSIGNED" => {
-                    let v = row.try_get::<u64, &str>(col.name());
+                    let v = row.try_get::<i64, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, v.into());
                     } else {

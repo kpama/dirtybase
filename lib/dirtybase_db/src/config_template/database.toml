@@ -1,3 +1,5 @@
+default = "sqlite"
+
 # Mysql configuration
 [mysql_write]
 enable = false

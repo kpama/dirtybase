@@ -54,7 +54,7 @@ impl Default for FieldValue {
 
 impl FieldValue {
     /// Returns a reference to the FieldValue if Some `NotSet` when None
-    pub fn from_ref_option_ref<'a>(field: Option<&'a FieldValue>) -> &'a FieldValue {
+    pub fn from_ref_option_ref(field: Option<&FieldValue>) -> &FieldValue {
         if let Some(f) = field {
             f
         } else {
@@ -63,14 +63,14 @@ impl FieldValue {
     }
 
     /// Unwraps the option, clone the FieldValue and call `into` on the cloned
-    pub fn from_ref_option_into<'a, T>(field: Option<&'a FieldValue>) -> T
+    pub fn from_ref_option_into<T>(field: Option<&FieldValue>) -> T
     where
         Self: Into<T>,
     {
         return Self::from_ref_option_ref(field).clone().into();
     }
 
-    pub fn from_ref_option_into_option<'a, T>(field: Option<&'a FieldValue>) -> Option<T>
+    pub fn from_ref_option_into_option<T>(field: Option<&FieldValue>) -> Option<T>
     where
         Self: Into<T>,
     {
@@ -82,7 +82,7 @@ impl FieldValue {
     }
 
     /// Returns the FieldValue if Some and `NotSet` when None
-    pub fn from_ref_option<'a>(field: Option<&'a FieldValue>) -> FieldValue {
+    pub fn from_ref_option(field: Option<&FieldValue>) -> FieldValue {
         if let Some(f) = field {
             f.clone()
         } else {

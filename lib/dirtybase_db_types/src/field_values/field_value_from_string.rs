@@ -20,8 +20,8 @@ impl FromIterator<String> for FieldValue {
 
 impl<'a> From<Option<&'a [String]>> for FieldValue {
     fn from(value: Option<&'a [String]>) -> Self {
-        if value.is_some() {
-            Self::Array(value.unwrap().iter().map(|x| x.into()).collect())
+        if let Some(v) = value {
+            Self::Array(v.iter().map(|x| x.into()).collect())
         } else {
             Self::NotSet
         }

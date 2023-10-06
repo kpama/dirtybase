@@ -12,7 +12,7 @@ impl From<FieldValue> for String {
 impl From<&FieldValue> for String {
     fn from(value: &FieldValue) -> Self {
         match value {
-            FieldValue::String(v) => v.clone().into(),
+            FieldValue::String(v) => v.clone(),
             _ => "".into(),
         }
     }

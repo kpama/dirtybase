@@ -5,6 +5,12 @@ pub struct ColumnAndValueBuilder {
     data: RefCell<ColumnAndValue>,
 }
 
+impl Default for ColumnAndValueBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ColumnAndValueBuilder {
     pub fn new() -> Self {
         Self {

@@ -1,11 +1,16 @@
-use std::fmt::Debug;
+use std::{collections::HashMap, fmt::Debug};
 
-use super::schema::{DatabaseKind, SchemaManagerTrait};
+use crate::config::DirtybaseDbConfig;
+
+use super::schema::{ClientType, DatabaseKind, SchemaManagerTrait};
 use async_trait::async_trait;
 
 #[async_trait]
 pub trait ConnectionPoolRegisterTrait: Send {
-    async fn register(&self, conn_str: &str, max: u32) -> Option<Box<dyn ConnectionPoolTrait>>;
+    async fn register(
+        &self,
+        config: &DirtybaseDbConfig,
+    ) -> Option<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>>;
 }
 
 #[async_trait]

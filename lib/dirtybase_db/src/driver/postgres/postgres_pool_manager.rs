@@ -1,4 +1,8 @@
-use super::mysql_schema_manager::MySqlSchemaManager;
+use std::{collections::HashMap, sync::Arc};
+
+use async_trait::async_trait;
+use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+
 use crate::{
     base::{
         connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait},
@@ -6,14 +10,13 @@ use crate::{
     },
     config::{BaseConfig, DirtybaseDbConfig},
 };
-use async_trait::async_trait;
-use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
-use std::{collections::HashMap, sync::Arc};
 
-pub struct MySqlPoolManagerRegisterer;
+use super::postgres_schema_manager::PostgresSchemaManager;
+
+pub struct PostgresPoolManagerRegisterer;
 
 #[async_trait]
-impl ConnectionPoolRegisterTrait for MySqlPoolManagerRegisterer {
+impl ConnectionPoolRegisterTrait for PostgresPoolManagerRegisterer {
     async fn register(
         &self,
         config: &DirtybaseDbConfig,
@@ -21,12 +24,12 @@ impl ConnectionPoolRegisterTrait for MySqlPoolManagerRegisterer {
         let mut pools: HashMap<ClientType, Box<dyn ConnectionPoolTrait>> = HashMap::new();
 
         // read pool
-        if let Some(read_config) = &config.mysql_read {
+        if let Some(read_config) = &config.postgres_read {
             if read_config.enable {
                 if let Ok(db_pool) = db_connect(read_config).await {
                     pools.insert(
                         ClientType::Read,
-                        Box::new(MysqlPoolManager {
+                        Box::new(PostgresPoolManager {
                             db_pool: Arc::new(db_pool),
                         }),
                     );
@@ -35,12 +38,12 @@ impl ConnectionPoolRegisterTrait for MySqlPoolManagerRegisterer {
         }
 
         // write pool
-        if let Some(write_config) = &config.mysql_write {
+        if let Some(write_config) = &config.postgres_write {
             if write_config.enable {
                 if let Ok(db_pool) = db_connect(write_config).await {
                     pools.insert(
                         ClientType::Write,
-                        Box::new(MysqlPoolManager {
+                        Box::new(PostgresPoolManager {
                             db_pool: Arc::new(db_pool),
                         }),
                     );
@@ -49,41 +52,41 @@ impl ConnectionPoolRegisterTrait for MySqlPoolManagerRegisterer {
         }
 
         if pools.is_empty() {
-            return None;
+            None
         } else {
-            return Some(pools);
+            Some(pools)
         }
     }
 }
 
 #[derive(Debug)]
-pub struct MysqlPoolManager {
-    db_pool: Arc<Pool<MySql>>,
+pub struct PostgresPoolManager {
+    db_pool: Arc<Pool<Postgres>>,
 }
 
 #[async_trait]
-impl ConnectionPoolTrait for MysqlPoolManager {
+impl ConnectionPoolTrait for PostgresPoolManager {
     fn schema_manger(&self) -> Box<dyn SchemaManagerTrait + Send + Sync> {
-        Box::new(MySqlSchemaManager::new(self.db_pool.clone()))
+        Box::new(PostgresSchemaManager::new(self.db_pool.clone()))
     }
     fn id(&self) -> DatabaseKind {
-        DatabaseKind::Mysql
+        DatabaseKind::Postgres
     }
 }
 
-pub async fn db_connect(config: &BaseConfig) -> anyhow::Result<Pool<MySql>> {
-    match MySqlPoolOptions::new()
+pub async fn db_connect(config: &BaseConfig) -> anyhow::Result<Pool<Postgres>> {
+    match PgPoolOptions::new()
         .max_connections(config.max)
         .connect(&config.url)
         .await
     {
         Ok(conn) => {
-            log::info!("MySql maximum DB pool connection: {}", config.max);
+            log::info!("Postgres maximum DB pool connection: {}", config.max);
             Ok(conn)
         }
         Err(e) => {
-            log::error!("could not connect to the MySql: {:#?}", &e);
-            Err(anyhow::anyhow!("could not connect to the MySql: {:#?}", e))
+            log::error!("could not connect to postgres: {:#?}", &e);
+            Err(anyhow::anyhow!("could not connect to postgres: {:#?}", e))
         }
     }
 }

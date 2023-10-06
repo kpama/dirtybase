@@ -12,7 +12,7 @@ impl From<FieldValue> for u64 {
 impl From<&FieldValue> for u64 {
     fn from(value: &FieldValue) -> Self {
         match value {
-            FieldValue::U64(v) => v.clone().into(),
+            FieldValue::U64(v) => *v,
             _ => 0,
         }
     }

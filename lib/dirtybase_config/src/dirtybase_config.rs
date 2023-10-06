@@ -86,7 +86,7 @@ impl DirtyConfig {
             builder = builder.add_source(config::Environment::with_prefix(prefix));
         }
 
-        return builder;
+        builder
     }
 
     pub fn load_optional_file(
@@ -102,7 +102,7 @@ impl DirtyConfig {
             builder = builder.add_source(config::Environment::with_prefix(prefix));
         }
 
-        return builder;
+        builder
     }
 
     pub fn require_file(
@@ -122,7 +122,7 @@ impl DirtyConfig {
             builder = builder.add_source(config::Environment::with_prefix(prefix));
         }
 
-        return builder;
+        builder
     }
 
     pub fn load_file(
@@ -138,7 +138,7 @@ impl DirtyConfig {
             builder = builder.add_source(config::Environment::with_prefix(prefix));
         }
 
-        return builder;
+        builder
     }
 }
 

@@ -19,11 +19,7 @@ impl From<UserEntity> for OutUserEntityDto {
             id: value.id.unwrap_or_default(),
             reset_password: value.reset_password.unwrap_or_default(),
             username: value.username.unwrap_or_default(),
-            created_at: if let Some(dt) = value.created_at {
-                Some(dt)
-            } else {
-                None
-            },
+            created_at: value.created_at,
             status: value.status.unwrap_or_default(),
         }
     }

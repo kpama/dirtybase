@@ -79,7 +79,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         let mut results = Vec::new();
 
         let mut params = Vec::new();
-        let statement = self.build_query(&query_builder, &mut params);
+        let statement = self.build_query(query_builder, &mut params);
 
         let mut query = sqlx::query(&statement);
         for p in &params {
@@ -103,7 +103,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         query_builder: &QueryBuilder,
     ) -> Result<ColumnAndValue, anyhow::Error> {
         let mut params = Vec::new();
-        let statement = self.build_query(&query_builder, &mut params);
+        let statement = self.build_query(query_builder, &mut params);
 
         let mut query = sqlx::query(&statement);
         for p in &params {
@@ -146,7 +146,7 @@ impl SqliteSchemaManager {
                         .first()
                         .unwrap()
                         .keys()
-                        .map(|e| e.clone())
+                        .cloned()
                         .collect::<Vec<String>>();
 
                     let placeholders = keys.iter().map(|_| "?").collect::<Vec<&str>>().join(",");
@@ -175,7 +175,7 @@ impl SqliteSchemaManager {
                 for entry in column_values {
                     if *entry.1 != FieldValue::NotSet {
                         columns.push(entry.0);
-                        params.push(self.field_value_to_string(&entry.1));
+                        params.push(self.field_value_to_string(entry.1));
                     }
                 }
                 sql = format!("UPDATE `{}` SET ", query.tables().join(","));
@@ -436,18 +436,16 @@ impl SqliteSchemaManager {
         let mut sql = "SELECT".to_owned();
 
         // fields
-        match query.action() {
-            QueryAction::Query {
-                columns,
-                select_all,
-            } => {
-                if *select_all {
-                    sql = format!("{} *", sql) // Select all columns by default
-                } else if let Some(fields) = columns {
-                    sql = format!("{} {}", sql, fields.join(","));
-                }
+        if let QueryAction::Query {
+            columns,
+            select_all,
+        } = query.action()
+        {
+            if *select_all {
+                sql = format!("{} *", sql) // Select all columns by default
+            } else if let Some(fields) = columns {
+                sql = format!("{} {}", sql, fields.join(","));
             }
-            _ => (),
         }
 
         // join fields
@@ -474,7 +472,7 @@ impl SqliteSchemaManager {
         sql
     }
 
-    fn build_join(&self, query: &QueryBuilder, _params: &mut Vec<String>) -> String {
+    fn build_join(&self, query: &QueryBuilder, _params: &mut [String]) -> String {
         let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
             for a_join in joins {
@@ -513,10 +511,7 @@ impl SqliteSchemaManager {
         let placeholder =
             if *condition.operator() == Operator::In || *condition.operator() == Operator::NotIn {
                 let length = match &condition.value() {
-                    QueryValue::Field(field) => match field {
-                        FieldValue::Array(v) => v.len(),
-                        _ => 1,
-                    },
+                    QueryValue::Field(FieldValue::Array(v)) => v.len(),
                     _ => 1,
                 };
 

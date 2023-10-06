@@ -89,23 +89,28 @@ fn build_structure(
     mut pieces: Vec<&str>,
     value: FieldValue,
 ) -> ColumnAndValue {
-    if pieces.len() > 1 {
-        let name = pieces.remove(0);
-        if built.contains_key(name) {
-            if let FieldValue::Object(obj) = built.get_mut(name).unwrap() {
-                *obj = build_structure(obj.clone(), pieces, value);
-            } else {
-                dbg!("shouldn't get this far");
-            }
-        } else {
-            built.insert(
-                name.to_string(),
-                FieldValue::Object(build_structure(ColumnAndValue::new(), pieces, value)),
-            );
+    match pieces.len() {
+        1 => {
+            let name = pieces.remove(0);
+            built.insert(name.to_string(), value);
         }
-    } else if pieces.len() == 1 {
-        let name = pieces.remove(0);
-        built.insert(name.to_string(), value);
+        _ => {
+            let name = pieces.remove(0);
+            match built.get_mut(name) {
+                Some(FieldValue::Object(obj)) => {
+                    *obj = build_structure(obj.clone(), pieces, value);
+                }
+                None => {
+                    built.insert(
+                        name.to_string(),
+                        FieldValue::Object(build_structure(ColumnAndValue::new(), pieces, value)),
+                    );
+                }
+                _ => {
+                    dbg!("shouldn't get this far");
+                }
+            }
+        }
     }
 
     built

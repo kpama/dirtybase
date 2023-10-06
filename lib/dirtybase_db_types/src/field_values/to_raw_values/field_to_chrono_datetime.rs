@@ -23,7 +23,7 @@ impl From<FieldValue> for Option<DateTime<Utc>> {
 impl From<&FieldValue> for DateTime<Utc> {
     fn from(value: &FieldValue) -> Self {
         match value {
-            FieldValue::DateTime(v) | FieldValue::Timestamp(v) => v.clone(),
+            FieldValue::DateTime(v) | FieldValue::Timestamp(v) => *v,
             _ => Utc::now(),
         }
     }
@@ -32,7 +32,7 @@ impl From<&FieldValue> for DateTime<Utc> {
 impl From<&FieldValue> for Option<DateTime<Utc>> {
     fn from(value: &FieldValue) -> Self {
         match value {
-            FieldValue::DateTime(v) | FieldValue::Timestamp(v) => Some(v.clone()),
+            FieldValue::DateTime(v) | FieldValue::Timestamp(v) => Some(*v),
             _ => None,
         }
     }
@@ -61,7 +61,7 @@ impl From<FieldValue> for Option<NaiveDate> {
 impl From<&FieldValue> for NaiveDate {
     fn from(value: &FieldValue) -> Self {
         match value {
-            FieldValue::Date(v) => v.clone(),
+            FieldValue::Date(v) => *v,
             _ => Utc::now().date_naive(),
         }
     }
@@ -70,7 +70,7 @@ impl From<&FieldValue> for NaiveDate {
 impl From<&FieldValue> for Option<NaiveDate> {
     fn from(value: &FieldValue) -> Self {
         match value {
-            FieldValue::Date(v) => Some(v.clone()),
+            FieldValue::Date(v) => Some(*v),
             _ => None,
         }
     }
@@ -99,7 +99,7 @@ impl From<FieldValue> for Option<NaiveTime> {
 impl From<&FieldValue> for NaiveTime {
     fn from(value: &FieldValue) -> Self {
         match value {
-            FieldValue::Time(v) => v.clone(),
+            FieldValue::Time(v) => *v,
             _ => Utc::now().time(),
         }
     }
@@ -108,7 +108,7 @@ impl From<&FieldValue> for NaiveTime {
 impl From<&FieldValue> for Option<NaiveTime> {
     fn from(value: &FieldValue) -> Self {
         match value {
-            FieldValue::Time(v) => Some(v.clone()),
+            FieldValue::Time(v) => Some(*v),
             _ => None,
         }
     }

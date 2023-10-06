@@ -3,11 +3,20 @@ use async_trait::async_trait;
 use dirtybase_db_types::types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue};
 use std::sync::Arc;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, serde::Deserialize)]
 pub enum DatabaseKind {
+    #[serde(rename(deserialize = "mysql"))]
     Mysql,
+    #[serde(rename(deserialize = "sqlite"))]
     Sqlite,
+    #[serde(rename(deserialize = "postgres"))]
     Postgres,
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub enum ClientType {
+    Read,
+    Write,
 }
 
 impl Default for DatabaseKind {
@@ -19,9 +28,15 @@ impl Default for DatabaseKind {
 impl From<&str> for DatabaseKind {
     fn from(value: &str) -> Self {
         match value.to_lowercase() {
-            _ if value.starts_with("mysql:") || value.starts_with("mariadb:") => Self::Mysql,
-            _ if value.starts_with("sqlite:") => Self::Sqlite,
-            _ if value.starts_with("postgres:") => Self::Postgres,
+            _ if value.starts_with("mysql:")
+                || value.starts_with("mariadb:")
+                || value == "mysql"
+                || value == "mariadb" =>
+            {
+                Self::Mysql
+            }
+            _ if value.starts_with("sqlite:") || value == "sqlite" => Self::Sqlite,
+            _ if value.starts_with("postgres:") || value == "postgres" => Self::Postgres,
             _ => panic!("Unknown database type"),
         }
     }
@@ -110,12 +125,12 @@ pub trait SchemaManagerTrait: Send + Sync {
     async fn has_table(&self, name: &str) -> bool;
 }
 
-pub struct SchemaWrapper<'a> {
+pub struct SchemaWrapper {
     pub(crate) query_builder: QueryBuilder,
-    pub(crate) inner: &'a dyn SchemaManagerTrait,
+    pub(crate) inner: Box<dyn SchemaManagerTrait>,
 }
 
-impl<'a> SchemaWrapper<'a> {
+impl SchemaWrapper {
     pub async fn fetch_all(&self) -> Result<Vec<StructuredColumnAndValue>, anyhow::Error> {
         let results = self.inner.fetch_all(&self.query_builder).await;
         if let Ok(r) = results {

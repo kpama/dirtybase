@@ -85,13 +85,14 @@ impl QueryBuilder {
     }
 
     pub fn select_all(&mut self) -> &mut Self {
-        match &mut self.action {
-            QueryAction::Query {
-                select_all,
-                columns: _,
-            } => *select_all = true,
-            _ => (),
+        if let QueryAction::Query {
+            columns: _,
+            select_all,
+        } = &mut self.action
+        {
+            *select_all = true;
         }
+
         self
     }
 
@@ -101,37 +102,32 @@ impl QueryBuilder {
 
     /// Set a column/value for update
     pub fn set_column<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
-        match &mut self.action {
-            QueryAction::Update(columns) => {
-                columns.insert(column.to_string(), value.into());
-            }
-            _ => (),
+        if let QueryAction::Update(columns) = &mut self.action {
+            columns.insert(column.to_string(), value.into());
         }
+
         self
     }
 
     /// Set multiple column/value for update
     pub fn set_columns(&mut self, column_and_values: ColumnAndValue) -> &mut Self {
-        match &mut self.action {
-            QueryAction::Update(columns) => {
-                columns.extend(column_and_values);
-            }
-            _ => (),
+        if let QueryAction::Update(columns) = &mut self.action {
+            columns.extend(column_and_values);
         }
+
         self
     }
 
     /// Set multiple rows for insert/create
     pub fn set_insert_rows(&mut self, rows_to_insert: Vec<ColumnAndValue>) -> &mut Self {
-        match &mut self.action {
-            QueryAction::Create {
-                rows,
-                do_soft_insert: _,
-            } => {
-                *rows = rows_to_insert;
-            }
-            _ => (),
+        if let QueryAction::Create {
+            rows,
+            do_soft_insert: _,
+        } = &mut self.action
+        {
+            *rows = rows_to_insert;
         }
+
         self
     }
 
@@ -153,19 +149,17 @@ impl QueryBuilder {
 
     /// Adds a column that should be selected
     pub fn select<T: ToString>(&mut self, column: T) -> &mut Self {
-        match &mut self.action {
-            QueryAction::Query {
-                columns,
-                select_all,
-            } => {
-                *select_all = false;
-                if let Some(list) = columns {
-                    list.push(column.to_string())
-                } else {
-                    *columns = Some(vec![column.to_string()]);
-                }
+        if let QueryAction::Query {
+            columns,
+            select_all,
+        } = &mut self.action
+        {
+            *select_all = false;
+            if let Some(list) = columns {
+                list.push(column.to_string())
+            } else {
+                *columns = Some(vec![column.to_string()]);
             }
-            _ => (),
         }
 
         self
@@ -178,24 +172,22 @@ impl QueryBuilder {
 
     /// Adds multiple columns to be selected
     pub fn select_multiple<T: ToString>(&mut self, columns_to_select: &[T]) -> &mut Self {
-        match &mut self.action {
-            QueryAction::Query {
-                columns,
-                select_all,
-            } => {
-                *select_all = false;
-                if let Some(list) = columns {
-                    list.extend(columns_to_select.iter().map(|c| c.to_string()))
-                } else {
-                    *columns = Some(
-                        columns_to_select
-                            .iter()
-                            .map(|c| c.to_string())
-                            .collect::<Vec<String>>(),
-                    );
-                }
+        if let QueryAction::Query {
+            columns,
+            select_all,
+        } = &mut self.action
+        {
+            *select_all = false;
+            if let Some(list) = columns {
+                list.extend(columns_to_select.iter().map(|c| c.to_string()))
+            } else {
+                *columns = Some(
+                    columns_to_select
+                        .iter()
+                        .map(|c| c.to_string())
+                        .collect::<Vec<String>>(),
+                );
             }
-            _ => (),
         }
 
         self
@@ -669,7 +661,7 @@ impl QueryBuilder {
         if let Some(field) = L::creator_id_column() {
             self.left_join_table_and_select::<UserEntity, L>(
                 UserEntity::id_column().unwrap(),
-                &L::prefix_with_tbl(&field),
+                &L::prefix_with_tbl(field),
                 prefix,
             );
         }

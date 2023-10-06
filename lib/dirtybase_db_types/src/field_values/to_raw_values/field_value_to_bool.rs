@@ -12,7 +12,7 @@ impl From<FieldValue> for bool {
 impl From<&FieldValue> for bool {
     fn from(value: &FieldValue) -> Self {
         match value {
-            FieldValue::Boolean(v) => (*v).into(),
+            FieldValue::Boolean(v) => *v,
             _ => false,
         }
     }

@@ -140,7 +140,7 @@ impl UserRepository {
                 q.eq(UserEntity::id_column().unwrap(), id);
             })
             .await;
-        self.find_on_by_id(&id).await
+        self.find_on_by_id(id).await
     }
 }
 

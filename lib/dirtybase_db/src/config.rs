@@ -1,28 +1,24 @@
 #![allow(dead_code)]
-#[derive(Debug, serde::Deserialize)]
+
+use crate::base::schema::DatabaseKind;
+#[derive(Debug, serde::Deserialize, Clone)]
 pub struct BaseConfig {
-    enable: bool,
-    url: String,
-    max: u32,
-    sticky: bool,
-    sticky_duration: u64,
+    pub(crate) enable: bool,
+    pub(crate) url: String,
+    pub(crate) max: u32,
+    pub(crate) sticky: Option<bool>,
+    pub(crate) sticky_duration: Option<i64>,
+    pub(crate) foreign_key: Option<bool>,
+    pub(crate) busy_timeout: Option<u64>,
 }
 
-#[derive(Debug, serde::Deserialize)]
-pub struct SqliteConfig {
-    enable: bool,
-    url: String,
-    max: u32,
-    foreign_key: bool,
-    busy_timeout: u64,
-}
-
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, Clone)]
 pub struct DirtybaseDbConfig {
-    mysql_read: Option<BaseConfig>,
-    mysql_write: Option<BaseConfig>,
-    postgres_read: Option<BaseConfig>,
-    postgres_write: Option<BaseConfig>,
-    sqlite_read: Option<SqliteConfig>,
-    sqlite_write: Option<SqliteConfig>,
+    pub(crate) default: Option<DatabaseKind>,
+    pub(crate) mysql_read: Option<BaseConfig>,
+    pub(crate) mysql_write: Option<BaseConfig>,
+    pub(crate) postgres_read: Option<BaseConfig>,
+    pub(crate) postgres_write: Option<BaseConfig>,
+    pub(crate) sqlite_read: Option<BaseConfig>,
+    pub(crate) sqlite_write: Option<BaseConfig>,
 }

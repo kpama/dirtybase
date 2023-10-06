@@ -17,8 +17,8 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let columns_attributes = pluck_columns(&input);
     let column = pluck_names(&columns_attributes);
 
-    let name = input.ident;
-    let generics = input.generics;
+    let name = input.ident.clone();
+    let generics = input.generics.clone();
     let (_impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let from_cv_for_handlers = names_of_from_cv_handlers(&columns_attributes);
@@ -27,6 +27,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let into_cv_for_calls = build_into_for_calls(&columns_attributes);
     let special_column_methods = build_special_column_methods(&columns_attributes);
     let column_name_methods = build_prop_column_names_getter(&columns_attributes);
+    let defaults = spread_default(&columns_attributes, &input);
 
     let expanded = quote! {
 
@@ -78,7 +79,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
         fn from_column_value(cv: ::dirtybase_db_types::types::ColumnAndValue) -> Self {
             Self {
                 #(#from_cv_for_handlers),*,
-                ..Self::default()
+                #defaults
             }
         }
       }

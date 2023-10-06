@@ -20,8 +20,8 @@ impl QueryValue {
         }
     }
     pub fn to_param(&self, params: &mut Vec<String>) {
-        match self {
-            QueryValue::Field(field) => match field {
+        if let QueryValue::Field(field) = self {
+            match field {
                 FieldValue::Null => (),
                 FieldValue::Object(_) => (),
                 FieldValue::NotSet => (),
@@ -40,8 +40,7 @@ impl QueryValue {
                         .map(|x| self.field_to_param(x))
                         .collect::<Vec<String>>(),
                 ),
-            },
-            _ => (), // Sub query string nothing to do here
+            }
         }
     }
 }
