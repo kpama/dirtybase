@@ -11,6 +11,7 @@ pub mod driver;
 pub mod entity;
 pub mod event;
 
+pub use dirtybase_config;
 pub use dirtybase_db_macro as macros;
 pub use dirtybase_db_types;
 
