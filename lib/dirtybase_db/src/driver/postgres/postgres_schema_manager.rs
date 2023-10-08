@@ -320,9 +320,7 @@ impl PostgresSchemaManager {
 
         // column type
         match column.column_type {
-            ColumnType::AutoIncrementId => {
-                the_type.push_str("bigint(20) AUTO_INCREMENT PRIMARY KEY")
-            }
+            ColumnType::AutoIncrementId => the_type.push_str("BIGSERIAL PRIMARY KEY"),
             ColumnType::Boolean => the_type.push_str("tinyint(1)"),
             ColumnType::Char(length) => {
                 the_type.push_str(&format!("char({}) COLLATE 'utf8mb4_unicode_ci'", length))
