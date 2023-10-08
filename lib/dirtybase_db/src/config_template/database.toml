@@ -12,8 +12,6 @@ sticky_duration = 10
 enable = false
 url = "mysql://root:dbpassword@db/dirtybase"
 max = 2
-sticky = true
-sticky_duration = 10
 
 
 # Sqlite configuration
@@ -23,13 +21,13 @@ url = "sqlite:data/dirtybase.db"
 max = 2
 foreign_key = true
 busy_timeout = 60
+sticky = true
+sticky_duration = 10
 
 [sqlite_read]
 enable = true
 url = "sqlite:data/dirtybase.db"
 max = 2
-foreign_key = true
-busy_timeout = 60
 
 
 # Postgresql configuration
@@ -44,5 +42,3 @@ sticky_duration = 10
 enable = false
 url = "postgres://root:dbpassword@db/dirtybase"
 max = 5
-sticky = true
-sticky_duration = 10
