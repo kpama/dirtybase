@@ -43,10 +43,8 @@ async fn cache_endpoint() -> impl Responder {
         is_up: false,
         msg: "Version 2".into(),
     };
-    let time = now();
-    _ = cache_manager
-        .add("uptime", &f, time.add_days(20).into())
-        .await;
+    let time = cache_manager.now().add_days(20);
+    _ = cache_manager.add("uptime", &f, time.into()).await;
 
     HttpResponse::Ok().json(status)
 }

@@ -249,7 +249,7 @@ impl CacheManager {
         false
     }
 
-    pub(super) fn now(&self) -> Time {
+    pub fn now(&self) -> Time {
         now()
     }
 
