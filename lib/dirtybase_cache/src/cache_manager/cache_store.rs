@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 
-// mod database_store;
+mod database_store;
 mod memory_store;
 mod redis_store;
 
-// pub use database_store::DatabaseStore;
+pub use database_store::DatabaseStore;
 pub use memory_store::MemoryStore;
 pub use redis_store::RedisStore;
 

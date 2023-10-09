@@ -1,5 +1,4 @@
 use crate::app::{
-    cache_manager::CacheManager,
     token_claim::{ClaimBuilder, JWTClaim},
     DirtyBase,
 };
@@ -15,6 +14,7 @@ use super::{
 };
 use anyhow::anyhow;
 use busybody::helpers::provide;
+use dirtybase_cache::CacheManager;
 use dirtybase_db::entity::user::{
     verify_password, UserEntity, UserRepository, UserService, UserStatus,
 };

@@ -1,6 +1,7 @@
+use dirtybase_cache::CacheEntry;
 use dirtybase_db::macros::DirtyTable;
 
-use crate::app::cache_manager::cache_entry::CacheEntry;
+// use crate::app::cache_manager::cache_entry::CacheEntry;
 
 #[derive(Debug, Clone, Default, DirtyTable)]
 #[dirty(table = "core_cache", id = "key")]

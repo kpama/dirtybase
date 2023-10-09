@@ -5,7 +5,6 @@ mod event_handler;
 mod fields;
 mod the_app;
 
-pub mod cache_manager;
 pub mod client;
 pub mod core;
 pub mod helper;
@@ -39,7 +38,10 @@ pub async fn setup() -> busybody::Service<the_app::DirtyBase> {
 /// ```
 ///
 pub async fn setup_using(config: Config) -> busybody::Service<the_app::DirtyBase> {
-    match the_app::DirtyBase::new(config).await {
+    let pool_manager = dirtybase_db::setup(config.dirty_config()).await;
+    let cache_manager = dirtybase_cache::setup(config.dirty_config()).await;
+
+    match the_app::DirtyBase::new(config, pool_manager, cache_manager).await {
         Ok(app) => {
             register_event_handlers(orsomafo::EventDispatcherBuilder::new())
                 .build()

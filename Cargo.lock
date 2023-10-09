@@ -832,6 +832,7 @@ dependencies = [
  "busybody",
  "chrono",
  "clap",
+ "dirtybase_cache",
  "dirtybase_config",
  "dirtybase_db",
  "dirtybase_db_types",

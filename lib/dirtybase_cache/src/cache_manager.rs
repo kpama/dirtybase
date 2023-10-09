@@ -1,6 +1,6 @@
 use crate::config::CacheConfig;
 
-use self::cache_store::{CacheStoreTrait, MemoryStore, RedisStore};
+use self::cache_store::{CacheStoreTrait, DatabaseStore, MemoryStore, RedisStore};
 use busybody::helpers::provide;
 use std::collections::HashMap;
 use std::future::Future;
@@ -23,9 +23,9 @@ pub struct CacheManager {
 impl CacheManager {
     async fn get_store(store_name: &str) -> StoreDriver {
         match store_name {
-            // _ if store_name == DatabaseStore::store_name() => {
-            //     Arc::new(Box::new(provide::<DatabaseStore>().await))
-            // }
+            _ if store_name == DatabaseStore::store_name() => {
+                Arc::new(Box::new(provide::<DatabaseStore>().await))
+            }
             _ if store_name == RedisStore::store_name() => {
                 Arc::new(Box::new(provide::<RedisStore>().await))
             }

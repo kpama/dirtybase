@@ -1,12 +1,10 @@
-use std::collections::HashMap;
-
 use actix_web::{get, HttpResponse, Responder, Scope};
 use busybody::helpers::{provide, service};
+use dirtybase_cache::CacheManager;
 use dirtybase_db::entity::user::{UserEntity, USER_TABLE};
 use dirtybase_db_types::TableEntityTrait;
 
 use crate::app::{
-    cache_manager::CacheManager,
     core::time::now,
     model::{
         app::{AppEntity, AppRepository},

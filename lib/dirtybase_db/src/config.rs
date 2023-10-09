@@ -22,3 +22,14 @@ pub struct DirtybaseDbConfig {
     pub(crate) sqlite_read: Option<BaseConfig>,
     pub(crate) sqlite_write: Option<BaseConfig>,
 }
+
+impl DirtybaseDbConfig {
+    pub async fn new(config: &dirtybase_config::DirtyConfig) -> Self {
+        config
+            .optional_file("database.toml", Some("DTY_DB"))
+            .build()
+            .unwrap()
+            .try_deserialize()
+            .unwrap()
+    }
+}

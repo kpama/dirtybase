@@ -1,0 +1,1 @@
+cache_store = "memory" # Valid options: memory, redis, db

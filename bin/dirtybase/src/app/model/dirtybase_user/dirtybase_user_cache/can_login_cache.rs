@@ -1,5 +1,7 @@
+use dirtybase_cache::CacheManager;
+
 use crate::app::{
-    cache_manager::CacheManager, helper::sha256,
+    helper::sha256,
     model::dirtybase_user::dirtybase_user_helpers::authentication_error_status::AuthenticationErrorStatus,
 };
 

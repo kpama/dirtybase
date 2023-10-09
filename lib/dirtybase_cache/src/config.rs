@@ -1,19 +1,26 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct CacheConfig {
-    cache_store: String,
-}
-
-impl Default for CacheConfig {
-    fn default() -> Self {
-        Self {
-            cache_store: "db".to_string(),
-        }
-    }
+    cache_store: Option<String>,
 }
 
 impl CacheConfig {
+    pub fn new(config: &dirtybase_config::DirtyConfig) -> Self {
+        let mut con: Self = config
+            .optional_file("cache.toml", Some("DTY_CACHE"))
+            .build()
+            .unwrap()
+            .try_deserialize()
+            .unwrap();
+
+        if con.cache_store.is_none() {
+            con.cache_store = Some("memory".to_string());
+        }
+
+        con
+    }
+
     pub fn cache_store(&self) -> &String {
-        &self.cache_store
+        &self.cache_store.as_ref().unwrap()
     }
 }
 

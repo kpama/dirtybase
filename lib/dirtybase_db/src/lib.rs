@@ -33,7 +33,7 @@ pub use dirtybase_db_types;
 
 pub type ConnectionsType = HashMap<DatabaseKind, HashMap<ClientType, Box<dyn ConnectionPoolTrait>>>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConnectionPoolManager {
     pub(crate) connections: Arc<ConnectionsType>,
     pub(crate) config: DirtybaseDbConfig,
@@ -93,12 +93,7 @@ impl ConnectionPoolManager {
 }
 
 pub async fn setup(config: &dirtybase_config::DirtyConfig) -> ConnectionPoolManager {
-    let base_config: config::DirtybaseDbConfig = config
-        .optional_file("database.toml", Some("DTY_DB"))
-        .build()
-        .unwrap()
-        .try_deserialize()
-        .unwrap();
+    let base_config = config::DirtybaseDbConfig::new(config).await;
 
     LAST_WRITE_TS.get_or_init(|| RwLock::new(HashMap::new()));
 
@@ -109,5 +104,16 @@ pub async fn setup(config: &dirtybase_config::DirtyConfig) -> ConnectionPoolMana
 }
 
 pub async fn setup_using(config: config::DirtybaseDbConfig) -> ConnectionPoolManager {
-    ConnectionPoolManager::new(config).await
+    let pool_manager = ConnectionPoolManager::new(config).await;
+
+    busybody::helpers::service_container().set_type(pool_manager.clone());
+
+    pool_manager
+}
+
+#[busybody::async_trait]
+impl busybody::Injectable for ConnectionPoolManager {
+    async fn inject(container: &busybody::ServiceContainer) -> Self {
+        container.get_type().unwrap()
+    }
 }

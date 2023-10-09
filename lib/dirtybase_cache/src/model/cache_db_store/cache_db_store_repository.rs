@@ -265,7 +265,7 @@ impl CacheDbStoreRepository {
 #[busybody::async_trait]
 impl busybody::Injectable for CacheDbStoreRepository {
     async fn inject(c: &busybody::ServiceContainer) -> Self {
-        let app = c.get::<DirtyBase>().unwrap();
-        Self::new(app.schema_manger())
+        let pool_manager = c.get::<dirtybase_db::ConnectionPoolManager>().unwrap();
+        Self::new(pool_manager.default_schema_manager().unwrap())
     }
 }
