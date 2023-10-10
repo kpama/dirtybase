@@ -867,7 +867,6 @@ dependencies = [
  "dirtybase_config",
  "log",
  "redis",
- "sqlx",
  "tokio",
 ]
 
