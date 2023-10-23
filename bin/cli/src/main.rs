@@ -3,6 +3,7 @@ use std::process::Command;
 use clap::{command, Parser, Subcommand};
 
 mod make_migration;
+mod run_init;
 
 fn main() {
     let args = Cli::parse();
@@ -40,10 +41,10 @@ fn main() {
             _ => (),
         },
         Commands::New { name } => {
-            eprintln!("creating a new application")
+            println!("creating a new application: {:?}", name)
         }
         Commands::Init => {
-            eprintln!("initialising features")
+            run_init::init(&dist_path);
         }
     }
 }
