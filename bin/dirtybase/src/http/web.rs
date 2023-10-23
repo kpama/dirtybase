@@ -3,12 +3,12 @@ pub mod routes;
 use actix_web::web;
 use busybody::helpers::service_container;
 
-use crate::app::DirtyBase;
+use crate::app::DirtyBaseApp;
 
 use super::test_routes;
 
 pub fn configure_web(config: &mut web::ServiceConfig) {
-    let app = service_container().get::<DirtyBase>().unwrap();
+    let app = service_container().get::<DirtyBaseApp>().unwrap();
     let mut web_routes = web::scope("/_admin");
 
     web_routes = routes::register_routes(web_routes);

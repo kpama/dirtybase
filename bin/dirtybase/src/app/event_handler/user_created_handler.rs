@@ -1,6 +1,6 @@
 use crate::app::model::dirtybase_user::DirtybaseUserService;
 use busybody::helpers::provide;
-use dirtybase_db::event::UserCreatedEvent;
+use dirtybase_db::db::event::UserCreatedEvent;
 
 #[derive(Default)]
 pub(crate) struct UserCreatedHandler;

@@ -1,6 +1,6 @@
 use dirtybase_db_types::TableEntityTrait;
 
-use crate::entity::user::USER_TABLE;
+use crate::db::entity::user::USER_TABLE;
 
 use super::{
     column::{BaseColumn, ColumnType, RelationType},

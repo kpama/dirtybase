@@ -1,5 +1,5 @@
 use super::UserStatus;
-use crate::base::helper::generate_ulid;
+use crate::db::base::helper::generate_ulid;
 use dirtybase_db_macro::DirtyTable;
 use dirtybase_db_types::types::{
     BooleanField, DateTimeField, InternalIdField, StringField, UlidField,

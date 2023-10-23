@@ -1,4 +1,5 @@
-use crate::base::{
+use async_trait::async_trait;
+use dirtybase_contract::db::base::{
     column::{BaseColumn, ColumnDefault, ColumnType},
     query::{QueryAction, QueryBuilder},
     query_conditions::Condition,
@@ -7,8 +8,7 @@ use crate::base::{
     schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
     table::BaseTable,
 };
-use async_trait::async_trait;
-use dirtybase_db_types::{field_values::FieldValue, types::ColumnAndValue};
+use dirtybase_contract::db::dirtybase_db_types::{field_values::FieldValue, types::ColumnAndValue};
 use futures::stream::TryStreamExt;
 use sqlx::{postgres::PgRow, types::chrono, Column, Pool, Postgres, Row};
 use std::{collections::HashMap, sync::Arc};

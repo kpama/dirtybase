@@ -2,7 +2,7 @@ use dirtybase_db_macro::DirtyTable;
 use dirtybase_db_types::types::DateTimeField;
 use serde::Serialize;
 
-use crate::entity::user::{UserEntity, UserStatus};
+use crate::db::entity::user::{UserEntity, UserStatus};
 
 #[derive(Debug, Clone, Serialize, Default, DirtyTable)]
 pub struct OutUserEntityDto {

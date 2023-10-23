@@ -1,35 +1,32 @@
-use base::{
+use dirtybase_contract::db::base::{
     connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait},
     manager::Manager,
     schema::{ClientType, DatabaseKind},
 };
-use config::DirtybaseDbConfig;
+use dirtybase_contract::db::config::DirtybaseDbConfig;
+use dirtybase_contract::db::event::SchemeWroteEvent;
+use dirtybase_contract::db::event_handler::HandleSchemaWroteEvent;
 use driver::{
     mysql::mysql_pool_manager::MySqlPoolManagerRegisterer,
     postgres::postgres_pool_manager::PostgresPoolManagerRegisterer,
     sqlite::sqlite_pool_manager::SqlitePoolManagerRegisterer,
 };
-use event::SchemeWroteEvent;
-use event_handler::HandleSchemaWroteEvent;
 use orsomafo::Dispatchable;
 use std::{
     collections::HashMap,
     sync::{Arc, OnceLock, RwLock},
 };
 
-mod event_handler;
-
 pub(crate) static LAST_WRITE_TS: OnceLock<RwLock<HashMap<DatabaseKind, i64>>> = OnceLock::new();
 
-pub mod base;
-pub mod config;
 pub mod driver;
-pub mod entity;
-pub mod event;
 
-pub use dirtybase_config;
-pub use dirtybase_db_macro as macros;
-pub use dirtybase_db_types;
+pub use dirtybase_contract::db;
+pub use dirtybase_contract::db::base;
+pub use dirtybase_contract::db::dirtybase_db_types;
+pub use dirtybase_contract::db::entity;
+pub use dirtybase_contract::db::macros;
+pub use dirtybase_contract::dirtybase_config;
 
 pub type ConnectionsType = HashMap<DatabaseKind, HashMap<ClientType, Box<dyn ConnectionPoolTrait>>>;
 
@@ -93,7 +90,7 @@ impl ConnectionPoolManager {
 }
 
 pub async fn setup(config: &dirtybase_config::DirtyConfig) -> ConnectionPoolManager {
-    let base_config = config::DirtybaseDbConfig::new(config).await;
+    let base_config = DirtybaseDbConfig::new(config).await;
 
     LAST_WRITE_TS.get_or_init(|| RwLock::new(HashMap::new()));
 
@@ -103,7 +100,7 @@ pub async fn setup(config: &dirtybase_config::DirtyConfig) -> ConnectionPoolMana
     setup_using(base_config).await
 }
 
-pub async fn setup_using(config: config::DirtybaseDbConfig) -> ConnectionPoolManager {
+pub async fn setup_using(config: DirtybaseDbConfig) -> ConnectionPoolManager {
     let pool_manager = ConnectionPoolManager::new(config).await;
 
     busybody::helpers::service_container().set_type(pool_manager.clone());

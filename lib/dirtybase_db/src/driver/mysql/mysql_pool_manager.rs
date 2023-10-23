@@ -1,12 +1,12 @@
 use super::mysql_schema_manager::MySqlSchemaManager;
-use crate::{
+use async_trait::async_trait;
+use dirtybase_contract::db::{
     base::{
         connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait},
         schema::{ClientType, DatabaseKind, SchemaManagerTrait},
     },
     config::{BaseConfig, DirtybaseDbConfig},
 };
-use async_trait::async_trait;
 use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
 use std::{collections::HashMap, sync::Arc};
 

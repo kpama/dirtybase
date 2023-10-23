@@ -1,10 +1,15 @@
 use clap::Subcommand;
 
-mod migrator;
+pub mod migrator;
 
 #[derive(Subcommand, Debug)]
-pub enum MigrateDirection {
+pub enum MigrateAction {
+    /// Migrate up
     Up,
+    /// Migrate down
     Down,
-    New { name: String },
+    /// Resets and migrate all up
+    Refresh,
+    /// Migrate all down
+    Reset,
 }

@@ -1,11 +1,10 @@
 use actix_web::{get, HttpResponse, Responder, Scope};
 use busybody::helpers::{provide, service};
 use dirtybase_cache::CacheManager;
-use dirtybase_db::entity::user::{UserEntity, USER_TABLE};
+use dirtybase_db::db::entity::user::{UserEntity, USER_TABLE};
 use dirtybase_db_types::TableEntityTrait;
 
 use crate::app::{
-    core::time::now,
     model::{
         app::{AppEntity, AppRepository},
         company::CompanyEntity,
@@ -16,11 +15,11 @@ use crate::app::{
         role::RoleEntity,
         role_user::RoleUserEntity,
     },
-    DirtyBase,
+    DirtyBaseApp,
 };
 
 pub fn register_routes(scope: Scope) -> Scope {
-    scope.service(cache_endpoint)
+    scope.service(cache_endpoint).service(serve_d_users)
 }
 
 #[get("/cache")]
@@ -52,7 +51,7 @@ async fn cache_endpoint() -> impl Responder {
 #[get("/d-users")]
 async fn serve_d_users() -> impl Responder {
     let core_user_id = "01h4qpe1gr7nm7d6zkpq7gxedx";
-    let app = service::<DirtyBase>().await;
+    let app = service::<DirtyBaseApp>().await;
     let repo = provide::<AppRepository>().await;
     let dirty_user_repo: DirtybaseUserRepository = provide().await;
 
@@ -93,7 +92,7 @@ async fn hello() -> impl Responder {
 
 #[get("/users")]
 async fn serve_users() -> impl Responder {
-    let app = service::<DirtyBase>().await;
+    let app = service::<DirtyBaseApp>().await;
     let manager = app.schema_manger();
     let result = manager
         .select_from_table(USER_TABLE, |q| {
@@ -121,7 +120,7 @@ async fn serve_users() -> impl Responder {
 
 #[get("/d-children")]
 async fn serve_d_children() -> impl Responder {
-    let app = service::<DirtyBase>().await;
+    let app = service::<DirtyBaseApp>().await;
     let manager = app.schema_manger();
 
     let core_user_id = "01h4qpe1gr7nm7d6zkpq7gxedx";

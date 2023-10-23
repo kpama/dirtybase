@@ -1,5 +1,5 @@
 use super::{SysAdminEntity, SYS_ADMIN_TABLE, SYS_ADMIN_TABLE_USER_ID_FIELD};
-use crate::app::DirtyBase;
+use crate::app::DirtyBaseApp;
 use dirtybase_db::{
     base::manager::Manager,
     dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue},
@@ -56,7 +56,7 @@ impl SysAdminRepository {
 #[busybody::async_trait]
 impl busybody::Injectable for SysAdminRepository {
     async fn inject(ci: &busybody::ServiceContainer) -> Self {
-        let app = ci.get::<DirtyBase>().unwrap();
+        let app = ci.get::<DirtyBaseApp>().unwrap();
 
         Self::new(app.schema_manger())
     }

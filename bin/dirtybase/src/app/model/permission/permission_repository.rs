@@ -1,5 +1,5 @@
 use super::permission_entity::PermissionEntity;
-use crate::app::DirtyBase;
+use crate::app::DirtyBaseApp;
 use dirtybase_db::base::manager::Manager;
 use dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue, TableEntityTrait};
 
@@ -108,7 +108,7 @@ impl PermissionRepository {
 #[busybody::async_trait]
 impl busybody::Injectable for PermissionRepository {
     async fn inject(ci: &busybody::ServiceContainer) -> Self {
-        let app: busybody::Service<DirtyBase> = ci.get().unwrap();
+        let app: busybody::Service<DirtyBaseApp> = ci.get().unwrap();
 
         Self::new(app.schema_manger())
     }

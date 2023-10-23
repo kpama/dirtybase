@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use crate::{config::DirtybaseDbConfig, event::SchemeWroteEvent, ConnectionsType, LAST_WRITE_TS};
+use crate::db::{
+    config::DirtybaseDbConfig, event::SchemeWroteEvent, ConnectionsType, LAST_WRITE_TS,
+};
 
 use super::{
     query::QueryBuilder,
@@ -11,7 +13,6 @@ use dirtybase_db_types::types::ColumnAndValue;
 use orsomafo::Dispatchable;
 
 pub struct Manager {
-    // schema: Box<dyn SchemaManagerTrait + Send>,
     connections: Arc<ConnectionsType>,
     kind: DatabaseKind,
     config: DirtybaseDbConfig,

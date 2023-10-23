@@ -1,9 +1,11 @@
 #![allow(dead_code)]
 
+use clap::{Parser, Subcommand};
+
 mod config;
+mod dirtybase_app;
 mod event_handler;
 mod fields;
-mod the_app;
 
 pub mod client;
 pub mod core;
@@ -16,15 +18,21 @@ pub mod token_claim;
 
 pub use config::Config;
 pub use config::ConfigBuilder;
-pub use the_app::DirtyBase;
+pub use dirtybase_app::DirtyBaseApp;
+
+use crate::cli;
+use crate::http;
+use crate::migration::MigrateAction;
 
 use self::event_handler::register_event_handlers;
 
+pub type DirtyBaseAppService = busybody::Service<dirtybase_app::DirtyBaseApp>;
+
 /// Setup database application using configs in .env files
-pub async fn setup() -> busybody::Service<the_app::DirtyBase> {
+pub async fn setup() -> DirtyBaseAppService {
     let config = Config::default();
     // setup email adapters
-    setup_using(config).await
+    setup_using(&config).await
 }
 
 /// Setup database application using custom configuration
@@ -37,11 +45,11 @@ pub async fn setup() -> busybody::Service<the_app::DirtyBase> {
 ///                     .build();
 /// ```
 ///
-pub async fn setup_using(config: Config) -> busybody::Service<the_app::DirtyBase> {
+pub async fn setup_using(config: &Config) -> DirtyBaseAppService {
     let pool_manager = dirtybase_db::setup(config.dirty_config()).await;
     let cache_manager = dirtybase_cache::setup(config.dirty_config()).await;
 
-    match the_app::DirtyBase::new(config, pool_manager, cache_manager).await {
+    match dirtybase_app::DirtyBaseApp::new(config, pool_manager, cache_manager).await {
         Ok(app) => {
             register_event_handlers(orsomafo::EventDispatcherBuilder::new())
                 .build()
@@ -58,4 +66,48 @@ pub async fn setup_using(config: Config) -> busybody::Service<the_app::DirtyBase
             panic!();
         }
     }
+}
+
+pub async fn run_http(app: DirtyBaseAppService) {
+    _ = http::init(app).await;
+}
+
+pub async fn run_cli(app: DirtyBaseAppService, command: &Commands) {
+    _ = cli::init(app, command).await;
+}
+
+pub async fn run(app: DirtyBaseAppService) {
+    let args = Args::parse();
+
+    match &args.command {
+        Some(Commands::Serve) => run_http(app).await,
+        Some(cmd) => {
+            run_cli(app, cmd).await;
+        }
+        None => {
+            println!("Unknown command")
+        }
+    }
+}
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum Commands {
+    /// Start the application web server
+    Serve,
+    /// Execute migration
+    Migrate {
+        #[command(subcommand)]
+        action: MigrateAction,
+    },
+    /// Process queued jobs
+    Queue { name: Option<String> },
+    /// Handle dispatched events
+    Handle { cluster: Option<String> },
 }

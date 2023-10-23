@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
-use crate::{
+use dirtybase_contract::db::{
     base::{
         connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait},
         schema::{ClientType, DatabaseKind, SchemaManagerTrait},

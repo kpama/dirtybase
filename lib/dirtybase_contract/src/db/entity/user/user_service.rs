@@ -1,6 +1,6 @@
 use orsomafo::Dispatchable;
 
-use crate::{base::helper::generate_ulid, event::UserCreatedEvent};
+use crate::db::{base::helper::generate_ulid, event::UserCreatedEvent};
 
 use super::{hash_password, user_repository::UserRepository, UserEntity};
 

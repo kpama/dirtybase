@@ -1,5 +1,5 @@
 use super::{RoleEntity, ROLE_TABLE, ROLE_TABLE_DELETED_AT_FIELD, ROLE_TABLE_ID_FIELD};
-use crate::app::DirtyBase;
+use crate::app::DirtyBaseApp;
 use dirtybase_db::{
     base::manager::Manager,
     dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue},
@@ -68,7 +68,7 @@ impl RoleRepository {
 #[busybody::async_trait]
 impl busybody::Injectable for RoleRepository {
     async fn inject(ci: &busybody::ServiceContainer) -> Self {
-        let app = ci.get::<DirtyBase>().unwrap();
+        let app = ci.get::<DirtyBaseApp>().unwrap();
 
         Self::new(app.schema_manger())
     }

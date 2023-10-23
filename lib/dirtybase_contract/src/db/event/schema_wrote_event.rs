@@ -1,4 +1,4 @@
-use crate::base::schema::DatabaseKind;
+use crate::db::base::schema::DatabaseKind;
 
 #[derive(Debug, Clone)]
 pub struct SchemeWroteEvent {

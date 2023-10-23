@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use crate::config::DirtybaseDbConfig;
+use crate::db::config::DirtybaseDbConfig;
 
 use super::schema::{ClientType, DatabaseKind, SchemaManagerTrait};
 use async_trait::async_trait;

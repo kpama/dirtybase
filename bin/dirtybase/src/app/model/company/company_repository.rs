@@ -4,7 +4,7 @@ use super::{
     CompanyEntity, COMPANY_TABLE, COMPANY_TABLE_DELETED_AT_FIELD, COMPANY_TABLE_ID_FIELD,
     COMPANY_TABLE_INTERNAL_ID_FIELD,
 };
-use crate::app::DirtyBase;
+use crate::app::DirtyBaseApp;
 use dirtybase_db::{
     base::manager::Manager,
     dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue},
@@ -79,7 +79,7 @@ impl CompanyRepository {
 #[busybody::async_trait]
 impl busybody::Injectable for CompanyRepository {
     async fn inject(c: &busybody::ServiceContainer) -> Self {
-        let app = c.get::<DirtyBase>().unwrap();
+        let app = c.get::<DirtyBaseApp>().unwrap();
         Self::new(app.schema_manger())
     }
 }

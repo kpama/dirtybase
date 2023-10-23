@@ -1,11 +1,10 @@
 use super::model::{
-    app::setup_applications_table, audit_log::setup_audit_log_table,
-    cache_db_store::setup_cache_db_store_tables, company::setup_company_table,
+    app::setup_applications_table, audit_log::setup_audit_log_table, company::setup_company_table,
     dirtybase_user::setup_dirtybase_user_table, permission::setup_permission_table,
     role::setup_roles_table, role_permission::setup_role_permission_table,
     role_user::setup_role_users_table, sys_admin::setup_sysadmins_table,
 };
-use dirtybase_db::{base::manager::Manager, entity::user::setup_users_table};
+use dirtybase_db::db::{base::manager::Manager, entity::user::setup_users_table};
 
 pub const APPLICATION_TABLE: &str = "core_app";
 pub const APPLICATION_SCHEMA_TABLE: &str = "core_app_schema";
@@ -87,5 +86,4 @@ pub(crate) async fn create_data_tables(manager: Manager) {
     setup_dirtybase_user_table(&manager).await;
     setup_permission_table(&manager).await;
     setup_role_permission_table(&manager).await;
-    setup_cache_db_store_tables(&manager).await;
 }

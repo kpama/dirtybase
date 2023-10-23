@@ -7,7 +7,7 @@ use crate::app::{
         app::AppEntity, company::CompanyEntity, role::RoleEntity, role_user::RoleUserEntity,
         sys_admin::SysAdminEntity,
     },
-    DirtyBase,
+    DirtyBaseApp,
 };
 use anyhow::Ok;
 use dirtybase_db::{
@@ -259,7 +259,7 @@ impl DirtybaseUserRepository {
 #[busybody::async_trait]
 impl busybody::Injectable for DirtybaseUserRepository {
     async fn inject(ci: &busybody::ServiceContainer) -> Self {
-        let app = ci.get::<DirtyBase>().unwrap();
+        let app = ci.get::<DirtyBaseApp>().unwrap();
 
         Self::new(app.schema_manger())
     }

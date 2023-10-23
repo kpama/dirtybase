@@ -1,5 +1,5 @@
-use dirtybase_db::base::manager::Manager;
-use dirtybase_db_types::TableEntityTrait;
+use dirtybase_db::db::base::manager::Manager;
+use dirtybase_db::dirtybase_db_types::TableEntityTrait;
 
 mod cache_db_store_entity;
 mod cache_db_store_repository;

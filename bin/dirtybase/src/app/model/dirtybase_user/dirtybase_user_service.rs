@@ -1,6 +1,6 @@
 use crate::app::{
     token_claim::{ClaimBuilder, JWTClaim},
-    DirtyBase,
+    DirtyBaseApp,
 };
 
 use super::{
@@ -183,7 +183,7 @@ impl DirtybaseUserService {
 impl busybody::Injectable for DirtybaseUserService {
     async fn inject(ci: &busybody::ServiceContainer) -> Self {
         let repo = ci.provide::<DirtybaseUserRepository>().await;
-        let app = ci.get::<DirtyBase>().unwrap();
+        let app = ci.get::<DirtyBaseApp>().unwrap();
         let cache = provide::<CacheManager>().await.tags(&["dtb_user"]).await;
 
         let user_service = UserService::new(UserRepository::new(app.schema_manger()));

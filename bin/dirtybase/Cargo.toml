@@ -11,6 +11,7 @@ dirtybase_db_types = { path = "../../lib/dirtybase_db_types" }
 dirtybase_config = { path = "../../lib/dirtybase_config" }
 dirtybase_cache = { path = "../../lib/dirtybase_cache" }
 dirtybase_mail = { path = "../../lib/dirtybase_mail" }
+dirtybase_contract = { path = "../../lib/dirtybase_contract" }
 actix-web = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }

@@ -1,6 +1,5 @@
 pub mod app;
 pub mod audit_log;
-pub mod cache_db_store;
 pub mod company;
 pub mod dirtybase_user;
 pub mod permission;
@@ -9,4 +8,4 @@ pub mod role_permission;
 pub mod role_user;
 pub mod sys_admin;
 
-pub use dirtybase_db::entity::user;
+pub use dirtybase_db::db::entity::user;

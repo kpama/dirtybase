@@ -1,4 +1,4 @@
-use crate::base::{
+use crate::db::base::{
     manager::Manager,
     table::{CREATED_AT_FIELD, DELETED_AT_FIELD, ID_FIELD, INTERNAL_ID_FIELD, UPDATED_AT_FIELD},
 };

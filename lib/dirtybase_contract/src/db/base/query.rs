@@ -1,4 +1,4 @@
-use crate::entity::user::UserEntity;
+use crate::db::entity::user::UserEntity;
 
 use super::{
     join_builder::JoinQueryBuilder, query_conditions::Condition, query_join_types::JoinType,

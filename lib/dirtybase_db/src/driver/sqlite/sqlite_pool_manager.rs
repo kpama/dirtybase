@@ -1,13 +1,13 @@
 use std::{collections::HashMap, str::FromStr, sync::Arc, time::Duration};
 
-use crate::{
+use async_trait::async_trait;
+use dirtybase_contract::db::{
     base::{
         connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait},
         schema::{ClientType, DatabaseKind},
     },
     config::{BaseConfig, DirtybaseDbConfig},
 };
-use async_trait::async_trait;
 use sqlx::{
     sqlite::SqliteJournalMode,
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
@@ -68,7 +68,9 @@ pub struct SqlitePoolManager {
 }
 
 impl ConnectionPoolTrait for SqlitePoolManager {
-    fn schema_manger(&self) -> Box<dyn crate::base::schema::SchemaManagerTrait + Send + Sync> {
+    fn schema_manger(
+        &self,
+    ) -> Box<dyn dirtybase_contract::db::base::schema::SchemaManagerTrait + Send + Sync> {
         Box::new(SqliteSchemaManager::new(self.db_pool.clone()))
     }
 

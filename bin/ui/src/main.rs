@@ -1,6 +1,6 @@
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 use busybody::{helpers::provide, Service};
-use dirtybase::app::{self, DirtyBase};
+use dirtybase::app::{self, DirtyBaseApp};
 use include_dir::{include_dir, Dir};
 
 static UI_EMBEDDED_ASSETS: Dir = include_dir!("bin/ui/src/app/dist/spa");
@@ -8,7 +8,7 @@ static UI_EMBEDDED_ASSETS: Dir = include_dir!("bin/ui/src/app/dist/spa");
 #[get("/")]
 async fn home() -> impl Responder {
     if let Some(file) = UI_EMBEDDED_ASSETS.get_file("index.html") {
-        let config = provide::<Service<DirtyBase>>().await.config();
+        let config = provide::<Service<DirtyBaseApp>>().await.config();
         HttpResponse::Ok().body(
             file.contents_utf8()
                 .unwrap()

@@ -1,5 +1,5 @@
 use crate::{
-    app::DirtyBase,
+    app::DirtyBaseApp,
     http::http_helpers::{field_string_to_vec, pluck_from_query_string},
 };
 use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
@@ -9,7 +9,7 @@ use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
  */
 #[get("/collections/{name}/records")]
 async fn get_all_records_handler(
-    app: web::Data<DirtyBase>,
+    app: web::Data<DirtyBaseApp>,
     request: HttpRequest,
 ) -> impl Responder {
     log::info!("Fetching all records");

@@ -1,5 +1,5 @@
 use crate::{
-    app::DirtyBase,
+    app::DirtyBaseAppService,
     http::http_helpers::{ApiError, ApiResponse},
 };
 use actix_files as fs;
@@ -20,7 +20,8 @@ use mime;
 pub mod middleware;
 pub mod web;
 
-pub async fn init(app: busybody::Service<DirtyBase>) -> std::io::Result<()> {
+pub async fn init(app: DirtyBaseAppService) -> std::io::Result<()> {
+    app.init().await;
     let static_assets_path =
         env::var("DTY_PUBLIC_DIRECTORY").unwrap_or_else(|_| String::from("./public"));
     let config = app.config();

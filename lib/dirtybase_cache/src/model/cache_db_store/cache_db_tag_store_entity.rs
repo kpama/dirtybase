@@ -1,4 +1,4 @@
-use dirtybase_db::macros::DirtyTable;
+use dirtybase_db::db::macros::DirtyTable;
 
 #[derive(Debug, Clone, Default, DirtyTable)]
 #[dirty(id = "tag", table = "core_cache_tags")]

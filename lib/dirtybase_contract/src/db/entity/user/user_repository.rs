@@ -4,7 +4,7 @@ use super::{
     UserEntity, USER_TABLE, USER_TABLE_DELETED_AT_FIELD, USER_TABLE_EMAIL_FIELD,
     USER_TABLE_ID_FIELD, USER_TABLE_INTERNAL_ID_FIELD, USER_TABLE_USERNAME_FIELD,
 };
-use crate::base::manager::Manager;
+use crate::db::base::manager::Manager;
 use dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue, TableEntityTrait};
 
 pub struct UserRepository {

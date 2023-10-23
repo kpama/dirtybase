@@ -6,10 +6,10 @@ use crate::app::{
         role_user::RoleUserService,
         sys_admin::SysAdminService,
     },
-    Config, DirtyBase,
+    Config, DirtyBaseApp,
 };
 use busybody::Service;
-use dirtybase_db::entity::user::UserEntity;
+use dirtybase_db::db::entity::user::UserEntity;
 use fama::PipeContent;
 
 pub(crate) async fn execute() {
@@ -52,7 +52,7 @@ impl busybody::Injectable for NewSysAdminData {
 }
 
 async fn find_or_create_admin_user(
-    app: Service<DirtyBase>,
+    app: Service<DirtyBaseApp>,
     mut new_admin_data: NewSysAdminData,
     pipe: PipeContent,
 ) -> Option<PipeContent> {

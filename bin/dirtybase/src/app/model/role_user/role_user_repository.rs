@@ -2,7 +2,7 @@ use super::{
     RoleUserEntity, ROLE_USER_TABLE, ROLE_USER_TABLE_CORE_APP_ROLE_ID_FIELD,
     ROLE_USER_TABLE_CORE_USER_ID_FIELD, ROLE_USER_TABLE_DELETED_AT_FIELD,
 };
-use crate::app::DirtyBase;
+use crate::app::DirtyBaseApp;
 use dirtybase_db::{
     base::manager::Manager,
     dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue},
@@ -85,7 +85,7 @@ impl RoleUserRepository {
 #[busybody::async_trait]
 impl busybody::Injectable for RoleUserRepository {
     async fn inject(ci: &busybody::ServiceContainer) -> Self {
-        let app = ci.get::<DirtyBase>().unwrap();
+        let app = ci.get::<DirtyBaseApp>().unwrap();
 
         Self::new(app.schema_manger())
     }

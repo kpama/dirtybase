@@ -1,6 +1,6 @@
 use orsomafo::DispatchedEvent;
 
-use crate::{event::SchemeWroteEvent, LAST_WRITE_TS};
+use crate::db::{event::SchemeWroteEvent, LAST_WRITE_TS};
 
 #[derive(Debug, Default)]
 pub struct HandleSchemaWroteEvent;
@@ -8,7 +8,7 @@ pub struct HandleSchemaWroteEvent;
 #[orsomafo::async_trait]
 impl orsomafo::EventHandler for HandleSchemaWroteEvent {
     /// After a write has occurred for a particular kind of database
-    /// We will try to log the time stamp. This value is used when the "sticky"
+    /// We will try to log the timestamp. This value is used when the "sticky"
     /// feature is turned on. Please review the crate's config file
     async fn handle(&self, dispatched: &DispatchedEvent) {
         if let Some(event) = dispatched.the_event::<SchemeWroteEvent>() {

@@ -1,7 +1,7 @@
 use super::{AppEntity, APP_TABLE, APP_TABLE_ID_FIELD};
 use crate::app::{
     model::{role::RoleEntity, role_user::RoleUserEntity},
-    DirtyBase,
+    DirtyBaseApp,
 };
 use dirtybase_db::{
     base::manager::Manager,
@@ -97,7 +97,7 @@ impl AppRepository {
 #[busybody::async_trait]
 impl busybody::Injectable for AppRepository {
     async fn inject(ci: &busybody::ServiceContainer) -> Self {
-        let app = ci.get::<DirtyBase>().unwrap();
+        let app = ci.get::<DirtyBaseApp>().unwrap();
         Self::new(app.schema_manger())
     }
 }

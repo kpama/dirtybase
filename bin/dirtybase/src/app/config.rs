@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 
 use dirtybase_config::DirtyConfig;
-use dirtybase_db::entity::user::hash_password;
+use dirtybase_db::db::entity::user::hash_password;
 use std::env;
 
-use super::DirtyBase;
+use super::DirtyBaseApp;
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -177,6 +177,6 @@ impl ConfigBuilder {
 #[busybody::async_trait]
 impl busybody::Injectable for Config {
     async fn inject(c: &busybody::ServiceContainer) -> Self {
-        c.get::<DirtyBase>().unwrap().config()
+        c.get::<DirtyBaseApp>().unwrap().config()
     }
 }
