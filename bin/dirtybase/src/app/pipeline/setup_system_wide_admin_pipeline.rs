@@ -66,7 +66,7 @@ async fn find_or_create_admin_user(
         )
         .await;
 
-    if let Ok((created, user)) = result {
+    if let Ok(Some((created, user))) = result {
         if !created {
             log::info!("System admin already exist");
             pipe.stop_the_flow();
@@ -112,7 +112,7 @@ async fn create_default_company(
         new_company.name = Some(config.app_name().clone());
         new_company.description = Some("This is the core/main company".into());
 
-        if let Ok(company) = company_service
+        if let Ok(Some(company)) = company_service
             .create(new_company, user.clone(), user.clone())
             .await
         {
@@ -142,8 +142,8 @@ async fn create_default_app_add_user(
         app_entity.is_system_app = Some(true);
         app_entity.description = Some("This is the core/main application".into());
 
-        if let Ok(app) = app_service.create(app_entity, user.clone()).await {
-            if let Ok(roles) = role_service
+        if let Ok(Some(app)) = app_service.create(app_entity, user.clone()).await {
+            if let Ok(Some(roles)) = role_service
                 .create_defaults(app.clone(), user.clone())
                 .await
             {

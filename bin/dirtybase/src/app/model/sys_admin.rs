@@ -8,6 +8,7 @@ mod sys_admin_entity;
 mod sys_admin_repository;
 mod sys_admin_service;
 
+use dirtybase_db_types::TableEntityTrait;
 pub use sys_admin_entity::SysAdminEntity;
 pub use sys_admin_repository::SysAdminRepository;
 pub use sys_admin_service::SysAdminService;
@@ -28,7 +29,7 @@ pub async fn setup_sysadmins_table(manager: &Manager) {
     }
 
     manager
-        .create_table_schema(SYS_ADMIN_TABLE, |table| {
+        .create_table_schema(SysAdminEntity::table_name(), |table| {
             // the user
             table.ulid_fk(USER_TABLE, true).set_is_unique(true);
         })

@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use async_trait::async_trait;
 use dirtybase_contract::db::base::{
     column::{BaseColumn, ColumnDefault, ColumnType},
@@ -18,6 +19,8 @@ struct ActiveQuery {
     statement: String,
     params: Vec<String>,
 }
+
+const LOG_TARGET: &str = "mysql_db_driver";
 
 impl ActiveQuery {
     fn to_sql_string(&self) -> String {
@@ -79,8 +82,9 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         let mut rows = query.fetch(self.db_pool.as_ref());
         while let Ok(result) = rows.try_next().await {
             if let Some(row) = result {
-                // TODO: Handle error
-                _ = sender.send(self.row_to_field_value(&row)).await;
+                if let Err(e) = sender.send(self.row_to_column_value(&row)).await {
+                    log::error!(target: LOG_TARGET, "could not send mpsc stream: {}", e.to_string());
+                }
             } else {
                 break;
             }
@@ -108,7 +112,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
     async fn fetch_all(
         &self,
         query_builder: &QueryBuilder,
-    ) -> Result<Vec<HashMap<String, FieldValue>>, anyhow::Error> {
+    ) -> Result<Option<Vec<HashMap<String, FieldValue>>>, anyhow::Error> {
         let mut results = Vec::new();
 
         let mut params = Vec::new();
@@ -120,21 +124,29 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         }
 
         let mut rows = query.fetch(self.db_pool.as_ref());
-        while let Ok(result) = rows.try_next().await {
-            if let Some(row) = result {
-                results.push(self.row_to_field_value(&row));
-            } else {
-                break;
+        loop {
+            let next = rows.try_next().await;
+            match next {
+                Ok(result) => {
+                    if let Some(row) = result {
+                        results.push(self.row_to_column_value(&row));
+                    } else {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    return Err(anyhow!("could not fetch rows: {}", e));
+                }
             }
         }
 
-        Ok(results)
+        Ok(Some(results))
     }
 
     async fn fetch_one(
         &self,
         query_builder: &QueryBuilder,
-    ) -> Result<ColumnAndValue, anyhow::Error> {
+    ) -> Result<Option<ColumnAndValue>, anyhow::Error> {
         let mut params = Vec::new();
         let statement = self.build_query(query_builder, &mut params);
 
@@ -142,8 +154,11 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         for p in &params {
             query = query.bind::<&str>(p);
         }
-        return match query.fetch_one(self.db_pool.as_ref()).await {
-            Ok(row) => Ok(self.row_to_field_value(&row)),
+        return match query.fetch_optional(self.db_pool.as_ref()).await {
+            Ok(result) => match result {
+                Some(row) => Ok(Some(self.row_to_column_value(&row))),
+                None => Ok(None),
+            },
             Err(e) => Err(e.into()),
         };
     }
@@ -539,7 +554,7 @@ impl MySqlSchemaManager {
         }
     }
 
-    fn row_to_field_value(&self, row: &MySqlRow) -> ColumnAndValue {
+    fn row_to_column_value(&self, row: &MySqlRow) -> ColumnAndValue {
         let mut this_row = HashMap::new();
 
         for col in row.columns() {

@@ -84,7 +84,7 @@ pub trait SchemaManagerTrait: Send + Sync {
     async fn fetch_all(
         &self,
         query_builder: &QueryBuilder,
-    ) -> Result<Vec<ColumnAndValue>, anyhow::Error>;
+    ) -> Result<Option<Vec<ColumnAndValue>>, anyhow::Error>;
 
     async fn stream_result(
         &self,
@@ -95,35 +95,40 @@ pub trait SchemaManagerTrait: Send + Sync {
     async fn fetch_one(
         &self,
         query_builder: &QueryBuilder,
-    ) -> Result<ColumnAndValue, anyhow::Error>;
+    ) -> Result<Option<ColumnAndValue>, anyhow::Error>;
 
     async fn fetch_one_to<T: FromColumnAndValue>(
         &self,
         query_builder: &QueryBuilder,
-    ) -> Result<T, anyhow::Error>
+    ) -> Result<Option<T>, anyhow::Error>
     where
         Self: Sized,
     {
         let result = self.fetch_one(query_builder).await;
 
         if let Ok(row) = result {
-            Ok(T::from_column_value(row))
+            match row {
+                Some(r) => Ok(Some(T::from_column_value(r))),
+                None => Ok(None),
+            }
         } else {
             Err(result.err().unwrap())
         }
     }
 
-    async fn fetch_all_to<T>(&self, query: &QueryBuilder) -> Result<Vec<T>, anyhow::Error>
+    async fn fetch_all_to<T>(&self, query: &QueryBuilder) -> Result<Option<Vec<T>>, anyhow::Error>
     where
         Self: Sized,
         T: FromColumnAndValue,
     {
         let result = self.fetch_all(query).await;
         if let Ok(records) = result {
-            Ok(records
-                .into_iter()
-                .map(T::from_column_value)
-                .collect::<Vec<T>>())
+            match records {
+                Some(rs) => Ok(Some(
+                    rs.into_iter().map(T::from_column_value).collect::<Vec<T>>(),
+                )),
+                None => Ok(None),
+            }
         } else {
             Err(result.err().unwrap())
         }
@@ -141,49 +146,62 @@ pub struct SchemaWrapper {
 }
 
 impl SchemaWrapper {
-    pub async fn fetch_all(&self) -> Result<Vec<StructuredColumnAndValue>, anyhow::Error> {
+    pub async fn fetch_all(&self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
         let results = self.inner.fetch_all(&self.query_builder).await;
-        if let Ok(r) = results {
-            Ok(StructuredColumnAndValue::from_results(r))
+        if let Ok(records) = results {
+            match records {
+                Some(rs) => Ok(Some(StructuredColumnAndValue::from_results(rs))),
+                None => Ok(Some(Vec::new())),
+            }
         } else {
             Err(results.err().unwrap())
         }
     }
 
-    pub async fn fetch_one(&self) -> Result<StructuredColumnAndValue, anyhow::Error> {
+    pub async fn fetch_one(&self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
         let result = self.inner.fetch_one(&self.query_builder).await;
 
-        if let Ok(r) = result {
-            Ok(StructuredColumnAndValue::from_a_result(r))
+        if let Ok(row) = result {
+            match row {
+                Some(r) => Ok(Some(StructuredColumnAndValue::from_a_result(r))),
+                None => Ok(None),
+            }
         } else {
             Err(result.err().unwrap())
         }
     }
 
-    pub async fn fetch_one_to<T: FromColumnAndValue>(&self) -> Result<T, anyhow::Error>
+    pub async fn fetch_one_to<T: FromColumnAndValue>(&self) -> Result<Option<T>, anyhow::Error>
     where
         Self: Sized,
     {
         let result = self.fetch_one().await;
 
         if let Ok(row) = result {
-            Ok(T::from_column_value(row.fields()))
+            match row {
+                Some(r) => Ok(Some(T::from_column_value(r.fields()))),
+                None => Ok(None),
+            }
         } else {
             Err(result.err().unwrap())
         }
     }
 
-    pub async fn fetch_all_to<T>(&self) -> Result<Vec<T>, anyhow::Error>
+    pub async fn fetch_all_to<T>(&self) -> Result<Option<Vec<T>>, anyhow::Error>
     where
         Self: Sized,
         T: FromColumnAndValue,
     {
         let result = self.fetch_all().await;
         if let Ok(records) = result {
-            Ok(records
-                .into_iter()
-                .map(|row| T::from_column_value(row.fields()))
-                .collect::<Vec<T>>())
+            match records {
+                Some(rows) => Ok(Some(
+                    rows.into_iter()
+                        .map(|row| T::from_column_value(row.fields()))
+                        .collect::<Vec<T>>(),
+                )),
+                None => Ok(Some(Vec::new())),
+            }
         } else {
             Err(result.err().unwrap())
         }

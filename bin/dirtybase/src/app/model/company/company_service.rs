@@ -25,7 +25,7 @@ impl CompanyService {
         mut company: CompanyEntity,
         company_user: UserEntity,
         blame: UserEntity,
-    ) -> Result<CompanyEntity, anyhow::Error> {
+    ) -> Result<Option<CompanyEntity>, anyhow::Error> {
         // TODO: validate the record
         if company.name.is_none() {
             return Err(anyhow!("Name field is required")); // TODO: Insert this in map and return all the errors at once?
@@ -54,7 +54,7 @@ impl CompanyService {
         mut company: CompanyEntity,
         id: &str,
         blame: UserEntity,
-    ) -> Result<CompanyEntity, anyhow::Error> {
+    ) -> Result<Option<CompanyEntity>, anyhow::Error> {
         // TODO: Validation ....
         if blame.id.is_none() {
             return Err(anyhow!("Company entity requires a user to blame"));

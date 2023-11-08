@@ -1,5 +1,4 @@
 use super::client::redis_client::make_redis_client;
-use super::setup_database::create_data_tables;
 use super::setup_defaults::setup_default_entities;
 use super::Config;
 use dirtybase_db::db::base::manager::Manager;

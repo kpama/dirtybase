@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use orsomafo::Dispatchable;
 
 use crate::db::{base::helper::generate_ulid, event::UserCreatedEvent};
@@ -25,7 +26,7 @@ impl UserService {
         &self,
         username: &str,
         without_trash: bool,
-    ) -> Result<UserEntity, anyhow::Error> {
+    ) -> Result<Option<UserEntity>, anyhow::Error> {
         self.user_repo
             .find_by_username(username, without_trash)
             .await
@@ -38,13 +39,16 @@ impl UserService {
         username: &str,
         email: &str,
         raw_password: &str,
-    ) -> Result<(bool, UserEntity), anyhow::Error> {
-        if let Ok(user) = self
+    ) -> Result<Option<(bool, UserEntity)>, anyhow::Error> {
+        if let Ok(result) = self
             .user_repo
             .find_by_username_and_email(username, email, true)
             .await
         {
-            Ok((false, user))
+            match result {
+                Some(user) => Ok(Some((false, user))),
+                None => Ok(None),
+            }
         } else {
             let mut user = UserEntity::new();
             user.email = Some(email.into());
@@ -54,7 +58,10 @@ impl UserService {
             user.status = Some(super::UserStatus::Active);
 
             match self.create(user).await {
-                Ok(user) => Ok((true, user)),
+                Ok(result) => match result {
+                    Some(user) => Ok(Some((true, user))),
+                    None => Err(anyhow!("could not create user")),
+                },
                 Err(e) => Err(e),
             }
         }
@@ -64,7 +71,7 @@ impl UserService {
         &mut self,
         password: &str,
         id: &str,
-    ) -> Result<UserEntity, anyhow::Error> {
+    ) -> Result<Option<UserEntity>, anyhow::Error> {
         // TODO: validate password
         let user = UserEntity {
             password: Some(hash_password(password)),
@@ -75,7 +82,10 @@ impl UserService {
         self.update(user, id).await
     }
 
-    pub async fn create(&mut self, mut user: UserEntity) -> Result<UserEntity, anyhow::Error> {
+    pub async fn create(
+        &mut self,
+        mut user: UserEntity,
+    ) -> Result<Option<UserEntity>, anyhow::Error> {
         user.password = Some(hash_password(
             &user.password.unwrap_or("changeme!!".to_owned()),
         ));
@@ -88,8 +98,8 @@ impl UserService {
 
         let result = self.user_repo.create(user).await;
 
-        if result.is_ok() {
-            let event = UserCreatedEvent::new(result.as_ref().unwrap().id.as_ref().unwrap());
+        if let Ok(Some(user)) = &result {
+            let event = UserCreatedEvent::new(user.id.as_ref().unwrap());
             event.dispatch_event();
         } else {
             log::error!(
@@ -105,7 +115,7 @@ impl UserService {
         &mut self,
         user: UserEntity,
         id: &str,
-    ) -> Result<UserEntity, anyhow::Error> {
+    ) -> Result<Option<UserEntity>, anyhow::Error> {
         self.user_repo.update(id, user).await
     }
 }

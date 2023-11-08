@@ -13,6 +13,7 @@ mod role_user_entity;
 mod role_user_repository;
 mod role_user_service;
 
+use dirtybase_db_types::TableEntityTrait;
 pub use role_user_entity::RoleUserEntity;
 pub use role_user_repository::RoleUserRepository;
 pub use role_user_service::RoleUserService;
@@ -51,7 +52,7 @@ pub async fn setup_role_users_table(manager: &Manager) {
         );
     }
     manager
-        .create_table_schema(ROLE_USER_TABLE, |table| {
+        .create_table_schema(RoleUserEntity::table_name(), |table| {
             // role id
             table.ulid_fk(ROLE_TABLE, true);
             // user id

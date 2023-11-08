@@ -17,7 +17,7 @@ impl PermissionService {
     pub async fn create(
         &self,
         permission: PermissionEntity,
-    ) -> Result<PermissionEntity, anyhow::Error> {
+    ) -> Result<Option<PermissionEntity>, anyhow::Error> {
         // TODO: Validate the data
         self.repo.create(permission).await
     }
@@ -25,7 +25,7 @@ impl PermissionService {
     pub async fn update(
         &self,
         mut permission: PermissionEntity,
-    ) -> Result<PermissionEntity, anyhow::Error> {
+    ) -> Result<Option<PermissionEntity>, anyhow::Error> {
         let the_id = permission.id.clone();
 
         if let Some(id) = &the_id {

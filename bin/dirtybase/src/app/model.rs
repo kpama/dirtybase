@@ -1,4 +1,5 @@
 pub mod app;
+pub mod app_schema;
 pub mod audit_log;
 pub mod company;
 pub mod dirtybase_user;

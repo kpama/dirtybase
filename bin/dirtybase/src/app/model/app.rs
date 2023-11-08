@@ -13,6 +13,7 @@ mod app_service;
 pub use app_entity::AppEntity;
 pub use app_repository::AppRepository;
 pub use app_service::AppService;
+use dirtybase_db_types::TableEntityTrait;
 
 use super::company::COMPANY_TABLE;
 
@@ -34,7 +35,7 @@ pub const APP_TABLE_DELETED_AT_FIELD: &str = DELETED_AT_FIELD;
 
 pub async fn setup_applications_table(manager: &Manager) {
     manager
-        .create_table_schema(APP_TABLE, |table| {
+        .create_table_schema(AppEntity::table_name(), |table| {
             // internal_id
             // id
             table.id_set();

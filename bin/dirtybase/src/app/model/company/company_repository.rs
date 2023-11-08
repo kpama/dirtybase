@@ -23,7 +23,10 @@ impl CompanyRepository {
         &self.manager
     }
 
-    pub async fn find_by_internal_id(&self, id: u64) -> Result<CompanyEntity, anyhow::Error> {
+    pub async fn find_by_internal_id(
+        &self,
+        id: u64,
+    ) -> Result<Option<CompanyEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(COMPANY_TABLE, |q| {
                 q.select_all()
@@ -34,7 +37,7 @@ impl CompanyRepository {
             .await
     }
 
-    pub async fn find_by_id(&self, id: &str) -> Result<CompanyEntity, anyhow::Error> {
+    pub async fn find_by_id(&self, id: &str) -> Result<Option<CompanyEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(COMPANY_TABLE, |q| {
                 q.select_all()
@@ -48,7 +51,7 @@ impl CompanyRepository {
     pub async fn create(
         &self,
         record: impl IntoColumnAndValue,
-    ) -> Result<CompanyEntity, anyhow::Error> {
+    ) -> Result<Option<CompanyEntity>, anyhow::Error> {
         let kv = record.into_column_value();
         let id: String = FieldValue::from_ref_option_into(kv.get(COMPANY_TABLE_ID_FIELD));
 
@@ -60,7 +63,7 @@ impl CompanyRepository {
         &self,
         id: &str,
         record: impl IntoColumnAndValue,
-    ) -> Result<CompanyEntity, anyhow::Error> {
+    ) -> Result<Option<CompanyEntity>, anyhow::Error> {
         let column_and_values = record.into_column_value();
         self.manager
             .update(COMPANY_TABLE, column_and_values, |q| {

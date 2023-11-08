@@ -14,7 +14,7 @@ pub mod permission_service;
 pub async fn setup_permission_table(manager: &Manager) {
     // TODO: Make each role unique based on it's name and company fields
     manager
-        .create_table_schema("core_permission", |table| {
+        .create_table_schema(PermissionEntity::table_name(), |table| {
             // internal_id
             // id
             table.id_set();

@@ -33,7 +33,7 @@ impl AppRepository {
     pub async fn find_all_by_user(
         &self,
         core_user_id: &str,
-    ) -> Result<Vec<StructuredColumnAndValue>, anyhow::Error> {
+    ) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
         self.manager()
             .select_from_table(USER_TABLE, |q| {
                 let app_columns = AppEntity::table_column_full_names()
@@ -58,7 +58,7 @@ impl AppRepository {
             .await
     }
 
-    pub async fn find_by_id(&self, id: &str) -> Result<AppEntity, anyhow::Error> {
+    pub async fn find_by_id(&self, id: &str) -> Result<Option<AppEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(APP_TABLE, |q| {
                 q.select_all().eq(APP_TABLE_ID_FIELD, id);
@@ -70,7 +70,7 @@ impl AppRepository {
     pub async fn create(
         &self,
         record: impl IntoColumnAndValue,
-    ) -> Result<AppEntity, anyhow::Error> {
+    ) -> Result<Option<AppEntity>, anyhow::Error> {
         let kv = record.into_column_value();
         let id: String = FieldValue::from_ref_option_into(kv.get(APP_TABLE_ID_FIELD));
 
@@ -82,7 +82,7 @@ impl AppRepository {
         &self,
         id: &str,
         record: impl IntoColumnAndValue,
-    ) -> Result<AppEntity, anyhow::Error> {
+    ) -> Result<Option<AppEntity>, anyhow::Error> {
         let column_and_values = record.into_column_value();
         self.manager
             .update(APP_TABLE, column_and_values, |q| {

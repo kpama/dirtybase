@@ -61,10 +61,10 @@ impl DirtybaseUserRepository {
                 .fetch_all()
                 .await
                 .and_then(|list| {
-                    if list.is_empty() {
+                    if list.is_none() {
                         Err(anyhow::anyhow!("User not found"))
                     } else {
-                        Ok(self.build_entity_result(list))
+                        Ok(self.build_entity_result(list.unwrap()))
                     }
                 })
         } else {
@@ -88,10 +88,10 @@ impl DirtybaseUserRepository {
             .fetch_all()
             .await
             .and_then(|list| {
-                if list.is_empty() {
+                if list.is_none() {
                     Err(anyhow::anyhow!("User not found"))
                 } else {
-                    Ok(self.build_dto_result(list))
+                    Ok(self.build_dto_result(list.unwrap()))
                 }
             })
     }
@@ -99,7 +99,7 @@ impl DirtybaseUserRepository {
     pub async fn find_by_core_user_id(
         &self,
         core_user_id: &str,
-    ) -> Result<DirtybaseUserEntity, anyhow::Error> {
+    ) -> Result<Option<DirtybaseUserEntity>, anyhow::Error> {
         self.manager
             .select_from_table(DirtybaseUserEntity::table_name(), |q| {
                 q.select_all();
@@ -112,7 +112,7 @@ impl DirtybaseUserRepository {
     pub async fn create(
         &self,
         record: DirtybaseUserEntity,
-    ) -> Result<DirtybaseUserEntity, anyhow::Error> {
+    ) -> Result<Option<DirtybaseUserEntity>, anyhow::Error> {
         let core_user_id = record.core_user_id.as_ref().unwrap().clone();
         let column_and_values = record.into_column_value();
 

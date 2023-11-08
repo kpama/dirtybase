@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anyhow::Ok;
 use dirtybase_db::base::manager::Manager;
 use dirtybase_db_types::{types::IntoColumnAndValue, TableEntityTrait};
@@ -23,7 +25,7 @@ impl MigrationRepository {
         setup_migration_table(&self.manager).await;
     }
 
-    pub async fn find_by_name(&self, name: &str) -> Result<MigrationEntity, anyhow::Error> {
+    pub async fn find_by_name(&self, name: &str) -> Result<Option<MigrationEntity>, anyhow::Error> {
         self.manager
             .select_from_table(MigrationEntity::table_name(), |query| {
                 query
@@ -34,11 +36,14 @@ impl MigrationRepository {
             .await
     }
 
-    pub async fn get_last_batch(&self) -> Result<Vec<MigrationEntity>, anyhow::Error> {
-        Ok(Vec::new())
+    pub async fn get_last_batch(&self) -> Result<HashMap<String, MigrationEntity>, anyhow::Error> {
+        Ok(HashMap::new())
     }
 
-    pub async fn create(&self, record: MigrationEntity) -> Result<MigrationEntity, anyhow::Error> {
+    pub async fn create(
+        &self,
+        record: MigrationEntity,
+    ) -> Result<Option<MigrationEntity>, anyhow::Error> {
         let name = record.name.as_ref().clone().unwrap().clone();
         let kv = record.into_column_value();
         self.manager.insert(MigrationEntity::table_name(), kv).await;

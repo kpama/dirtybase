@@ -8,6 +8,7 @@ use dirtybase_db::db::{
     },
     entity::user::USER_TABLE,
 };
+use dirtybase_db_types::TableEntityTrait;
 
 use super::app::APP_TABLE;
 
@@ -54,7 +55,7 @@ pub async fn setup_roles_table(manager: &Manager) {
     }
 
     manager
-        .create_table_schema(ROLE_TABLE, |table| {
+        .create_table_schema(RoleEntity::table_name(), |table| {
             // internal_id
             // id
             table.id_set();

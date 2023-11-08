@@ -32,7 +32,7 @@ impl CacheDbStoreRepository {
             .fetch_one_to()
             .await
         {
-            Ok(result) => Some(result),
+            Ok(result) => result,
             _ => None,
         }
     }
@@ -66,7 +66,7 @@ impl CacheDbStoreRepository {
             .fetch_all_to::<CacheDbStoreEntity>()
             .await
         {
-            Ok(list) => Some(list),
+            Ok(list) => list,
             _ => None,
         }
     }

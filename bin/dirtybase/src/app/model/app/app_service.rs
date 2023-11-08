@@ -27,7 +27,7 @@ impl AppService {
         &self,
         mut app: AppEntity,
         blame: UserEntity,
-    ) -> Result<AppEntity, anyhow::Error> {
+    ) -> Result<Option<AppEntity>, anyhow::Error> {
         // TODO: Validation....
         if app.core_company_id.is_none() {
             return Err(anyhow!("An application requires a company"));
@@ -57,7 +57,7 @@ impl AppService {
         mut app: AppEntity,
         id: &str,
         blame: UserEntity,
-    ) -> Result<AppEntity, anyhow::Error> {
+    ) -> Result<Option<AppEntity>, anyhow::Error> {
         // TODO: Validation
         if app.core_company_id.is_none() {
             return Err(anyhow!("An application requires a company"));

@@ -2,8 +2,13 @@ use clap::Subcommand;
 
 use dirtybase_contract::ExtensionMigrations;
 use dirtybase_db::base::manager::Manager;
+use dirtybase_db_types::{types::ColumnAndValue, TableEntityTrait};
 
-use crate::app::DirtyBaseAppService;
+use crate::app::{
+    model::migration::{MigrationEntity, MigrationRepository},
+    setup_database::setup_migration_table,
+    DirtyBaseAppService,
+};
 
 #[derive(Subcommand, Debug)]
 pub enum MigrateAction {
@@ -35,22 +40,28 @@ impl Migrator {
     }
 
     pub async fn up(&self, manager: &Manager) {
+        let batch = chrono::Utc::now().timestamp();
+
         for entry in &self.migrations {
             log::debug!(target: LOG_TARGET, "migrating {} up", entry.id());
             // TODO: First check before running the migration
-            entry.up(manager).await
+
+            entry.up(manager).await;
         }
     }
 
     pub async fn down(&self, manager: &Manager) {
+        let repo = self.repo().await;
+
         for entry in &self.migrations {
             log::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
             // TODO: First check before running the migration
-            entry.down(manager).await
+            entry.down(manager).await;
         }
     }
 
     pub async fn refresh(&self, manager: &Manager) {
+        let repo = self.repo().await;
         // Migrate everything down
         for entry in &self.migrations {
             log::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
@@ -64,9 +75,17 @@ impl Migrator {
     }
 
     pub async fn reset(&self, manager: &Manager) {
+        let repo = self.repo().await;
         for entry in &self.migrations {
             log::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
             entry.down(manager).await
         }
+    }
+
+    async fn repo(&self) -> MigrationRepository {
+        let repo = busybody::helpers::provide::<MigrationRepository>().await;
+        repo.init().await;
+
+        repo
     }
 }

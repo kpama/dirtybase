@@ -20,7 +20,7 @@ impl PermissionRepository {
         &self,
         name: &str,
         with_trashed: bool,
-    ) -> Result<PermissionEntity, anyhow::Error> {
+    ) -> Result<Option<PermissionEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(PermissionEntity::table_name(), |query| {
                 query.select_all();
@@ -38,7 +38,7 @@ impl PermissionRepository {
         &self,
         id: &str,
         with_trashed: bool,
-    ) -> Result<PermissionEntity, anyhow::Error> {
+    ) -> Result<Option<PermissionEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(PermissionEntity::table_name(), |query| {
                 query.select_all();
@@ -56,7 +56,7 @@ impl PermissionRepository {
         &self,
         company_id: &str,
         with_trashed: bool,
-    ) -> Result<Vec<PermissionEntity>, anyhow::Error> {
+    ) -> Result<Option<Vec<PermissionEntity>>, anyhow::Error> {
         self.manager()
             .select_from_table(PermissionEntity::table_name(), |query| {
                 query
@@ -74,7 +74,7 @@ impl PermissionRepository {
     pub async fn create(
         &self,
         record: impl IntoColumnAndValue,
-    ) -> Result<PermissionEntity, anyhow::Error> {
+    ) -> Result<Option<PermissionEntity>, anyhow::Error> {
         let kv = record.into_column_value();
         let id: String =
             FieldValue::from_ref_option_into(kv.get(PermissionEntity::col_name_for_id()));
@@ -90,7 +90,7 @@ impl PermissionRepository {
         &self,
         record: impl IntoColumnAndValue,
         id: &str,
-    ) -> Result<PermissionEntity, anyhow::Error> {
+    ) -> Result<Option<PermissionEntity>, anyhow::Error> {
         self.manager()
             .update(
                 PermissionEntity::table_name(),

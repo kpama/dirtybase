@@ -24,7 +24,7 @@ impl UserRepository {
         &mut self,
         id: u64,
         without_trash: bool,
-    ) -> Result<UserEntity, anyhow::Error> {
+    ) -> Result<Option<UserEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(USER_TABLE, |q| {
                 q.select_all()
@@ -38,7 +38,7 @@ impl UserRepository {
             .await
     }
 
-    pub async fn find_on_by_id(&self, id: &str) -> Result<UserEntity, anyhow::Error> {
+    pub async fn find_on_by_id(&self, id: &str) -> Result<Option<UserEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(USER_TABLE, |q| {
                 q.select_all()
@@ -54,7 +54,7 @@ impl UserRepository {
         username: &str,
         email: &str,
         without_trash: bool,
-    ) -> Result<UserEntity, anyhow::Error> {
+    ) -> Result<Option<UserEntity>, anyhow::Error> {
         if !username.is_empty() || !email.is_empty() {
             self.manager()
                 .select_from_table(USER_TABLE, |q| {
@@ -79,7 +79,7 @@ impl UserRepository {
         &self,
         username: &str,
         without_trash: bool,
-    ) -> Result<UserEntity, anyhow::Error> {
+    ) -> Result<Option<UserEntity>, anyhow::Error> {
         self.manager
             .select_from_table(UserEntity::table_name(), |query| {
                 query
@@ -99,7 +99,7 @@ impl UserRepository {
         username: &str,
         email: &str,
         without_trash: bool,
-    ) -> Result<UserEntity, anyhow::Error> {
+    ) -> Result<Option<UserEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(UserEntity::table_name(), |q| {
                 q.select_all()
@@ -116,7 +116,7 @@ impl UserRepository {
     pub async fn create(
         &self,
         record: impl IntoColumnAndValue,
-    ) -> Result<UserEntity, anyhow::Error> {
+    ) -> Result<Option<UserEntity>, anyhow::Error> {
         let column_and_values = record.into_column_value();
         let id: String = FieldValue::from_ref_option_into(
             column_and_values.get(UserEntity::id_column().unwrap()),
@@ -133,7 +133,7 @@ impl UserRepository {
         &self,
         id: &str,
         record: impl IntoColumnAndValue,
-    ) -> Result<UserEntity, anyhow::Error> {
+    ) -> Result<Option<UserEntity>, anyhow::Error> {
         let kv = record.into_column_value();
         self.manager()
             .update(UserEntity::table_name(), kv, move |q| {

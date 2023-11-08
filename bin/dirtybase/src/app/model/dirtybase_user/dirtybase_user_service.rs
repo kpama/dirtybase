@@ -60,7 +60,7 @@ impl DirtybaseUserService {
     pub async fn create(
         &self,
         entity: DirtybaseUserEntity,
-    ) -> Result<DirtybaseUserEntity, anyhow::Error> {
+    ) -> Result<Option<DirtybaseUserEntity>, anyhow::Error> {
         if entity.core_user_id.is_some() {
             return self.repo.create(entity).await;
         }
@@ -82,7 +82,7 @@ impl DirtybaseUserService {
         payload: SwitchAppDto,
     ) -> Result<SwitchAppResultDto, anyhow::Error> {
         // TODO: Validation
-        if let Ok(user) = self.repo.find_by_core_user_id(core_user_id).await {
+        if let Ok(Some(user)) = self.repo.find_by_core_user_id(core_user_id).await {
             Ok(ClaimBuilder::new(&user)
                 .set_app(&payload.app_id)
                 .set_role(&payload.role_id)
@@ -125,11 +125,12 @@ impl DirtybaseUserService {
 
     pub async fn reset_login_attempts(&self, core_user_id: &str) -> Result<bool, anyhow::Error> {
         match self.repo.find_by_core_user_id(core_user_id).await {
-            Ok(mut user) => {
+            Ok(Some(mut user)) => {
                 user.reset_login_attempts();
                 _ = self.repo.update(user).await;
                 Ok(true)
             }
+            Ok(None) => Ok(false),
             Err(e) => Err(e),
         }
     }

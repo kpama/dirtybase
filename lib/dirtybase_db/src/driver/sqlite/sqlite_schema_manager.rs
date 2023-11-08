@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use async_trait::async_trait;
 use dirtybase_contract::db::base::{
     column::{BaseColumn, ColumnDefault, ColumnType},
@@ -13,6 +14,8 @@ use dirtybase_contract::db::dirtybase_db_types::{field_values::FieldValue, types
 use futures::stream::TryStreamExt;
 use sqlx::{sqlite::SqliteRow, types::chrono, Column, Pool, Row, Sqlite};
 use std::{collections::HashMap, sync::Arc};
+
+const LOG_TARGET: &str = "sqlite_db_driver";
 
 struct ActiveQuery {
     statement: String,
@@ -80,8 +83,9 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         let mut rows = query.fetch(self.db_pool.as_ref());
         while let Ok(result) = rows.try_next().await {
             if let Some(row) = result {
-                // TODO: Handle error
-                _ = sender.send(self.row_to_column_value(&row)).await;
+                if let Err(e) = sender.send(self.row_to_column_value(&row)).await {
+                    log::error!(target: LOG_TARGET, "could not send mpsc stream: {}", e.to_string());
+                }
             } else {
                 break;
             }
@@ -108,7 +112,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
     async fn fetch_all(
         &self,
         query_builder: &QueryBuilder,
-    ) -> Result<Vec<HashMap<String, FieldValue>>, anyhow::Error> {
+    ) -> Result<Option<Vec<HashMap<String, FieldValue>>>, anyhow::Error> {
         let mut results = Vec::new();
 
         let mut params = Vec::new();
@@ -120,21 +124,29 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         }
 
         let mut rows = query.fetch(self.db_pool.as_ref());
-        while let Ok(result) = rows.try_next().await {
-            if let Some(row) = result {
-                results.push(self.row_to_column_value(&row));
-            } else {
-                break;
+        loop {
+            let next = rows.try_next().await;
+            match next {
+                Ok(result) => {
+                    if let Some(row) = result {
+                        results.push(self.row_to_column_value(&row));
+                    } else {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    return Err(anyhow!("could not fetch rows: {}", e));
+                }
             }
         }
 
-        Ok(results)
+        Ok(Some(results))
     }
 
     async fn fetch_one(
         &self,
         query_builder: &QueryBuilder,
-    ) -> Result<ColumnAndValue, anyhow::Error> {
+    ) -> Result<Option<ColumnAndValue>, anyhow::Error> {
         let mut params = Vec::new();
         let statement = self.build_query(query_builder, &mut params);
 
@@ -142,8 +154,12 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         for p in &params {
             query = query.bind::<&str>(p);
         }
-        return match query.fetch_one(self.db_pool.as_ref()).await {
-            Ok(row) => Ok(self.row_to_column_value(&row)),
+
+        return match query.fetch_optional(self.db_pool.as_ref()).await {
+            Ok(result) => match result {
+                Some(row) => Ok(Some(self.row_to_column_value(&row))),
+                None => Ok(None),
+            },
             Err(e) => Err(e.into()),
         };
     }

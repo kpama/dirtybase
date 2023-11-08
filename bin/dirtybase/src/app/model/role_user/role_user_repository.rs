@@ -30,7 +30,7 @@ impl RoleUserRepository {
         user_id: &str,
         app_id: &str,
         with_trashed: bool,
-    ) -> Result<RoleUserEntity, anyhow::Error> {
+    ) -> Result<Option<RoleUserEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(ROLE_USER_TABLE, |q| {
                 q.select_all()
@@ -47,7 +47,7 @@ impl RoleUserRepository {
     pub async fn create(
         &self,
         record: impl IntoColumnAndValue,
-    ) -> Result<RoleUserEntity, anyhow::Error> {
+    ) -> Result<Option<RoleUserEntity>, anyhow::Error> {
         let kv = record.into_column_value();
         let user_id: String =
             FieldValue::from_ref_option_into(kv.get(ROLE_USER_TABLE_CORE_USER_ID_FIELD));
@@ -62,7 +62,7 @@ impl RoleUserRepository {
     pub async fn update(
         &self,
         record: impl IntoColumnAndValue,
-    ) -> Result<RoleUserEntity, anyhow::Error> {
+    ) -> Result<Option<RoleUserEntity>, anyhow::Error> {
         let kv = record.into_column_value();
 
         let user_id: String =

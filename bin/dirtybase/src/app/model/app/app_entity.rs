@@ -4,7 +4,7 @@ use dirtybase_db::{
 };
 use dirtybase_db_types::types::{BooleanField, DateTimeField, StringField, UlidField};
 
-#[derive(Debug, Clone, Default, DirtyTable)]
+#[derive(Debug, Clone, Default, DirtyTable, serde::Deserialize, serde::Serialize)]
 #[dirty(table = "core_app", id = "id")]
 pub struct AppEntity {
     pub internal_id: InternalIdField,

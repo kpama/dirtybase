@@ -1,11 +1,20 @@
 use super::model::{
-    app::setup_applications_table, audit_log::setup_audit_log_table, company::setup_company_table,
-    dirtybase_user::setup_dirtybase_user_table, migration::MigrationEntity,
-    permission::setup_permission_table, role::setup_roles_table,
-    role_permission::setup_role_permission_table, role_user::setup_role_users_table,
-    sys_admin::setup_sysadmins_table,
+    app::{setup_applications_table, AppEntity},
+    app_schema::AppSchemaEntity,
+    audit_log::{setup_audit_log_table, AuditLogEntity},
+    company::{setup_company_table, CompanyEntity},
+    dirtybase_user::{setup_dirtybase_user_table, DirtybaseUserEntity},
+    migration::MigrationEntity,
+    permission::{permission_entity::PermissionEntity, setup_permission_table},
+    role::{setup_roles_table, RoleEntity},
+    role_permission::{setup_role_permission_table, RolePermissionEntity},
+    role_user::{setup_role_users_table, RoleUserEntity},
+    sys_admin::{setup_sysadmins_table, SysAdminEntity},
 };
-use dirtybase_db::db::{base::manager::Manager, entity::user::setup_users_table};
+use dirtybase_db::{
+    db::{base::manager::Manager, entity::user::setup_users_table},
+    entity::user::UserEntity,
+};
 use dirtybase_db_types::TableEntityTrait;
 
 pub const APPLICATION_TABLE: &str = "core_app";
@@ -18,7 +27,7 @@ pub const FILE_METADATA_TABLE: &str = "core_file_meta";
 // The table that will contain the "collections" definitions
 pub(crate) async fn setup_schema_table(manager: &Manager) {
     manager
-        .create_table_schema(APPLICATION_SCHEMA_TABLE, |table| {
+        .create_table_schema(AppEntity::table_name(), |table| {
             // internal_id
             // id
             table.id_set();
@@ -60,27 +69,9 @@ pub(crate) async fn setup_migration_table(manager: &Manager) {
         .await;
 }
 
-// The table that will hold file metadata
-pub(crate) async fn setup_file_metadata_table(manager: &Manager) {
-    manager
-        .create_table_schema(FILE_METADATA_TABLE, |table| {
-            // internal_id
-            // id
-            table.id_set();
-            // external_id
-            table.ulid("external_id").set_is_nullable(false);
-            // meta
-            table.json("meta");
-            // timestamp
-            table.timestamps();
-        })
-        .await;
-}
-
-pub(crate) async fn create_data_tables(manager: &Manager) {
+pub(crate) async fn create_default_tables(manager: &Manager) {
     setup_migration_table(manager).await;
     setup_users_table(manager).await;
-    setup_file_metadata_table(manager).await;
     setup_audit_log_table(manager).await;
     setup_company_table(manager).await;
     setup_applications_table(manager).await;
@@ -91,4 +82,24 @@ pub(crate) async fn create_data_tables(manager: &Manager) {
     setup_dirtybase_user_table(manager).await;
     setup_permission_table(manager).await;
     setup_role_permission_table(manager).await;
+}
+
+pub(crate) async fn drop_default_tables(manager: &Manager) {
+    let tables = [
+        RolePermissionEntity::table_name(),
+        PermissionEntity::table_name(),
+        DirtybaseUserEntity::table_name(),
+        SysAdminEntity::table_name(),
+        RoleUserEntity::table_name(),
+        RoleEntity::table_name(),
+        AppSchemaEntity::table_name(),
+        AppEntity::table_name(),
+        CompanyEntity::table_name(),
+        AuditLogEntity::table_name(),
+        UserEntity::table_name(),
+    ];
+
+    for name in tables {
+        manager.drop_table(name).await;
+    }
 }

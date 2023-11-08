@@ -28,7 +28,7 @@ impl RoleUserService {
         &self,
         mut role_user: RoleUserEntity,
         blame: UserEntity,
-    ) -> Result<RoleUserEntity, anyhow::Error> {
+    ) -> Result<Option<RoleUserEntity>, anyhow::Error> {
         // TODO: validation...
         if role_user.core_app_role_id.is_none() || role_user.core_user_id.is_none() {
             return Err(anyhow!("user and app role IDs are always require"));
@@ -46,7 +46,7 @@ impl RoleUserService {
         &self,
         mut role_user: RoleUserEntity,
         blame: UserEntity,
-    ) -> Result<RoleUserEntity, anyhow::Error> {
+    ) -> Result<Option<RoleUserEntity>, anyhow::Error> {
         if role_user.core_app_role_id.is_none() || role_user.core_user_id.is_none() {
             return Err(anyhow!("user and app role IDs are always require"));
         }

@@ -28,7 +28,7 @@ impl RoleService {
         &self,
         app: AppEntity,
         blame: UserEntity,
-    ) -> Result<Vec<RoleEntity>, anyhow::Error> {
+    ) -> Result<Option<Vec<RoleEntity>>, anyhow::Error> {
         if app.id.is_none() {
             return Err(anyhow!("A role must be assigned to an application"));
         }
@@ -41,7 +41,7 @@ impl RoleService {
         admin_role.name = Some(ROLE_ADMIN.into());
         admin_role.core_app_id = Some(id.clone());
 
-        if let Ok(role) = self.create(admin_role, blame.clone()).await {
+        if let Ok(Some(role)) = self.create(admin_role, blame.clone()).await {
             result.push(role);
         }
 
@@ -50,18 +50,18 @@ impl RoleService {
         user_role.name = Some(ROLE_USER.into());
         user_role.core_app_id = Some(id);
 
-        if let Ok(role) = self.create(user_role, blame).await {
+        if let Ok(Some(role)) = self.create(user_role, blame).await {
             result.push(role);
         }
 
-        Ok(result)
+        Ok(Some(result))
     }
 
     pub async fn create(
         &self,
         mut role: RoleEntity,
         blame: UserEntity,
-    ) -> Result<RoleEntity, anyhow::Error> {
+    ) -> Result<Option<RoleEntity>, anyhow::Error> {
         // TODO: validation
         if role.name.is_none() {
             return Err(anyhow!("A new role requires a name"));
@@ -89,7 +89,7 @@ impl RoleService {
         mut role: RoleEntity,
         id: &str,
         blame: UserEntity,
-    ) -> Result<RoleEntity, anyhow::Error> {
+    ) -> Result<Option<RoleEntity>, anyhow::Error> {
         // TODO: Validation ....
         if blame.id.is_none() {
             return Err(anyhow!("Role entity requires a user to blame"));
