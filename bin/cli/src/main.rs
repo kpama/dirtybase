@@ -15,37 +15,18 @@ fn main() {
     };
 
     match &args.command {
-        Commands::Make { what } => match what {
-            MakeSubcommand::Migration { name } => {
-                let ts = chrono::Utc::now().timestamp();
-
-                let joinned = name.split_whitespace().collect::<String>();
-                let filename = joinned.to_lowercase();
-
-                let full_filename = format!("mig_{}_{}", ts, filename);
-                let struct_name = format!("Mig{}{}", ts, filename.split('_').collect::<String>());
-
-                let path = dist_path
-                    .parent()
-                    .unwrap()
-                    .join("migration")
-                    .join(&full_filename);
-
-                println!("making migration : {:?}", name);
-                println!("migration filename : {:?}", full_filename);
-                println!("migration struct name: {:?}", struct_name);
-                println!("migration full path: {:?}", path);
-
-                make_migration::make(&struct_name, &dist_path, &full_filename);
-            }
-            _ => (),
-        },
         Commands::New { name } => {
             println!("creating a new application: {:?}", name)
         }
         Commands::Init => {
             run_init::init(&dist_path);
         }
+        Commands::Make { what } => match what {
+            MakeSubcommand::Migration { name } => {
+                make_migration::make(name, &dist_path);
+            }
+            _ => (),
+        },
     }
 }
 

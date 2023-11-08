@@ -1,7 +1,8 @@
 mod app;
 mod cli;
+mod dirtybase_entry;
 mod http;
-mod migration;
+mod migrator;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

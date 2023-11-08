@@ -63,8 +63,41 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         result.unwrap_or(false)
     }
 
-    async fn commit(&self, table: BaseTable) {
-        self.do_commit(table).await
+    async fn stream_result(
+        &self,
+        query_builder: &QueryBuilder,
+        sender: tokio::sync::mpsc::Sender<ColumnAndValue>,
+    ) {
+        let mut params = Vec::new();
+        let statement = self.build_query(query_builder, &mut params);
+
+        let mut query = sqlx::query(&statement);
+        for p in &params {
+            query = query.bind::<&str>(p);
+        }
+
+        let mut rows = query.fetch(self.db_pool.as_ref());
+        while let Ok(result) = rows.try_next().await {
+            if let Some(row) = result {
+                // TODO: Handle error
+                _ = sender.send(self.row_to_field_value(&row)).await;
+            } else {
+                break;
+            }
+        }
+    }
+
+    async fn drop_table(&self, name: &str) -> bool {
+        if self.has_table(name).await {
+            let query = QueryBuilder::new(vec![name.to_string()], QueryAction::DropTable);
+            self.execute(query).await;
+            return true;
+        }
+        false
+    }
+
+    async fn apply(&self, table: BaseTable) {
+        self.do_apply(table).await
     }
 
     async fn execute(&self, query: QueryBuilder) {
@@ -116,7 +149,7 @@ impl SchemaManagerTrait for PostgresSchemaManager {
 }
 
 impl PostgresSchemaManager {
-    async fn do_commit(&self, table: BaseTable) {
+    async fn do_apply(&self, table: BaseTable) {
         if table.view_query.is_some() {
             // working with view table
             self.create_or_replace_view(table).await
@@ -198,6 +231,13 @@ impl PostgresSchemaManager {
                 sql = format!("{} {}", sql, self.build_join(&query, &mut params));
                 // where
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
+            }
+            QueryAction::DropTable => {
+                sql = query
+                    .tables()
+                    .iter()
+                    .map(|name| format!("DROP TABLE {};", name))
+                    .fold(String::new(), |sum, sub| format!("{} {}", sum, sub));
             }
             _ => {
                 sql = "".into();

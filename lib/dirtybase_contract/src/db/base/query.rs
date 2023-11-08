@@ -25,6 +25,7 @@ pub enum QueryAction {
     },
     Update(HashMap<String, FieldValue>),
     Delete,
+    DropTable,
 }
 
 impl Display for QueryAction {
@@ -43,6 +44,7 @@ impl Display for QueryAction {
                 } => "Query",
                 QueryAction::Update(_) => "Update",
                 QueryAction::Delete => "Delete",
+                QueryAction::DropTable => "DropTable",
             }
         )
     }

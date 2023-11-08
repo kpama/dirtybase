@@ -21,8 +21,9 @@ pub use config::ConfigBuilder;
 pub use dirtybase_app::DirtyBaseApp;
 
 use crate::cli;
+use crate::dirtybase_entry;
 use crate::http;
-use crate::migration::MigrateAction;
+use crate::migrator::MigrateAction;
 
 use self::event_handler::register_event_handlers;
 
@@ -58,7 +59,9 @@ pub async fn setup_using(config: &Config) -> DirtyBaseAppService {
             // email adapters
             dirtybase_mail::register_mail_adapters().await;
 
-            app.db_setup().await;
+            // app.db_setup().await;
+            app.register(dirtybase_entry::Extension).await;
+
             app
         }
         Err(e) => {

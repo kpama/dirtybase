@@ -1,7 +1,8 @@
 pub mod app;
 pub mod cli;
+pub mod dirtybase_entry;
 pub mod http;
-pub mod migration;
+pub mod migrator;
 
 pub use dirtybase_cache;
 pub use dirtybase_config;

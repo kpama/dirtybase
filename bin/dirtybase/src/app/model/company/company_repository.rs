@@ -23,10 +23,6 @@ impl CompanyRepository {
         &self.manager
     }
 
-    pub fn manager_mut(&mut self) -> &mut Manager {
-        &mut self.manager
-    }
-
     pub async fn find_by_internal_id(&self, id: u64) -> Result<CompanyEntity, anyhow::Error> {
         self.manager()
             .select_from_table(COMPANY_TABLE, |q| {

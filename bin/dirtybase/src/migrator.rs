@@ -1,7 +1,21 @@
+use clap::Subcommand;
+
 use dirtybase_contract::ExtensionMigrations;
 use dirtybase_db::base::manager::Manager;
 
 use crate::app::DirtyBaseAppService;
+
+#[derive(Subcommand, Debug)]
+pub enum MigrateAction {
+    /// Migrate up
+    Up,
+    /// Migrate down
+    Down,
+    /// Resets and migrate all up
+    Refresh,
+    /// Migrate all down
+    Reset,
+}
 
 pub struct Migrator {
     migrations: ExtensionMigrations,

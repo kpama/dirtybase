@@ -42,24 +42,22 @@ pub fn verify_password(raw: &str, hash: &str) -> bool {
 // the "own" fields are assuming there is a user
 // table
 pub async fn setup_users_table(manager: &Manager) {
-    if !manager.has_table(USER_TABLE).await {
-        manager
-            .create_table_schema(USER_TABLE, |table| {
-                table.id_set();
-                table.string(USER_TABLE_USERNAME_FIELD).set_is_unique(true);
-                table.string(USER_TABLE_EMAIL_FIELD).set_is_unique(true);
-                table
-                    .string(USER_TABLE_PASSWORD_FIELD)
-                    .set_is_nullable(true);
-                table
-                    .boolean(USER_TABLE_RESET_PASSWORD_FIELD)
-                    .set_default_from(false); // A flag that indicates a password change is required
-                table
-                    .string(USER_TABLE_STATUS_FIELD)
-                    .set_default_from(UserStatus::Pending);
-                table.timestamps();
-                table.soft_deletable();
-            })
-            .await;
-    }
+    manager
+        .create_table_schema(USER_TABLE, |table| {
+            table.id_set();
+            table.string(USER_TABLE_USERNAME_FIELD).set_is_unique(true);
+            table.string(USER_TABLE_EMAIL_FIELD).set_is_unique(true);
+            table
+                .string(USER_TABLE_PASSWORD_FIELD)
+                .set_is_nullable(true);
+            table
+                .boolean(USER_TABLE_RESET_PASSWORD_FIELD)
+                .set_default_from(false); // A flag that indicates a password change is required
+            table
+                .string(USER_TABLE_STATUS_FIELD)
+                .set_default_from(UserStatus::Pending);
+            table.timestamps();
+            table.soft_deletable();
+        })
+        .await;
 }

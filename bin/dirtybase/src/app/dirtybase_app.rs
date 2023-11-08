@@ -77,7 +77,6 @@ impl DirtyBaseApp {
     }
 
     pub async fn db_setup(&self) {
-        create_data_tables(self.schema_manger()).await;
         setup_default_entities().await;
     }
 

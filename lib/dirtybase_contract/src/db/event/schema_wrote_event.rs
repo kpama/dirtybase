@@ -1,6 +1,6 @@
 use crate::db::base::schema::DatabaseKind;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct SchemeWroteEvent {
     kind: DatabaseKind,
 }

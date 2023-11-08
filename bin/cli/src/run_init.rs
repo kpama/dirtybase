@@ -1,25 +1,49 @@
+use std::collections::HashMap;
+
 pub fn init(path_buf: &std::path::PathBuf) {
-    let directories = ["migration", "event", "event_handler", "http", "model"];
+    let directories = [
+        "dirtybase_entry/migration",
+        "dirtybase_entry/event",
+        "dirtybase_entry/event_handler",
+        "dirtybase_entry/http",
+        "dirtybase_entry/model",
+    ];
 
     let files = [
         // migration
-        "migration/.gitkeep",
-        "migration.rs",
+        "dirtybase_entry/migration/.gitkeep",
+        "dirtybase_entry/migration.rs",
         // event
-        "event/.gitkeep",
-        "event.rs",
+        "dirtybase_entry/event/.gitkeep",
+        "dirtybase_entry/event.rs",
         // event handler
-        "event_handler/.gitkeep",
-        "event_handler.rs",
+        "dirtybase_entry/event_handler/.gitkeep",
+        "dirtybase_entry/event_handler.rs",
         // http
-        "http/.gitkeep",
-        "http.rs",
+        "dirtybase_entry/http/.gitkeep",
+        "dirtybase_entry/http.rs",
         // model
-        "model/.gitkeep",
-        "model.rs",
+        "dirtybase_entry/model/.gitkeep",
+        "dirtybase_entry/model.rs",
         // setup,
-        "dirtybase_setup.rs",
+        "dirtybase_entry.rs",
     ];
+
+    let mut file_content = HashMap::new();
+
+    file_content.insert(
+        "dirtybase_entry.rs",
+        include_str!("stubs/dirtybase_entry.stub.rs"),
+    );
+    file_content.insert(
+        "dirtybase_entry/migration.rs",
+        include_str!("stubs/migration.stub.rs"),
+    );
+
+    file_content.insert(
+        "dirtybase_entry/event_handler.rs",
+        include_str!("stubs/event_handler.stub.rs"),
+    );
 
     for dir in directories {
         let path = path_buf.join(dir);
@@ -32,7 +56,15 @@ pub fn init(path_buf: &std::path::PathBuf) {
         let path = path_buf.join(filename);
 
         if !path.exists() && !path.is_dir() {
-            _ = std::fs::write(path, "");
+            let content = if let Some(content) = file_content.get(filename) {
+                content
+            } else {
+                ""
+            };
+
+            println!("content: {:?}", content);
+
+            _ = std::fs::write(path, content);
         }
     }
 }

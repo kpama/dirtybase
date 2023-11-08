@@ -70,7 +70,7 @@ impl Manager {
             table.set_is_new(true);
 
             callback(&mut table);
-            self.write_schema_manager().commit(table).await;
+            self.write_schema_manager().apply(table).await;
             self.dispatch_written_event();
         }
     }
@@ -82,7 +82,7 @@ impl Manager {
             table.set_is_new(false);
 
             callback(&mut table);
-            self.write_schema_manager().commit(table).await;
+            self.write_schema_manager().apply(table).await;
             self.dispatch_written_event();
         }
     }
@@ -104,7 +104,7 @@ impl Manager {
         callback(&mut query);
         let mut table = self.write_schema_manager().fetch_table_for_update(name);
         table.view_query = Some(query);
-        self.write_schema_manager().commit(table).await;
+        self.write_schema_manager().apply(table).await;
         self.dispatch_written_event();
     }
 
@@ -154,8 +154,23 @@ impl Manager {
         self.dispatch_written_event();
     }
 
+    pub async fn transaction(&self, table_name: &str, mut callback: impl FnMut(&mut QueryBuilder)) {
+    }
+
     pub async fn has_table(&self, name: &str) -> bool {
         self.read_schema_manager().has_table(name).await
+    }
+
+    pub async fn drop_table(&self, table_name: &str) -> bool {
+        self.write_schema_manager().drop_table(table_name).await
+    }
+
+    fn read_schema_manager(&self) -> Box<dyn SchemaManagerTrait + Send> {
+        self.create_schema_manager(false)
+    }
+
+    fn write_schema_manager(&self) -> Box<dyn SchemaManagerTrait + Send> {
+        self.create_schema_manager(true)
     }
 
     async fn create_insert_query(
@@ -174,14 +189,6 @@ impl Manager {
 
         self.write_schema_manager().execute(query).await;
         self.dispatch_written_event();
-    }
-
-    fn read_schema_manager(&self) -> Box<dyn SchemaManagerTrait + Send> {
-        self.create_schema_manager(false)
-    }
-
-    fn write_schema_manager(&self) -> Box<dyn SchemaManagerTrait + Send> {
-        self.create_schema_manager(true)
     }
 
     fn create_schema_manager(&self, for_write: bool) -> Box<dyn SchemaManagerTrait + Send> {

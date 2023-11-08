@@ -1,6 +1,6 @@
 use crate::{
     app::{Commands, DirtyBaseAppService},
-    migration::{migrator::Migrator, MigrateAction},
+    migrator::{MigrateAction, Migrator},
 };
 
 pub async fn init(app: DirtyBaseAppService, command: &Commands) -> std::io::Result<()> {

@@ -1,8 +1,12 @@
-use actix_web::{get, HttpResponse, Responder, Scope};
+use actix_web::web::Bytes;
+use actix_web::{body::BodyStream, get, HttpResponse, Responder, Scope};
 use busybody::helpers::{provide, service};
 use dirtybase_cache::CacheManager;
 use dirtybase_db::db::entity::user::{UserEntity, USER_TABLE};
-use dirtybase_db_types::TableEntityTrait;
+use dirtybase_db_types::{types::ColumnAndValue, TableEntityTrait};
+use futures_util::FutureExt;
+use futures_util::Stream;
+use tokio_stream::StreamExt;
 
 use crate::app::{
     model::{
@@ -19,7 +23,11 @@ use crate::app::{
 };
 
 pub fn register_routes(scope: Scope) -> Scope {
-    scope.service(cache_endpoint).service(serve_d_users)
+    scope
+        .service(cache_endpoint)
+        .service(serve_d_users)
+        .service(test_streaming)
+        .service(test_all)
 }
 
 #[get("/cache")]
@@ -46,6 +54,38 @@ async fn cache_endpoint() -> impl Responder {
     _ = cache_manager.add("uptime", &f, time.into()).await;
 
     HttpResponse::Ok().json(status)
+}
+
+#[get("/stream")]
+async fn test_streaming() -> impl Responder {
+    let app = service::<DirtyBaseApp>().await;
+    let mut receiver = app
+        .schema_manger()
+        .select_from_table("authors", |query| {
+            query.select("first_name").select("last_name");
+        })
+        .stream()
+        .await;
+
+    let mut stream2 = receiver
+        .map(|e| serde_json::to_string(&e).unwrap())
+        .map(|e| Ok::<Bytes, String>(Bytes::from(e)));
+
+    HttpResponse::Ok().streaming(stream2)
+}
+
+#[get("/all")]
+async fn test_all() -> impl Responder {
+    let app = service::<DirtyBaseApp>().await;
+    let mut receiver = app
+        .schema_manger()
+        .select_from_table("authors", |query| {
+            query.select("first_name").select("last_name");
+        })
+        .fetch_all()
+        .await;
+
+    HttpResponse::Ok().json(receiver.unwrap())
 }
 
 #[get("/d-users")]

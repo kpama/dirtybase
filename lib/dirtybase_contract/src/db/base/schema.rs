@@ -3,7 +3,9 @@ use async_trait::async_trait;
 use dirtybase_db_types::types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue};
 use std::sync::Arc;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, serde::Deserialize)]
+#[derive(
+    Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, serde::Deserialize, serde::Serialize,
+)]
 pub enum DatabaseKind {
     #[serde(rename(deserialize = "mysql"))]
     Mysql,
@@ -75,7 +77,7 @@ pub trait SchemaManagerTrait: Send + Sync {
     fn fetch_table_for_update(&self, name: &str) -> BaseTable;
 
     // commit schema changes
-    async fn commit(&self, table: BaseTable);
+    async fn apply(&self, table: BaseTable);
 
     async fn execute(&self, query_builder: QueryBuilder);
 
@@ -83,6 +85,12 @@ pub trait SchemaManagerTrait: Send + Sync {
         &self,
         query_builder: &QueryBuilder,
     ) -> Result<Vec<ColumnAndValue>, anyhow::Error>;
+
+    async fn stream_result(
+        &self,
+        query_builder: &QueryBuilder,
+        sender: tokio::sync::mpsc::Sender<ColumnAndValue>,
+    );
 
     async fn fetch_one(
         &self,
@@ -123,6 +131,8 @@ pub trait SchemaManagerTrait: Send + Sync {
 
     // checks if a table exist in the database
     async fn has_table(&self, name: &str) -> bool;
+
+    async fn drop_table(&self, name: &str) -> bool;
 }
 
 pub struct SchemaWrapper {
@@ -177,5 +187,39 @@ impl SchemaWrapper {
         } else {
             Err(result.err().unwrap())
         }
+    }
+
+    pub async fn stream(self) -> tokio_stream::wrappers::ReceiverStream<ColumnAndValue> {
+        let (sender, receiver) = tokio::sync::mpsc::channel::<ColumnAndValue>(100);
+
+        tokio::spawn(async move {
+            self.inner.stream_result(&self.query_builder, sender).await;
+        });
+
+        tokio_stream::wrappers::ReceiverStream::new(receiver)
+    }
+
+    pub async fn stream_to<T: FromColumnAndValue + Send + Sync + 'static>(
+        self,
+    ) -> tokio_stream::wrappers::ReceiverStream<T> {
+        let (inner_sender, mut inner_receiver) = tokio::sync::mpsc::channel::<ColumnAndValue>(100);
+        let (outer_sender, outer_receiver) = tokio::sync::mpsc::channel::<T>(100);
+
+        tokio::spawn(async move {
+            while let Some(result) = inner_receiver.recv().await {
+                if let Err(e) = outer_sender.send(T::from_column_value(result)).await {
+                    log::debug!("error sending transformed row result: {}", e);
+                    break;
+                }
+            }
+        });
+
+        tokio::spawn(async move {
+            self.inner
+                .stream_result(&self.query_builder, inner_sender)
+                .await;
+        });
+
+        tokio_stream::wrappers::ReceiverStream::new(outer_receiver)
     }
 }

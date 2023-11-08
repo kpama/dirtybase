@@ -32,6 +32,7 @@ jwt = { workspace = true }
 sha2 = { workspace = true }
 chrono = { workspace = true }
 tokio = { workspace = true }
+tokio-stream = { workspace = true }
 busybody = { workspace = true }
 orsomafo = { workspace = true }
 fama = { workspace = true }

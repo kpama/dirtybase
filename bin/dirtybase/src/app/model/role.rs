@@ -45,10 +45,12 @@ pub const ROLE_TABLE_DELETED_AT_FIELD: &str = DELETED_AT_FIELD;
 pub async fn setup_roles_table(manager: &Manager) {
     if !manager.has_table(USER_TABLE).await {
         log::error!("{} is require to create {} table", USER_TABLE, ROLE_TABLE);
+        eprintln!("{} is require to create {} table", USER_TABLE, ROLE_TABLE);
     }
 
     if !manager.has_table(APP_TABLE).await {
         log::error!("{} is require to create {} table", APP_TABLE, ROLE_TABLE);
+        eprintln!("{} is require to create {} table", APP_TABLE, ROLE_TABLE);
     }
 
     manager
