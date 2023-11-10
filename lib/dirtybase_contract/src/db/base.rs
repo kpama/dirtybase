@@ -1,3 +1,4 @@
+pub mod aggregate;
 pub mod base_entity;
 pub mod column;
 pub mod connection;
@@ -5,6 +6,7 @@ pub mod helper;
 pub mod index;
 pub mod join_builder;
 pub mod manager;
+pub mod order_by_builder;
 pub mod query;
 pub mod query_conditions;
 pub mod query_join_types;
