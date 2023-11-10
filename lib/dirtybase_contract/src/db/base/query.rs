@@ -1,8 +1,9 @@
 use crate::db::entity::user::UserEntity;
 
 use super::{
-    join_builder::JoinQueryBuilder, query_conditions::Condition, query_join_types::JoinType,
-    query_operators::Operator, table::DELETED_AT_FIELD, where_join_operators::WhereJoinOperator,
+    aggregate::Aggregate, join_builder::JoinQueryBuilder, order_by_builder::OrderByBuilder,
+    query_conditions::Condition, query_join_types::JoinType, query_operators::Operator,
+    table::DELETED_AT_FIELD, where_join_operators::WhereJoinOperator,
 };
 use dirtybase_db_types::{field_values::FieldValue, types::ColumnAndValue, TableEntityTrait};
 use std::{collections::HashMap, fmt::Display};
@@ -56,6 +57,7 @@ pub struct QueryBuilder {
     tables: Vec<String>,
     joins: Option<Vec<JoinQueryBuilder>>,
     action: QueryAction,
+    order_by: Option<OrderByBuilder>,
 }
 
 impl QueryBuilder {
@@ -65,6 +67,7 @@ impl QueryBuilder {
             tables,
             joins: None,
             action,
+            order_by: None,
         }
     }
 
@@ -98,12 +101,45 @@ impl QueryBuilder {
         self
     }
 
+    pub fn select_count<C: ToString>(&mut self, column: C) -> &mut Self {
+        self.select(Aggregate::Count(column.to_string()));
+        self
+    }
+
+    pub fn select_max<C: ToString>(&mut self, column: C) -> &mut Self {
+        self.select(Aggregate::Max(column.to_string()));
+        self
+    }
+
+    pub fn select_mix<C: ToString>(&mut self, column: C) -> &mut Self {
+        self.select(Aggregate::Min(column.to_string()));
+        self
+    }
+
+    pub fn select_sum<C: ToString>(&mut self, column: C) -> &mut Self {
+        self.select(Aggregate::Sum(column.to_string()));
+        self
+    }
+
+    pub fn select_avg<C: ToString>(&mut self, column: C) -> &mut Self {
+        self.select(Aggregate::Avg(column.to_string()));
+        self
+    }
+
     pub fn joins(&self) -> &Option<Vec<JoinQueryBuilder>> {
         &self.joins
     }
 
+    pub fn order_by(&self) -> &Option<OrderByBuilder> {
+        &self.order_by
+    }
+
     /// Set a column/value for update
-    pub fn set_column<T: Into<FieldValue>>(&mut self, column: &str, value: T) -> &mut Self {
+    pub fn set_column<T: Into<FieldValue>, C: ToString>(
+        &mut self,
+        column: C,
+        value: T,
+    ) -> &mut Self {
         if let QueryAction::Update(columns) = &mut self.action {
             columns.insert(column.to_string(), value.into());
         }
@@ -191,6 +227,26 @@ impl QueryBuilder {
                 );
             }
         }
+
+        self
+    }
+
+    pub fn asc<C: ToString>(&mut self, column: C) -> &mut Self {
+        if self.order_by.is_none() {
+            self.order_by = Some(OrderByBuilder::new());
+        }
+
+        self.order_by.as_mut().unwrap().asc(column);
+
+        self
+    }
+
+    pub fn desc<C: ToString>(&mut self, column: C) -> &mut Self {
+        if self.order_by.is_none() {
+            self.order_by = Some(OrderByBuilder::new());
+        }
+
+        self.order_by.as_mut().unwrap().desc(column);
 
         self
     }
@@ -712,6 +768,7 @@ impl QueryBuilder {
             None,
         )
     }
+
     pub fn inner_join_table<L: TableEntityTrait, R: TableEntityTrait>(
         &mut self,
         left_field: &str,
