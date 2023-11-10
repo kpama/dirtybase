@@ -487,6 +487,17 @@ impl MySqlSchemaManager {
         // wheres
         sql = format!("{} {}", sql, self.build_where_clauses(query, params));
 
+        // group by
+
+        // order by
+        if let Some(order) = self.build_order_by(query) {
+            sql = format!("{} {}", sql, order);
+        }
+
+        // having
+
+        // limit, offset
+
         sql
     }
 
@@ -521,6 +532,13 @@ impl MySqlSchemaManager {
         }
 
         wheres
+    }
+
+    fn build_order_by(&self, query: &QueryBuilder) -> Option<String> {
+        match query.order_by() {
+            Some(order) => Some(order.to_string()),
+            _ => None,
+        }
     }
 
     fn transform_condition(&self, condition: &Condition, params: &mut Vec<String>) -> String {
