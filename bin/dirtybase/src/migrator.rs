@@ -41,12 +41,20 @@ impl Migrator {
 
     pub async fn up(&self, manager: &Manager) {
         let batch = chrono::Utc::now().timestamp();
+        let repo = self.repo().await;
 
         for entry in &self.migrations {
-            log::debug!(target: LOG_TARGET, "migrating {} up", entry.id());
-            // TODO: First check before running the migration
+            let name = entry.id();
+            if !repo.exist(&name).await {
+                log::debug!(target: LOG_TARGET, "migrating {} up", entry.id());
+                entry.up(manager).await;
 
-            entry.up(manager).await;
+                if let Err(e) = repo.create(&name, batch).await {
+                    log::error!(target: LOG_TARGET,"could not create migration entry: {:?}", e);
+                }
+            } else {
+                log::debug!(target: LOG_TARGET, "migration already exist: {:?}", &name);
+            }
         }
     }
 

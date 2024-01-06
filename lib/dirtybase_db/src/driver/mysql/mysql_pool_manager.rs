@@ -78,10 +78,12 @@ pub async fn db_connect(config: &BaseConfig) -> anyhow::Result<Pool<MySql>> {
         .await
     {
         Ok(conn) => {
+            // TODO: Use i18n
             log::info!("MySql maximum DB pool connection: {}", config.max);
             Ok(conn)
         }
         Err(e) => {
+            // TODO: Use i18n
             log::error!("could not connect to the MySql: {:#?}", &e);
             Err(anyhow::anyhow!("could not connect to the MySql: {:#?}", e))
         }

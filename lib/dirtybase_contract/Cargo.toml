@@ -14,6 +14,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 orsomafo = { workspace = true }
 busstop = { workspace = true }
+busybody = { workspace = true }
 ulid = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }

@@ -1,11 +1,10 @@
-use crate::db::entity::user::UserEntity;
+use crate::{field_values::FieldValue, types::ColumnAndValue, TableEntityTrait};
 
 use super::{
     aggregate::Aggregate, join_builder::JoinQueryBuilder, order_by_builder::OrderByBuilder,
     query_conditions::Condition, query_join_types::JoinType, query_operators::Operator,
-    table::DELETED_AT_FIELD, where_join_operators::WhereJoinOperator,
+    query_values::QueryValue, table::DELETED_AT_FIELD, where_join_operators::WhereJoinOperator,
 };
-use dirtybase_db_types::{field_values::FieldValue, types::ColumnAndValue, TableEntityTrait};
 use std::{collections::HashMap, fmt::Display};
 
 #[derive(Debug)]
@@ -87,6 +86,23 @@ impl QueryBuilder {
             } => select_all,
             _ => false,
         }
+    }
+
+    pub fn sub_query<F>(&self, table: &str, mut callback: F) -> QueryValue
+    where
+        F: FnMut(&mut QueryBuilder),
+    {
+        let mut query_builder = Self::new(
+            vec![table.to_string()],
+            QueryAction::Query {
+                columns: None,
+                select_all: false,
+            },
+        );
+
+        callback(&mut query_builder);
+
+        QueryValue::SubQuery(query_builder)
     }
 
     pub fn select_all(&mut self) -> &mut Self {
@@ -715,16 +731,16 @@ impl QueryBuilder {
         self.where_(WhereJoinOperator::And(condition))
     }
 
-    pub fn with_creator<L: TableEntityTrait>(&mut self, prefix: Option<&str>) -> &mut Self {
-        if let Some(field) = L::creator_id_column() {
-            self.left_join_table_and_select::<UserEntity, L>(
-                UserEntity::id_column().unwrap(),
-                &L::prefix_with_tbl(field),
-                prefix,
-            );
-        }
-        self
-    }
+    // pub fn with_creator<L: TableEntityTrait>(&mut self, prefix: Option<&str>) -> &mut Self {
+    //     if let Some(field) = L::creator_id_column() {
+    //         self.left_join_table_and_select::<UserEntity, L>(
+    //             UserEntity::id_column().unwrap(),
+    //             &L::prefix_with_tbl(field),
+    //             prefix,
+    //         );
+    //     }
+    //     self
+    // }
 
     pub fn join<T: ToString>(
         &mut self,

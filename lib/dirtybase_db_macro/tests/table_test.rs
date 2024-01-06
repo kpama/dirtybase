@@ -72,13 +72,20 @@ fn test_complex_field() {
         name: String,
         #[dirty(col = "created_at")]
         date: String,
-        #[dirty(from = "string_to_tuple")]
+        #[dirty(from = "string_to_vec")]
         discount_allowed: DiscountRange,
     }
 
     impl Example {
-        pub fn string_to_tuple<'a>(_column: Option<&'a FieldValue>) -> DiscountRange {
-            vec![2, 25]
+        pub fn string_to_vec<'a>(column: Option<&'a FieldValue>) -> DiscountRange {
+            if let Some(value) = column {
+                return value
+                    .to_string()
+                    .split(',')
+                    .map(|v| v.trim().parse::<u64>().unwrap_or_default())
+                    .collect::<Vec<u64>>();
+            }
+            Vec::new()
         }
     }
 
@@ -90,20 +97,17 @@ fn test_complex_field() {
     );
     data.insert(
         "discount_allowed".to_string(),
-        FieldValue::Array(vec![FieldValue::U64(50), FieldValue::U64(55)]),
+        FieldValue::String("25, 20".to_string()),
     );
 
     let instance = Example::from_column_value(data);
 
     assert_eq!(
-        Example::string_to_tuple(Some(&FieldValue::NotSet)),
-        vec![2, 25],
-        "Custom 'from' should have been called"
-    );
-
-    assert_eq!(
         instance.discount_allowed,
-        vec![2, 25],
-        "Discount allowed should have been (2, 25)"
+        vec![25, 20],
+        "Discount allowed should have been (25, 20)"
     )
 }
+
+#[test]
+fn test_xyz() {}

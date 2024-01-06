@@ -1,10 +1,12 @@
 use helpers::*;
 use proc_macro::TokenStream;
-use quote::quote;
+use query_builder::generate_query_builder_struct;
+use quote::{format_ident, quote};
 use syn::{parse_macro_input, DeriveInput};
 
 mod attribute_type;
 mod helpers;
+mod query_builder;
 
 #[proc_macro_derive(DirtyTable, attributes(dirty))]
 pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
@@ -28,6 +30,9 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let special_column_methods = build_special_column_methods(&columns_attributes);
     let column_name_methods = build_prop_column_names_getter(&columns_attributes);
     let defaults = spread_default(&columns_attributes, &input);
+    let query_builder =
+        generate_query_builder_struct(&columns_attributes, &name, &table_name, &input);
+    let repo_struct_name = format_ident!("{}Repo", &name);
 
     let expanded = quote! {
 
@@ -50,6 +55,10 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
           } else {
             Some(::dirtybase_db_types::types::FromColumnAndValue::from_column_value(cv.clone().fields()))
           }
+        }
+
+        pub fn repo(manager: dirtybase_db_types::base::manager::Manager)-> #repo_struct_name {
+          #repo_struct_name::new(manager)
         }
       }
 
@@ -114,19 +123,22 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
           }
       }
 
-      // Impl from Self to FieldValue
+      // Impl from &Self to FieldValue
       impl #ty_generics From<&#name> for ::dirtybase_db_types::field_values::FieldValue {
           fn from(value: &#name ) -> ::dirtybase_db_types::field_values::FieldValue {
              ::dirtybase_db_types::field_values::FieldValue::NotSet
           }
       }
 
+      // Impl from Self to FieldValue
       impl #ty_generics From<#name> for ::dirtybase_db_types::field_values::FieldValue {
           fn from(value: #name ) -> ::dirtybase_db_types::field_values::FieldValue {
              ::dirtybase_db_types::field_values::FieldValue::NotSet
           }
       }
 
+      // query builder
+      #query_builder
 
     };
 

@@ -1,9 +1,6 @@
 #![allow(dead_code)]
 
-use super::{
-    UserEntity, USER_TABLE, USER_TABLE_DELETED_AT_FIELD, USER_TABLE_EMAIL_FIELD,
-    USER_TABLE_ID_FIELD, USER_TABLE_INTERNAL_ID_FIELD, USER_TABLE_USERNAME_FIELD,
-};
+use super::UserEntity;
 use crate::db::base::manager::Manager;
 use dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue, TableEntityTrait};
 
@@ -26,10 +23,10 @@ impl UserRepository {
         without_trash: bool,
     ) -> Result<Option<UserEntity>, anyhow::Error> {
         self.manager()
-            .select_from_table(USER_TABLE, |q| {
+            .select_from_table(UserEntity::table_name(), |q| {
                 q.select_all()
-                    .eq(USER_TABLE_INTERNAL_ID_FIELD, id)
-                    .and_is_null(USER_TABLE_DELETED_AT_FIELD);
+                    .eq(UserEntity::col_name_for_internal_id(), id)
+                    .and_is_null(UserEntity::col_name_for_deleted_at());
                 if without_trash {
                     q.without_table_trash::<UserEntity>();
                 }
@@ -40,10 +37,10 @@ impl UserRepository {
 
     pub async fn find_on_by_id(&self, id: &str) -> Result<Option<UserEntity>, anyhow::Error> {
         self.manager()
-            .select_from_table(USER_TABLE, |q| {
+            .select_from_table(UserEntity::table_name(), |q| {
                 q.select_all()
-                    .eq(USER_TABLE_ID_FIELD, id)
-                    .and_is_null(USER_TABLE_DELETED_AT_FIELD);
+                    .eq(UserEntity::col_name_for_id(), id)
+                    .and_is_null(UserEntity::col_name_for_deleted_at());
             })
             .fetch_one_to()
             .await
@@ -57,15 +54,15 @@ impl UserRepository {
     ) -> Result<Option<UserEntity>, anyhow::Error> {
         if !username.is_empty() || !email.is_empty() {
             self.manager()
-                .select_from_table(USER_TABLE, |q| {
+                .select_from_table(UserEntity::table_name(), |q| {
                     q.select_all();
                     if without_trash {
                         q.without_table_trash::<UserEntity>();
                     }
                     if !email.is_empty() {
-                        q.eq(USER_TABLE_EMAIL_FIELD, email);
+                        q.eq(UserEntity::col_name_for_email(), email);
                     } else {
-                        q.eq(USER_TABLE_USERNAME_FIELD, username);
+                        q.eq(UserEntity::col_name_for_username(), username);
                     }
                 })
                 .fetch_one_to()

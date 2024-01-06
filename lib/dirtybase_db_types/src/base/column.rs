@@ -1,4 +1,4 @@
-use dirtybase_db_types::field_values::FieldValue;
+use crate::field_values::FieldValue;
 
 #[derive(Debug)]
 pub struct BaseColumn {

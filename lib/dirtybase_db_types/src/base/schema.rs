@@ -1,6 +1,6 @@
 use super::{query::QueryBuilder, table::BaseTable};
+use crate::types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue};
 use async_trait::async_trait;
-use dirtybase_db_types::types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue};
 use std::sync::Arc;
 
 #[derive(

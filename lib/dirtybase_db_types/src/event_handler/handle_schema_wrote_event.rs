@@ -1,6 +1,6 @@
 use orsomafo::DispatchedEvent;
 
-use crate::db::{event::SchemeWroteEvent, LAST_WRITE_TS};
+use crate::{event::SchemeWroteEvent, LAST_WRITE_TS};
 
 #[derive(Debug, Default)]
 pub struct HandleSchemaWroteEvent;

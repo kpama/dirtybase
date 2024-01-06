@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
-use anyhow::Ok;
-use dirtybase_db::base::manager::Manager;
-use dirtybase_db_types::{types::IntoColumnAndValue, TableEntityTrait};
+use dirtybase_db::base::{manager::Manager, query::QueryBuilder, query_values::QueryValue};
+use dirtybase_db_types::{
+    types::{IntoColumnAndValue, StructuredColumnAndValue},
+    TableEntityTrait,
+};
 
 use crate::app::{setup_database::setup_migration_table, DirtyBaseApp};
 
@@ -25,6 +27,13 @@ impl MigrationRepository {
         setup_migration_table(&self.manager).await;
     }
 
+    pub async fn exist(&self, name: &str) -> bool {
+        match self.find_by_name(name).await {
+            Ok(Some(_)) => true,
+            _ => false,
+        }
+    }
+
     pub async fn find_by_name(&self, name: &str) -> Result<Option<MigrationEntity>, anyhow::Error> {
         self.manager
             .select_from_table(MigrationEntity::table_name(), |query| {
@@ -42,10 +51,14 @@ impl MigrationRepository {
 
     pub async fn create(
         &self,
-        record: MigrationEntity,
+        name: &str,
+        batch: i64,
     ) -> Result<Option<MigrationEntity>, anyhow::Error> {
-        let name = record.name.as_ref().clone().unwrap().clone();
-        let kv = record.into_column_value();
+        let mut kv = HashMap::new();
+
+        kv.insert("name".to_owned(), name.to_string().into());
+        kv.insert("batch".to_owned(), batch.to_string().into());
+
         self.manager.insert(MigrationEntity::table_name(), kv).await;
 
         self.find_by_name(&name).await

@@ -1,5 +1,6 @@
+use crate::field_values::FieldValue;
+
 use super::query::QueryBuilder;
-use dirtybase_db_types::field_values::FieldValue;
 
 #[derive(Debug, Clone)]
 pub enum QueryValue {

@@ -7,8 +7,8 @@ pub struct CacheDbTagStoreEntity {
 }
 
 #[derive(Debug, Clone, Default, DirtyTable)]
-#[dirty(table = "core_cache_tag_entries")]
+#[dirty(table = "core_cache_tag_entries", id = "core_cache_tags_id")]
 pub struct CacheDbPivotEntity {
-    pub(crate) core_cache_tags_id: u64,
+    pub(crate) core_cache_tags_id: i64,
     pub(crate) core_cache_key: String,
 }

@@ -24,23 +24,6 @@ pub struct UserEntity {
     pub deleted_at: DateTimeField,
 }
 
-// impl Default for UserEntity {
-//     fn default() -> Self {
-//         Self {
-//             internal_id: None,
-//             id: None,
-//             status: None,
-//             username: None,
-//             email: None,
-//             reset_password: None,
-//             password: None,
-//             created_at: None,
-//             updated_at: None,
-//             deleted_at: None,
-//         }
-//     }
-// }
-
 impl UserEntity {
     pub fn new() -> Self {
         Self {

@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use crate::db::{
-    config::DirtybaseDbConfig, event::SchemeWroteEvent, ConnectionsType, LAST_WRITE_TS,
+use crate::{
+    config::DirtybaseDbConfig, event::SchemeWroteEvent, types::ColumnAndValue, ConnectionsType,
+    LAST_WRITE_TS,
 };
 
 use super::{
@@ -9,7 +10,6 @@ use super::{
     schema::{DatabaseKind, SchemaManagerTrait, SchemaWrapper},
     table::BaseTable,
 };
-use dirtybase_db_types::types::ColumnAndValue;
 use orsomafo::Dispatchable;
 
 pub struct Manager {
@@ -38,15 +38,15 @@ impl Manager {
     // Get a table or view for querying
     pub fn select_from_table<F>(&self, table: &str, callback: F) -> SchemaWrapper
     where
-        F: FnMut(&mut QueryBuilder),
+        F: FnOnce(&mut QueryBuilder),
     {
         self.select_from_tables(vec![table.to_owned()], callback)
     }
 
     // Get tables or view for querying
-    pub fn select_from_tables<F>(&self, tables: Vec<String>, mut callback: F) -> SchemaWrapper
+    pub fn select_from_tables<F>(&self, tables: Vec<String>, callback: F) -> SchemaWrapper
     where
-        F: FnMut(&mut QueryBuilder),
+        F: FnOnce(&mut QueryBuilder),
     {
         let mut query_builder = QueryBuilder::new(
             tables,
@@ -117,7 +117,7 @@ impl Manager {
         self.create_insert_query(table_name, rows, false).await
     }
 
-    /// Insert a row gracefully ignore insert duplicate
+    /// Insert a row gracefully ignore insert creates duplicate
     pub async fn soft_insert(&self, table_name: &str, column_and_values: ColumnAndValue) {
         self.create_insert_query(table_name, vec![column_and_values], true)
             .await;
@@ -155,6 +155,7 @@ impl Manager {
     }
 
     pub async fn transaction(&self, table_name: &str, mut callback: impl FnMut(&mut QueryBuilder)) {
+        todo!()
     }
 
     pub async fn has_table(&self, name: &str) -> bool {

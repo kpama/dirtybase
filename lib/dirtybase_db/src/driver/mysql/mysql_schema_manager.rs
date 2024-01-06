@@ -11,7 +11,7 @@ use dirtybase_contract::db::base::{
 };
 use dirtybase_contract::db::dirtybase_db_types::{field_values::FieldValue, types::ColumnAndValue};
 use futures::stream::TryStreamExt;
-use sqlx::{mysql::MySqlRow, types::chrono, Column, MySql, Pool, Row};
+use sqlx::{any::AnyRow, mysql::MySqlRow, types::chrono, Column, Database, MySql, Pool, Row, Type};
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Debug, Clone)]
@@ -55,11 +55,21 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         BaseTable::new(name)
     }
     async fn has_table(&self, name: &str) -> bool {
-        let query = "SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_name = ?";
+        let query = "SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_name = ? AND table_schema = ?";
+
+        // TODO: Waiting for PR
+        // let database = self
+        //     .db_pool
+        //     .connect_options()
+        //     .as_ref()
+        //     .get_database()
+        //     .unwrap()
+        //     .to_string();
 
         let result = sqlx::query(query)
             .bind(name)
-            .map(|_row| true)
+            // .bind(database)
+            .map(|_| true)
             .fetch_one(self.db_pool.as_ref())
             .await;
 
@@ -124,6 +134,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         }
 
         let mut rows = query.fetch(self.db_pool.as_ref());
+
         loop {
             let next = rows.try_next().await;
             match next {
@@ -497,6 +508,7 @@ impl MySqlSchemaManager {
         // having
 
         // limit, offset
+        dbg!("----> {}", &sql);
 
         sql
     }
@@ -716,6 +728,19 @@ impl MySqlSchemaManager {
                 format!("{}", dt.format("%F %T"))
             }
             _ => field.to_string(),
+        }
+    }
+}
+
+enum MyRow<'a> {
+    MySql(&'a MySqlRow),
+}
+fn parse_row(row: MyRow) {
+    match row {
+        MyRow::MySql(row) => {
+            for col in row.columns() {
+                dbg!(col.name(), row.try_get::<Option<String>, &str>(col.name()));
+            }
         }
     }
 }

@@ -57,6 +57,8 @@ impl SchemaManagerTrait for PostgresSchemaManager {
     async fn has_table(&self, name: &str) -> bool {
         let query = "SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_name = ?";
 
+        let database = self.db_pool.connect_options().get_database();
+
         let result = sqlx::query(query)
             .bind(name)
             .map(|_row| true)
@@ -318,16 +320,19 @@ impl PostgresSchemaManager {
             .collect();
 
         let mut query = if table.is_new() {
-            format!("CREATE TABLE `{}`", &table.name)
+            //quote_ident
+            format!("CREATE TABLE \"{}\"", &table.name)
         } else {
-            format!("ALTER TABLE `{}`", &table.name)
+            format!("ALTER TABLE \"{}\"", &table.name)
         };
 
         if !columns.is_empty() {
             query = format!("{} ({})", query, columns.join(","));
         }
 
-        query = format!("{} ENGINE='InnoDB';", query);
+        // query = format!("{} ENGINE='InnoDB';", query);
+
+        dbg!(&query);
 
         let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
 
@@ -371,7 +376,7 @@ impl PostgresSchemaManager {
     }
 
     fn create_column(&self, column: &BaseColumn) -> String {
-        let mut entry = format!("`{}`", &column.name);
+        let mut entry = format!("\"{}\"", &column.name);
         let mut the_type = " ".to_owned();
 
         // column type
@@ -379,10 +384,11 @@ impl PostgresSchemaManager {
             ColumnType::AutoIncrementId => the_type.push_str("BIGSERIAL PRIMARY KEY"),
             ColumnType::Boolean => the_type.push_str("tinyint(1)"),
             ColumnType::Char(length) => {
-                the_type.push_str(&format!("char({}) COLLATE 'utf8mb4_unicode_ci'", length))
+                // the_type.push_str(&format!("char({}) COLLATE 'utf8mb4_unicode_ci'", length))
+                the_type.push_str(&format!("varchar({})", length))
             }
             ColumnType::Datetime => the_type.push_str("datetime"),
-            ColumnType::Timestamp => the_type.push_str("timestamp"),
+            ColumnType::Timestamp => the_type.push_str("timestamptz"),
             // ColumnType::File() shouldn't be here
             // ColumnType::Float not sure
             ColumnType::Integer => the_type.push_str("bigint(20)"),
@@ -391,7 +397,8 @@ impl PostgresSchemaManager {
             // ColumnType::Relation { relation_type, table_name }
             // ColumnType::Select()
             ColumnType::String(length) => {
-                let q = format!("varchar({}) COLLATE 'utf8mb4_unicode_ci'", length);
+                // let q = format!("varchar({}) COLLATE 'utf8mb4_unicode_ci'", length);
+                let q = format!("varchar({})", length);
                 the_type.push_str(q.as_str());
             }
             ColumnType::Text => the_type.push_str("longtext"),
@@ -417,16 +424,14 @@ impl PostgresSchemaManager {
         if let Some(default) = &column.default {
             the_type.push_str(" DEFAULT ");
             match default {
-                ColumnDefault::CreatedAt => the_type.push_str("now()"),
+                ColumnDefault::CreatedAt => the_type.push_str("CURRENT_TIMESTAMP"),
                 ColumnDefault::Custom(d) => the_type.push_str(&format!("'{}'", d)),
                 ColumnDefault::EmptyArray => the_type.push_str("[]"),
                 ColumnDefault::EmptyObject => the_type.push_str("{}"),
                 ColumnDefault::EmptyString => the_type.push_str(""),
                 ColumnDefault::Uuid => the_type.push_str("SYS_GUID()"),
                 ColumnDefault::Ulid => (),
-                ColumnDefault::UpdatedAt => {
-                    the_type.push_str("current_timestamp() ON UPDATE CURRENT_TIMESTAMP")
-                }
+                ColumnDefault::UpdatedAt => the_type.push_str("CURRENT_TIMESTAMP"),
                 ColumnDefault::Zero => the_type.push('0'),
             };
         }
