@@ -1,7 +1,8 @@
-use dirtybase_db::{
-    base::helper::generate_ulid, dirtybase_db_types::types::InternalIdField, macros::DirtyTable,
+use dirtybase_contract::db::{
+    base::helper::generate_ulid,
+    macros::DirtyTable,
+    types::{DateTimeField, InternalIdField, StringField, UlidField},
 };
-use dirtybase_db_types::types::{DateTimeField, StringField, UlidField};
 
 #[derive(Debug, Clone, Default, DirtyTable)]
 #[dirty(table = "core_app_role", id = "id")]

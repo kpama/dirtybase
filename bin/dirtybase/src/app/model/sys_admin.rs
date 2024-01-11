@@ -2,13 +2,13 @@
 //!
 //! The default user as setup time is placed in this list.
 
-use dirtybase_db::db::{base::manager::Manager, entity::user::USER_TABLE};
+use dirtybase_contract::db::{base::manager::Manager, entity::user::USER_TABLE};
 
 mod sys_admin_entity;
 mod sys_admin_repository;
 mod sys_admin_service;
 
-use dirtybase_db_types::TableEntityTrait;
+use dirtybase_db::TableEntityTrait;
 pub use sys_admin_entity::SysAdminEntity;
 pub use sys_admin_repository::SysAdminRepository;
 pub use sys_admin_service::SysAdminService;

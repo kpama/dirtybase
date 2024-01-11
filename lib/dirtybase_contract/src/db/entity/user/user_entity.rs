@@ -1,9 +1,7 @@
 use super::UserStatus;
 use crate::db::base::helper::generate_ulid;
+use dirtybase_db::types::{BooleanField, DateTimeField, InternalIdField, StringField, UlidField};
 use dirtybase_db_macro::DirtyTable;
-use dirtybase_db_types::types::{
-    BooleanField, DateTimeField, InternalIdField, StringField, UlidField,
-};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, DirtyTable)]

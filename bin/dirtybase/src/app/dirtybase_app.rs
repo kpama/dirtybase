@@ -1,8 +1,8 @@
 use super::client::redis_client::make_redis_client;
 use super::setup_defaults::setup_default_entities;
 use super::Config;
-use dirtybase_db::db::base::manager::Manager;
-use dirtybase_db::db::entity::user::{UserRepository, UserService};
+use dirtybase_contract::db::base::manager::Manager;
+use dirtybase_contract::db::entity::user::{UserRepository, UserService};
 use dirtybase_db::ConnectionPoolManager;
 use tokio::sync::RwLock;
 

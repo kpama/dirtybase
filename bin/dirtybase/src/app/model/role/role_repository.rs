@@ -1,9 +1,7 @@
 use super::{RoleEntity, ROLE_TABLE, ROLE_TABLE_DELETED_AT_FIELD, ROLE_TABLE_ID_FIELD};
 use crate::app::DirtyBaseApp;
-use dirtybase_db::{
-    base::manager::Manager,
-    dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue},
-};
+use dirtybase_contract::db::{base::manager::Manager, types::IntoColumnAndValue};
+use dirtybase_db::field_values::FieldValue;
 
 pub struct RoleRepository {
     manager: Manager,

@@ -3,29 +3,22 @@ name = "dirtybase_db"
 version = { workspace = true }
 edition = { workspace = true }
 
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# dirtybase_db_types = { path = "../dirtybase_db_types" }
-# dirtybase_db_macro = { path = "../dirtybase_db_macro" }
-# dirtybase_config = { path = "../dirtybase_config" }
-dirtybase_contract = { path = "../dirtybase_contract" }
-async-trait = { workspace = true }
-futures = { workspace = true }
-futures-util = { workspace = true }
-sqlx = { workspace = true }
-ulid = { workspace = true }
+dirtybase_config = { path = "../dirtybase_config" }
 serde = { workspace = true }
 serde_json = { workspace = true }
-log = { workspace = true }
-tokio-tungstenite = { workspace = true }
-futures-channel = { workspace = true }
-native-tls = { workspace = true }
-tokio = { workspace = true }
-bcrypt = { workspace = true }
 chrono = { workspace = true }
+sqlx = { workspace = true }
+async-trait = { workspace = true }
 anyhow = { workspace = true }
-busybody = { workspace = true }
+ulid = { workspace = true }
 orsomafo = { workspace = true }
-fama = { workspace = true }
+log = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
+tokio-stream = { workspace = true }
+busybody = { workspace = true }
+futures = { workspace = true }
+futures-util = { workspace = true }
+futures-channel = { workspace = true }

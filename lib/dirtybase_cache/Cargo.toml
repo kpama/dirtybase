@@ -7,8 +7,8 @@ edition.workspace = true
 
 [dependencies]
 busybody = { workspace = true }
+dirtybase_db_macro = { path = "../dirtybase_db_macro" }
 dirtybase_db = { path = "../dirtybase_db" }
-dirtybase_db_types = { path = "../dirtybase_db_types" }
 dirtybase_config = { path = "../dirtybase_config" }
 dirtybase_helper = { path = "../dirtybase_helper" }
 dirtybase_3rd_client = { path = "../dirtybase_3rd_client" }

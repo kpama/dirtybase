@@ -1,6 +1,6 @@
 use orsomafo::Dispatchable;
 
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct DirtybaseUserLoggedInEvent {
     id: String,
 }

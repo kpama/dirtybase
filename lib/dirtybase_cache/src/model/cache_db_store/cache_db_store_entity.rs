@@ -1,4 +1,4 @@
-use dirtybase_db::macros::DirtyTable;
+use dirtybase_db_macro::DirtyTable;
 
 use crate::cache_manager::cache_entry::CacheEntry;
 

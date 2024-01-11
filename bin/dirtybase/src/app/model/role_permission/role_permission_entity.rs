@@ -1,5 +1,5 @@
-use dirtybase_db::{entity::user::UserEntity, macros::DirtyTable};
-use dirtybase_db_types::types::{DateTimeField, UlidField};
+use dirtybase_contract::db::types::{DateTimeField, UlidField};
+use dirtybase_contract::db::{entity::user::UserEntity, macros::DirtyTable};
 
 #[derive(Debug, Clone, Default, DirtyTable, serde::Serialize, serde::Deserialize)]
 #[dirty(table = "core_role_permission")]

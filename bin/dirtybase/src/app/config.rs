@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use dirtybase_config::DirtyConfig;
-use dirtybase_db::db::entity::user::hash_password;
+use dirtybase_contract::db::entity::user::hash_password;
 use std::env;
 
 use super::DirtyBaseApp;

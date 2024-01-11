@@ -1,5 +1,7 @@
-use dirtybase_db::{dirtybase_db_types::types::InternalIdField, macros::DirtyTable};
-use dirtybase_db_types::types::{DateTimeField, StringField, UnsignedIntegerField};
+use dirtybase_contract::db::{
+    macros::DirtyTable,
+    types::{DateTimeField, InternalIdField, StringField, UnsignedIntegerField},
+};
 
 #[derive(Debug, Default, DirtyTable)]
 #[dirty(table = "core_migration", id = "id")]

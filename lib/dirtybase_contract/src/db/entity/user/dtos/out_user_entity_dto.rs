@@ -1,5 +1,5 @@
+use dirtybase_db::types::DateTimeField;
 use dirtybase_db_macro::DirtyTable;
-use dirtybase_db_types::types::DateTimeField;
 use serde::Serialize;
 
 use crate::db::entity::user::{UserEntity, UserStatus};

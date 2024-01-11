@@ -3,9 +3,8 @@ use super::{
     ROLE_USER_TABLE_CORE_USER_ID_FIELD, ROLE_USER_TABLE_DELETED_AT_FIELD,
 };
 use crate::app::DirtyBaseApp;
-use dirtybase_db::{
-    base::manager::Manager,
-    dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue},
+use dirtybase_contract::db::{
+    base::manager::Manager, field_values::FieldValue, types::IntoColumnAndValue,
 };
 
 pub struct RoleUserRepository {

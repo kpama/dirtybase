@@ -5,10 +5,7 @@ use super::{
     COMPANY_TABLE_INTERNAL_ID_FIELD,
 };
 use crate::app::DirtyBaseApp;
-use dirtybase_db::{
-    base::manager::Manager,
-    dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue},
-};
+use dirtybase_db::{base::manager::Manager, field_values::FieldValue, types::IntoColumnAndValue};
 
 pub struct CompanyRepository {
     manager: Manager,

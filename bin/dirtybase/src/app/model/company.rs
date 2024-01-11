@@ -1,4 +1,4 @@
-use dirtybase_db::{
+use dirtybase_contract::db::{
     base::{
         manager::Manager,
         table::{

@@ -1,7 +1,7 @@
 use super::out_user_app::UserAppDto;
 use crate::app::model::dirtybase_user::DirtybaseUserEntity;
-use dirtybase_db::{entity::user::dtos::OutUserEntityDto, macros::DirtyTable};
-use dirtybase_db_types::types::{StructuredColumnAndValue, TimestampField};
+use dirtybase_contract::db::types::{StructuredColumnAndValue, TimestampField};
+use dirtybase_contract::db::{entity::user::dtos::OutUserEntityDto, macros::DirtyTable};
 
 /// Outgoing DTO when the user successfully logged in
 #[derive(Debug, Default, serde::Serialize, Clone, DirtyTable)]

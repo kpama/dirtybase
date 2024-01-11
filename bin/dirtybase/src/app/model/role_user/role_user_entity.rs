@@ -1,6 +1,6 @@
 use crate::app::model::role::RoleEntity;
-use dirtybase_db::{entity::user::UserEntity, macros::DirtyTable};
-use dirtybase_db_types::{
+use dirtybase_contract::db::{entity::user::UserEntity, macros::DirtyTable};
+use dirtybase_contract::db::{
     types::{DateTimeField, UlidField},
     TableEntityTrait,
 };

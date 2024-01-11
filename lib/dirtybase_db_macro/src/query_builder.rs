@@ -17,11 +17,11 @@ pub(crate) fn generate_query_builder_struct(
 
     if !id_column.is_empty() {
         methods.push(quote!{
-          pub async fn id<V: Into<dirtybase_db_types::field_values::FieldValue>>(&self, id: V) -> Result<Option<#base_name>, dirtybase_db_types::anyhow::Error> {
+          pub async fn id<V: Into<dirtybase_db::field_values::FieldValue>>(&self, id: V) -> Result<Option<#base_name>, dirtybase_db::anyhow::Error> {
              self.one_by(#id_column, id).await
           }
 
-          pub async fn ids<V: Into<dirtybase_db_types::field_values::FieldValue> + IntoIterator >(&self, ids: V) -> Result<Option<Vec<#base_name>>, dirtybase_db_types::anyhow::Error> {
+          pub async fn ids<V: Into<dirtybase_db::field_values::FieldValue> + IntoIterator >(&self, ids: V) -> Result<Option<Vec<#base_name>>, dirtybase_db::anyhow::Error> {
            self.manager.select_from_table(&self.table,|query| {
                 query.select_all()
                 .is_in(#id_column, ids);
@@ -40,16 +40,16 @@ pub(crate) fn generate_query_builder_struct(
                 let null_method = format_ident!("{}_is_null", name.to_lowercase());
                 let all_null_method = format_ident!("all_{}_is_null", name.to_lowercase());
                 methods.push(quote!{
-                pub async fn #by_method<V: Into<dirtybase_db_types::field_values::FieldValue>>(&self, value: V) -> Result<Option<#base_name>, dirtybase_db_types::anyhow::Error> {
+                pub async fn #by_method<V: Into<dirtybase_db::field_values::FieldValue>>(&self, value: V) -> Result<Option<#base_name>, dirtybase_db::anyhow::Error> {
                   self.one_by(#name, value).await
                 }
-                pub async fn #like_method<V: Into<dirtybase_db_types::field_values::FieldValue>>(&self, value: V) -> Result<Option<#base_name>, dirtybase_db_types::anyhow::Error> {
+                pub async fn #like_method<V: Into<dirtybase_db::field_values::FieldValue>>(&self, value: V) -> Result<Option<#base_name>, dirtybase_db::anyhow::Error> {
                   self.manager.select_from_table(&self.table,|query| {
                       query.select_all()
                       .like(#name, value);
                     }).fetch_one_to().await
                 }
-                pub async fn #all_like_method<V: Into<dirtybase_db_types::field_values::FieldValue>>(&self, value: V) -> Result<Option<Vec<#base_name>>, dirtybase_db_types::anyhow::Error> {
+                pub async fn #all_like_method<V: Into<dirtybase_db::field_values::FieldValue>>(&self, value: V) -> Result<Option<Vec<#base_name>>, dirtybase_db::anyhow::Error> {
                   self.manager.select_from_table(&self.table,|query| {
                       query.select_all()
                       .like(#name, value);
@@ -58,7 +58,7 @@ pub(crate) fn generate_query_builder_struct(
               });
                 if attr.optional {
                     methods.push(quote!{
-                      pub async fn #null_method(&self, is_null: bool) -> Result<Option<#base_name>, dirtybase_db_types::anyhow::Error> {
+                      pub async fn #null_method(&self, is_null: bool) -> Result<Option<#base_name>, dirtybase_db::anyhow::Error> {
                         self.manager.select_from_table(&self.table,|query| {
                           query.select_all();
                           if is_null {
@@ -69,7 +69,7 @@ pub(crate) fn generate_query_builder_struct(
                         }).fetch_one_to().await
                     }
 
-                      pub async fn #all_null_method(&self, is_null: bool) -> Result<Option<Vec<#base_name>>, dirtybase_db_types::anyhow::Error> {
+                      pub async fn #all_null_method(&self, is_null: bool) -> Result<Option<Vec<#base_name>>, dirtybase_db::anyhow::Error> {
                         self.manager.select_from_table(&self.table,|query| {
                           query.select_all();
                           if is_null {
@@ -88,34 +88,34 @@ pub(crate) fn generate_query_builder_struct(
 
     quote! {
       pub struct  #struct_name {
-        manager: dirtybase_db_types::base::manager::Manager,
+        manager: dirtybase_db::base::manager::Manager,
         table: String,
       }
 
       impl #struct_name {
 
-        pub fn new(manager: dirtybase_db_types::base::manager::Manager) -> Self {
+        pub fn new(manager: dirtybase_db::base::manager::Manager) -> Self {
             Self {
               manager,
               table: #the_table_name.to_string()
              }
         }
 
-          pub async fn all(&self) -> Result<Option<Vec<#base_name>>, dirtybase_db_types::anyhow::Error> {
+          pub async fn all(&self) -> Result<Option<Vec<#base_name>>, dirtybase_db::anyhow::Error> {
            self.manager.select_from_table(&self.table,|query| {
                 query.select_all();
              }).fetch_all_to().await
           }
 
 
-          pub async fn one_by<C: ToString, V: Into<dirtybase_db_types::field_values::FieldValue>>(&self, name: C, value: V) -> Result<Option<#base_name>, dirtybase_db_types::anyhow::Error> {
+          pub async fn one_by<C: ToString, V: Into<dirtybase_db::field_values::FieldValue>>(&self, name: C, value: V) -> Result<Option<#base_name>, dirtybase_db::anyhow::Error> {
             self.manager.select_from_table(&self.table, move |query| {
                query.select_all()
                   .eq(name, value);
             }).fetch_one_to().await
           }
 
-          pub async fn all_by<C: ToString, V: Into<dirtybase_db_types::field_values::FieldValue>>(&self, name: C, value: V) ->  Result<Option<Vec<#base_name>>, dirtybase_db_types::anyhow::Error> {
+          pub async fn all_by<C: ToString, V: Into<dirtybase_db::field_values::FieldValue>>(&self, name: C, value: V) ->  Result<Option<Vec<#base_name>>, dirtybase_db::anyhow::Error> {
            self.manager.select_from_table(&self.table, move |query| {
                 query.select_all()
                    .eq(name, value);

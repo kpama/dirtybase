@@ -2,7 +2,7 @@ use crate::app::model::{
     app::AppEntity, company::dto::out_company_entity_dto::OutCompanyEntityDto,
     role::dtos::out_role_dto::OutRoleEntityDto,
 };
-use dirtybase_db::macros::DirtyTable;
+use dirtybase_contract::db::macros::DirtyTable;
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize, DirtyTable, Default)]
 pub struct UserAppDto {

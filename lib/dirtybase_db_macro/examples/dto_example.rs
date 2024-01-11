@@ -1,5 +1,5 @@
+use dirtybase_db::TableEntityTrait;
 use dirtybase_db_macro::DirtyTable;
-use dirtybase_db_types::TableEntityTrait;
 
 #[derive(Debug, Default, Clone, DirtyTable)]
 struct User {

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use dirtybase_db::db::base::manager::Manager;
-use dirtybase_db::db::dirtybase_db_types::{field_values::FieldValue, TableEntityTrait};
+use dirtybase_db::base::manager::Manager;
+use dirtybase_db::{field_values::FieldValue, TableEntityTrait};
 use dirtybase_helper::time::now;
 
 use super::{CacheDbPivotEntity, CacheDbStoreEntity, CacheDbTagStoreEntity};

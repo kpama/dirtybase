@@ -7,7 +7,7 @@ mod user_service;
 
 pub mod dtos;
 
-use dirtybase_db_types::TableEntityTrait;
+use dirtybase_db::TableEntityTrait;
 pub use user_entity::UserEntity;
 pub use user_helpers::*;
 pub use user_repository::UserRepository;

@@ -1,8 +1,7 @@
 use super::{SysAdminEntity, SYS_ADMIN_TABLE, SYS_ADMIN_TABLE_USER_ID_FIELD};
 use crate::app::DirtyBaseApp;
-use dirtybase_db::{
-    base::manager::Manager,
-    dirtybase_db_types::{field_values::FieldValue, types::IntoColumnAndValue},
+use dirtybase_contract::db::{
+    base::manager::Manager, field_values::FieldValue, types::IntoColumnAndValue,
 };
 
 pub struct SysAdminRepository {

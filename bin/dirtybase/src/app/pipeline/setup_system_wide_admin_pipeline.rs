@@ -9,7 +9,7 @@ use crate::app::{
     Config, DirtyBaseApp,
 };
 use busybody::Service;
-use dirtybase_db::db::entity::user::UserEntity;
+use dirtybase_contract::db::entity::user::UserEntity;
 use fama::PipeContent;
 
 pub(crate) async fn execute() {

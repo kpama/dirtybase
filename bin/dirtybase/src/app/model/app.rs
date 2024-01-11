@@ -13,7 +13,7 @@ mod app_service;
 pub use app_entity::AppEntity;
 pub use app_repository::AppRepository;
 pub use app_service::AppService;
-use dirtybase_db_types::TableEntityTrait;
+use dirtybase_db::TableEntityTrait;
 
 use super::company::COMPANY_TABLE;
 

@@ -1,9 +1,9 @@
 use busybody::ServiceContainer;
-use dirtybase_db::{
+use dirtybase_contract::db::{
     base::helper::generate_ulid,
-    dirtybase_db_types::types::{DateTimeField, InternalIdField, StringField, UlidField},
     entity::user::UserEntity,
     macros::DirtyTable,
+    types::{DateTimeField, InternalIdField, StringField, UlidField},
 };
 
 #[derive(Debug, Clone, Default, DirtyTable, serde::Serialize, serde::Deserialize)]

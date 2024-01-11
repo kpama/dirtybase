@@ -1,4 +1,4 @@
-use dirtybase_db::db::event::UserCreatedEvent;
+use dirtybase_contract::db::event::UserCreatedEvent;
 
 mod user_created_handler;
 

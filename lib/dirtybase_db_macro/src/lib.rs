@@ -45,7 +45,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
 
         #(#column_name_methods)*
 
-        pub fn from_struct_column_value(mut cv: &mut ::dirtybase_db_types::types::StructuredColumnAndValue, key: Option<&str>) -> Option<Self> {
+        pub fn from_struct_column_value(mut cv: &mut ::dirtybase_db::types::StructuredColumnAndValue, key: Option<&str>) -> Option<Self> {
           if let Some(name) = key {
               if let Some(values) = cv.get(name) {
                     Some(values.clone().into())
@@ -53,17 +53,17 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
                     None
                 }
           } else {
-            Some(::dirtybase_db_types::types::FromColumnAndValue::from_column_value(cv.clone().fields()))
+            Some(::dirtybase_db::types::FromColumnAndValue::from_column_value(cv.clone().fields()))
           }
         }
 
-        pub fn repo(manager: dirtybase_db_types::base::manager::Manager)-> #repo_struct_name {
+        pub fn repo(manager: dirtybase_db::base::manager::Manager)-> #repo_struct_name {
           #repo_struct_name::new(manager)
         }
       }
 
       // TableEntityTrait
-      impl #ty_generics ::dirtybase_db_types::TableEntityTrait for #name  #ty_generics #where_clause {
+      impl #ty_generics ::dirtybase_db::TableEntityTrait for #name  #ty_generics #where_clause {
 
         #id_column_method
 
@@ -83,9 +83,9 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
       }
 
       // FromColumnAndValue for T
-      impl #ty_generics ::dirtybase_db_types::types::FromColumnAndValue  for #name  #ty_generics #where_clause {
+      impl #ty_generics ::dirtybase_db::types::FromColumnAndValue  for #name  #ty_generics #where_clause {
 
-        fn from_column_value(cv: ::dirtybase_db_types::types::ColumnAndValue) -> Self {
+        fn from_column_value(cv: ::dirtybase_db::types::ColumnAndValue) -> Self {
             Self {
                 #(#from_cv_for_handlers),*,
                 #defaults
@@ -94,46 +94,46 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
       }
 
       // IntoColumnAndValue into T
-      impl #ty_generics ::dirtybase_db_types::types::IntoColumnAndValue for #name  #ty_generics #where_clause {
-        fn into_column_value(self) -> ::dirtybase_db_types::types::ColumnAndValue {
-            ::dirtybase_db_types::ColumnAndValueBuilder::new()
+      impl #ty_generics ::dirtybase_db::types::IntoColumnAndValue for #name  #ty_generics #where_clause {
+        fn into_column_value(self) -> ::dirtybase_db::types::ColumnAndValue {
+            ::dirtybase_db::ColumnAndValueBuilder::new()
                 #(.#into_cv_for_calls)*
                 .build()
         }
       }
 
       // Impl From FieldValue
-      impl #ty_generics From<::dirtybase_db_types::field_values::FieldValue> for #name  #ty_generics #where_clause {
+      impl #ty_generics From<::dirtybase_db::field_values::FieldValue> for #name  #ty_generics #where_clause {
 
-          fn from(value: ::dirtybase_db_types::field_values::FieldValue) -> Self {
+          fn from(value: ::dirtybase_db::field_values::FieldValue) -> Self {
               match value {
-                  ::dirtybase_db_types::field_values::FieldValue::Object(v) => ::dirtybase_db_types::types::FromColumnAndValue::from_column_value(v),
+                  ::dirtybase_db::field_values::FieldValue::Object(v) => ::dirtybase_db::types::FromColumnAndValue::from_column_value(v),
                   _ =>  Self::default()
               }
           }
       }
 
-      impl #ty_generics From<&::dirtybase_db_types::field_values::FieldValue> for #name  #ty_generics #where_clause {
+      impl #ty_generics From<&::dirtybase_db::field_values::FieldValue> for #name  #ty_generics #where_clause {
 
-          fn from(value: &::dirtybase_db_types::field_values::FieldValue) -> Self {
+          fn from(value: &::dirtybase_db::field_values::FieldValue) -> Self {
               match value {
-                  ::dirtybase_db_types::field_values::FieldValue::Object(v) => ::dirtybase_db_types::types::FromColumnAndValue::from_column_value(v.clone()),
+                  ::dirtybase_db::field_values::FieldValue::Object(v) => ::dirtybase_db::types::FromColumnAndValue::from_column_value(v.clone()),
                   _ =>  Self::default()
               }
           }
       }
 
       // Impl from &Self to FieldValue
-      impl #ty_generics From<&#name> for ::dirtybase_db_types::field_values::FieldValue {
-          fn from(value: &#name ) -> ::dirtybase_db_types::field_values::FieldValue {
-             ::dirtybase_db_types::field_values::FieldValue::NotSet
+      impl #ty_generics From<&#name> for ::dirtybase_db::field_values::FieldValue {
+          fn from(value: &#name ) -> ::dirtybase_db::field_values::FieldValue {
+             ::dirtybase_db::field_values::FieldValue::NotSet
           }
       }
 
       // Impl from Self to FieldValue
-      impl #ty_generics From<#name> for ::dirtybase_db_types::field_values::FieldValue {
-          fn from(value: #name ) -> ::dirtybase_db_types::field_values::FieldValue {
-             ::dirtybase_db_types::field_values::FieldValue::NotSet
+      impl #ty_generics From<#name> for ::dirtybase_db::field_values::FieldValue {
+          fn from(value: #name ) -> ::dirtybase_db::field_values::FieldValue {
+             ::dirtybase_db::field_values::FieldValue::NotSet
           }
       }
 

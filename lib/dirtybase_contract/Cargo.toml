@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dirtybase_db_types = { path = "../dirtybase_db_types" }
+dirtybase_db = { path = "../dirtybase_db" }
 dirtybase_config = { path = "../dirtybase_config" }
 dirtybase_db_macro = { path = "../dirtybase_db_macro" }
 async-trait = { workspace = true }

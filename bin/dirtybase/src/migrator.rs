@@ -2,7 +2,7 @@ use clap::Subcommand;
 
 use dirtybase_contract::ExtensionMigrations;
 use dirtybase_db::base::manager::Manager;
-use dirtybase_db_types::{types::ColumnAndValue, TableEntityTrait};
+use dirtybase_db::{types::ColumnAndValue, TableEntityTrait};
 
 use crate::app::{
     model::migration::{MigrationEntity, MigrationRepository},

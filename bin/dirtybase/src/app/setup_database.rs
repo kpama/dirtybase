@@ -11,11 +11,10 @@ use super::model::{
     role_user::{setup_role_users_table, RoleUserEntity},
     sys_admin::{setup_sysadmins_table, SysAdminEntity},
 };
-use dirtybase_db::{
-    db::{base::manager::Manager, entity::user::setup_users_table},
-    entity::user::UserEntity,
+use dirtybase_contract::db::{
+    base::manager::Manager, entity::user::setup_users_table, entity::user::UserEntity,
 };
-use dirtybase_db_types::TableEntityTrait;
+use dirtybase_db::TableEntityTrait;
 
 pub const APPLICATION_TABLE: &str = "core_app";
 pub const APPLICATION_SCHEMA_TABLE: &str = "core_app_schema";

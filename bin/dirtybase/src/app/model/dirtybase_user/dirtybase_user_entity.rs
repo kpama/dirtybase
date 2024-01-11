@@ -1,9 +1,11 @@
 use super::dtos::out_user_app::UserAppDto;
-use dirtybase_db::{
-    base::helper::generate_ulid, dirtybase_db_types::types::UlidField,
-    dirtybase_db_types::TableEntityTrait, entity::user::UserEntity, macros::DirtyTable,
+use dirtybase_contract::db::{
+    base::helper::generate_ulid,
+    entity::user::UserEntity,
+    macros::DirtyTable,
+    types::{StructuredColumnAndValue, TimestampField, UlidField},
 };
-use dirtybase_db_types::types::{StructuredColumnAndValue, TimestampField};
+use dirtybase_db::TableEntityTrait;
 use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone, Default, DirtyTable)]

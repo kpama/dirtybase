@@ -234,28 +234,28 @@ pub(crate) fn build_from_handlers(
                     if item.1.optional {
                         if item.1.is_vec {
                         quote! {
-                            pub fn #fn_name <'a>(field: Option<&'a dirtybase_db_types::field_values::FieldValue>) -> Option<Vec<#returns>> {
-                                dirtybase_db_types::field_values::FieldValue::from_ref_option_into_option(field)
+                            pub fn #fn_name <'a>(field: Option<&'a dirtybase_db::field_values::FieldValue>) -> Option<Vec<#returns>> {
+                                dirtybase_db::field_values::FieldValue::from_ref_option_into_option(field)
                             }
                         }
                         } else {
 
                         quote! {
-                            pub fn #fn_name <'a>(field: Option<&'a dirtybase_db_types::field_values::FieldValue>) -> Option<#returns> {
-                                dirtybase_db_types::field_values::FieldValue::from_ref_option_into_option(field)
+                            pub fn #fn_name <'a>(field: Option<&'a dirtybase_db::field_values::FieldValue>) -> Option<#returns> {
+                                dirtybase_db::field_values::FieldValue::from_ref_option_into_option(field)
                             }
                         }
                         }
                     } else if item.1.is_vec {
                             quote! {
-                                pub fn #fn_name <'a> (field: Option<&'a dirtybase_db_types::field_values::FieldValue>) -> Vec<#returns> {
-                                    dirtybase_db_types::field_values::FieldValue::from_ref_option_into(field)
+                                pub fn #fn_name <'a> (field: Option<&'a dirtybase_db::field_values::FieldValue>) -> Vec<#returns> {
+                                    dirtybase_db::field_values::FieldValue::from_ref_option_into(field)
                                 }
                             }
                         } else {
                             quote! {
-                                pub fn #fn_name <'a> (field: Option<&'a dirtybase_db_types::field_values::FieldValue>) -> #returns {
-                                    dirtybase_db_types::field_values::FieldValue::from_ref_option_into(field)
+                                pub fn #fn_name <'a> (field: Option<&'a dirtybase_db::field_values::FieldValue>) -> #returns {
+                                    dirtybase_db::field_values::FieldValue::from_ref_option_into(field)
                                 }
                         }
                     });
@@ -280,7 +280,7 @@ pub(crate) fn build_into_handlers(
 
         built.push(if item.1.optional {
             quote! {
-                    pub fn #fn_name(&self) ->Option<dirtybase_db_types::field_values::FieldValue> {
+                    pub fn #fn_name(&self) ->Option<dirtybase_db::field_values::FieldValue> {
                         if let Some(value) = &self.#struct_field {
                             Some(value.clone().into())
                         } else {
@@ -290,7 +290,7 @@ pub(crate) fn build_into_handlers(
             }
         } else {
             quote! {
-                    pub fn #fn_name(&self) ->Option<dirtybase_db_types::field_values::FieldValue> {
+                    pub fn #fn_name(&self) ->Option<dirtybase_db::field_values::FieldValue> {
                         Some(self.#struct_field.clone().into())
                     }
             }

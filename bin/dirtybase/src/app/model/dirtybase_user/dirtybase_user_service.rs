@@ -15,7 +15,7 @@ use super::{
 use anyhow::anyhow;
 use busybody::helpers::provide;
 use dirtybase_cache::CacheManager;
-use dirtybase_db::entity::user::{
+use dirtybase_contract::db::entity::user::{
     verify_password, UserEntity, UserRepository, UserService, UserStatus,
 };
 

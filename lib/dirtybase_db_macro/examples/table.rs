@@ -1,8 +1,8 @@
+use dirtybase_db::field_values::FieldValue;
 use dirtybase_db_macro::DirtyTable;
-use dirtybase_db_types::field_values::FieldValue;
-// use dirtybase_db_types::types::FromColumnAndValue;
-use dirtybase_db_types::types::IntoColumnAndValue;
-use dirtybase_db_types::TableEntityTrait;
+// use dirtybase_db::types::FromColumnAndValue;
+use dirtybase_db::types::IntoColumnAndValue;
+use dirtybase_db::TableEntityTrait;
 
 #[derive(DirtyTable, Default, Clone, Debug)]
 #[dirty(table = "address")]

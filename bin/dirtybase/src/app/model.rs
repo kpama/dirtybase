@@ -10,4 +10,4 @@ pub mod role_permission;
 pub mod role_user;
 pub mod sys_admin;
 
-pub use dirtybase_db::db::entity::user;
+pub use dirtybase_contract::db::entity::user;

@@ -1,4 +1,4 @@
-use dirtybase_db_types::field_values::FieldValue;
+use dirtybase_db::field_values::FieldValue;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 

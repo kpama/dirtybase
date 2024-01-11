@@ -3,15 +3,13 @@ use crate::app::{
     model::{role::RoleEntity, role_user::RoleUserEntity},
     DirtyBaseApp,
 };
+use dirtybase_contract::db::entity::user::{UserEntity, USER_TABLE};
+use dirtybase_db::TableEntityTrait;
 use dirtybase_db::{
     base::manager::Manager,
-    dirtybase_db_types::{
-        field_values::FieldValue,
-        types::{IntoColumnAndValue, StructuredColumnAndValue},
-    },
-    entity::user::{UserEntity, USER_TABLE},
+    field_values::FieldValue,
+    types::{IntoColumnAndValue, StructuredColumnAndValue},
 };
-use dirtybase_db_types::TableEntityTrait;
 
 pub struct AppRepository {
     manager: Manager,

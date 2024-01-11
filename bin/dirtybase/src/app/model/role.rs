@@ -1,4 +1,4 @@
-use dirtybase_db::db::{
+use dirtybase_contract::db::{
     base::{
         manager::Manager,
         table::{
@@ -8,7 +8,7 @@ use dirtybase_db::db::{
     },
     entity::user::USER_TABLE,
 };
-use dirtybase_db_types::TableEntityTrait;
+use dirtybase_db::TableEntityTrait;
 
 use super::app::APP_TABLE;
 
