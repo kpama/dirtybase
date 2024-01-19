@@ -142,7 +142,23 @@ pub trait SchemaManagerTrait: Send + Sync {
 
     async fn drop_table(&self, name: &str) -> bool;
 
-    async fn raw_insert(&self, statement: &str, args: Vec<String>);
+    async fn raw_insert(
+        &self,
+        sql: &str,
+        values: Vec<Vec<FieldValue>>,
+    ) -> Result<bool, anyhow::Error>;
+
+    async fn raw_update(&self, sql: &str, params: Vec<FieldValue>) -> Result<u64, anyhow::Error>;
+
+    async fn raw_delete(&self, sql: &str, values: Vec<FieldValue>) -> Result<u64, anyhow::Error>;
+
+    async fn raw_select(
+        &self,
+        sql: &str,
+        params: Vec<FieldValue>,
+    ) -> Result<Vec<ColumnAndValue>, anyhow::Error>;
+
+    async fn raw_statement(&self, sql: &str) -> Result<bool, anyhow::Error>;
 }
 
 pub struct SchemaWrapper {

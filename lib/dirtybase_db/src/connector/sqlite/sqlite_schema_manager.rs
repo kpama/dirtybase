@@ -1,17 +1,20 @@
-use crate::base::{
-    column::{BaseColumn, ColumnDefault, ColumnType},
-    index::IndexType,
-    query::{QueryAction, QueryBuilder},
-    query_conditions::Condition,
-    query_operators::Operator,
-    schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
-    table::{BaseTable, UPDATED_AT_FIELD},
+use crate::{
+    base::{
+        column::{BaseColumn, ColumnDefault, ColumnType},
+        index::IndexType,
+        query::{QueryAction, QueryBuilder},
+        query_conditions::Condition,
+        query_operators::Operator,
+        schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
+        table::{BaseTable, UPDATED_AT_FIELD},
+    },
+    types::StructuredColumnAndValue,
 };
 use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAndValue};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
-use sqlx::{sqlite::SqliteRow, types::chrono, Column, Pool, Row, Sqlite};
+use sqlx::{sqlite::SqliteRow, types::chrono, Column, Execute, Pool, Row, Sqlite, TypeInfo};
 use std::{collections::HashMap, sync::Arc};
 
 const LOG_TARGET: &str = "sqlite_db_driver";
@@ -163,14 +166,78 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         };
     }
 
-    async fn raw_insert(&self, statement: &str, args: Vec<String>) {
-        let mut query = sqlx::query(statement);
-        for p in args {
-            query = query.bind(p);
+    async fn raw_insert(
+        &self,
+        sql: &str,
+        args: Vec<Vec<FieldValue>>,
+    ) -> Result<bool, anyhow::Error> {
+        let mut query = sqlx::query(sql);
+        for row in args {
+            for field in row {
+                query = query.bind(field.to_string());
+            }
         }
-        let result = query.execute(self.db_pool.as_ref()).await;
-        dbg!(result);
-        dbg!(statement);
+        match query.execute(self.db_pool.as_ref()).await {
+            Ok(_) => Ok(true),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    async fn raw_update(&self, sql: &str, params: Vec<FieldValue>) -> Result<u64, anyhow::Error> {
+        let mut query = sqlx::query(sql);
+        for p in params {
+            query = query.bind(p.to_string());
+        }
+
+        match query.execute(self.db_pool.as_ref()).await {
+            Ok(v) => Ok(v.rows_affected()),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    async fn raw_delete(&self, sql: &str, params: Vec<FieldValue>) -> Result<u64, anyhow::Error> {
+        self.raw_update(sql, params).await
+    }
+
+    async fn raw_select(
+        &self,
+        sql: &str,
+        params: Vec<FieldValue>,
+    ) -> Result<Vec<ColumnAndValue>, anyhow::Error> {
+        let mut results = Vec::new();
+        let mut query = sqlx::query(sql);
+
+        for p in &params {
+            query = query.bind(p.to_string());
+        }
+
+        let mut rows = query.fetch(self.db_pool.as_ref());
+        loop {
+            let next = rows.try_next().await;
+            match next {
+                Ok(result) => {
+                    if let Some(row) = result {
+                        results.push(self.row_to_column_value(&row));
+                    } else {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    return Err(anyhow!("could not fetch rows: {}", e));
+                }
+            }
+        }
+
+        Ok(results)
+    }
+
+    async fn raw_statement(&self, sql: &str) -> Result<bool, anyhow::Error> {
+        let query = sqlx::query(sql);
+
+        match query.execute(self.db_pool.as_ref()).await {
+            Ok(v) => Ok(true),
+            Err(e) => Err(e.into()),
+        }
     }
 }
 
@@ -606,7 +673,7 @@ impl SqliteSchemaManager {
 
         for col in row.columns() {
             let name = col.name().to_owned();
-            match col.type_info().to_string().to_ascii_uppercase().as_str() {
+            match col.type_info().name() {
                 "BOOLEAN" | "TINYINT(1)" => {
                     let v: bool = row.try_get::<i8, &str>(col.name()).unwrap_or_default() > 0;
                     this_row.insert(name, FieldValue::Boolean(v));
@@ -690,13 +757,25 @@ impl SqliteSchemaManager {
                         this_row.insert(col.name().to_owned(), FieldValue::Null);
                     }
                 }
-                "VARBINARY" | "BINARY" | "BLOB" => {}
-                // TODO find a means to represent binary
+                "VARBINARY" | "BINARY" | "BLOB" => {
+                    // TODO find a means to represent binary
+                }
+                "NULL" => {
+                    if let Ok(v) = row.try_get::<i64, &str>(col.name()) {
+                        this_row.insert(name, v.into());
+                    } else if let Ok(v) = row.try_get::<f64, &str>(col.name()) {
+                        this_row.insert(name, v.into());
+                    } else if let Ok(v) = row.try_get::<String, &str>(col.name()) {
+                        this_row.insert(name, v.into());
+                    }
+                }
                 _ => {
+                    let value = row.try_get::<String, &str>(col.name());
+                    println!("unknown value: {:?}", value);
                     dbg!(
                         "not mapped field: {:#?} => value: {:#?}",
                         name,
-                        col.type_info()
+                        col.type_info().name()
                     );
                 }
             }

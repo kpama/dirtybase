@@ -1,16 +1,19 @@
-use crate::base::{
-    column::{BaseColumn, ColumnDefault, ColumnType},
-    query::{QueryAction, QueryBuilder},
-    query_conditions::Condition,
-    query_operators::Operator,
-    schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
-    table::BaseTable,
+use crate::{
+    base::{
+        column::{BaseColumn, ColumnDefault, ColumnType},
+        query::{QueryAction, QueryBuilder},
+        query_conditions::Condition,
+        query_operators::Operator,
+        schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
+        table::BaseTable,
+    },
+    types::StructuredColumnAndValue,
 };
 use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAndValue};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
-use sqlx::{postgres::PgRow, types::chrono, Column, Pool, Postgres, Row};
+use sqlx::{any, postgres::PgRow, types::chrono, Column, Pool, Postgres, Row};
 use std::{collections::HashMap, sync::Arc};
 
 const LOG_TARGET: &str = "postgresql_db_driver";
@@ -165,8 +168,49 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         };
     }
 
-    async fn raw_insert(&self, statement: &str, args: Vec<String>) {
-        todo!()
+    async fn raw_insert(
+        &self,
+        sql: &str,
+        values: Vec<Vec<FieldValue>>,
+    ) -> Result<bool, anyhow::Error> {
+        let mut query = sqlx::query(sql);
+        for row in values {
+            for field in row {
+                query = query.bind(field.to_string());
+            }
+        }
+        match query.execute(self.db_pool.as_ref()).await {
+            Err(e) => Err(e.into()),
+            _ => Ok(true),
+        }
+    }
+
+    async fn raw_update(&self, sql: &str, params: Vec<FieldValue>) -> Result<u64, anyhow::Error> {
+        let mut query = sqlx::query(sql);
+        for p in params {
+            query = query.bind(p.to_string());
+        }
+
+        match query.execute(self.db_pool.as_ref()).await {
+            Ok(v) => Ok(v.rows_affected()),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    async fn raw_delete(&self, sql: &str, params: Vec<FieldValue>) -> Result<u64, anyhow::Error> {
+        self.raw_update(sql, params).await
+    }
+
+    async fn raw_select(
+        &self,
+        sql: &str,
+        params: Vec<FieldValue>,
+    ) -> Result<Vec<ColumnAndValue>, anyhow::Error> {
+        todo!();
+    }
+
+    async fn raw_statement(&self, sql: &str) -> Result<bool, anyhow::Error> {
+        todo!();
     }
 }
 
@@ -682,8 +726,18 @@ impl PostgresSchemaManager {
                         this_row.insert(col.name().to_owned(), FieldValue::Null);
                     }
                 }
-                "VARBINARY" | "BINARY" | "BLOB" => {}
-                // TODO find a means to represent binary
+                "VARBINARY" | "BINARY" | "BLOB" => {
+                    // TODO find a means to represent binary
+                }
+                "NULL" => {
+                    if let Ok(v) = row.try_get::<i64, &str>(col.name()) {
+                        this_row.insert(name, v.into());
+                    } else if let Ok(v) = row.try_get::<f64, &str>(col.name()) {
+                        this_row.insert(name, v.into());
+                    } else if let Ok(v) = row.try_get::<String, &str>(col.name()) {
+                        this_row.insert(name, v.into());
+                    }
+                }
                 _ => {
                     dbg!(
                         "not mapped field: {:#?} => value: {:#?}",

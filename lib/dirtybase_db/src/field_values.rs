@@ -1,15 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
 
-mod field_value_from_chrono_datetime;
-mod field_value_from_f32;
-mod field_value_from_f64;
-mod field_value_from_i32;
-mod field_value_from_i64;
-mod field_value_from_str;
-mod field_value_from_string;
-mod field_value_from_u32;
-mod field_value_from_u64;
+mod field_value_from_type;
 mod insert_value;
 
 pub mod to_raw_values;
@@ -185,34 +177,6 @@ impl From<HashMap<String, FieldValue>> for FieldValue {
     }
 }
 
-// impl FromIterator<HashMap<String, FieldValue>> for FieldValue {
-//     fn from_iter<T: IntoIterator<Item = HashMap<String, FieldValue>>>(iter: T) -> Self {
-//         Self::Array(iter.into_iter().map(|e| e.into()).collect::<Vec<Self>>())
-//     }
-// }
-
-// impl FromIterator<Option<HashMap<String, FieldValue>>> for FieldValue {
-//     fn from_iter<T: IntoIterator<Item = Option<HashMap<String, FieldValue>>>>(iter: T) -> Self {
-//         Self::Array(
-//             iter.into_iter()
-//                 .filter(|e| e.is_some())
-//                 .map(|e| e.into())
-//                 .collect::<Vec<Self>>(),
-//         )
-//     }
-// }
-
-// impl<E> FromIterator<Result<HashMap<String, FieldValue>, E>> for FieldValue {
-//     fn from_iter<T: IntoIterator<Item = Result<HashMap<String, FieldValue>, E>>>(iter: T) -> Self {
-//         Self::Array(
-//             iter.into_iter()
-//                 .filter(|e| e.is_ok())
-//                 .map(|e| e.into())
-//                 .collect::<Vec<Self>>(),
-//         )
-//     }
-// }
-
 impl<'a> From<HashMap<&'a str, FieldValue>> for FieldValue {
     fn from(value: HashMap<&'a str, FieldValue>) -> Self {
         let mut obj = HashMap::new();
@@ -224,47 +188,8 @@ impl<'a> From<HashMap<&'a str, FieldValue>> for FieldValue {
     }
 }
 
-// impl<'a> FromIterator<HashMap<&'a str, FieldValue>> for FieldValue {
-//     fn from_iter<T: IntoIterator<Item = HashMap<&'a str, FieldValue>>>(iter: T) -> Self {
-//         Self::Array(iter.into_iter().map(|e| e.into()).collect::<Vec<Self>>())
-//     }
-// }
-
-// impl<'a> FromIterator<Option<HashMap<&'a str, FieldValue>>> for FieldValue {
-//     fn from_iter<T: IntoIterator<Item = Option<HashMap<&'a str, FieldValue>>>>(iter: T) -> Self {
-//         Self::Array(
-//             iter.into_iter()
-//                 .filter(|f| f.is_some())
-//                 .map(|e| e.into())
-//                 .collect::<Vec<Self>>(),
-//         )
-//     }
-// }
-
 impl<A: Into<FieldValue>> FromIterator<A> for FieldValue {
     fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
         Self::Array(iter.into_iter().map(|x| x.into()).collect())
     }
 }
-
-// impl<A: Into<FieldValue>> FromIterator<Option<A>> for FieldValue {
-//     fn from_iter<T: IntoIterator<Item = Option<A>>>(iter: T) -> Self {
-//         Self::Array(
-//             iter.into_iter()
-//                 .filter(|x| x.is_some())
-//                 .map(|x| x.unwrap().into())
-//                 .collect(),
-//         )
-//     }
-// }
-
-// impl<A: Into<FieldValue>, E> FromIterator<Result<A, E>> for FieldValue {
-//     fn from_iter<T: IntoIterator<Item = Result<A, E>>>(iter: T) -> Self {
-//         Self::Array(
-//             iter.into_iter()
-//                 .filter(|x| x.is_ok())
-//                 .map(|x| x.unwrap_or_default().into())
-//                 .collect(),
-//         )
-//     }
-// }

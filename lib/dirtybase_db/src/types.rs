@@ -67,6 +67,7 @@ impl StructuredColumnAndValue {
         self.fields.get(key)
     }
 }
+
 impl Default for StructuredColumnAndValue {
     fn default() -> Self {
         Self::new(ColumnAndValue::new())

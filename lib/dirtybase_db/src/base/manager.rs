@@ -215,18 +215,61 @@ impl Manager {
         self.dispatch_written_event();
     }
 
-    pub async fn raw_insert<V: ToString>(&self, sql: &str, values: Vec<String>) {
-        self.write_schema_manager().raw_insert(sql, values).await;
-        self.dispatch_written_event();
+    pub async fn raw_insert(
+        &self,
+        sql: &str,
+        values: Vec<Vec<FieldValue>>,
+    ) -> Result<bool, anyhow::Error> {
+        let result = self.write_schema_manager().raw_insert(sql, values).await;
+        if result.is_ok() {
+            self.dispatch_written_event();
+        }
+        result
     }
 
-    pub async fn raw_update(&self, sql: &str, values: Vec<String>) {}
+    pub async fn raw_update(
+        &self,
+        sql: &str,
+        params: Vec<FieldValue>,
+    ) -> Result<u64, anyhow::Error> {
+        let result = self.write_schema_manager().raw_update(sql, params).await;
+        if result.is_ok() {
+            self.dispatch_written_event();
+        }
 
-    pub async fn raw_delete(&self, sql: &str) {}
+        result
+    }
 
-    pub async fn raw_select(&self, sql: &str, args: HashMap<String, String>) {}
+    pub async fn raw_delete(
+        &self,
+        sql: &str,
+        params: Vec<FieldValue>,
+    ) -> Result<u64, anyhow::Error> {
+        let result = self.write_schema_manager().raw_delete(sql, params).await;
+        if result.is_ok() {
+            self.dispatch_written_event();
+        }
 
-    pub async fn raw_statement(&self, sql: &str) {}
+        result
+    }
+
+    pub async fn raw_select(
+        &self,
+        sql: &str,
+        params: Vec<FieldValue>,
+    ) -> Result<Vec<ColumnAndValue>, anyhow::Error> {
+        self.read_schema_manager().raw_select(sql, params).await
+    }
+
+    pub async fn raw_statement(&self, sql: &str) -> Result<bool, anyhow::Error> {
+        let result = self.write_schema_manager().raw_statement(sql).await;
+
+        if result.is_ok() {
+            self.dispatch_written_event();
+        }
+
+        result
+    }
 
     fn create_schema_manager(&self, for_write: bool) -> Box<dyn SchemaManagerTrait + Send> {
         return match self.connections.get(&self.kind) {
