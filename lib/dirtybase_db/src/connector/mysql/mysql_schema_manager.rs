@@ -556,7 +556,6 @@ impl MySqlSchemaManager {
         // having
 
         // limit, offset
-        dbg!("----> {}", &sql);
 
         sql
     }

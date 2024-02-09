@@ -5,12 +5,12 @@ use crate::{
     event::SchemeWroteEvent,
     field_values::FieldValue,
     query_values::QueryValue,
-    types::{ColumnAndValue, IntoColumnAndValue},
+    types::{ColumnAndValue, FromColumnAndValue, IntoColumnAndValue, StructuredColumnAndValue},
     ConnectionsType, LAST_WRITE_TS,
 };
 
 use super::{
-    query::QueryBuilder,
+    query::{EntityQueryBuilder, QueryBuilder},
     schema::{DatabaseKind, SchemaManagerTrait, SchemaWrapper},
     table::BaseTable,
 };
@@ -57,6 +57,13 @@ impl Manager {
         )
     }
 
+    pub fn table_for<T: FromColumnAndValue + Send + Sync + 'static>(
+        &self,
+        table: &str,
+    ) -> EntityQueryBuilder<T> {
+        EntityQueryBuilder::new(self.table(table), self.read_schema_manager())
+    }
+
     // Get tables or view for querying
     pub fn select_from_tables<F>(&self, tables: Vec<String>, callback: F) -> SchemaWrapper
     where
@@ -78,7 +85,7 @@ impl Manager {
     }
 
     // Create a new table
-    pub async fn create_table_schema(&self, name: &str, mut callback: impl FnOnce(&mut BaseTable)) {
+    pub async fn create_table_schema(&self, name: &str, callback: impl FnOnce(&mut BaseTable)) {
         if !self.has_table(name).await {
             let mut table = self.write_schema_manager().fetch_table_for_update(name);
             table.set_is_new(true);
@@ -90,7 +97,7 @@ impl Manager {
     }
 
     // Get an existing table for updating
-    pub async fn update_table_schema(&self, name: &str, mut callback: impl FnOnce(&mut BaseTable)) {
+    pub async fn update_table_schema(&self, name: &str, callback: impl FnOnce(&mut BaseTable)) {
         if self.has_table(name).await {
             let mut table = self.write_schema_manager().fetch_table_for_update(name);
             table.set_is_new(false);
@@ -106,7 +113,7 @@ impl Manager {
         &self,
         name: &str,
         from_table: &str,
-        mut callback: impl FnOnce(&mut QueryBuilder),
+        callback: impl FnOnce(&mut QueryBuilder),
     ) {
         let mut query = QueryBuilder::new(
             vec![from_table.to_owned()],
@@ -148,7 +155,7 @@ impl Manager {
         &self,
         table_name: &str,
         column_and_values: ColumnAndValue,
-        mut callback: impl FnOnce(&mut QueryBuilder),
+        callback: impl FnOnce(&mut QueryBuilder),
     ) {
         let mut query = QueryBuilder::new(
             vec![table_name.to_owned()],
@@ -159,7 +166,8 @@ impl Manager {
         self.dispatch_written_event();
     }
 
-    pub async fn delete(&self, table_name: &str, mut callback: impl FnOnce(&mut QueryBuilder)) {
+    // TODO: Return a resut.....
+    pub async fn delete(&self, table_name: &str, callback: impl FnOnce(&mut QueryBuilder)) {
         let mut query = QueryBuilder::new(
             vec![table_name.to_owned()],
             super::query::QueryAction::Delete,
@@ -189,11 +197,11 @@ impl Manager {
         self.write_schema_manager().drop_table(table_name).await
     }
 
-    fn read_schema_manager(&self) -> Box<dyn SchemaManagerTrait + Send> {
+    pub fn read_schema_manager(&self) -> Box<dyn SchemaManagerTrait + Send> {
         self.create_schema_manager(false)
     }
 
-    fn write_schema_manager(&self) -> Box<dyn SchemaManagerTrait + Send> {
+    pub fn write_schema_manager(&self) -> Box<dyn SchemaManagerTrait + Send> {
         self.create_schema_manager(true)
     }
 

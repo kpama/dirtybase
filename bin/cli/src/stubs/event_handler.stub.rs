@@ -1,1 +1,3 @@
-pub(crate) async fn setup() {}
+pub(crate) async fn setup() {
+    // setup code here...
+}

@@ -9,7 +9,7 @@ async fn main() -> std::io::Result<()> {
     pretty_env_logger::init();
 
     let dirtybase_app = app::setup().await;
-    //
+
     app::run(dirtybase_app).await;
 
     Ok(())

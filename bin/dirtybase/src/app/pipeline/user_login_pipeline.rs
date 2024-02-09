@@ -5,7 +5,7 @@ use crate::app::model::dirtybase_user::{
     dtos::{in_user_login_payload_dto::UserLoginPayload, out_logged_in_user_dto::LoggedInUser},
     DirtybaseUserService,
 };
-use fama::PipeContent;
+use fama::{PipeContent, PipelineBuilderTrait};
 
 type AuthResult = Result<LoggedInUser, AuthenticationErrorStatus>;
 
@@ -18,21 +18,36 @@ impl From<AuthenticationErrorStatus> for AuthResult {
 }
 
 pub(crate) async fn execute(payload: UserLoginPayload) -> AuthResult {
-    fama::Pipeline::pass(payload)
-        .ok_fn(validate_payload)
-        .await
-        .store_fn(inject_user_email)
-        .await
-        .store_fn(find_can_user_login_cache_data)
-        .await
-        .next_fn(check_if_user_can_login)
-        .await
-        .some_fn(find_user)
-        .await
-        .ok_fn(try_logging_user_in)
+    payload
+        .pipeline()
         .await
         .try_deliver_as::<AuthResult>()
         .unwrap_or_else(|| AuthenticationErrorStatus::AuthenticationFailed.into())
+}
+
+pub(crate) async fn register_pipes(
+    builder: fama::PipelineBuilder<UserLoginPayload>,
+) -> fama::PipelineBuilder<UserLoginPayload> {
+    builder
+        .register(|pipeline| {
+            Box::pin(async {
+                pipeline
+                    .ok_fn(validate_payload)
+                    .await
+                    .store_fn(inject_user_email)
+                    .await
+                    .store_fn(find_can_user_login_cache_data)
+                    .await
+                    .next_fn(check_if_user_can_login)
+                    .await
+                    .some_fn(find_user)
+                    .await
+                    .ok_fn(try_logging_user_in)
+                    .await
+            })
+        })
+        .await;
+    builder
 }
 
 async fn validate_payload(
@@ -77,14 +92,11 @@ async fn find_can_user_login_cache_data(
 async fn check_if_user_can_login(pipe: PipeContent) -> bool {
     let result = pipe.container().get_type::<Option<CanLoginCachedData>>();
 
-    match result.unwrap() {
-        Some(data) => {
-            if !data.allow {
-                pipe.store::<AuthResult>(AuthResult::Err(data.error));
-                return false;
-            }
+    if let Some(Some(data)) = result {
+        if !data.allow {
+            pipe.store::<AuthResult>(AuthResult::Err(data.error));
+            return false;
         }
-        None => (),
     }
 
     return true;
@@ -98,10 +110,7 @@ async fn find_user(
     let username = payload.username.unwrap_or_default();
     let email = payload.email.unwrap_or_default();
 
-    log::debug!(
-        target: LOG_TARGET,
-        "2. Find the user actual data"
-    );
+    log::debug!(target: LOG_TARGET, "2. Find the user actual data" );
 
     match service
         .dirtybase_user_repo()

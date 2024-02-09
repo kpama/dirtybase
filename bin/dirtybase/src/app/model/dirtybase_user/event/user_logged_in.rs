@@ -1,11 +1,11 @@
 use orsomafo::Dispatchable;
 
 #[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
-pub struct DirtybaseUserLoggedInEvent {
+pub struct UserLoggedInEvent {
     id: String,
 }
 
-impl DirtybaseUserLoggedInEvent {
+impl UserLoggedInEvent {
     pub fn new(id: &str) -> Self {
         Self { id: id.into() }
     }
@@ -15,4 +15,4 @@ impl DirtybaseUserLoggedInEvent {
     }
 }
 
-impl Dispatchable for DirtybaseUserLoggedInEvent {}
+impl Dispatchable for UserLoggedInEvent {}

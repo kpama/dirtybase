@@ -4,6 +4,8 @@ pub mod dirtybase_entry;
 pub mod http;
 pub mod migrator;
 
+pub use busybody;
+
 pub use dirtybase_cache;
 pub use dirtybase_config;
 pub use dirtybase_db;

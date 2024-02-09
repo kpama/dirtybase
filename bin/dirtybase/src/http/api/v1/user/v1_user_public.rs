@@ -11,15 +11,10 @@ use actix_web::{post, web::Json, HttpResponse, Responder};
 
 #[post("/user/login")]
 async fn user_login_handler(payload: Json<UserLoginPayload>) -> impl Responder {
-    let result = pipeline::user_login_pipeline::execute(payload.0.clone()).await;
+    let result = pipeline::user_login_pipeline::execute(payload.clone()).await;
 
     return match result {
         Ok(user) => HttpResponse::Ok().json(ApiResponse::success(user)),
         Err(e) => HttpResponse::Forbidden().json(ApiResponse::<LoggedInUser>::error(e)),
     };
-
-    // match service.login(payload.0).await {
-    //     Ok(user) => HttpResponse::Ok().json(ApiResponse::success(user)),
-    //     Err(e) => HttpResponse::Forbidden().json(ApiResponse::<LoggedInUser>::error(e)),
-    // }
 }

@@ -17,7 +17,6 @@ pub mod setup_defaults;
 pub mod token_claim;
 
 pub use config::Config;
-pub use config::ConfigBuilder;
 pub use dirtybase_app::DirtyBaseApp;
 
 use crate::cli;
@@ -84,9 +83,7 @@ pub async fn run(app: DirtyBaseAppService) {
 
     match &args.command {
         Some(Commands::Serve) => run_http(app).await,
-        Some(cmd) => {
-            run_cli(app, cmd).await;
-        }
+        Some(cmd) => run_cli(app, cmd).await,
         None => {
             println!("Unknown command")
         }

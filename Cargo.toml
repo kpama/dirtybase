@@ -60,7 +60,7 @@ dotenvy = "0.15"
 # cookie = { version = "0.17", features= ["default", "secure-cookies"] }
 busybody = { version = "0.3.0" }
 orsomafo = { version = "0.3.4" }
-fama = { version = "0.3.1" }
+fama = { version = "0.3.6" }
 busstop = { version = "0.2.0" }
 redis = { version = "0.24.0", features = [
   "tokio-comp",
@@ -69,7 +69,8 @@ redis = { version = "0.24.0", features = [
   "cluster-async",
 ] }
 lettre = { version = "0.11.0" }
-config = "0.13.3"
+config = "0.14"
 deadpool = "0.10.0"
 deadpool-redis = { version = "0.14.0" }
 cron = { version = "0.12.0" }
+validator = { version = "0.16.1", features = ["derive"] }

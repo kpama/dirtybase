@@ -1,13 +1,24 @@
+use sqlx::query_builder;
+
 use crate::{
-    field_values::FieldValue, query_values::QueryValue, types::ColumnAndValue, TableEntityTrait,
+    field_values::FieldValue,
+    query_values::QueryValue,
+    types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue},
+    ConnectionPoolManager, TableEntityTrait,
 };
 
 use super::{
-    aggregate::Aggregate, join_builder::JoinQueryBuilder, order_by_builder::OrderByBuilder,
-    query_conditions::Condition, query_join_types::JoinType, query_operators::Operator,
-    schema::SchemaManagerTrait, table::DELETED_AT_FIELD, where_join_operators::WhereJoinOperator,
+    aggregate::Aggregate,
+    join_builder::JoinQueryBuilder,
+    order_by_builder::OrderByBuilder,
+    query_conditions::Condition,
+    query_join_types::JoinType,
+    query_operators::Operator,
+    schema::{SchemaManagerTrait, SchemaWrapper},
+    table::DELETED_AT_FIELD,
+    where_join_operators::WhereJoinOperator,
 };
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display, marker::PhantomData};
 
 #[derive(Debug)]
 pub enum WhereJoin {
@@ -90,7 +101,7 @@ impl QueryBuilder {
         }
     }
 
-    pub fn sub_query<F>(&self, table: &str, mut callback: F) -> QueryValue
+    pub fn sub_query<F>(&mut self, table: &str, mut callback: F) -> &mut Self
     where
         F: FnMut(&mut QueryBuilder),
     {
@@ -104,12 +115,14 @@ impl QueryBuilder {
 
         callback(&mut query_builder);
 
-        QueryValue::SubQuery(query_builder)
+        QueryValue::SubQuery(query_builder);
+
+        self
     }
 
     pub fn select_all(&mut self) -> &mut Self {
         if let QueryAction::Query {
-            columns: columns,
+            columns,
             select_all,
         } = &mut self.action
         {
@@ -959,5 +972,103 @@ impl QueryBuilder {
             &R::prefix_with_tbl(right_field),
             &L::column_aliases(left_tbl_columns_prefix),
         )
+    }
+}
+
+pub struct EntityQueryBuilder<T: FromColumnAndValue + Send + Sync + 'static> {
+    query_builder: QueryBuilder,
+    inner: Box<dyn SchemaManagerTrait>,
+    phathom: PhantomData<T>,
+}
+
+impl<T: FromColumnAndValue + Send + Sync + 'static> EntityQueryBuilder<T> {
+    pub fn new(mut query_builder: QueryBuilder, inner: Box<dyn SchemaManagerTrait>) -> Self {
+        query_builder.select_all();
+
+        Self {
+            query_builder,
+            inner,
+            phathom: PhantomData::default(),
+        }
+    }
+
+    pub fn query(&mut self) -> &mut QueryBuilder {
+        &mut self.query_builder
+    }
+
+    pub async fn all(self) -> Result<Option<Vec<T>>, anyhow::Error> {
+        let result = self.fetch_all().await;
+        if let Ok(records) = result {
+            match records {
+                Some(rows) => Ok(Some(
+                    rows.into_iter()
+                        .map(|row| T::from_column_value(row.fields()))
+                        .collect::<Vec<T>>(),
+                )),
+                None => Ok(Some(Vec::new())),
+            }
+        } else {
+            Err(result.err().unwrap())
+        }
+    }
+
+    pub async fn one(self) -> Result<Option<T>, anyhow::Error> {
+        let result = self.fetch_one().await;
+
+        if let Ok(row) = result {
+            match row {
+                Some(r) => Ok(Some(T::from_column_value(r.fields()))),
+                None => Ok(None),
+            }
+        } else {
+            Err(result.err().unwrap())
+        }
+    }
+
+    pub async fn stream(self) -> tokio_stream::wrappers::ReceiverStream<T> {
+        let (inner_sender, mut inner_receiver) = tokio::sync::mpsc::channel::<ColumnAndValue>(100);
+        let (outer_sender, outer_receiver) = tokio::sync::mpsc::channel::<T>(100);
+
+        tokio::spawn(async move {
+            while let Some(result) = inner_receiver.recv().await {
+                if let Err(e) = outer_sender.send(T::from_column_value(result)).await {
+                    log::debug!("error sending transformed row result: {}", e);
+                    break;
+                }
+            }
+        });
+
+        tokio::spawn(async move {
+            self.inner
+                .stream_result(&self.query_builder, inner_sender)
+                .await;
+        });
+
+        tokio_stream::wrappers::ReceiverStream::new(outer_receiver)
+    }
+
+    async fn fetch_all(&self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
+        let results = self.inner.fetch_all(&self.query_builder).await;
+        if let Ok(records) = results {
+            match records {
+                Some(rs) => Ok(Some(StructuredColumnAndValue::from_results(rs))),
+                None => Ok(Some(Vec::new())),
+            }
+        } else {
+            Err(results.err().unwrap())
+        }
+    }
+
+    async fn fetch_one(&self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
+        let result = self.inner.fetch_one(&self.query_builder).await;
+
+        if let Ok(row) = result {
+            match row {
+                Some(r) => Ok(Some(StructuredColumnAndValue::from_a_result(r))),
+                None => Ok(None),
+            }
+        } else {
+            Err(result.err().unwrap())
+        }
     }
 }

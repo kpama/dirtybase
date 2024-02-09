@@ -3,8 +3,6 @@ mod audit_log_repository;
 mod audit_log_service;
 
 pub use audit_log_entity::AuditLogEntity;
-pub use audit_log_repository::AuditLogRepository;
-pub use audit_log_service::AuditLogService;
 use dirtybase_db::base::{manager::Manager, table::CREATED_AT_FIELD};
 use dirtybase_db::TableEntityTrait;
 

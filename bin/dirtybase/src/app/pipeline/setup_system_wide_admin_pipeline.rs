@@ -13,7 +13,7 @@ use dirtybase_contract::db::entity::user::UserEntity;
 use fama::PipeContent;
 
 pub(crate) async fn execute() {
-    _ = fama::Pipeline::pass(NewSysAdminData::default())
+    let comfirm = fama::Pipeline::pass(NewSysAdminData::default())
         .through_fn(find_or_create_admin_user)
         .await
         .through_fn(add_user_to_system_wide_admin)
@@ -23,10 +23,12 @@ pub(crate) async fn execute() {
         .through_fn(create_default_app_add_user)
         .await
         .confirm();
+
+    println!("Default user created: {}", comfirm);
 }
 
 #[derive(Clone)]
-struct NewSysAdminData {
+pub struct NewSysAdminData {
     user: Option<UserEntity>,
     company: Option<CompanyEntity>,
     company_app: Option<AppEntity>,
@@ -51,6 +53,30 @@ impl busybody::Injectable for NewSysAdminData {
     }
 }
 
+#[busybody::async_trait]
+impl fama::PipelineBuilderTrait for NewSysAdminData {
+    async fn setup_pipeline_builder(
+        builder: fama::PipelineBuilder<Self>,
+    ) -> fama::PipelineBuilder<Self> {
+        builder
+            .register(|pipeline| {
+                Box::pin(async {
+                    pipeline
+                        .through_fn(find_or_create_admin_user)
+                        .await
+                        .through_fn(add_user_to_system_wide_admin)
+                        .await
+                        .through_fn(create_default_company)
+                        .await
+                        .through_fn(create_default_app_add_user)
+                        .await
+                })
+            })
+            .await;
+        builder
+    }
+}
+
 async fn find_or_create_admin_user(
     app: Service<DirtyBaseApp>,
     mut new_admin_data: NewSysAdminData,
@@ -66,17 +92,25 @@ async fn find_or_create_admin_user(
         )
         .await;
 
-    if let Ok(Some((created, user))) = result {
-        if !created {
-            log::info!("System admin already exist");
-            pipe.stop_the_flow();
-        } else {
-            new_admin_data.user = Some(user);
-            pipe.store(new_admin_data);
-            log::info!("System admin created");
+    match result {
+        Ok(Some((created, user))) => {
+            if !created {
+                log::info!("System admin already exist");
+                pipe.stop_the_flow();
+            } else {
+                new_admin_data.user = Some(user);
+                pipe.store(new_admin_data);
+                log::info!("System admin created");
+            }
         }
-    } else {
-        pipe.stop_the_flow();
+        Ok(None) => {
+            log::info!("could not create default user, none returned");
+            pipe.stop_the_flow();
+        }
+        Err(e) => {
+            log::info!("could not create default admin user: {:?}", e);
+            pipe.stop_the_flow();
+        }
     }
 
     Some(pipe)

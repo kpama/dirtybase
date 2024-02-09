@@ -40,15 +40,12 @@ impl UserService {
         email: &str,
         raw_password: &str,
     ) -> Result<Option<(bool, UserEntity)>, anyhow::Error> {
-        if let Ok(result) = self
+        if let Ok(Some(user)) = self
             .user_repo
             .find_by_username_and_email(username, email, true)
             .await
         {
-            match result {
-                Some(user) => Ok(Some((false, user))),
-                None => Ok(None),
-            }
+            Ok(Some((false, user)))
         } else {
             let mut user = UserEntity::new();
             user.email = Some(email.into());
@@ -93,8 +90,6 @@ impl UserService {
         if user.id.is_none() {
             user.id = Some(generate_ulid());
         }
-
-        dbg!("core user entity: {:#?}", &user);
 
         let result = self.user_repo.create(user).await;
 

@@ -27,7 +27,7 @@ impl DirtyBaseApp {
         };
 
         busybody::helpers::service_container().set(instance);
-        make_redis_client(&config).await;
+        // make_redis_client(&config).await;
 
         Ok(busybody::helpers::service_container()
             .get::<Self>()

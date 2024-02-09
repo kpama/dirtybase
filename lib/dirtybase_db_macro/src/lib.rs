@@ -1,3 +1,4 @@
+use entity_repo::generate_entity_repo;
 use helpers::*;
 use proc_macro::TokenStream;
 use query_builder::generate_query_builder_struct;
@@ -5,6 +6,7 @@ use quote::{format_ident, quote};
 use syn::{parse_macro_input, DeriveInput};
 
 mod attribute_type;
+mod entity_repo;
 mod helpers;
 mod query_builder;
 
@@ -30,8 +32,9 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let special_column_methods = build_special_column_methods(&columns_attributes);
     let column_name_methods = build_prop_column_names_getter(&columns_attributes);
     let defaults = spread_default(&columns_attributes, &input);
-    let query_builder =
-        generate_query_builder_struct(&columns_attributes, &name, &table_name, &input);
+    //let query_builder = generate_entity_repo(&columns_attributes, &name, &table_name, &input);
+    //  let query_builder =
+    // generate_query_builder_struct(&columns_attributes, &name, &table_name, &input);
     let repo_struct_name = format_ident!("{}Repo", &name);
 
     let expanded = quote! {
@@ -57,9 +60,13 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
           }
         }
 
-        pub fn repo(manager: dirtybase_db::base::manager::Manager)-> #repo_struct_name {
-          #repo_struct_name::new(manager)
-        }
+        // pub fn repo(manager: dirtybase_db::base::manager::Manager)-> #repo_struct_name {
+        //   #repo_struct_name::new(manager)
+        // }
+
+        // pub async fn repo_instance() ->#repo_struct_name {
+        //     busybody::helpers::get_type_or_inject().await
+        // }
       }
 
       // TableEntityTrait
@@ -138,7 +145,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
       }
 
       // query builder
-      #query_builder
+      // #query_builder
 
     };
 

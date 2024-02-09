@@ -47,6 +47,7 @@ impl RoleRepository {
         let id: String = FieldValue::from_ref_option_into(kv.get(ROLE_TABLE_ID_FIELD));
 
         self.manager.insert(ROLE_TABLE, kv).await;
+        // ERROR: ID could not be in the hash map!!!
         self.find_by_id(&id, false).await
     }
 

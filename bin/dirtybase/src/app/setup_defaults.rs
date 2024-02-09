@@ -1,5 +1,9 @@
-use super::pipeline;
+use fama::PipelineBuilderTrait;
+
+use super::pipeline::setup_system_wide_admin_pipeline::NewSysAdminData;
 
 pub async fn setup_default_entities() {
-    pipeline::setup_system_wide_admin_pipeline::execute().await;
+    if NewSysAdminData::default().pipeline().await.confirm() {
+        log::info!("Default administrator user created");
+    }
 }

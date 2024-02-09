@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
+use busybody::Injectable;
 use dirtybase_db::{
-    base::{manager::Manager, schema::DatabaseKind},
+    base::{manager::Manager, query::EntityQueryBuilder, schema::DatabaseKind},
     config::BaseConfig,
     field_values::FieldValue,
     types::FromColumnAndValue,
@@ -10,12 +11,12 @@ use dirtybase_db::{
 use dirtybase_db_macro::DirtyTable;
 
 #[derive(DirtyTable, Default, Debug)]
-#[dirty(id = "id", table = "people")]
+#[dirty(id = "id", table = "users")]
 struct Person {
     id: Option<i64>,
+    is_admin: bool,
     first_name: String,
     last_name: String,
-    is_admin: bool,
     #[dirty(skip)]
     orders: Vec<Order>,
 }
@@ -30,6 +31,45 @@ struct Order {
 
 #[tokio::main]
 async fn main() {
+    setup_db().await;
+    // let people_repo = Person::repo_instance().await;
+    // insert
+    let person1 = Person {
+        id: None,
+        first_name: "Person1 Frist".to_string(),
+        last_name: "Person2 Last".to_string(),
+        is_admin: true,
+        orders: Vec::new(),
+    };
+
+    let person2 = Person {
+        id: None,
+        first_name: "Person2 Frist".to_string(),
+        last_name: "Person2 Last".to_string(),
+        is_admin: true,
+        orders: Vec::new(),
+    };
+
+    // _ = people_repo.insert(person1).await;
+    // _ = people_repo.insert(person2).await;
+
+    // let results = people_repo.ids(vec![4, 1, 5, 2]).await;
+    // dbg!(results);
+
+    // let mut builder = people_repo.builder();
+    // builder
+    //     .query()
+    //     .is_in("id", vec![4, 1, 6, 7])
+    //     .and_eq("id", 1);
+
+    // if let Ok(Some(mut entity)) = builder.one().await {
+    //     entity.first_name = "I got changed!!!".to_string();
+    //     let result = people_repo.update(entity, 1, None).await;
+    //     println!("did a query via the builder: {:#?}", result);
+    // }
+}
+
+async fn setup_db() {
     let config = dirtybase_db::dirtybase_config::DirtyConfig::default();
     let mut db_config = dirtybase_db::config::DirtybaseDbConfig::new(&config).await;
 
@@ -48,26 +88,11 @@ async fn main() {
 
     let manager = pool_manager.schema_manger(&DatabaseKind::Sqlite).unwrap();
     create_tables(&manager).await;
-
-    // insert
-    let person1 = Person {
-        id: None,
-        first_name: "Frist Name Value".to_string(),
-        last_name: "Last Name Value".to_string(),
-        is_admin: true,
-        orders: Vec::new(),
-    };
-
-    _ = manager.insert(Person::table_name(), person1).await;
-
-    let results = Person::repo(manager).first_name_like("%Value").await;
-
-    dbg!(results);
 }
 
 async fn create_tables(manager: &Manager) {
     manager
-        .create_table_schema("people", |builder| {
+        .create_table_schema(Person::table_name(), |builder| {
             builder.id(Person::id_column());
             builder.string(Person::col_name_for_first_name());
             builder.string(Person::col_name_for_last_name());
