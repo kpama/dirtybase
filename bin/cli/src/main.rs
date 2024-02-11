@@ -1,73 +1,26 @@
-use std::process::Command;
-
 use clap::{command, Parser, Subcommand};
 
-mod make_migration;
-mod run_init;
+mod commands;
+mod metadata;
 
 fn main() {
     let args = Cli::parse();
 
-    let dist_path = if let Some(package) = &args.package {
-        read_metadata(package)
-    } else {
-        read_metadata("")
-    };
-
     match &args.command {
         Commands::New { name } => {
-            println!("creating a new application: {:?}", name)
+            println!("----> creating a new application: {:?}", name);
+            commands::new::create(name);
         }
         Commands::Init => {
-            run_init::init(&dist_path);
+            commands::init::init(args.package.as_ref());
         }
         Commands::Make { what } => match what {
             MakeSubcommand::Migration { name } => {
-                make_migration::make(name, &dist_path);
+                commands::make_migration::make(args.package.as_ref(), name);
             }
             _ => (),
         },
     }
-}
-
-fn read_metadata(package: &str) -> std::path::PathBuf {
-    let output = Command::new("cargo")
-        .arg("metadata")
-        .arg("--no-deps")
-        .arg("--format-version=1")
-        .output();
-
-    let out = output.unwrap().stdout;
-    let o = std::str::from_utf8(&out).unwrap();
-    let value: serde_json::Value = serde_json::from_str(o).unwrap();
-
-    let packages = value.get("packages").unwrap().as_array().unwrap();
-
-    let mut path = packages[0].get("targets").unwrap().as_array().unwrap()[0]
-        .get("src_path")
-        .unwrap();
-
-    if !package.is_empty() {
-        let pass_name = package.to_lowercase();
-        for pkg in packages {
-            match pkg.get("name") {
-                Some(value) => {
-                    if pass_name == value.as_str().unwrap() {
-                        path = pkg.get("targets").unwrap().as_array().unwrap()[0]
-                            .get("src_path")
-                            .unwrap();
-                        break;
-                    }
-                }
-                None => (),
-            }
-        }
-    }
-
-    std::path::PathBuf::from(serde_json::from_value::<String>(path.clone()).unwrap())
-        .parent()
-        .unwrap()
-        .to_path_buf()
 }
 
 #[derive(Debug, Parser)] // requires `derive` feature
@@ -82,7 +35,7 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
-    /// Initialise DirtyBase feature in the curren directory
+    /// Initialise DirtyBase feature in the current directory
     Init,
     /// Create new application
     New { name: String },

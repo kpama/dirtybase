@@ -1,6 +1,14 @@
 use std::collections::HashMap;
 
-pub fn init(path_buf: &std::path::PathBuf) {
+use crate::metadata::read_package_metadata;
+
+pub(crate) fn init(package: Option<&String>) {
+    let path_buf = if let Some(package) = package {
+        read_package_metadata(package)
+    } else {
+        read_package_metadata("")
+    };
+
     let directories = [
         "dirtybase_entry/migration",
         "dirtybase_entry/event",
@@ -33,16 +41,16 @@ pub fn init(path_buf: &std::path::PathBuf) {
 
     file_content.insert(
         "dirtybase_entry.rs",
-        include_str!("stubs/dirtybase_entry.stub.rs"),
+        include_str!("../stubs/dirtybase_entry.stub.rs"),
     );
     file_content.insert(
         "dirtybase_entry/migration.rs",
-        include_str!("stubs/migration.stub.rs"),
+        include_str!("../stubs/migration.stub.rs"),
     );
 
     file_content.insert(
         "dirtybase_entry/event_handler.rs",
-        include_str!("stubs/event_handler.stub.rs"),
+        include_str!("../stubs/event_handler.stub.rs"),
     );
 
     for dir in directories {

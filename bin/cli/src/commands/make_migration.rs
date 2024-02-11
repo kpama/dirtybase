@@ -1,5 +1,7 @@
 use std::process::Command;
 
+use crate::metadata::read_package_metadata;
+
 const MIGRATION_STUB: &str = "
 use dirtybase_contract::db::migration::Migration;
 use dirtybase_contract::db::base::manager::Manager;
@@ -18,7 +20,13 @@ impl Migration for struct_name {
 }
 ";
 
-pub fn make(name: &str, path_buf: &std::path::PathBuf) {
+pub fn make(package: Option<&String>, name: &str) {
+    let path_buf = if let Some(package) = package {
+        read_package_metadata(package)
+    } else {
+        read_package_metadata("")
+    };
+
     let ts = chrono::Utc::now().timestamp();
 
     let filename = name.split_whitespace().collect::<String>().to_lowercase();
