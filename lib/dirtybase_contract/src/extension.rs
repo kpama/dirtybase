@@ -1,11 +1,18 @@
 use dirtybase_config::DirtyConfig;
 
+use crate::http::RouterManager;
+
 pub type ExtensionMigrations = Vec<Box<dyn super::db::migration::Migration>>;
 
 #[async_trait::async_trait]
 pub trait ExtensionSetup: Send + Sync {
     /// Setup the extension
     async fn setup(&self, config: &DirtyConfig);
+
+    /// Register HTTP routes
+    fn register_routes(&self, manager: RouterManager) -> RouterManager {
+        manager
+    }
 
     fn migrations(&self) -> ExtensionMigrations {
         Vec::new()

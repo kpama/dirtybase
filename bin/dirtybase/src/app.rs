@@ -22,6 +22,7 @@ pub use dirtybase_app::DirtyBaseApp;
 use crate::cli;
 use crate::dirtybase_entry;
 use crate::http;
+use crate::http2;
 use crate::migrator::MigrateAction;
 
 use self::event_handler::register_event_handlers;
@@ -74,6 +75,10 @@ pub async fn run_http(app: DirtyBaseAppService) {
     _ = http::init(app).await;
 }
 
+pub async fn run_http2(app: DirtyBaseAppService) {
+    _ = http2::int(app).await;
+}
+
 pub async fn run_cli(app: DirtyBaseAppService, command: &Commands) {
     _ = cli::init(app, command).await;
 }
@@ -82,7 +87,8 @@ pub async fn run(app: DirtyBaseAppService) {
     let args = Args::parse();
 
     match &args.command {
-        Some(Commands::Serve) => run_http(app).await,
+        Some(Commands::Serve) => run_http2(app).await,
+        // Some(Commands::Serve) => run_http(app).await,
         Some(cmd) => run_cli(app, cmd).await,
         None => {
             println!("Unknown command")

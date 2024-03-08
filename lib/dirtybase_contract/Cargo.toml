@@ -22,3 +22,4 @@ log = { workspace = true }
 bcrypt = { workspace = true }
 tokio = { workspace = true, features = ["sync"] }
 tokio-stream = { workspace = true }
+axum = { workspace = true }

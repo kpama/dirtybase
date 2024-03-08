@@ -4,7 +4,7 @@ mod http;
 mod migration;
 mod model;
 
-use dirtybase_contract::dirtybase_config::DirtyConfig;
+use dirtybase_contract::{axum, dirtybase_config::DirtyConfig, http::RouterManager};
 
 pub struct Extension;
 
@@ -16,5 +16,13 @@ impl dirtybase_contract::ExtensionSetup for Extension {
 
     fn migrations(&self) -> dirtybase_contract::ExtensionMigrations {
         migration::setup()
+    }
+
+    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
+        // manager.general("/be-awsome",
+        //     axum::Router::new().route("/", axum::routing::get(|| async { "Rust or bust" })),
+        // );
+
+        manager
     }
 }

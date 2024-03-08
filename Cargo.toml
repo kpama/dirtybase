@@ -20,6 +20,7 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace.dependencies]
+axum = { version = "0.7.4" }
 actix-web = "4.3.0"
 actix-session = { version = "0.8.0", features = ["cookie-session"] }
 anyhow = "1.0.68"
@@ -58,10 +59,10 @@ quote = "1.0"
 syn = { version = "2.0", features = ["extra-traits"] }
 dotenvy = "0.15"
 # cookie = { version = "0.17", features= ["default", "secure-cookies"] }
-busybody = { version = "0.3.0" }
-orsomafo = { version = "0.3.4" }
-fama = { version = "0.3.6" }
-busstop = { version = "0.2.0" }
+busybody = { version = "0.3" }
+orsomafo = { version = "0.3" }
+fama = { version = "0.3" }
+busstop = { version = "0.2" }
 redis = { version = "0.24.0", features = [
   "tokio-comp",
   "aio",

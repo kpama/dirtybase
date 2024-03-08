@@ -1,4 +1,3 @@
-use super::client::redis_client::make_redis_client;
 use super::setup_defaults::setup_default_entities;
 use super::Config;
 use dirtybase_contract::db::base::manager::Manager;
@@ -10,7 +9,7 @@ pub struct DirtyBaseApp {
     config: Config,
     pool_manager: ConnectionPoolManager,
     cache_manager: dirtybase_cache::CacheManager,
-    extensions: RwLock<Vec<Box<dyn dirtybase_contract::ExtensionSetup>>>,
+    pub(crate) extensions: RwLock<Vec<Box<dyn dirtybase_contract::ExtensionSetup>>>,
 }
 
 impl DirtyBaseApp {

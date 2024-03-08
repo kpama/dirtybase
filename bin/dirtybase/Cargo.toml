@@ -37,3 +37,5 @@ orsomafo = { workspace = true }
 fama = { workspace = true }
 redis = { workspace = true }
 mime = { workspace = true }
+axum = { workspace = true }
+busstop = { workspace = true }

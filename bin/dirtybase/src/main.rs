@@ -1,7 +1,9 @@
 mod app;
+mod bus;
 mod cli;
 mod dirtybase_entry;
 mod http;
+mod http2;
 mod migrator;
 
 #[actix_web::main]
