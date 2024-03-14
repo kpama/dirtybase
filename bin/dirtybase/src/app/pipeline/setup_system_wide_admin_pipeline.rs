@@ -86,8 +86,8 @@ async fn find_or_create_admin_user(
     let result = app
         .user_service()
         .create_admin_user(
-            &config.admin_user(),
-            &config.admin_email(),
+            config.admin_username(),
+            config.admin_email(),
             &config.admin_password(),
         )
         .await;
