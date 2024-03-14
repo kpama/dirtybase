@@ -211,7 +211,7 @@ mod test {
 
         let tmp_dir = env::temp_dir();
         let dir = tmp_dir.join("dirty_config");
-        let content = "DTY_APP_NAME=\"My Temp App\" \nDTY_ENV=\"prod\" \n";
+        let content = "DTY_APP_NAME=\"My Temp App\" \nDTY_APP_ENV=\"prod\" \n";
 
         _ = std::fs::create_dir(dir.clone());
 
