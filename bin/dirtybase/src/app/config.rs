@@ -2,20 +2,29 @@
 
 use dirtybase_config::DirtyConfig;
 use dirtybase_contract::db::entity::user::hash_password;
-use std::env;
 
 use super::DirtyBaseApp;
 
 #[derive(Debug, Clone)]
 pub struct Config {
-    app_name: String,
+    dirty_config: dirtybase_config::DirtyConfig,
+    entry: ConfigEntry,
+}
+
+#[derive(Debug, serde::Deserialize, Clone)]
+struct ConfigEntry {
+    name: String,
     secret: String,
-    admin_user: String,
-    admin_email: String,
-    admin_password: String,
+    sys_admin_username: String,
+    sys_admin_email: String,
+    sys_admin_password: String,
     web_port: u16,
     web_ip_address: String,
-    dirty_config: dirtybase_config::DirtyConfig,
+    web_enable_api_routes: bool,
+    web_enable_admin_routes: bool,
+    web_enable_general_routes: bool,
+    #[serde(rename = "web_public_directory")]
+    web_public_dir: String,
 }
 
 impl Default for Config {
@@ -27,58 +36,55 @@ impl Default for Config {
 
 impl Config {
     pub fn new(config: DirtyConfig) -> Self {
-        let web_port = if let Ok(p) = env::var("DTY_WEB_PORT") {
-            p.parse().unwrap_or(8080)
-        } else {
-            8080
-        };
-        let web_ip_address = if let Ok(p) = env::var("DTY_WEB_IP_ADDRESS") {
-            p.parse().unwrap_or("127.0.0.1".to_string())
-        } else {
-            "127.0.0.1".to_owned()
-        };
-        let secret = env::var("DTY_SECRET").unwrap_or_default();
-        let admin_user = env::var("DTY_SYS_ADMIN_USERNAME").unwrap_or_default();
-        let admin_email = env::var("DTY_SYS_ADMIN_EMAIL").unwrap_or_default();
-        let admin_password = env::var("DTY_SYS_ADMIN_PASSWORD").unwrap_or("changeme!!".into());
-        let app_name: String = env::var("DTY_APP_NAME").unwrap_or("Default Company".into());
+        let entry: ConfigEntry = config
+            .load_optional_file("nothing.toml", Some("DTY_APP"))
+            .build()
+            .unwrap()
+            .try_deserialize()
+            .unwrap();
 
         Self {
-            app_name,
-            secret,
-            admin_user,
-            admin_email,
-            admin_password,
-            web_port,
-            web_ip_address,
             dirty_config: config,
+            entry,
         }
     }
     pub fn app_name(&self) -> &String {
-        &self.app_name
+        &self.entry.name
     }
 
     pub fn secret(&self) -> &String {
-        &self.secret
+        &self.entry.secret
     }
 
-    pub fn admin_user(&self) -> &String {
-        &self.admin_user
+    pub fn admin_username(&self) -> &String {
+        &self.entry.sys_admin_username
     }
 
     pub fn admin_email(&self) -> &String {
-        &self.admin_email
+        &self.entry.sys_admin_email
     }
     pub fn admin_password(&self) -> &String {
-        &self.admin_password
+        &self.entry.sys_admin_password
     }
 
     pub fn web_port(&self) -> u16 {
-        self.web_port
+        self.entry.web_port
     }
 
     pub fn web_ip_address(&self) -> &String {
-        &self.web_ip_address
+        &self.entry.web_ip_address
+    }
+
+    pub fn web_enable_api_routes(&self) -> bool {
+        self.entry.web_enable_api_routes
+    }
+
+    pub fn web_enable_admin_routes(&self) -> bool {
+        self.entry.web_enable_admin_routes
+    }
+
+    pub fn web_enable_general_routes(&self) -> bool {
+        self.entry.web_enable_general_routes
     }
 
     pub fn environment(&self) -> &dirtybase_config::CurrentEnvironment {
@@ -92,11 +98,14 @@ impl Config {
 pub struct ConfigBuilder {
     app_name: Option<String>,
     secret: Option<String>,
-    admin_user: Option<String>,
+    admin_username: Option<String>,
     admin_email: Option<String>,
     admin_password: Option<String>,
     web_port: Option<u16>,
     web_ip_address: Option<String>,
+    web_enable_api_routes: Option<bool>,
+    web_enable_admin_routes: Option<bool>,
+    web_enable_general_routes: Option<bool>,
     dirty_config: Option<dirtybase_config::DirtyConfig>,
 }
 
@@ -105,11 +114,14 @@ impl Default for ConfigBuilder {
         Self {
             app_name: None,
             secret: None,
-            admin_user: None,
+            admin_username: None,
             admin_email: None,
             admin_password: None,
             web_port: None,
             web_ip_address: None,
+            web_enable_api_routes: None,
+            web_enable_admin_routes: None,
+            web_enable_general_routes: None,
             dirty_config: None,
         }
     }
@@ -135,8 +147,8 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn admin_user(mut self, admin_user: &str) -> Self {
-        self.admin_user = Some(admin_user.into());
+    pub fn admin_username(mut self, admin_user: &str) -> Self {
+        self.admin_username = Some(admin_user.into());
         self
     }
 
@@ -158,16 +170,45 @@ impl ConfigBuilder {
         self
     }
 
+    pub fn web_enable_general_routes(mut self, enable: bool) -> Self {
+        self.web_enable_general_routes = Some(enable);
+        self
+    }
+
+    pub fn web_enable_admin_routes(mut self, enable: bool) -> Self {
+        self.web_enable_admin_routes = Some(enable);
+        self
+    }
+
+    pub fn web_enable_api_routes(mut self, enable: bool) -> Self {
+        self.web_enable_api_routes = Some(enable);
+        self
+    }
+
     pub fn build(self) -> Config {
         let mut config = Config::default();
 
-        config.app_name = self.app_name.unwrap_or(config.app_name);
-        config.secret = self.secret.unwrap_or(config.secret);
-        config.admin_user = self.admin_user.unwrap_or(config.admin_user);
-        config.admin_email = self.admin_email.unwrap_or(config.admin_email);
-        config.admin_password = self.admin_password.unwrap_or(config.admin_password);
-        config.web_ip_address = self.web_ip_address.unwrap_or(config.web_ip_address);
-        config.web_port = self.web_port.unwrap_or(config.web_port);
+        config.entry.name = self.app_name.unwrap_or(config.entry.name);
+        config.entry.secret = self.secret.unwrap_or(config.entry.secret);
+        config.entry.sys_admin_username = self
+            .admin_username
+            .unwrap_or(config.entry.sys_admin_username);
+        config.entry.sys_admin_email = self.admin_email.unwrap_or(config.entry.sys_admin_email);
+        config.entry.sys_admin_password = self
+            .admin_password
+            .unwrap_or(config.entry.sys_admin_password);
+        config.entry.web_ip_address = self.web_ip_address.unwrap_or(config.entry.web_ip_address);
+        config.entry.web_port = self.web_port.unwrap_or(config.entry.web_port);
+        config.entry.web_enable_api_routes = self
+            .web_enable_api_routes
+            .unwrap_or(config.entry.web_enable_api_routes);
+        config.entry.web_enable_admin_routes = self
+            .web_enable_admin_routes
+            .unwrap_or(config.entry.web_enable_admin_routes);
+        config.entry.web_enable_general_routes = self
+            .web_enable_general_routes
+            .unwrap_or(config.entry.web_enable_general_routes);
+
         config.dirty_config = self.dirty_config.unwrap_or(config.dirty_config);
 
         config
