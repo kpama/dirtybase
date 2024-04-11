@@ -1,7 +1,7 @@
-use entity_repo::generate_entity_repo;
+
 use helpers::*;
 use proc_macro::TokenStream;
-use query_builder::generate_query_builder_struct;
+
 use quote::{format_ident, quote};
 use syn::{parse_macro_input, DeriveInput};
 
@@ -35,7 +35,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     //let query_builder = generate_entity_repo(&columns_attributes, &name, &table_name, &input);
     //  let query_builder =
     // generate_query_builder_struct(&columns_attributes, &name, &table_name, &input);
-    let repo_struct_name = format_ident!("{}Repo", &name);
+    let _repo_struct_name = format_ident!("{}Repo", &name);
 
     let expanded = quote! {
 

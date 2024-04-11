@@ -62,13 +62,11 @@ impl CacheStoreTrait for DatabaseStore {
 
     async fn get(&self, key: String) -> Option<CacheEntry> {
         let result = self.repo.get(&key, false).await;
-        result.map_or(None, |e| Some(CacheEntry::from(e)))
+        result.map(CacheEntry::from)
     }
 
     async fn many(&self, keys: &[String]) -> Option<Vec<CacheEntry>> {
-        self.repo.get_many(keys, false).await.map_or(None, |list| {
-            Some(list.into_iter().map(|e| CacheEntry::from(e)).collect())
-        })
+        self.repo.get_many(keys, false).await.map(|list| list.into_iter().map(CacheEntry::from).collect())
     }
 
     // Delete an entry

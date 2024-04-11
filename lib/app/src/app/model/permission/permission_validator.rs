@@ -11,10 +11,10 @@ impl PermissionValidator {
         Self { claim, service }
     }
 
-    pub async fn can<P: ToString>(&self, name: P) -> bool {
+    pub async fn can<P: ToString>(&self, _name: P) -> bool {
         false
     }
-    pub async fn can_do_any<P: ToString>(&self, name: &[P]) -> bool {
+    pub async fn can_do_any<P: ToString>(&self, _name: &[P]) -> bool {
         false
     }
 

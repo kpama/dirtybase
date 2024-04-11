@@ -56,9 +56,7 @@ impl CacheStoreTrait for RedisStore {
             return Some(
                 list_of_data
                     .iter()
-                    .map(|entry| serde_json::from_str::<CacheEntry>(entry))
-                    .filter(|entry| entry.is_ok())
-                    .map(|entry| entry.unwrap())
+                    .flat_map(|entry| serde_json::from_str::<CacheEntry>(entry))
                     .collect::<Vec<CacheEntry>>(),
             );
         }

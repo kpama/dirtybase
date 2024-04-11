@@ -221,7 +221,7 @@ mod test {
                 assert_eq!(config.app_name(), "My Temp App");
                 assert_eq!(config.current_env(), &CurrentEnvironment::Production);
             }
-            Err(e) => panic!("could not write temp file: {}", e.to_string()),
+            Err(e) => panic!("could not write temp file: {}", e),
         }
     }
 }

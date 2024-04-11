@@ -10,7 +10,7 @@ impl PermissionService {
         Self { repo }
     }
 
-    pub async fn create_default_permissions(&self, company_id: &str) {
+    pub async fn create_default_permissions(&self, _company_id: &str) {
         // TODO: Setup default permissions
     }
 

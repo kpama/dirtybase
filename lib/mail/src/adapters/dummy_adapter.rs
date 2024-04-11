@@ -8,7 +8,7 @@ impl AdapterTrait for DummyAdapter {
         "dummy"
     }
 
-    async fn send(&self, envelope: Envelope) -> Result<bool, anyhow::Error> {
+    async fn send(&self, _envelope: Envelope) -> Result<bool, anyhow::Error> {
         log::debug!(target: "dummy email", "{:#?}", "dry test for now");
 
         Ok(true)

@@ -35,7 +35,7 @@ impl CacheManager {
 
     pub async fn new(config: &CacheConfig) -> Self {
         Self {
-            store: Self::get_store(&config.cache_store()).await,
+            store: Self::get_store(config.cache_store()).await,
             prefix: None,
             tags: Vec::new(),
         }
@@ -155,7 +155,7 @@ impl CacheManager {
     }
 
     pub async fn increment(&self, key: &str) -> bool {
-        self.increment_by(&key, 1.0).await
+        self.increment_by(key, 1.0).await
     }
 
     pub async fn increment_by(&self, key: &str, by: f64) -> bool {
@@ -327,7 +327,7 @@ impl CacheManager {
             let new_value = default.call(()).await;
             let result = serde_json::to_value(&new_value).unwrap();
             self.do_put(key, &result, expiration, tags).await;
-            return new_value;
+            new_value
         } else {
             value.unwrap()
         }

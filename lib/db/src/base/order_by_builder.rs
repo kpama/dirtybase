@@ -20,6 +20,12 @@ pub struct OrderByBuilder {
     orders: Vec<(String, Direction)>,
 }
 
+impl Default for OrderByBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OrderByBuilder {
     pub fn new() -> Self {
         Self { orders: Vec::new() }

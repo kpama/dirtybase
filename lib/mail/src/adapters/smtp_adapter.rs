@@ -24,7 +24,7 @@ impl AdapterTrait for SmtpAdapter {
             .body(envelope.subject.unwrap_or_default())
             .unwrap();
 
-        let creds = Credentials::new("smtp_username".to_owned(), "smtp_password".to_owned());
+        let _creds = Credentials::new("smtp_username".to_owned(), "smtp_password".to_owned());
 
         // Open a remote connection to gmail
         let mailer = SmtpTransport::relay("mail")

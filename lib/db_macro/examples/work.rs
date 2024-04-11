@@ -1,11 +1,9 @@
-use std::collections::HashMap;
 
-use busybody::Injectable;
+
+
 use dirtybase_db::{
-    base::{manager::Manager, query::EntityQueryBuilder, schema::DatabaseKind},
+    base::{manager::Manager, schema::DatabaseKind},
     config::BaseConfig,
-    field_values::FieldValue,
-    types::FromColumnAndValue,
     TableEntityTrait,
 };
 use dirtybase_db_macro::DirtyTable;
@@ -34,7 +32,7 @@ async fn main() {
     setup_db().await;
     // let people_repo = Person::repo_instance().await;
     // insert
-    let person1 = Person {
+    let _person1 = Person {
         id: None,
         first_name: "Person1 Frist".to_string(),
         last_name: "Person2 Last".to_string(),
@@ -42,7 +40,7 @@ async fn main() {
         orders: Vec::new(),
     };
 
-    let person2 = Person {
+    let _person2 = Person {
         id: None,
         first_name: "Person2 Frist".to_string(),
         last_name: "Person2 Last".to_string(),

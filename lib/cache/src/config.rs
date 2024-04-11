@@ -20,7 +20,7 @@ impl CacheConfig {
     }
 
     pub fn cache_store(&self) -> &String {
-        &self.cache_store.as_ref().unwrap()
+        self.cache_store.as_ref().unwrap()
     }
 }
 

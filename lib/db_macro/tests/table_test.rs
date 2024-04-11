@@ -77,7 +77,7 @@ fn test_complex_field() {
     }
 
     impl Example {
-        pub fn string_to_vec<'a>(column: Option<&'a FieldValue>) -> DiscountRange {
+        pub fn string_to_vec(column: Option<&FieldValue>) -> DiscountRange {
             if let Some(value) = column {
                 return value
                     .to_string()

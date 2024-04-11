@@ -15,6 +15,6 @@ fn main() {
             println!("app name: {}", config.app_name());
             println!("environment: {:?}", config.current_env());
         }
-        Err(e) => panic!("could not write temp file: {}", e.to_string()),
+        Err(e) => panic!("could not write temp file: {}", e),
     }
 }

@@ -53,10 +53,10 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
         let app_id = "app unknown";
 
         log::info!("company: {:?}, app: {}", company_id, app_id);
-        let response = next.run(request).await;
+        
 
         // axum::response::Response::new("Hello world".into())
-        response
+        next.run(request).await
     }
 
     async fn api_auth_middleware(
@@ -67,8 +67,8 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
         log::info!("auth: {:?}", jwt);
 
-        let response = next.run(request).await;
-        response
+        
+        next.run(request).await
     }
 
     router = router
@@ -86,7 +86,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
         config.web_ip_address(),
         config.web_port()
     );
-    display_welcome_info(&config.web_ip_address(), config.web_port());
+    display_welcome_info(config.web_ip_address(), config.web_port());
     axum::serve(
         listener,
         router.with_state(busybody::helpers::service_container()),

@@ -46,7 +46,7 @@ impl CompanyService {
         company.core_user_id = Some(company_user.id.unwrap());
         company.creator_id = Some(blame.id.unwrap());
 
-        return self.company_repo.create(company).await;
+        self.company_repo.create(company).await
     }
 
     pub async fn update(

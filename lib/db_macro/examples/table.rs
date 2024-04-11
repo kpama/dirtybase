@@ -28,20 +28,16 @@ struct Person {
 }
 
 impl Person {
-    pub fn field_into_status<'a>(column: Option<&'a FieldValue>) -> bool {
+    pub fn field_into_status(column: Option<&FieldValue>) -> bool {
         FieldValue::from_ref_option_into(column)
     }
 
     pub fn override_date_to_field_value(&self) -> Option<FieldValue> {
-        if let Some(value) = &self.created_at {
-            Some(match value {
+        self.created_at.as_ref().map(|value| match value {
                 DateCreated::Morning => FieldValue::String("A".into()),
                 DateCreated::Afternoon => FieldValue::String("B".into()),
                 DateCreated::Midnight => FieldValue::String("C".into()),
             })
-        } else {
-            None
-        }
     }
 }
 

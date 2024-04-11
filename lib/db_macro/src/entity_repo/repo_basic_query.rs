@@ -1,6 +1,6 @@
 use proc_macro2::Ident;
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
+use quote::{quote};
 
 pub(crate) fn generate_repo_basic_query(base_name: &Ident, id_column: &str) -> Vec<TokenStream> {
     let mut methods = Vec::new();

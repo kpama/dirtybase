@@ -81,7 +81,7 @@ impl RoleService {
         }
         role.creator_id = Some(blame.id.unwrap());
 
-        return self.role_repo.create(role).await;
+        self.role_repo.create(role).await
     }
 
     pub async fn update(

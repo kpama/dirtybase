@@ -50,7 +50,7 @@ impl AppEntityService {
 
         app.creator_id = Some(blame.id.unwrap());
 
-        return self.app_repo().create(app).await;
+        self.app_repo().create(app).await
     }
 
     pub async fn update(

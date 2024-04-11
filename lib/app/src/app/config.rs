@@ -90,7 +90,7 @@ impl Config {
     }
 
     pub fn environment(&self) -> &dirtybase_config::CurrentEnvironment {
-        &self.dirty_config.current_env()
+        self.dirty_config.current_env()
     }
 
     pub fn dirty_config(&self) -> &dirtybase_config::DirtyConfig {
@@ -98,6 +98,7 @@ impl Config {
     }
 }
 
+#[derive(Default)]
 pub struct ConfigBuilder {
     app_name: Option<String>,
     secret: Option<String>,
@@ -112,23 +113,7 @@ pub struct ConfigBuilder {
     dirty_config: Option<dirtybase_config::DirtyConfig>,
 }
 
-impl Default for ConfigBuilder {
-    fn default() -> Self {
-        Self {
-            app_name: None,
-            secret: None,
-            admin_username: None,
-            admin_email: None,
-            admin_password: None,
-            web_port: None,
-            web_ip_address: None,
-            web_enable_api_routes: None,
-            web_enable_admin_routes: None,
-            web_enable_general_routes: None,
-            dirty_config: None,
-        }
-    }
-}
+
 
 impl ConfigBuilder {
     pub fn new() -> Self {

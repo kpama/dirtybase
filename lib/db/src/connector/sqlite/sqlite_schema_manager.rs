@@ -8,7 +8,6 @@ use crate::{
         schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
         table::{BaseTable, UPDATED_AT_FIELD},
     },
-    types::StructuredColumnAndValue,
 };
 use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAndValue};
 use anyhow::anyhow;
@@ -235,7 +234,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         let query = sqlx::query(sql);
 
         match query.execute(self.db_pool.as_ref()).await {
-            Ok(v) => Ok(true),
+            Ok(_v) => Ok(true),
             Err(e) => Err(e.into()),
         }
     }

@@ -78,7 +78,7 @@ impl CacheDbStoreRepository {
         tags: Option<&[String]>,
     ) -> bool {
         for entry in kv {
-            self.create(&entry.0, &entry.1, expiration, tags).await;
+            self.create(entry.0, entry.1, expiration, tags).await;
         }
         true
     }
@@ -104,7 +104,7 @@ impl CacheDbStoreRepository {
             self.tag_key(tags, key).await;
             return true;
         }
-        return false;
+        false
     }
 
     pub async fn create(
@@ -125,7 +125,7 @@ impl CacheDbStoreRepository {
             return true;
         }
 
-        return false;
+        false
     }
 
     pub async fn delete(&self, key: &str) -> bool {
@@ -134,7 +134,7 @@ impl CacheDbStoreRepository {
                 query.eq(CacheDbStoreEntity::col_name_for_key(), key);
             })
             .await;
-        return true;
+        true
     }
 
     pub async fn delete_all(&self, tags: Option<&[String]>) -> bool {
@@ -160,7 +160,7 @@ impl CacheDbStoreRepository {
             return true;
         }
 
-        return false;
+        false
     }
 
     pub async fn delete_expired(&self) {

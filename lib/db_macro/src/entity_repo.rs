@@ -13,7 +13,7 @@ pub(crate) fn generate_entity_repo(
     input: &DeriveInput,
 ) -> proc_macro2::TokenStream {
     let struct_name = format_ident!("{}Repo", base_name);
-    let the_table_name = format!("{}", table_name);
+    let the_table_name = table_name.to_string();
     let mut methods = Vec::new();
     let id_column = pluck_id_column(input);
     let basic_queries = repo_basic_query::generate_repo_basic_query(base_name, &id_column);

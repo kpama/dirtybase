@@ -59,7 +59,7 @@ impl MigrationRepository {
 
         self.manager.insert(MigrationEntity::table_name(), kv).await;
 
-        self.find_by_name(&name).await
+        self.find_by_name(name).await
     }
 }
 

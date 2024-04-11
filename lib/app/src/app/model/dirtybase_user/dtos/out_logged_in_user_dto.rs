@@ -27,7 +27,7 @@ impl From<DirtybaseUserEntity> for LoggedInUser {
         Self {
             login_attempt: value.login_attempt,
             token: "".to_owned(),
-            apps: value.apps.into_iter().map(|i| i.into()).collect(),
+            apps: value.apps.into_iter().collect(),
             user: value.user.into(),
             is_sys_admin: value.is_sys_admin,
             last_login_at: value.last_login_at,

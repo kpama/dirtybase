@@ -19,18 +19,18 @@ impl CanLoginCachedData {
         error: AuthenticationErrorStatus,
     ) {
         let data = Self { allow, error };
-        let id = Self::generate_id(&user_email);
+        let id = Self::generate_id(user_email);
 
         cache_manager.put(&id, &data, None).await;
     }
 
     pub async fn fetch(cache_manager: &CacheManager, user_email: &str) -> Option<Self> {
-        let id = Self::generate_id(&user_email);
+        let id = Self::generate_id(user_email);
         cache_manager.get::<Self>(&id).await
     }
 
     pub async fn clear(cache_manager: &CacheManager, user_email: &str) {
-        let id = Self::generate_id(&user_email);
+        let id = Self::generate_id(user_email);
         cache_manager.forget(&id).await;
     }
 

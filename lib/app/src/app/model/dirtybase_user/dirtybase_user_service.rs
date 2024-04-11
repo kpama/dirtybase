@@ -100,7 +100,7 @@ impl DirtybaseUserService {
         mut user: DirtybaseUserEntity,
         password: &str,
     ) -> Result<LoggedInUser, AuthenticationErrorStatus> {
-        if verify_password(password, &user.user.password.as_ref().unwrap()) {
+        if verify_password(password, user.user.password.as_ref().unwrap()) {
             let mut out_dto: LoggedInUser = user.clone().into();
 
             // JWT token
@@ -175,7 +175,7 @@ impl DirtybaseUserService {
             .await
         {
             Ok(user) => self.log_user_in(user, &password).await,
-            Err(_) => return Err(AuthenticationErrorStatus::UserNotFound),
+            Err(_) => Err(AuthenticationErrorStatus::UserNotFound),
         }
     }
 }

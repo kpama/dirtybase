@@ -1,10 +1,9 @@
-use sqlx::query_builder;
+
 
 use crate::{
     field_values::FieldValue,
     query_values::QueryValue,
-    types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue},
-    ConnectionPoolManager, TableEntityTrait,
+    types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue}, TableEntityTrait,
 };
 
 use super::{
@@ -14,7 +13,7 @@ use super::{
     query_conditions::Condition,
     query_join_types::JoinType,
     query_operators::Operator,
-    schema::{SchemaManagerTrait, SchemaWrapper},
+    schema::{SchemaManagerTrait},
     table::DELETED_AT_FIELD,
     where_join_operators::WhereJoinOperator,
 };
@@ -988,7 +987,7 @@ impl<T: FromColumnAndValue + Send + Sync + 'static> EntityQueryBuilder<T> {
         Self {
             query_builder,
             inner,
-            phathom: PhantomData::default(),
+            phathom: PhantomData,
         }
     }
 

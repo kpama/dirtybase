@@ -55,7 +55,7 @@ impl Migrator {
     }
 
     pub async fn down(&self, manager: &Manager) {
-        let repo = self.repo().await;
+        let _repo = self.repo().await;
 
         for entry in &self.migrations {
             log::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
@@ -78,7 +78,7 @@ impl Migrator {
     }
 
     pub async fn reset(&self, manager: &Manager) {
-        let repo = self.repo().await;
+        let _repo = self.repo().await;
         for entry in &self.migrations {
             log::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
             entry.down(manager).await

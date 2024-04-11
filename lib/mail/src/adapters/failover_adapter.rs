@@ -8,7 +8,7 @@ impl AdapterTrait for FailoverAdapter {
         "failover"
     }
 
-    async fn send(&self, envelope: Envelope) -> Result<bool, anyhow::Error> {
+    async fn send(&self, _envelope: Envelope) -> Result<bool, anyhow::Error> {
         unimplemented!()
     }
 }

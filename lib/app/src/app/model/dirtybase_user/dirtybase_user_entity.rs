@@ -25,10 +25,7 @@ pub struct DirtybaseUserEntity {
 
 impl DirtybaseUserEntity {
     pub fn user_id_column() -> String {
-        format!(
-            "{}",
-            Self::prefix_with_tbl(UserEntity::foreign_id_column().unwrap())
-        )
+        Self::prefix_with_tbl(UserEntity::foreign_id_column().unwrap()).to_string()
     }
 
     pub fn append_from_structured(&mut self, cv: &mut StructuredColumnAndValue) {
@@ -44,7 +41,7 @@ impl DirtybaseUserEntity {
             apps.push(app);
         }
 
-        return apps;
+        apps
     }
 
     pub fn generate_salt(&mut self) {

@@ -1,11 +1,10 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{sync::Arc};
 
 use crate::{
     config::DirtybaseDbConfig,
     event::SchemeWroteEvent,
     field_values::FieldValue,
-    query_values::QueryValue,
-    types::{ColumnAndValue, FromColumnAndValue, IntoColumnAndValue, StructuredColumnAndValue},
+    types::{ColumnAndValue, FromColumnAndValue, IntoColumnAndValue},
     ConnectionsType, LAST_WRITE_TS,
 };
 
@@ -179,8 +178,8 @@ impl Manager {
 
     pub async fn transaction(
         &self,
-        table_name: &str,
-        mut callback: impl FnOnce(&mut QueryBuilder),
+        _table_name: &str,
+        _callback: impl FnOnce(&mut QueryBuilder),
     ) {
         todo!()
     }
@@ -190,7 +189,7 @@ impl Manager {
     }
 
     pub async fn drop_table(&self, table_name: &str) -> bool {
-        let query = QueryBuilder::new(
+        let _query = QueryBuilder::new(
             vec![table_name.to_owned()],
             super::query::QueryAction::DropTable,
         );

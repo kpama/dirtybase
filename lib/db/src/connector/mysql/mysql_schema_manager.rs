@@ -15,7 +15,7 @@ use crate::{
     },
     field_values::FieldValue,
     query_values::QueryValue,
-    types::{ColumnAndValue, StructuredColumnAndValue},
+    types::{ColumnAndValue},
 };
 
 #[derive(Debug, Clone)]
@@ -212,13 +212,13 @@ impl SchemaManagerTrait for MySqlSchemaManager {
 
     async fn raw_select(
         &self,
-        sql: &str,
-        params: Vec<FieldValue>,
+        _sql: &str,
+        _params: Vec<FieldValue>,
     ) -> Result<Vec<ColumnAndValue>, anyhow::Error> {
         todo!();
     }
 
-    async fn raw_statement(&self, sql: &str) -> Result<bool, anyhow::Error> {
+    async fn raw_statement(&self, _sql: &str) -> Result<bool, anyhow::Error> {
         todo!();
     }
 }
@@ -594,10 +594,7 @@ impl MySqlSchemaManager {
     }
 
     fn build_order_by(&self, query: &QueryBuilder) -> Option<String> {
-        match query.order_by() {
-            Some(order) => Some(order.to_string()),
-            _ => None,
-        }
+        query.order_by().as_ref().map(|order| order.to_string())
     }
 
     fn transform_condition(&self, condition: &Condition, params: &mut Vec<String>) -> String {

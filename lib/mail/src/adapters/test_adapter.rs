@@ -6,7 +6,7 @@ pub struct TestAdapter;
 
 #[async_trait]
 impl AdapterTrait for TestAdapter {
-    async fn send(&self, envelope: Envelope) -> Result<bool, anyhow::Error> {
+    async fn send(&self, _envelope: Envelope) -> Result<bool, anyhow::Error> {
         Ok(true)
     }
 

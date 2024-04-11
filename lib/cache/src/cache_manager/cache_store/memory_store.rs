@@ -166,7 +166,7 @@ impl CacheStoreTrait for MemoryStore {
                 Entry {
                     expiration,
                     content,
-                    key: key,
+                    key,
                 },
             );
             return true;

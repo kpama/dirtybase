@@ -99,7 +99,7 @@ async fn check_if_user_can_login(pipe: PipeContent) -> bool {
         }
     }
 
-    return true;
+    true
 }
 
 async fn find_user(
@@ -158,7 +158,7 @@ async fn try_logging_user_in(
                 if let Some(email) = payload.email.as_ref() {
                     CanLoginCachedData::store(service.cache(), email, false, e.clone()).await;
                 }
-                Err(e.into())
+                Err(e)
             }
         }
     } else {
@@ -169,7 +169,7 @@ async fn try_logging_user_in(
                 if let Some(email) = payload.email.as_ref() {
                     CanLoginCachedData::store(service.cache(), email, false, e.clone()).await;
                 }
-                Err(e.into())
+                Err(e)
             }
         }
     }

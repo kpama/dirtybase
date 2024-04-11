@@ -7,13 +7,12 @@ use crate::{
         schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
         table::BaseTable,
     },
-    types::StructuredColumnAndValue,
 };
 use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAndValue};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
-use sqlx::{any, postgres::PgRow, types::chrono, Column, Pool, Postgres, Row};
+use sqlx::{postgres::PgRow, types::chrono, Column, Pool, Postgres, Row};
 use std::{collections::HashMap, sync::Arc};
 
 const LOG_TARGET: &str = "postgresql_db_driver";
@@ -60,7 +59,7 @@ impl SchemaManagerTrait for PostgresSchemaManager {
     async fn has_table(&self, name: &str) -> bool {
         let query = "SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_name = ?";
 
-        let database = self.db_pool.connect_options().get_database();
+        let _database = self.db_pool.connect_options().get_database();
 
         let result = sqlx::query(query)
             .bind(name)
@@ -203,13 +202,13 @@ impl SchemaManagerTrait for PostgresSchemaManager {
 
     async fn raw_select(
         &self,
-        sql: &str,
-        params: Vec<FieldValue>,
+        _sql: &str,
+        _params: Vec<FieldValue>,
     ) -> Result<Vec<ColumnAndValue>, anyhow::Error> {
         todo!();
     }
 
-    async fn raw_statement(&self, sql: &str) -> Result<bool, anyhow::Error> {
+    async fn raw_statement(&self, _sql: &str) -> Result<bool, anyhow::Error> {
         todo!();
     }
 }

@@ -10,7 +10,7 @@ pub(crate) fn generate_query_builder_struct(
     input: &DeriveInput,
 ) -> proc_macro2::TokenStream {
     let struct_name = format_ident!("{}Repo", base_name);
-    let the_table_name = format!("{}", table_name);
+    let the_table_name = table_name.to_string();
     // let mut find_by_a_field = Vec::new();
     let mut methods = Vec::new();
     let id_column = pluck_id_column(input);

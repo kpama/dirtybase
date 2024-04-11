@@ -13,6 +13,7 @@ use dirtybase_contract::db::entity::user::UserEntity;
 use fama::PipeContent;
 
 #[derive(Clone)]
+#[derive(Default)]
 pub struct NewSysAdminData {
     user: Option<UserEntity>,
     company: Option<CompanyEntity>,
@@ -20,16 +21,7 @@ pub struct NewSysAdminData {
     // company_app_roles: Option<RoleEntity>,
 }
 
-impl Default for NewSysAdminData {
-    fn default() -> Self {
-        Self {
-            user: None,
-            company: None,
-            // company_app: None,
-            // company_app_roles: None,
-        }
-    }
-}
+
 
 #[busybody::async_trait]
 impl busybody::Injectable for NewSysAdminData {
@@ -73,7 +65,7 @@ async fn find_or_create_admin_user(
         .create_admin_user(
             config.admin_username(),
             config.admin_email(),
-            &config.admin_password(),
+            config.admin_password(),
         )
         .await;
 
@@ -106,15 +98,12 @@ async fn add_user_to_system_wide_admin(
     pipe: PipeContent,
     sys_admin_service: SysAdminService,
 ) -> Option<PipeContent> {
-    if new_admin_data.user.is_some() {
-        if sys_admin_service
+    if new_admin_data.user.is_some() && sys_admin_service
             .add_user(new_admin_data.user.as_ref().unwrap().id.as_ref().unwrap())
             .await
-            .is_err()
-        {
-            pipe.stop_the_flow();
-            log::error!("could not add user to system wide admin");
-        }
+            .is_err() {
+        pipe.stop_the_flow();
+        log::error!("could not add user to system wide admin");
     }
     None
 }
@@ -127,7 +116,7 @@ async fn create_default_company(
     config: Config,
 ) -> Option<PipeContent> {
     if new_admin_data.user.is_some() {
-        let user = new_admin_data.user.as_ref().clone().unwrap();
+        let user = new_admin_data.user.as_ref().unwrap();
         new_company.name = Some(config.app_name().clone());
         new_company.description = Some("This is the core/main company".into());
 
