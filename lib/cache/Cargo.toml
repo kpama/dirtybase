@@ -1,0 +1,22 @@
+[package]
+name = "dirtybase_cache"
+version.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+busybody = { workspace = true }
+dirtybase_db_macro = { path = "../db_macro" }
+dirtybase_db = { path = "../db" }
+dirtybase_config = { path = "../config" }
+dirtybase_helper = { path = "../helper" }
+dirtybase_3rd_client = { path = "../3rd_client" }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+log = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
+redis = { workspace = true }
+
+[dev-dependencies]

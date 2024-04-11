@@ -8,7 +8,6 @@ fn main() {
 
     match &args.command {
         Commands::New { name } => {
-            println!("----> creating a new application: {:?}", name);
             commands::new::create(name);
         }
         Commands::Init => {

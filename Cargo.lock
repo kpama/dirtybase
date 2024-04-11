@@ -20,29 +20,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "actix-files"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf0bdd6ff79de7c9a021f5d9ea79ce23e108d8bfc9b49b5b4a2cf6fad5a35212"
-dependencies = [
- "actix-http",
- "actix-service",
- "actix-utils",
- "actix-web",
- "bitflags 2.4.2",
- "bytes",
- "derive_more",
- "futures-core",
- "http-range",
- "log",
- "mime",
- "mime_guess",
- "percent-encoding",
- "pin-project-lite",
- "v_htmlescape",
-]
-
-[[package]]
 name = "actix-http"
 version = "3.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -929,11 +906,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "dirtybase"
+name = "dirtybase_3rd_client"
 version = "0.1.0"
 dependencies = [
- "actix-files",
- "actix-web",
+ "anyhow",
+ "busybody",
+ "deadpool",
+ "deadpool-redis",
+ "dirtybase_config",
+ "log",
+ "redis",
+ "tokio",
+]
+
+[[package]]
+name = "dirtybase_app"
+version = "0.1.0"
+dependencies = [
  "anyhow",
  "async-trait",
  "axum",
@@ -965,20 +954,7 @@ dependencies = [
  "sqlx",
  "tokio",
  "tokio-stream",
-]
-
-[[package]]
-name = "dirtybase_3rd_client"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "busybody",
- "deadpool",
- "deadpool-redis",
- "dirtybase_config",
- "log",
- "redis",
- "tokio",
+ "tokio-util",
 ]
 
 [[package]]
@@ -1567,12 +1543,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "http-range"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21dec9db110f5f872ed9699c3ecf50cf16f423502706ba5c72462e28d3157573"
-
-[[package]]
 name = "httparse"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1898,16 +1868,6 @@ name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6877bb514081ee2a7ff5ef9de3281f14a4dd4bceac4c09388074a6b5df8a139a"
-
-[[package]]
-name = "mime_guess"
-version = "2.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4192263c238a5f0d0c6bfd21f336a313a4ce1c450542449ca191bb657b4642ef"
-dependencies = [
- "mime",
- "unicase",
-]
 
 [[package]]
 name = "minimal-lexical"
@@ -3200,8 +3160,12 @@ checksum = "5419f34732d9eb6ee4c3578b7989078579b7f039cbbb9ca2c4da015749371e15"
 dependencies = [
  "bytes",
  "futures-core",
+ "futures-io",
  "futures-sink",
+ "futures-util",
+ "hashbrown 0.14.3",
  "pin-project-lite",
+ "slab",
  "tokio",
  "tracing",
 ]
@@ -3318,7 +3282,7 @@ version = "0.1.0"
 dependencies = [
  "actix-web",
  "busybody",
- "dirtybase",
+ "dirtybase_app",
  "include_dir",
  "log",
  "pretty_env_logger",
@@ -3334,15 +3298,6 @@ dependencies = [
  "rand",
  "serde",
  "web-time",
-]
-
-[[package]]
-name = "unicase"
-version = "2.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7d2d4dafb69621809a81864c9c1b864479e1235c0dd4e199924b9742439ed89"
-dependencies = [
- "version_check",
 ]
 
 [[package]]
@@ -3406,12 +3361,6 @@ name = "utf8parse"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
-
-[[package]]
-name = "v_htmlescape"
-version = "0.15.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e8257fbc510f0a46eb602c10215901938b5c2a7d5e70fc11483b1d3c9b5b18c"
 
 [[package]]
 name = "vcpkg"

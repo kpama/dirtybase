@@ -7,7 +7,7 @@ edition = { workspace = true }
 
 [dependencies]
 include_dir = { version = "0.7.3" }
-dirtybase = { path = "../dirtybase" }
+dirtybase_app = { path = "../../lib/app" }
 actix-web = { workspace = true }
 log = { workspace = true }
 pretty_env_logger = { workspace = true }

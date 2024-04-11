@@ -1,0 +1,19 @@
+[package]
+name = "dirtybase_3rd_client"
+version.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
+log = { workspace = true }
+deadpool = { workspace = true }
+deadpool-redis = { workspace = true, features = ["serde"] }
+redis = { workspace = true }
+busybody = { workspace = true }
+dirtybase_config = { path = "../config" }
+
+[dev-dependencies]
+tokio = { version = "*", features = ["full"] }
