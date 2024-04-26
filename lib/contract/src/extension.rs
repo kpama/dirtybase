@@ -7,9 +7,12 @@ pub type ExtensionMigrations = Vec<Box<dyn super::db::migration::Migration>>;
 #[async_trait::async_trait]
 pub trait ExtensionSetup: Send + Sync {
     /// Setup the extension
-    async fn setup(&self, config: &DirtyConfig);
+    async fn setup(&self, config: &DirtyConfig) {
+        //..
+    }
 
     async fn shutdown(&self) {
+        log::debug!("shutting down extension: {}", self.id());
         // logic to run when the server is shutting down
     }
 
