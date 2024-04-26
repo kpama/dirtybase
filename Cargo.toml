@@ -51,7 +51,7 @@ busybody = { version = "0.3" }
 orsomafo = { version = "0.3" }
 fama = { version = "0.3" }
 busstop = { version = "0.2" }
-redis = { version = "0.24.0", features = [
+redis = { version = "0.25", features = [
   "tokio-comp",
   "aio",
   # "tls-native-tls",
@@ -59,7 +59,9 @@ redis = { version = "0.24.0", features = [
 ] }
 lettre = { version = "0.11.0" }
 config = "0.14"
-deadpool = "0.10.0"
-deadpool-redis = { version = "0.14.0" }
-cron = { version = "0.12.0" }
-validator = { version = "0.16.1", features = ["derive"] }
+deadpool = "0.11"
+deadpool-redis = { version = "0.15" }
+cron = { version = "0.12" }
+validator = { version = "0.18", features = ["derive"] }
+tower-service = { version = "0.3" }
+named_routes_axum = { version = "0.1" }
