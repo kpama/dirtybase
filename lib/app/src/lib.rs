@@ -5,6 +5,8 @@ pub mod app;
 pub mod cli;
 pub mod dirtybase_entry;
 pub mod http;
+pub use axum;
+pub use dirtybase_contract as contract;
 
 /// Setup database application using configs in .env files
 pub async fn setup() -> anyhow::Result<AppService> {
