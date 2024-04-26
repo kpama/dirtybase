@@ -40,3 +40,5 @@ redis = { workspace = true }
 mime = { workspace = true }
 axum = { workspace = true }
 busstop = { workspace = true }
+tower-service = { workspace = true }
+named_routes_axum = { workspace = true }
