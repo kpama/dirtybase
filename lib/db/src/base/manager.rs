@@ -1,4 +1,4 @@
-use std::{sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     config::DirtybaseDbConfig,
@@ -176,11 +176,7 @@ impl Manager {
         self.dispatch_written_event();
     }
 
-    pub async fn transaction(
-        &self,
-        _table_name: &str,
-        _callback: impl FnOnce(&mut QueryBuilder),
-    ) {
+    pub async fn transaction(&self, _table_name: &str, _callback: impl FnOnce(&mut QueryBuilder)) {
         todo!()
     }
 

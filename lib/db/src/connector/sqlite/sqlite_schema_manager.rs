@@ -1,19 +1,17 @@
-use crate::{
-    base::{
-        column::{BaseColumn, ColumnDefault, ColumnType},
-        index::IndexType,
-        query::{QueryAction, QueryBuilder},
-        query_conditions::Condition,
-        query_operators::Operator,
-        schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
-        table::{BaseTable, UPDATED_AT_FIELD},
-    },
+use crate::base::{
+    column::{BaseColumn, ColumnDefault, ColumnType},
+    index::IndexType,
+    query::{QueryAction, QueryBuilder},
+    query_conditions::Condition,
+    query_operators::Operator,
+    schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
+    table::{BaseTable, UPDATED_AT_FIELD},
 };
 use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAndValue};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
-use sqlx::{sqlite::SqliteRow, types::chrono, Column, Execute, Pool, Row, Sqlite, TypeInfo};
+use sqlx::{sqlite::SqliteRow, types::chrono, Column, Pool, Row, Sqlite, TypeInfo};
 use std::{collections::HashMap, sync::Arc};
 
 const LOG_TARGET: &str = "sqlite_db_driver";

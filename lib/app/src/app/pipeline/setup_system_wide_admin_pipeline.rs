@@ -12,16 +12,13 @@ use busybody::Service;
 use dirtybase_contract::db::entity::user::UserEntity;
 use fama::PipeContent;
 
-#[derive(Clone)]
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct NewSysAdminData {
     user: Option<UserEntity>,
     company: Option<CompanyEntity>,
     // company_app: Option<AppEntity>,
     // company_app_roles: Option<RoleEntity>,
 }
-
-
 
 #[busybody::async_trait]
 impl busybody::Injectable for NewSysAdminData {
@@ -98,10 +95,12 @@ async fn add_user_to_system_wide_admin(
     pipe: PipeContent,
     sys_admin_service: SysAdminService,
 ) -> Option<PipeContent> {
-    if new_admin_data.user.is_some() && sys_admin_service
+    if new_admin_data.user.is_some()
+        && sys_admin_service
             .add_user(new_admin_data.user.as_ref().unwrap().id.as_ref().unwrap())
             .await
-            .is_err() {
+            .is_err()
+    {
         pipe.stop_the_flow();
         log::error!("could not add user to system wide admin");
     }

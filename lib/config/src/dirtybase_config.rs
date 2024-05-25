@@ -99,7 +99,8 @@ impl DirtyConfig {
             .add_source(config::File::with_name(full_path).required(false));
 
         if let Some(prefix) = dotenv_prefix {
-            builder = builder.add_source(config::Environment::with_prefix(prefix));
+            builder =
+                builder.add_source(config::Environment::with_prefix(prefix).try_parsing(true));
         }
 
         builder

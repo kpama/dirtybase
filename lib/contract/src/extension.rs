@@ -1,6 +1,9 @@
+#![allow(unused)]
+use std::collections::HashMap;
+
 use dirtybase_config::DirtyConfig;
 
-use crate::http::RouterManager;
+use crate::http::{MiddlewareManager, RouterManager};
 
 pub type ExtensionMigrations = Vec<Box<dyn super::db::migration::Migration>>;
 
@@ -17,7 +20,12 @@ pub trait ExtensionSetup: Send + Sync {
     }
 
     /// Register HTTP routes
-    fn register_routes(&self, manager: RouterManager) -> RouterManager {
+    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
+        manager
+    }
+
+    /// Register Middlewares
+    fn register_web_middleware(&self, mut manager: MiddlewareManager) -> MiddlewareManager {
         manager
     }
 

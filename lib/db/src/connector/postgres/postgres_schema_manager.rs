@@ -1,12 +1,10 @@
-use crate::{
-    base::{
-        column::{BaseColumn, ColumnDefault, ColumnType},
-        query::{QueryAction, QueryBuilder},
-        query_conditions::Condition,
-        query_operators::Operator,
-        schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
-        table::BaseTable,
-    },
+use crate::base::{
+    column::{BaseColumn, ColumnDefault, ColumnType},
+    query::{QueryAction, QueryBuilder},
+    query_conditions::Condition,
+    query_operators::Operator,
+    schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
+    table::BaseTable,
 };
 use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAndValue};
 use anyhow::anyhow;

@@ -4,6 +4,44 @@ use dirtybase_contract::db::entity::user::hash_password;
 use super::App;
 
 #[derive(Debug, serde::Deserialize, Clone)]
+pub struct MiddlewareConfig {
+    global: String,
+    general: String,
+    general_route: String,
+    api_route: String,
+    insecure_api_route: String,
+    admin_route: String,
+}
+
+impl MiddlewareConfig {
+    pub fn global(&self) -> Vec<String> {
+        self.global.split(',').map(String::from).collect()
+    }
+    pub fn general(&self) -> Vec<String> {
+        self.general.split(',').map(String::from).collect()
+    }
+
+    pub fn generate_route(&self) -> Vec<String> {
+        self.general_route.split(',').map(String::from).collect()
+    }
+
+    pub fn api_route(&self) -> Vec<String> {
+        self.api_route.split(',').map(String::from).collect()
+    }
+
+    pub fn insecure_api_route(&self) -> Vec<String> {
+        self.insecure_api_route
+            .split(',')
+            .map(String::from)
+            .collect()
+    }
+
+    pub fn admin_route(&self) -> Vec<String> {
+        self.admin_route.split(',').map(String::from).collect()
+    }
+}
+
+#[derive(Debug, serde::Deserialize, Clone)]
 struct ConfigEntry {
     name: String,
     secret: String,
@@ -13,10 +51,12 @@ struct ConfigEntry {
     web_port: u16,
     web_ip_address: String,
     web_enable_api_routes: bool,
+    web_enable_insecure_api_routes: bool,
     web_enable_admin_routes: bool,
     web_enable_general_routes: bool,
     #[serde(rename = "web_public_directory")]
     web_public_dir: String,
+    web_middleware: MiddlewareConfig,
 }
 
 #[derive(Debug, Clone)]
@@ -34,17 +74,19 @@ impl Default for Config {
 
 impl Config {
     pub fn new(config: DirtyConfig) -> Self {
-        let entry: ConfigEntry = config
+        let builder = config
             .load_optional_file("app.toml", Some("DTY_APP"))
             .build()
-            .unwrap()
-            .try_deserialize()
             .unwrap();
 
         Self {
             dirty_config: config,
-            entry,
+            entry: builder.try_deserialize().unwrap(),
         }
+    }
+
+    pub fn middleware(&self) -> &MiddlewareConfig {
+        &self.entry.web_middleware
     }
 
     pub fn app_name(&self) -> &String {
@@ -78,6 +120,10 @@ impl Config {
         self.entry.web_enable_api_routes
     }
 
+    pub fn web_enable_insecure_api_routes(&self) -> bool {
+        self.entry.web_enable_insecure_api_routes
+    }
+
     pub fn web_enable_admin_routes(&self) -> bool {
         self.entry.web_enable_admin_routes
     }
@@ -108,12 +154,12 @@ pub struct ConfigBuilder {
     web_port: Option<u16>,
     web_ip_address: Option<String>,
     web_enable_api_routes: Option<bool>,
+    web_enable_insecure_api_routes: Option<bool>,
     web_enable_admin_routes: Option<bool>,
     web_enable_general_routes: Option<bool>,
+    web_middleware: Option<MiddlewareConfig>,
     dirty_config: Option<dirtybase_config::DirtyConfig>,
 }
-
-
 
 impl ConfigBuilder {
     pub fn new() -> Self {
@@ -173,6 +219,16 @@ impl ConfigBuilder {
         self
     }
 
+    pub fn web_enable_insecure_api_routes(mut self, enable: bool) -> Self {
+        self.web_enable_insecure_api_routes = Some(enable);
+        self
+    }
+
+    pub fn web_middleware(mut self, config: MiddlewareConfig) -> Self {
+        self.web_middleware = Some(config);
+        self
+    }
+
     pub fn build(self) -> Config {
         let mut config = Config::default();
 
@@ -190,6 +246,10 @@ impl ConfigBuilder {
         config.entry.web_enable_api_routes = self
             .web_enable_api_routes
             .unwrap_or(config.entry.web_enable_api_routes);
+        config.entry.web_enable_insecure_api_routes = self
+            .web_enable_insecure_api_routes
+            .unwrap_or(config.entry.web_enable_insecure_api_routes);
+        config.entry.web_middleware = self.web_middleware.unwrap_or(config.entry.web_middleware);
         config.entry.web_enable_admin_routes = self
             .web_enable_admin_routes
             .unwrap_or(config.entry.web_enable_admin_routes);

@@ -7,7 +7,7 @@ use crate::app::{
 
 // TODO: remove serde::Serialization. This data should never leave the backend
 /// Incoming DTO when the user is attempting to login
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct UserLoginPayload {
     pub username: Option<String>,
     pub email: Option<String>,
@@ -27,16 +27,6 @@ impl UserLoginPayload {
         }
 
         Ok(true)
-    }
-}
-
-impl Default for UserLoginPayload {
-    fn default() -> Self {
-        Self {
-            username: None,
-            email: None,
-            password: "".to_string(),
-        }
     }
 }
 

@@ -6,7 +6,7 @@ use dirtybase_contract::db::{
             INTERNAL_ID_FIELD, UPDATED_AT_FIELD,
         },
     },
-    entity::user::USER_TABLE,
+    entity::user::{UserEntity, USER_TABLE},
 };
 
 mod company_entity;
@@ -18,34 +18,23 @@ pub mod dto;
 pub use company_entity::CompanyEntity;
 pub use company_repository::CompanyRepository;
 pub use company_service::CompanyService;
-
-pub const COMPANY_TABLE: &str = "core_company";
-
-// Table columns
-pub const COMPANY_TABLE_NAME_FIELD: &str = "name";
-pub const COMPANY_TABLE_DESCRIPTION_FIELD: &str = "description";
-pub const COMPANY_TABLE_CORE_USER_ID_FIELD: &str = "core_user_id";
-pub const COMPANY_TABLE_INTERNAL_ID_FIELD: &str = INTERNAL_ID_FIELD;
-pub const COMPANY_TABLE_ID_FIELD: &str = ID_FIELD;
-pub const COMPANY_TABLE_CREATOR_FIELD: &str = CREATOR_FIELD;
-pub const COMPANY_TABLE_EDITOR_FIELD: &str = EDITOR_FIELD;
-pub const COMPANY_TABLE_CREATED_AT_FIELD: &str = CREATED_AT_FIELD;
-pub const COMPANY_TABLE_UPDATED_AT_FIELD: &str = UPDATED_AT_FIELD;
-pub const COMPANY_TABLE_DELETED_AT_FIELD: &str = DELETED_AT_FIELD;
+use dirtybase_db::TableEntityTrait;
 
 pub async fn setup_company_table(manager: &Manager) {
     manager
-        .create_table_schema(COMPANY_TABLE, |table| {
+        .create_table_schema(CompanyEntity::table_name(), |table| {
             // internal_id
             // id
             table.id_set();
             // name
-            table.string(COMPANY_TABLE_NAME_FIELD);
+            table.string(CompanyEntity::col_name_for_name());
             // owner
-            table.ulid_fk(USER_TABLE, false).set_is_nullable(true);
+            table
+                .ulid_fk(UserEntity::table_name(), false)
+                .set_is_nullable(true);
             // description
             table
-                .sized_string(COMPANY_TABLE_DESCRIPTION_FIELD, 512)
+                .sized_string(CompanyEntity::col_name_for_description(), 512)
                 .set_is_nullable(true);
             // blame
             table.blame();

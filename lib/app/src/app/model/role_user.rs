@@ -65,8 +65,10 @@ pub async fn setup_role_users_table(manager: &Manager) {
             table.soft_deletable();
 
             // primary key
-            let keys = [to_fk_column(ROLE_TABLE, None),
-                to_fk_column(USER_TABLE, None)];
+            let keys = [
+                to_fk_column(ROLE_TABLE, None),
+                to_fk_column(USER_TABLE, None),
+            ];
             table.primary_index(
                 keys.iter()
                     .map(AsRef::as_ref)

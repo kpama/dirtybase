@@ -15,7 +15,7 @@ use crate::{
     },
     field_values::FieldValue,
     query_values::QueryValue,
-    types::{ColumnAndValue},
+    types::ColumnAndValue,
 };
 
 #[derive(Debug, Clone)]

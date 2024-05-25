@@ -1,8 +1,9 @@
 pub mod http_helper;
-use std::{env, sync::Arc};
+use std::{collections::HashMap, env, sync::Arc};
 
 use axum::Router;
-use dirtybase_contract::http::{RouteCollection, RouteType, RouterManager};
+use dirtybase_contract::http::{MiddlewareManager, RouteCollection, RouteType, RouterManager};
+use named_routes_axum::RouterWrapper;
 
 use crate::{app::AppService, shutdown_signal};
 
@@ -15,10 +16,12 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
     let mut router = Router::new();
 
-    let mut manager = RouterManager::new(Some("/api"), Some("/_admin"));
+    let mut manager = RouterManager::new(Some("/api"), Some("/_admin"), Some("/_open"));
+    let mut middleware_manager = MiddlewareManager::new();
     let lock = app.extensions.read().await;
     for ext in lock.iter() {
         manager = ext.register_routes(manager);
+        middleware_manager = ext.register_web_middleware(middleware_manager);
     }
     drop(lock);
 
@@ -26,20 +29,47 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
         match route_type {
             RouteType::Api => {
                 if app.config().web_enable_api_routes() {
-                    // Apply API middleware
-                    router = router.merge(flatten_routes(collection))
+                    let middleware_order = app.config().middleware().insecure_api_route();
+                    let mut api_router =
+                        middleware_manager.register(flatten_routes(collection), middleware_order);
+
+                    // TODO: add core middlewares
+                    api_router = api_router.middleware(api_auth_middleware);
+
+                    router = router.merge(api_router.into_router());
+                }
+            }
+            RouteType::InsecureApi => {
+                if app.config().web_enable_insecure_api_routes() {
+                    let middleware_order = app.config().middleware().insecure_api_route();
+                    let insecure_api_router =
+                        middleware_manager.register(flatten_routes(collection), middleware_order);
+
+                    // TODO: add core middlewares
+                    router = router.merge(insecure_api_router.into_router());
                 }
             }
             RouteType::Backend => {
                 if app.config().web_enable_admin_routes() {
-                    // Apply Backend middleware
-                    router = router.merge(flatten_routes(collection))
+                    let middleware_order = app.config().middleware().admin_route();
+                    let backend_router =
+                        middleware_manager.register(flatten_routes(collection), middleware_order);
+
+                    // TODO: Apply core Backend middleware
+
+                    router = router.merge(backend_router.into_router())
                 }
             }
             RouteType::General => {
                 if app.config().web_enable_general_routes() {
-                    // Apply General middleware
-                    router = router.merge(flatten_routes(collection))
+                    let middleware_order = app.config().middleware().general();
+
+                    let general_router =
+                        middleware_manager.register(flatten_routes(collection), middleware_order);
+
+                    // TODO: Apply core General middleware
+
+                    router = router.merge(general_router.into_router())
                 }
             }
         }
@@ -53,7 +83,6 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
         let app_id = "app unknown";
 
         log::info!("company: {:?}, app: {}", company_id, app_id);
-        
 
         // axum::response::Response::new("Hello world".into())
         next.run(request).await
@@ -67,13 +96,15 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
         log::info!("auth: {:?}", jwt);
 
-        
         next.run(request).await
     }
 
-    router = router
-        .layer(axum::middleware::from_fn(api_auth_middleware))
-        .layer(axum::middleware::from_fn(my_middleware_test));
+    let mut app = RouterWrapper::from(router);
+
+    let general_middleware = config.middleware().general();
+    dbg!("general middlewares: {:#?}", &general_middleware);
+
+    app = app.middleware(my_middleware_test);
 
     let listener =
         tokio::net::TcpListener::bind((config.web_ip_address().as_str(), config.web_port()))
@@ -89,7 +120,8 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
     display_welcome_info(config.web_ip_address(), config.web_port());
     axum::serve(
         listener,
-        router.with_state(busybody::helpers::service_container()),
+        app.into_router()
+            .with_state(busybody::helpers::service_container()),
     )
     .with_graceful_shutdown(shutdown_signal())
     .await
@@ -100,7 +132,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
 fn display_welcome_info(address: &str, port: u16) {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
-    println!(
+    eprintln!(
         r"
     ____  _      __        ____                     
    / __ \(_)____/ /___  __/ __ )____ _________      
@@ -110,11 +142,11 @@ fn display_welcome_info(address: &str, port: u16) {
                  /____/                             
 "
     );
-    println!("version: {}", VERSION);
-    println!("Http server running at : {} on port: {}", address, port);
+    eprintln!("version: {}", VERSION);
+    eprintln!("Http server running at : {} on port: {}", address, port);
 }
 
-fn flatten_routes(collection: RouteCollection) -> axum::Router<Arc<busybody::ServiceContainer>> {
+fn flatten_routes(collection: RouteCollection) -> RouterWrapper<Arc<busybody::ServiceContainer>> {
     let mut base = collection.base_route;
     for (sub_path, collection) in collection.routers {
         for a_router in collection {

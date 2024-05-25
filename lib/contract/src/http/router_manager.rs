@@ -1,15 +1,18 @@
 use std::{collections::HashMap, sync::Arc};
 
-#[derive(Debug)]
+use named_routes_axum::RouterWrapper;
+
+pub type ExtensionRouter = named_routes_axum::RouterWrapper<Arc<busybody::ServiceContainer>>;
+
 pub struct RouteCollection {
     pub prefix: String,
-    pub base_route: axum::Router<Arc<busybody::ServiceContainer>>,
-    pub routers: HashMap<String, Vec<axum::Router<Arc<busybody::ServiceContainer>>>>,
+    pub base_route: RouterWrapper<Arc<busybody::ServiceContainer>>,
+    pub routers: HashMap<String, Vec<RouterWrapper<Arc<busybody::ServiceContainer>>>>,
 }
 
 impl RouteCollection {
     pub(crate) fn new(prefix: String) -> Self {
-        let base_route = axum::Router::new();
+        let base_route = RouterWrapper::new();
         Self {
             prefix: prefix.to_string(),
             routers: HashMap::new(),
@@ -21,7 +24,7 @@ impl RouteCollection {
         self.prefix.clone()
     }
 
-    pub fn add(&mut self, prefix: &str, router: axum::Router<Arc<busybody::ServiceContainer>>) {
+    pub fn add(&mut self, prefix: &str, router: RouterWrapper<Arc<busybody::ServiceContainer>>) {
         let full_path = format!("{}{}", &self.prefix, prefix);
         if !self.routers.contains_key(&full_path) {
             self.routers.insert(full_path, vec![router]);
@@ -34,6 +37,7 @@ impl RouteCollection {
 #[derive(Debug, PartialEq, PartialOrd, Eq, Hash)]
 pub enum RouteType {
     Api,
+    InsecureApi,
     Backend,
     General,
 }
@@ -43,17 +47,23 @@ pub struct RouterManager {
 }
 
 impl RouterManager {
-    pub fn new(api_prefix: Option<&str>, backend_prefix: Option<&str>) -> Self {
+    pub fn new(
+        api_prefix: Option<&str>,
+        backend_prefix: Option<&str>,
+        insecure_api_prefix: Option<&str>,
+    ) -> Self {
         let mut routers = HashMap::new();
 
         let api = api_prefix.unwrap_or_else(|| "/api").to_string();
+        let insecure_api = insecure_api_prefix.unwrap_or_else(|| "/_open").to_string();
         let backend = backend_prefix.unwrap_or_else(|| "/_admin").to_string();
 
         // general
         routers.insert(RouteType::General, RouteCollection::new("".to_string()));
         // api
         routers.insert(RouteType::Api, RouteCollection::new(api));
-
+        // unsecure api
+        routers.insert(RouteType::InsecureApi, RouteCollection::new(insecure_api));
         // backend
         routers.insert(RouteType::Backend, RouteCollection::new(backend));
 
@@ -62,26 +72,38 @@ impl RouterManager {
 
     pub fn api(
         &mut self,
-        prefix: &str,
-        router: axum::Router<Arc<busybody::ServiceContainer>>,
+        prefix: Option<&str>,
+        callback: fn(ExtensionRouter) -> ExtensionRouter,
     ) -> &mut Self {
-        self.append(RouteType::Api, prefix, router)
+        let router = callback(RouterWrapper::new());
+        self.append(RouteType::Api, prefix.unwrap_or_default(), router)
+    }
+
+    pub fn insecure_api(
+        &mut self,
+        prefix: Option<&str>,
+        callback: fn(ExtensionRouter) -> ExtensionRouter,
+    ) -> &mut Self {
+        let router = callback(RouterWrapper::new());
+        self.append(RouteType::InsecureApi, prefix.unwrap_or_default(), router)
     }
 
     pub fn backend(
         &mut self,
-        prefix: &str,
-        router: axum::Router<Arc<busybody::ServiceContainer>>,
+        prefix: Option<&str>,
+        callback: fn(ExtensionRouter) -> ExtensionRouter,
     ) -> &mut Self {
-        self.append(RouteType::Backend, prefix, router)
+        let router = callback(RouterWrapper::new());
+        self.append(RouteType::Backend, prefix.unwrap_or_default(), router)
     }
 
     pub fn general(
         &mut self,
-        prefix: &str,
-        router: axum::Router<Arc<busybody::ServiceContainer>>,
+        prefix: Option<&str>,
+        callback: fn(ExtensionRouter) -> ExtensionRouter,
     ) -> &mut Self {
-        self.append(RouteType::General, prefix, router)
+        let router = callback(RouterWrapper::new());
+        self.append(RouteType::General, prefix.unwrap_or_default(), router)
     }
 
     pub fn take(self) -> HashMap<RouteType, RouteCollection> {
@@ -92,7 +114,7 @@ impl RouterManager {
         &mut self,
         base_type: RouteType,
         prefix: &str,
-        router: axum::Router<Arc<busybody::ServiceContainer>>,
+        router: RouterWrapper<Arc<busybody::ServiceContainer>>,
     ) -> &mut Self {
         if let Some(base) = self.base.get_mut(&base_type) {
             base.add(prefix, router);

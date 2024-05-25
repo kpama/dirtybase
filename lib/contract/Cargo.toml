@@ -23,3 +23,4 @@ bcrypt = { workspace = true }
 tokio = { workspace = true, features = ["sync"] }
 tokio-stream = { workspace = true }
 axum = { workspace = true }
+named_routes_axum = { workspace = true }

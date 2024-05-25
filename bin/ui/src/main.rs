@@ -1,5 +1,3 @@
-
-
 use include_dir::{include_dir, Dir};
 
 static UI_EMBEDDED_ASSETS: Dir = include_dir!("bin/ui/src/app/dist/spa");

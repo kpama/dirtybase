@@ -1,21 +1,14 @@
-
-
 use crate::{
     field_values::FieldValue,
     query_values::QueryValue,
-    types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue}, TableEntityTrait,
+    types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue},
+    TableEntityTrait,
 };
 
 use super::{
-    aggregate::Aggregate,
-    join_builder::JoinQueryBuilder,
-    order_by_builder::OrderByBuilder,
-    query_conditions::Condition,
-    query_join_types::JoinType,
-    query_operators::Operator,
-    schema::{SchemaManagerTrait},
-    table::DELETED_AT_FIELD,
-    where_join_operators::WhereJoinOperator,
+    aggregate::Aggregate, join_builder::JoinQueryBuilder, order_by_builder::OrderByBuilder,
+    query_conditions::Condition, query_join_types::JoinType, query_operators::Operator,
+    schema::SchemaManagerTrait, table::DELETED_AT_FIELD, where_join_operators::WhereJoinOperator,
 };
 use std::{collections::HashMap, fmt::Display, marker::PhantomData};
 

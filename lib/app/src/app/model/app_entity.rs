@@ -15,7 +15,7 @@ pub use app_entity_repository::AppRepository;
 pub use app_entity_service::AppEntityService;
 use dirtybase_db::TableEntityTrait;
 
-use super::company::COMPANY_TABLE;
+use super::company::CompanyEntity;
 
 // Table
 pub const APP_TABLE: &str = "core_app";
@@ -24,7 +24,6 @@ pub const APP_TABLE: &str = "core_app";
 pub const APP_TABLE_NAME_FIELD: &str = "name";
 pub const APP_TABLE_DESCRIPTION_FIELD: &str = "description";
 pub const APP_TABLE_IS_SYSTEM_APP_FIELD: &str = "is_system_app";
-pub const APP_TABLE_COMPANY_ID_FIELD: &str = "core_company_id";
 pub const APP_TABLE_INTERNAL_ID_FIELD: &str = INTERNAL_ID_FIELD;
 pub const APP_TABLE_ID_FIELD: &str = ID_FIELD;
 pub const APP_TABLE_CREATOR_FIELD: &str = CREATOR_FIELD;
@@ -40,17 +39,17 @@ pub async fn setup_applications_table(manager: &Manager) {
             // id
             table.id_set();
             // company_id
-            table.ulid_fk(COMPANY_TABLE, true);
+            table.ulid_fk(CompanyEntity::table_name(), true);
             // is_system_app
             // This field identifies the main system application
             table
-                .boolean(APP_TABLE_IS_SYSTEM_APP_FIELD)
+                .boolean(AppEntity::col_name_for_is_system_app())
                 .set_default_from(false);
             // name
-            table.string(APP_TABLE_NAME_FIELD);
+            table.string(AppEntity::col_name_for_name());
             //description
             table
-                .sized_string(APP_TABLE_DESCRIPTION_FIELD, 512)
+                .sized_string(AppEntity::col_name_for_description(), 512)
                 .set_is_nullable(true);
             // blame
             table.blame();

@@ -2,11 +2,10 @@
 
 use crate::app::App;
 
-use super::{
-    CompanyEntity, COMPANY_TABLE, COMPANY_TABLE_DELETED_AT_FIELD, COMPANY_TABLE_ID_FIELD,
-    COMPANY_TABLE_INTERNAL_ID_FIELD,
+use super::CompanyEntity;
+use dirtybase_db::{
+    base::manager::Manager, field_values::FieldValue, types::IntoColumnAndValue, TableEntityTrait,
 };
-use dirtybase_db::{base::manager::Manager, field_values::FieldValue, types::IntoColumnAndValue};
 
 pub struct CompanyRepository {
     manager: Manager,
@@ -26,10 +25,10 @@ impl CompanyRepository {
         id: u64,
     ) -> Result<Option<CompanyEntity>, anyhow::Error> {
         self.manager()
-            .select_from_table(COMPANY_TABLE, |q| {
+            .select_from_table(CompanyEntity::table_name(), |q| {
                 q.select_all()
-                    .eq(COMPANY_TABLE_INTERNAL_ID_FIELD, id)
-                    .and_is_null(COMPANY_TABLE_DELETED_AT_FIELD);
+                    .eq(CompanyEntity::col_name_for_internal_id(), id)
+                    .and_is_null(CompanyEntity::col_name_for_deleted_at());
             })
             .fetch_one_to()
             .await
@@ -37,10 +36,10 @@ impl CompanyRepository {
 
     pub async fn find_by_id(&self, id: &str) -> Result<Option<CompanyEntity>, anyhow::Error> {
         self.manager()
-            .select_from_table(COMPANY_TABLE, |q| {
+            .select_from_table(CompanyEntity::table_name(), |q| {
                 q.select_all()
-                    .eq(COMPANY_TABLE_ID_FIELD, id)
-                    .and_is_null(COMPANY_TABLE_DELETED_AT_FIELD);
+                    .eq(CompanyEntity::col_name_for_id(), id)
+                    .and_is_null(CompanyEntity::col_name_for_deleted_at());
             })
             .fetch_one_to()
             .await
@@ -51,9 +50,9 @@ impl CompanyRepository {
         record: impl IntoColumnAndValue,
     ) -> Result<Option<CompanyEntity>, anyhow::Error> {
         let kv = record.into_column_value();
-        let id: String = FieldValue::from_ref_option_into(kv.get(COMPANY_TABLE_ID_FIELD));
+        let id: String = FieldValue::from_ref_option_into(kv.get(CompanyEntity::col_name_for_id()));
 
-        self.manager.insert(COMPANY_TABLE, kv).await;
+        self.manager.insert(CompanyEntity::table_name(), kv).await;
         self.find_by_id(&id).await
     }
 
@@ -64,8 +63,8 @@ impl CompanyRepository {
     ) -> Result<Option<CompanyEntity>, anyhow::Error> {
         let column_and_values = record.into_column_value();
         self.manager
-            .update(COMPANY_TABLE, column_and_values, |q| {
-                q.eq(COMPANY_TABLE_ID_FIELD, id);
+            .update(CompanyEntity::table_name(), column_and_values, |q| {
+                q.eq(CompanyEntity::col_name_for_id(), id);
             })
             .await;
 

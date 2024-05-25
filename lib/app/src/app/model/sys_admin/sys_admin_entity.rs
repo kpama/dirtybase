@@ -8,8 +8,6 @@ pub struct SysAdminEntity {
     pub core_user_id: UlidField,
 }
 
-
-
 impl SysAdminEntity {
     pub fn new() -> Self {
         Self::default()

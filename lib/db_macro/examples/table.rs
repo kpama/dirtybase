@@ -34,10 +34,10 @@ impl Person {
 
     pub fn override_date_to_field_value(&self) -> Option<FieldValue> {
         self.created_at.as_ref().map(|value| match value {
-                DateCreated::Morning => FieldValue::String("A".into()),
-                DateCreated::Afternoon => FieldValue::String("B".into()),
-                DateCreated::Midnight => FieldValue::String("C".into()),
-            })
+            DateCreated::Morning => FieldValue::String("A".into()),
+            DateCreated::Afternoon => FieldValue::String("B".into()),
+            DateCreated::Midnight => FieldValue::String("C".into()),
+        })
     }
 }
 
