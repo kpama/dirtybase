@@ -1,4 +1,4 @@
-use clap::Subcommand;
+use clap::{ArgMatches, Subcommand};
 
 use dirtybase_contract::ExtensionMigrations;
 use dirtybase_db::base::manager::Manager;
@@ -90,5 +90,17 @@ impl Migrator {
         repo.init().await;
 
         repo
+    }
+}
+
+impl From<(String, ArgMatches)> for MigrateAction {
+    fn from(value: (String, ArgMatches)) -> Self {
+        match value.0.as_str() {
+            "up" => MigrateAction::Up,
+            "down" => MigrateAction::Down,
+            "refresh" => MigrateAction::Refresh,
+            "reset" => MigrateAction::Reset,
+            v @ _ => panic!("{} is not a migration action", v),
+        }
     }
 }

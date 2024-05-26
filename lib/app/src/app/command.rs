@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{ArgMatches, Parser, Subcommand};
 
 pub mod migrator;
 
@@ -22,4 +22,24 @@ pub enum Commands {
     Queue { name: Option<String> },
     /// Handle dispatched events
     Handle { cluster: Option<String> },
+}
+
+impl From<(String, ArgMatches)> for Commands {
+    fn from(value: (String, ArgMatches)) -> Self {
+        match value {
+            (name, _) if name == "serve" => Commands::Serve,
+            (name, mut args) if name == "migrate" && args.subcommand().is_some() => {
+                Commands::Migrate {
+                    action: migrator::MigrateAction::from(args.remove_subcommand().unwrap()),
+                }
+            }
+            (name, mut args) if name == "queue" => Commands::Queue {
+                name: args.remove_one("cluster"),
+            },
+            (name, mut args) if name == "handle" => Commands::Handle {
+                cluster: args.remove_one("cluster"),
+            },
+            v @ _ => panic!("{} is not a valid command", &v.0),
+        }
+    }
 }

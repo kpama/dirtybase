@@ -1,11 +1,11 @@
 use app::AppService;
-use clap::Parser;
 
 pub mod app;
 pub mod cli;
 pub mod dirtybase_entry;
 pub mod http;
 pub use axum;
+use contract::cli::CliCommandManager;
 pub use dirtybase_contract as contract;
 
 /// Setup database application using configs in .env files
@@ -55,12 +55,16 @@ pub async fn run_cli(
 }
 
 pub async fn run(app_service: AppService) -> anyhow::Result<()> {
-    let args = app::command::Args::parse();
-    match &args.command {
-        Some(app::command::Commands::Serve) => run_http(app_service.clone()).await,
-        Some(command) => run_cli(app_service.clone(), command).await,
-        None => Err(anyhow::anyhow!("Command was not handled")),
+    let mut manager = CliCommandManager::new();
+
+    let lock = app_service.extensions.read().await;
+    for ext in lock.iter() {
+        manager = ext.register_cli_commands(manager);
     }
+    drop(lock);
+
+    manager.handle(busybody::helpers::service_container()).await;
+    Ok(())
 }
 
 pub async fn setup_and_run() -> anyhow::Result<()> {

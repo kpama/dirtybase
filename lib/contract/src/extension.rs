@@ -3,7 +3,10 @@ use std::collections::HashMap;
 
 use dirtybase_config::DirtyConfig;
 
-use crate::http::{MiddlewareManager, RouterManager};
+use crate::{
+    cli::CliCommandManager,
+    http::{MiddlewareManager, RouterManager},
+};
 
 pub type ExtensionMigrations = Vec<Box<dyn super::db::migration::Migration>>;
 
@@ -25,7 +28,12 @@ pub trait ExtensionSetup: Send + Sync {
     }
 
     /// Register Middlewares
-    fn register_web_middleware(&self, mut manager: MiddlewareManager) -> MiddlewareManager {
+    fn register_web_middlewares(&self, mut manager: MiddlewareManager) -> MiddlewareManager {
+        manager
+    }
+
+    /// register cli sub commands
+    fn register_cli_commands(&self, mut manager: CliCommandManager) -> CliCommandManager {
         manager
     }
 

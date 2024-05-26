@@ -1,11 +1,17 @@
+mod middleware;
+
 pub mod http_helper;
-use std::{collections::HashMap, env, sync::Arc};
+use std::{env, sync::Arc};
 
 use axum::Router;
 use dirtybase_contract::http::{MiddlewareManager, RouteCollection, RouteType, RouterManager};
 use named_routes_axum::RouterWrapper;
 
-use crate::{app::AppService, shutdown_signal};
+use crate::{
+    app::AppService,
+    http::middleware::{api_auth_middleware, my_middleware_test},
+    shutdown_signal,
+};
 
 pub async fn init(app: AppService) -> anyhow::Result<()> {
     app.init().await;
@@ -21,7 +27,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
     let lock = app.extensions.read().await;
     for ext in lock.iter() {
         manager = ext.register_routes(manager);
-        middleware_manager = ext.register_web_middleware(middleware_manager);
+        middleware_manager = ext.register_web_middlewares(middleware_manager);
     }
     drop(lock);
 
@@ -73,30 +79,6 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 }
             }
         }
-    }
-
-    async fn my_middleware_test(
-        request: axum::extract::Request,
-        next: axum::middleware::Next,
-    ) -> axum::response::Response {
-        let company_id = "company unknown";
-        let app_id = "app unknown";
-
-        log::info!("company: {:?}, app: {}", company_id, app_id);
-
-        // axum::response::Response::new("Hello world".into())
-        next.run(request).await
-    }
-
-    async fn api_auth_middleware(
-        request: axum::extract::Request,
-        next: axum::middleware::Next,
-    ) -> axum::response::Response {
-        let jwt = request.headers().get("authorization");
-
-        log::info!("auth: {:?}", jwt);
-
-        next.run(request).await
     }
 
     let mut app = RouterWrapper::from(router);

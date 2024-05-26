@@ -35,7 +35,7 @@ impl dirtybase_app::contract::ExtensionSetup for MyApp {
         manager
     }
 
-    fn register_web_middleware(&self, mut manager: MiddlewareManager) -> MiddlewareManager {
+    fn register_web_middlewares(&self, mut manager: MiddlewareManager) -> MiddlewareManager {
         manager.add("example1", Example1Middleware);
         manager.add("example3", Example3Middleware);
 

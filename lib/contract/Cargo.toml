@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+clap = { workspace = true, features = ["unstable-doc"] }
 dirtybase_db = { path = "../db" }
 dirtybase_config = { path = "../config" }
 dirtybase_db_macro = { path = "../db_macro" }
@@ -24,3 +25,5 @@ tokio = { workspace = true, features = ["sync"] }
 tokio-stream = { workspace = true }
 axum = { workspace = true }
 named_routes_axum = { workspace = true }
+futures = { workspace = true }
+futures-util = { workspace = true }

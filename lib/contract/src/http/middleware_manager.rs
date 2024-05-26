@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use named_routes_axum::RouterWrapper;
 
-pub trait MiddlewareRegisterer {
+pub trait MiddlewareRegisterer: Send + Sync {
     fn register(
         &self,
         router: RouterWrapper<Arc<busybody::ServiceContainer>>,

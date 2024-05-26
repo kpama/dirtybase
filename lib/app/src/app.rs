@@ -9,8 +9,6 @@ pub mod model;
 pub mod pipeline;
 pub mod token_claim;
 
-use std::collections::HashMap;
-
 pub use config::Config;
 pub use config::ConfigBuilder;
 
