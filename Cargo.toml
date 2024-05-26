@@ -65,3 +65,4 @@ cron = { version = "0.12" }
 validator = { version = "0.18", features = ["derive"] }
 tower-service = { version = "0.3" }
 named_routes_axum = { version = "0.1" }
+simple-middleware = { version = "0.1" }
