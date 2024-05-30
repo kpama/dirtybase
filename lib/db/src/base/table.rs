@@ -276,19 +276,17 @@ impl BaseTable {
         self.columns.last_mut().unwrap()
     }
 
-    // pub fn unique_index(&mut self, columns: &[&str]) -> &mut Self {
-    //     if self.indexes.is_none() {
-    //         self.indexes = Some(Vec::new());
-    //     }
+    pub fn unique_index(&mut self, columns: &[&str]) -> &mut Self {
+        if self.indexes.is_none() {
+            self.indexes = Some(Vec::new());
+        }
 
-    //     if let Some(indexes) = &mut self.indexes {
-    //         indexes.push(IndexType::Unique(
-    //             columns.iter().map(|c| c.to_string()).collect(),
-    //         ));
-    //     }
+        if let Some(indexes) = &mut self.indexes {
+            indexes.push(IndexType::Unique(IndexProp::new(columns, false)));
+        }
 
-    //     self
-    // }
+        self
+    }
 
     pub fn index(&mut self, columns: &[&str]) -> &mut Self {
         if self.indexes.is_none() {
