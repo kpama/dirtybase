@@ -1,6 +1,9 @@
 use super::UserStatus;
 use crate::db::base::helper::generate_ulid;
-use dirtybase_db::types::{BooleanField, DateTimeField, InternalIdField, StringField, UlidField};
+use dirtybase_db::types::{
+    BooleanField, DateTimeField, InternalIdField, NumberField, StringField, TimestampField,
+    UlidField,
+};
 use dirtybase_db_macro::DirtyTable;
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +16,13 @@ pub struct UserEntity {
     pub email: StringField,
     pub reset_password: BooleanField,
     pub status: Option<UserStatus>,
+    #[serde(skip_deserializing, skip_serializing)]
     pub password: StringField,
+    #[serde(skip_deserializing, skip_serializing)]
+    pub salt: StringField,
+    pub login_attempt: NumberField,
+    #[serde(skip_deserializing)]
+    pub last_login_at: TimestampField,
     #[serde(skip_deserializing)]
     pub created_at: DateTimeField,
     #[serde(skip_deserializing)]

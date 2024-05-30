@@ -17,7 +17,7 @@ impl UserRepository {
         &self.manager
     }
 
-    pub async fn find_on_by_internal_id(
+    pub async fn find_one_by_internal_id(
         &mut self,
         id: u64,
         without_trash: bool,
@@ -35,7 +35,7 @@ impl UserRepository {
             .await
     }
 
-    pub async fn find_on_by_id(&self, id: &str) -> Result<Option<UserEntity>, anyhow::Error> {
+    pub async fn find_one_by_id(&self, id: &str) -> Result<Option<UserEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(UserEntity::table_name(), |q| {
                 q.select_all()
@@ -122,7 +122,7 @@ impl UserRepository {
             .insert(UserEntity::table_name(), column_and_values)
             .await;
 
-        self.find_on_by_id(&id).await
+        self.find_one_by_id(&id).await
     }
 
     // Update an existing User record
@@ -131,19 +131,15 @@ impl UserRepository {
         id: &str,
         record: impl IntoColumnAndValue,
     ) -> Result<Option<UserEntity>, anyhow::Error> {
-        let kv = record.into_column_value();
         self.manager()
-            .update(UserEntity::table_name(), kv, move |q| {
-                q.eq(UserEntity::id_column().unwrap(), id);
-            })
+            .update(
+                UserEntity::table_name(),
+                record.into_column_value(),
+                move |q| {
+                    q.eq(UserEntity::id_column().unwrap(), id);
+                },
+            )
             .await;
-        self.find_on_by_id(id).await
+        self.find_one_by_id(id).await
     }
 }
-
-// #[busybody::async_trait]
-// impl busybody::Injectable for UserRepository {
-//     async fn inject(c: &busybody::ServiceContainer) -> Self {
-//         Self::new(c.proxy_value().unwrap())
-//     }
-// }

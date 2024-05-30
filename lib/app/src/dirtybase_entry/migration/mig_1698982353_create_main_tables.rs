@@ -1,7 +1,7 @@
 use dirtybase_contract::db::base::manager::Manager;
 use dirtybase_contract::db::migration::Migration;
 
-use crate::app::{
+use crate::core::{
     setup_database::{create_default_tables, drop_default_tables},
     setup_defaults::setup_default_entities,
 };

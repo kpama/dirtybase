@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use orsomafo::Dispatchable;
+use sha2::{Digest, Sha256};
 
 use crate::db::{base::helper::generate_ulid, event::UserCreatedEvent};
 
@@ -53,6 +54,10 @@ impl UserService {
             user.password = Some(raw_password.into());
             user.reset_password = Some(true);
             user.status = Some(super::UserStatus::Active);
+
+            let mut hash = Sha256::new();
+            hash.update(generate_ulid().as_bytes());
+            user.salt = Some(format!("{:x}", hash.finalize()));
 
             match self.create(user).await {
                 Ok(result) => match result {

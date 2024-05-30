@@ -46,6 +46,15 @@ pub async fn setup_users_table(manager: &Manager) {
             table
                 .string(UserEntity::col_name_for_status())
                 .set_default_from(UserStatus::Pending);
+            table
+                .sized_string(UserEntity::col_name_for_salt(), 512)
+                .set_is_nullable(false);
+            table
+                .number(UserEntity::col_name_for_login_attempt())
+                .set_default_from(0);
+            table
+                .datetime(UserEntity::col_name_for_last_login_at())
+                .set_is_nullable(true);
             table.timestamps();
             table.soft_deletable();
         })

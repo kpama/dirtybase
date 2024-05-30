@@ -62,7 +62,7 @@ impl RouterManager {
         routers.insert(RouteType::General, RouteCollection::new("".to_string()));
         // api
         routers.insert(RouteType::Api, RouteCollection::new(api));
-        // unsecure api
+        // insecure api
         routers.insert(RouteType::InsecureApi, RouteCollection::new(insecure_api));
         // backend
         routers.insert(RouteType::Backend, RouteCollection::new(backend));

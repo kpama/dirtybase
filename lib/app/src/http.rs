@@ -8,7 +8,7 @@ use dirtybase_contract::http::{MiddlewareManager, RouteCollection, RouteType, Ro
 use named_routes_axum::RouterWrapper;
 
 use crate::{
-    app::AppService,
+    core::AppService,
     http::middleware::{api_auth_middleware, my_middleware_test},
     shutdown_signal,
 };
@@ -47,9 +47,10 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             }
             RouteType::InsecureApi => {
                 if app.config().web_enable_insecure_api_routes() {
-                    let middleware_order = app.config().middleware().insecure_api_route();
-                    let insecure_api_router =
-                        middleware_manager.register(flatten_routes(collection), middleware_order);
+                    let insecure_api_router = middleware_manager.register(
+                        flatten_routes(collection),
+                        app.config().middleware().insecure_api_route(),
+                    );
 
                     // TODO: add core middlewares
                     router = router.merge(insecure_api_router.into_router());
@@ -57,9 +58,10 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             }
             RouteType::Backend => {
                 if app.config().web_enable_admin_routes() {
-                    let middleware_order = app.config().middleware().admin_route();
-                    let backend_router =
-                        middleware_manager.register(flatten_routes(collection), middleware_order);
+                    let backend_router = middleware_manager.register(
+                        flatten_routes(collection),
+                        app.config().middleware().admin_route(),
+                    );
 
                     // TODO: Apply core Backend middleware
 
@@ -68,10 +70,10 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             }
             RouteType::General => {
                 if app.config().web_enable_general_routes() {
-                    let middleware_order = app.config().middleware().general();
-
-                    let general_router =
-                        middleware_manager.register(flatten_routes(collection), middleware_order);
+                    let general_router = middleware_manager.register(
+                        flatten_routes(collection),
+                        app.config().middleware().general_route(),
+                    );
 
                     // TODO: Apply core General middleware
 
@@ -83,8 +85,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
     let mut app = RouterWrapper::from(router);
 
-    let general_middleware = config.middleware().general();
-    dbg!("general middlewares: {:#?}", &general_middleware);
+    app = middleware_manager.register(app, config.middleware().general());
 
     app = app.middleware(my_middleware_test);
 

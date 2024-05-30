@@ -1,6 +1,6 @@
 use tokio_util::sync::CancellationToken;
 
-use crate::app::{
+use crate::core::{
     command::{
         migrator::{MigrateAction, Migrator},
         Commands,

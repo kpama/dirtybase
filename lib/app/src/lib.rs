@@ -1,7 +1,7 @@
-use app::AppService;
+use core::AppService;
 
-pub mod app;
 pub mod cli;
+pub mod core;
 pub mod dirtybase_entry;
 pub mod http;
 pub use axum;
@@ -10,25 +10,25 @@ pub use dirtybase_contract as contract;
 
 /// Setup database application using configs in .env files
 pub async fn setup() -> anyhow::Result<AppService> {
-    let config = app::Config::default();
+    let config = core::Config::default();
     setup_using(&config).await
 }
 
 /// Setup database application using custom configuration
 /// A builder exist that assist in building the configuration instance
 /// ```rust
-/// # use app::app::ConfigBuilder;
+/// # use core::core::ConfigBuilder;
 /// let builder = ConfigBuilder::new();
 /// let config = builder.app_name("My awesome application")
 ///                     .web_port(8709)
 ///                     .build();
 /// ```
 ///
-pub async fn setup_using(config: &app::Config) -> anyhow::Result<AppService> {
+pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
     let pool_manager = dirtybase_db::setup(config.dirty_config()).await;
     let cache_manager = dirtybase_cache::setup(config.dirty_config()).await;
 
-    let app = app::App::new(config, pool_manager, cache_manager).await?;
+    let app = core::App::new(config, pool_manager, cache_manager).await?;
     app.register(dirtybase_entry::Extension).await;
 
     Ok(app)
@@ -49,7 +49,7 @@ pub async fn run_http(app_service: AppService) -> anyhow::Result<()> {
 
 pub async fn run_cli(
     app_service: AppService,
-    command: &app::command::Commands,
+    command: &core::command::Commands,
 ) -> anyhow::Result<()> {
     cli::init(app_service, command).await
 }

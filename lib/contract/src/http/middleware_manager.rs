@@ -31,7 +31,6 @@ impl MiddlewareManager {
     ) -> RouterWrapper<Arc<busybody::ServiceContainer>> {
         for m in order.into_iter() {
             if self.0.contains_key(&m) {
-                dbg!("about to register middleware: {}", &m);
                 router = MiddlewareRegisterer::register(self.0.get(&m).unwrap().as_ref(), router);
             }
         }

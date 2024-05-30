@@ -1,7 +1,7 @@
 use dirtybase_config::DirtyConfig;
 use dirtybase_contract::{cli::CliCommandManager, http::RouterManager};
 
-use crate::{app::command::Commands, run_cli, run_http};
+use crate::{core::command::Commands, run_cli, run_http};
 
 mod migration;
 
@@ -28,7 +28,7 @@ impl dirtybase_contract::ExtensionSetup for Extension {
     fn register_cli_commands(&self, mut manager: CliCommandManager) -> CliCommandManager {
         // serve command
         let serve = clap::Command::new("serve").about("Start the web application server");
-        manager.register(serve, |name, _c, service| {
+        manager.register(serve, |_name, _c, service| {
             Box::pin(async move {
                 if let Err(e) = run_http(service.provide().await).await {
                     log::error!("{}", e)

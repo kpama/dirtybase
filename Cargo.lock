@@ -1024,6 +1024,7 @@ dependencies = [
  "orsomafo",
  "serde",
  "serde_json",
+ "sha2",
  "tokio",
  "tokio-stream",
  "ulid",

@@ -7,6 +7,7 @@ pub type ColumnAndValue = HashMap<String, FieldValue>;
 
 pub type InternalIdField = Option<i64>; // works across databases
 pub type SingedIntegerField = Option<i64>;
+pub type NumberField = Option<i64>;
 pub type UnsignedIntegerField = Option<u64>;
 pub type FloatField = Option<f64>;
 pub type StringField = Option<String>;
