@@ -54,6 +54,7 @@ impl UserService {
             user.password = Some(raw_password.into());
             user.reset_password = Some(true);
             user.status = Some(super::UserStatus::Active);
+            user.is_sys_admin = Some(true);
 
             let mut hash = Sha256::new();
             hash.update(generate_ulid().as_bytes());
