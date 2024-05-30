@@ -1,12 +1,10 @@
 use crate::core::App;
 
-use super::{
-    RoleUserEntity, ROLE_USER_TABLE, ROLE_USER_TABLE_CORE_APP_ROLE_ID_FIELD,
-    ROLE_USER_TABLE_CORE_USER_ID_FIELD, ROLE_USER_TABLE_DELETED_AT_FIELD,
-};
+use super::RoleUserEntity;
 use dirtybase_contract::db::{
     base::manager::Manager, field_values::FieldValue, types::IntoColumnAndValue,
 };
+use dirtybase_db::TableEntityTrait;
 
 pub struct RoleUserRepository {
     manager: Manager,
@@ -32,12 +30,12 @@ impl RoleUserRepository {
         with_trashed: bool,
     ) -> Result<Option<RoleUserEntity>, anyhow::Error> {
         self.manager()
-            .select_from_table(ROLE_USER_TABLE, |q| {
+            .select_from_table(RoleUserEntity::table_name(), |q| {
                 q.select_all()
-                    .eq(ROLE_USER_TABLE_CORE_USER_ID_FIELD, user_id)
-                    .eq(ROLE_USER_TABLE_CORE_APP_ROLE_ID_FIELD, app_id);
+                    .eq(RoleUserEntity::col_name_for_core_user_id(), user_id)
+                    .eq(RoleUserEntity::col_name_for_core_app_role_id(), app_id);
                 if !with_trashed {
-                    q.is_null(ROLE_USER_TABLE_DELETED_AT_FIELD);
+                    q.is_null(RoleUserEntity::deleted_at_column().unwrap());
                 }
             })
             .fetch_one_to()
@@ -50,11 +48,12 @@ impl RoleUserRepository {
     ) -> Result<Option<RoleUserEntity>, anyhow::Error> {
         let kv = record.into_column_value();
         let user_id: String =
-            FieldValue::from_ref_option_into(kv.get(ROLE_USER_TABLE_CORE_USER_ID_FIELD));
-        let app_id: String =
-            FieldValue::from_ref_option_into(kv.get(ROLE_USER_TABLE_CORE_APP_ROLE_ID_FIELD));
+            FieldValue::from_ref_option_into(kv.get(RoleUserEntity::col_name_for_core_user_id()));
+        let app_id: String = FieldValue::from_ref_option_into(
+            kv.get(RoleUserEntity::col_name_for_core_app_role_id()),
+        );
 
-        self.manager.insert(ROLE_USER_TABLE, kv).await;
+        self.manager.insert(RoleUserEntity::table_name(), kv).await;
         self.find_by_user_and_app_ids(&user_id, &app_id, false)
             .await
     }
@@ -66,14 +65,15 @@ impl RoleUserRepository {
         let kv = record.into_column_value();
 
         let user_id: String =
-            FieldValue::from_ref_option_into(kv.get(ROLE_USER_TABLE_CORE_USER_ID_FIELD));
-        let app_id: String =
-            FieldValue::from_ref_option_into(kv.get(ROLE_USER_TABLE_CORE_APP_ROLE_ID_FIELD));
+            FieldValue::from_ref_option_into(kv.get(RoleUserEntity::col_name_for_core_user_id()));
+        let app_id: String = FieldValue::from_ref_option_into(
+            kv.get(RoleUserEntity::col_name_for_core_app_role_id()),
+        );
 
         self.manager
-            .update(ROLE_USER_TABLE, kv, |q| {
-                q.eq(ROLE_USER_TABLE_CORE_USER_ID_FIELD, &user_id)
-                    .eq(ROLE_USER_TABLE_CORE_APP_ROLE_ID_FIELD, &app_id);
+            .update(RoleUserEntity::table_name(), kv, |q| {
+                q.eq(RoleUserEntity::col_name_for_core_user_id(), &user_id)
+                    .eq(RoleUserEntity::col_name_for_core_app_role_id(), &app_id);
             })
             .await;
 

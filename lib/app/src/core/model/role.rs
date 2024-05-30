@@ -1,16 +1,7 @@
-use dirtybase_contract::db::{
-    base::{
-        manager::Manager,
-        table::{
-            CREATED_AT_FIELD, CREATOR_FIELD, DELETED_AT_FIELD, EDITOR_FIELD, ID_FIELD,
-            INTERNAL_ID_FIELD, UPDATED_AT_FIELD,
-        },
-    },
-    entity::user::USER_TABLE,
-};
+use dirtybase_contract::db::{base::manager::Manager, entity::user::UserEntity};
 use dirtybase_db::TableEntityTrait;
 
-use super::app_entity::APP_TABLE;
+use super::app_entity::AppEntity;
 
 mod role_entity;
 mod role_repository;
@@ -26,32 +17,34 @@ pub use role_service::RoleService;
 pub const ROLE_ADMIN: &str = "admin";
 pub const ROLE_USER: &str = "user";
 
-// Table
-pub const ROLE_TABLE: &str = "core_app_role";
-
-// Fields
-pub const ROLE_TABLE_NAME_FIELD: &str = "name";
-pub const ROLE_TABLE_APP_ID_FIELD: &str = "core_app_id";
-pub const ROLE_TABLE_INTERNAL_ID_FIELD: &str = INTERNAL_ID_FIELD;
-pub const ROLE_TABLE_ID_FIELD: &str = ID_FIELD;
-pub const ROLE_TABLE_CREATOR_FIELD: &str = CREATOR_FIELD;
-pub const ROLE_TABLE_EDITOR_FIELD: &str = EDITOR_FIELD;
-pub const ROLE_TABLE_CREATED_AT_FIELD: &str = CREATED_AT_FIELD;
-pub const ROLE_TABLE_UPDATED_AT_FIELD: &str = UPDATED_AT_FIELD;
-pub const ROLE_TABLE_DELETED_AT_FIELD: &str = DELETED_AT_FIELD;
-
 /// Creates the roles table
 /// The role table expects the `user` and  `app` tables to already exist
 ///
 pub async fn setup_roles_table(manager: &Manager) {
-    if !manager.has_table(USER_TABLE).await {
-        log::error!("{} is require to create {} table", USER_TABLE, ROLE_TABLE);
-        eprintln!("{} is require to create {} table", USER_TABLE, ROLE_TABLE);
+    if !manager.has_table(UserEntity::table_name()).await {
+        log::error!(
+            "{} is require to create {} table",
+            UserEntity::table_name(),
+            RoleEntity::table_name()
+        );
+        eprintln!(
+            "{} is require to create {} table",
+            UserEntity::table_name(),
+            RoleEntity::table_name()
+        );
     }
 
-    if !manager.has_table(APP_TABLE).await {
-        log::error!("{} is require to create {} table", APP_TABLE, ROLE_TABLE);
-        eprintln!("{} is require to create {} table", APP_TABLE, ROLE_TABLE);
+    if !manager.has_table(AppEntity::table_name()).await {
+        log::error!(
+            "{} is require to create {} table",
+            AppEntity::table_name(),
+            RoleEntity::table_name()
+        );
+        eprintln!(
+            "{} is require to create {} table",
+            AppEntity::table_name(),
+            RoleEntity::table_name()
+        );
     }
 
     manager
@@ -60,15 +53,21 @@ pub async fn setup_roles_table(manager: &Manager) {
             // id
             table.id_set();
             // application
-            table.ulid_fk(APP_TABLE, true);
+            table.ulid_fk(AppEntity::table_name(), true);
             // name
-            table.string(ROLE_TABLE_NAME_FIELD);
+            table.string(RoleEntity::col_name_for_name());
             // blame
             table.blame();
             // timestamps
             table.timestamps();
             // soft delete
             table.soft_deletable();
+
+            // name+app_id is unique
+            table.unique_index(&[
+                RoleEntity::col_name_for_name(),
+                RoleEntity::col_name_for_core_app_id(),
+            ]);
         })
         .await;
 }

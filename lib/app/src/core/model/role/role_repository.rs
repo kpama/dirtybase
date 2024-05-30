@@ -1,8 +1,8 @@
 use crate::core::App;
 
-use super::{RoleEntity, ROLE_TABLE, ROLE_TABLE_DELETED_AT_FIELD, ROLE_TABLE_ID_FIELD};
+use super::RoleEntity;
 use dirtybase_contract::db::{base::manager::Manager, types::IntoColumnAndValue};
-use dirtybase_db::field_values::FieldValue;
+use dirtybase_db::{field_values::FieldValue, TableEntityTrait};
 
 pub struct RoleRepository {
     manager: Manager,
@@ -30,10 +30,10 @@ impl RoleRepository {
         with_trashed: bool,
     ) -> Result<Option<RoleEntity>, anyhow::Error> {
         self.manager()
-            .select_from_table(ROLE_TABLE, |q| {
-                q.select_all().eq(ROLE_TABLE_ID_FIELD, id);
+            .select_from_table(RoleEntity::table_name(), |q| {
+                q.select_all().eq(RoleEntity::id_column().unwrap(), id);
                 if !with_trashed {
-                    q.is_null(ROLE_TABLE_DELETED_AT_FIELD);
+                    q.is_null(RoleEntity::deleted_at_column().unwrap());
                 }
             })
             .fetch_one_to()
@@ -45,9 +45,9 @@ impl RoleRepository {
         record: impl IntoColumnAndValue,
     ) -> Result<Option<RoleEntity>, anyhow::Error> {
         let kv = record.into_column_value();
-        let id: String = FieldValue::from_ref_option_into(kv.get(ROLE_TABLE_ID_FIELD));
+        let id: String = FieldValue::from_ref_option_into(kv.get(RoleEntity::table_name()));
 
-        self.manager.insert(ROLE_TABLE, kv).await;
+        self.manager.insert(RoleEntity::table_name(), kv).await;
         // ERROR: ID could not be in the hash map!!!
         self.find_by_id(&id, false).await
     }
@@ -59,8 +59,8 @@ impl RoleRepository {
     ) -> Result<Option<RoleEntity>, anyhow::Error> {
         let column_and_values = record.into_column_value();
         self.manager
-            .update(ROLE_TABLE, column_and_values, |q| {
-                q.eq(ROLE_TABLE_ID_FIELD, id);
+            .update(RoleEntity::table_name(), column_and_values, |q| {
+                q.eq(RoleEntity::id_column().unwrap(), id);
             })
             .await;
 
