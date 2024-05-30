@@ -21,6 +21,7 @@ pub struct UserEntity {
     #[serde(skip_deserializing, skip_serializing)]
     pub salt: StringField,
     pub login_attempt: NumberField,
+    pub is_sys_admin: BooleanField,
     #[serde(skip_deserializing)]
     pub last_login_at: TimestampField,
     #[serde(skip_deserializing)]

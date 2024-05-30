@@ -47,6 +47,9 @@ pub async fn setup_users_table(manager: &Manager) {
                 .string(UserEntity::col_name_for_status())
                 .set_default_from(UserStatus::Pending);
             table
+                .boolean(UserEntity::col_name_for_is_sys_admin())
+                .set_default_from(false); // A flag that indicates if this user is an admin
+            table
                 .sized_string(UserEntity::col_name_for_salt(), 512)
                 .set_is_nullable(false);
             table
