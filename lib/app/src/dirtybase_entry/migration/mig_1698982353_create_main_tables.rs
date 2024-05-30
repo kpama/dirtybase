@@ -6,10 +6,10 @@ use crate::core::{
     setup_defaults::setup_default_entities,
 };
 
-pub struct Mig1698982353createmaintables;
+pub struct Mig1698982353CreateMainTables;
 
 #[dirtybase_contract::async_trait]
-impl Migration for Mig1698982353createmaintables {
+impl Migration for Mig1698982353CreateMainTables {
     async fn up(&self, manager: &Manager) {
         create_default_tables(manager).await;
         setup_default_entities().await;

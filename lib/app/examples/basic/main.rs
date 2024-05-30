@@ -1,6 +1,9 @@
 use std::sync::{atomic::AtomicU64, Arc};
 
-use axum::{extract::State, response::IntoResponse};
+use axum::{
+    extract::State,
+    response::{Html, IntoResponse},
+};
 use dirtybase_contract::http::{MiddlewareManager, MiddlewareRegisterer, RouterManager};
 use tower_service::Service;
 
@@ -44,7 +47,7 @@ impl dirtybase_app::contract::ExtensionSetup for MyApp {
 }
 
 async fn handle_home() -> impl IntoResponse {
-    "Hello world!!"
+    Html("Hello world!!")
 }
 
 async fn handle_home2() -> impl IntoResponse {
