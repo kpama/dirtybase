@@ -85,8 +85,8 @@ pub async fn db_connect(config: &BaseConfig) -> anyhow::Result<Pool<Postgres>> {
             Ok(conn)
         }
         Err(e) => {
-            log::error!("could not connect to postgres: {:#?}", &e);
-            Err(anyhow::anyhow!("could not connect to postgres: {:#?}", e))
+            // TODO: Use i18n
+            panic!("could not connect to postgres: {:#?}", &e);
         }
     }
 }
