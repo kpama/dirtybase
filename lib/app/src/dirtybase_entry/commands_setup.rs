@@ -20,6 +20,8 @@ pub(crate) fn register(mut manager: CliCommandManager) -> CliCommandManager {
         .subcommand(clap::Command::new("down").about("Migrate down"))
         .subcommand(clap::Command::new("refresh").about("Resets and migrate all up"))
         .subcommand(clap::Command::new("reset").about("Migrate all down"));
+
+    // -
     manager.register(migrate, |name, matches, service| {
         Box::pin(async move {
             let commands: Commands = Commands::from((name, matches));

@@ -55,12 +55,17 @@ impl Migrator {
     }
 
     pub async fn down(&self, manager: &Manager) {
-        let _repo = self.repo().await;
+        let repo = self.repo().await;
 
-        for entry in &self.migrations {
-            log::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
-            // TODO: First check before running the migration
-            entry.down(manager).await;
+        let collection = repo.get_last_batch().await;
+
+        for (name, _) in collection {
+            for entry in &self.migrations {
+                if entry.id() == name {
+                    log::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
+                    entry.down(manager).await;
+                }
+            }
         }
     }
 
@@ -71,10 +76,7 @@ impl Migrator {
             entry.down(manager).await
         }
 
-        for entry in &self.migrations {
-            log::debug!(target: LOG_TARGET, "migrating {} up", entry.id());
-            entry.up(manager).await
-        }
+        self.up(manager).await
     }
 
     pub async fn reset(&self, manager: &Manager) {
