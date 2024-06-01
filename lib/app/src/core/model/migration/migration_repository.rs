@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use dirtybase_db::base::manager::Manager;
 use dirtybase_db::TableEntityTrait;
@@ -43,8 +43,34 @@ impl MigrationRepository {
             .await
     }
 
-    pub async fn get_last_batch(&self) -> Result<HashMap<String, MigrationEntity>, anyhow::Error> {
-        Ok(HashMap::new())
+    pub async fn get_last_batch(&self) -> BTreeMap<String, MigrationEntity> {
+        if let Ok(Some(last)) = self
+            .manager
+            .select_from_table(MigrationEntity::table_name(), |q| {
+                q.desc(MigrationEntity::col_name_for_batch());
+            })
+            .fetch_one_to::<MigrationEntity>()
+            .await
+        {
+            dbg!("{}", &last);
+
+            if let Ok(Some(collection)) = self
+                .manager
+                .select_from_table(MigrationEntity::table_name(), |q| {
+                    q.eq(MigrationEntity::col_name_for_batch(), last.batch.unwrap())
+                        .desc(MigrationEntity::col_name_for_created_at());
+                })
+                .fetch_all_to::<MigrationEntity>()
+                .await
+            {
+                return collection
+                    .into_iter()
+                    .map(|m| (m.name.as_ref().unwrap().to_string(), m))
+                    .collect::<BTreeMap<String, MigrationEntity>>();
+            }
+        }
+
+        BTreeMap::new()
     }
 
     pub async fn create(

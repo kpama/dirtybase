@@ -1,6 +1,6 @@
 use dirtybase_contract::db::{
     macros::DirtyTable,
-    types::{DateTimeField, InternalIdField, StringField, UnsignedIntegerField},
+    types::{DateTimeField, InternalIdField, NumberField, StringField},
 };
 
 #[derive(Debug, Default, DirtyTable)]
@@ -8,6 +8,6 @@ use dirtybase_contract::db::{
 pub struct MigrationEntity {
     id: InternalIdField,
     pub(crate) name: StringField,
-    pub(crate) batch: UnsignedIntegerField,
+    pub(crate) batch: NumberField,
     pub(crate) created_at: DateTimeField,
 }
