@@ -311,10 +311,3 @@ impl BaseTable {
         self
     }
 }
-
-pub enum AlterAction {
-    Rename { old: String, new: String },
-    RenameColumn { old: String, new: String },
-    AddColumn(BaseColumn),
-    DropTableColumn(String),
-}
