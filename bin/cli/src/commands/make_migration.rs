@@ -31,8 +31,12 @@ pub fn make(package: Option<&String>, name: &str) {
 
     let filename = name.split_whitespace().collect::<String>().to_lowercase();
 
-    let module_name = format!("mig_{}_{}", ts, filename);
-    let struct_name = format!("Mig{}{}", ts, filename.split('_').collect::<String>());
+    let module_name = format!("mig_{}_{}", ts, &filename);
+    let struct_name = format!(
+        "Mig{}{}",
+        ts,
+        dirtybase_helper::string::to_pascal_case(&name)
+    );
 
     let built = MIGRATION_STUB.replace("struct_name", &struct_name);
 
