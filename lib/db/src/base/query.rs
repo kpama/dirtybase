@@ -6,9 +6,10 @@ use crate::{
 };
 
 use super::{
-    aggregate::Aggregate, join_builder::JoinQueryBuilder, order_by_builder::OrderByBuilder,
-    query_conditions::Condition, query_join_types::JoinType, query_operators::Operator,
-    schema::SchemaManagerTrait, table::DELETED_AT_FIELD, where_join_operators::WhereJoinOperator,
+    aggregate::Aggregate, column::BaseColumn, join_builder::JoinQueryBuilder,
+    order_by_builder::OrderByBuilder, query_conditions::Condition, query_join_types::JoinType,
+    query_operators::Operator, schema::SchemaManagerTrait, table::DELETED_AT_FIELD,
+    where_join_operators::WhereJoinOperator,
 };
 use std::{collections::HashMap, fmt::Display, marker::PhantomData};
 
@@ -31,6 +32,13 @@ pub enum QueryAction {
     Update(HashMap<String, FieldValue>),
     Delete,
     DropTable,
+    RenameTable(String),
+    DropColumn(String),
+    AddColumn(BaseColumn),
+    RenameColumn {
+        old: String,
+        new: String,
+    },
 }
 
 impl Display for QueryAction {
@@ -50,6 +58,10 @@ impl Display for QueryAction {
                 QueryAction::Update(_) => "Update",
                 QueryAction::Delete => "Delete",
                 QueryAction::DropTable => "DropTable",
+                QueryAction::RenameTable(_) => "RenameTable",
+                QueryAction::DropColumn(_) => "DropColumn",
+                QueryAction::AddColumn(_) => "AddColumn",
+                QueryAction::RenameColumn { old: _, new: _ } => "RenameColumn",
             }
         )
     }

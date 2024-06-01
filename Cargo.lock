@@ -650,6 +650,7 @@ dependencies = [
  "chrono",
  "clap",
  "dirtybase_contract",
+ "dirtybase_helper",
  "serde",
  "serde_json",
 ]

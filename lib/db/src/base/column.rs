@@ -1,18 +1,17 @@
 use crate::field_values::FieldValue;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BaseColumn {
-    pub name: String,
-    pub new_name: Option<String>,
-    pub after: Option<String>,
-    pub column_type: ColumnType,
-    pub default: Option<ColumnDefault>,
-    pub is_unique: bool,
-    pub is_nullable: Option<bool>,
-    pub relationship: Option<ForeignKey>,
+    pub(crate) name: String,
+    pub(crate) after: Option<String>,
+    pub(crate) column_type: ColumnType,
+    pub(crate) default: Option<ColumnDefault>,
+    pub(crate) is_unique: bool,
+    pub(crate) is_nullable: Option<bool>,
+    pub(crate) relationship: Option<ForeignKey>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ForeignKey {
     table: String,
     column: String,
@@ -40,13 +39,13 @@ impl ForeignKey {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RelationType {
     Single,
     Multiple(isize),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ColumnDefault {
     Custom(String),
     EmptyString,
@@ -59,7 +58,7 @@ pub enum ColumnDefault {
     Ulid,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ColumnType {
     AutoIncrementId,
     Boolean,
@@ -85,7 +84,6 @@ impl BaseColumn {
     pub fn new(name: &str, column_type: ColumnType) -> Self {
         Self {
             name: name.to_owned(),
-            new_name: None,
             column_type,
             default: None,
             after: None,

@@ -192,6 +192,23 @@ impl Manager {
         self.write_schema_manager().drop_table(table_name).await
     }
 
+    pub async fn rename_table(&self, old: &str, new: &str) {
+        self.write_schema_manager().rename_table(old, new).await;
+        self.dispatch_written_event();
+    }
+
+    pub async fn drop_column(&self, table: &str, column: &str) {
+        self.write_schema_manager().drop_column(table, column).await;
+        self.dispatch_written_event();
+    }
+
+    pub async fn rename_column(&self, table: &str, old: &str, new: &str) {
+        self.write_schema_manager()
+            .rename_column(table, old, new)
+            .await;
+        self.dispatch_written_event();
+    }
+
     pub fn read_schema_manager(&self) -> Box<dyn SchemaManagerTrait + Send> {
         self.create_schema_manager(false)
     }

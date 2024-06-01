@@ -11,6 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 dirtybase_contract = { path = "../../lib/contract" }
+dirtybase_helper = { path = "../../lib/helper" }
 clap = { workspace = true, features = ["derive"] }
 chrono = { workspace = true }
 serde = { workspace = true }

@@ -314,6 +314,18 @@ impl MySqlSchemaManager {
                     .map(|name| format!("DROP TABLE {};", name))
                     .fold(String::new(), |sum, sub| format!("{} {}", sum, sub));
             }
+            QueryAction::RenameColumn { old, new } => {
+                let table = query.tables().first().unwrap();
+                sql = format!("ALTER TABLE {} RENAME COLUMN {} TO {}", table, old, new);
+            }
+            QueryAction::RenameTable(new) => {
+                let table = query.tables().first().unwrap();
+                sql = format!("ALTER TABLE {} RENAME TO {}", table, new);
+            }
+            QueryAction::DropColumn(column) => {
+                let table = query.tables().first().unwrap();
+                sql = format!("ALTER TABLE {} DROP {}", table, column);
+            }
             _ => {
                 sql = "".into();
             }
@@ -444,13 +456,10 @@ impl MySqlSchemaManager {
             }
             ColumnType::Datetime => the_type.push_str("datetime"),
             ColumnType::Timestamp => the_type.push_str("timestamp"),
-            // ColumnType::File() shouldn't be here
             // ColumnType::Float not sure
             ColumnType::Integer => the_type.push_str("bigint(20)"),
             ColumnType::Json => the_type.push_str("json"),
             ColumnType::Number => the_type.push_str("double"),
-            // ColumnType::Relation { relation_type, table_name }
-            // ColumnType::Select()
             ColumnType::String(length) => {
                 let q = format!("varchar({}) COLLATE 'utf8mb4_unicode_ci'", length);
                 the_type.push_str(q.as_str());

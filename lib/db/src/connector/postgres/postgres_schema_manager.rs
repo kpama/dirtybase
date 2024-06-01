@@ -302,6 +302,18 @@ impl PostgresSchemaManager {
                     .map(|name| format!("DROP TABLE {};", name))
                     .fold(String::new(), |sum, sub| format!("{} {}", sum, sub));
             }
+            QueryAction::RenameColumn { old, new } => {
+                let table = query.tables().first().unwrap();
+                sql = format!("ALTER TABLE {} RENAME COLUMN {} TO {}", table, old, new);
+            }
+            QueryAction::RenameTable(new) => {
+                let table = query.tables().first().unwrap();
+                sql = format!("ALTER TABLE {} RENAME TO {}", table, new);
+            }
+            QueryAction::DropColumn(column) => {
+                let table = query.tables().first().unwrap();
+                sql = format!("ALTER TABLE {} DROP {}", table, column);
+            }
             _ => {
                 sql = "".into();
             }

@@ -1,4 +1,7 @@
-use super::{query::QueryBuilder, table::BaseTable};
+use super::{
+    query::{QueryAction, QueryBuilder},
+    table::BaseTable,
+};
 use crate::{
     field_values::FieldValue,
     types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue},
@@ -141,6 +144,33 @@ pub trait SchemaManagerTrait: Send + Sync {
     async fn has_table(&self, name: &str) -> bool;
 
     async fn drop_table(&self, name: &str) -> bool;
+
+    async fn rename_table(&self, old: &str, new: &str) {
+        self.execute(QueryBuilder::new(
+            vec![old.to_string()],
+            QueryAction::RenameTable(new.to_string()),
+        ))
+        .await
+    }
+
+    async fn drop_column(&self, table: &str, column: &str) {
+        self.execute(QueryBuilder::new(
+            vec![table.to_string()],
+            QueryAction::DropColumn(column.to_string()),
+        ))
+        .await
+    }
+
+    async fn rename_column(&self, table: &str, old: &str, new: &str) {
+        self.execute(QueryBuilder::new(
+            vec![table.to_string()],
+            QueryAction::RenameColumn {
+                old: old.to_string(),
+                new: new.to_string(),
+            },
+        ))
+        .await
+    }
 
     async fn raw_insert(
         &self,
