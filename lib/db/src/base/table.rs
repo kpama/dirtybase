@@ -47,7 +47,7 @@ impl BaseTable {
         self
     }
 
-    pub fn set_is_new(&mut self, new: bool) -> &mut Self {
+    pub(crate) fn set_is_new(&mut self, new: bool) -> &mut Self {
         self.is_new = new;
         self
     }
