@@ -7,7 +7,7 @@ async fn main() {
     let app_service = dirtybase_app::setup().await.unwrap();
 
     app_service.register(MyAwesomeApp).await;
-    app_service.register(UrlShortner).await;
+    app_service.register(UrlShortener).await;
 
     _ = dirtybase_app::run(app_service).await;
 }
@@ -19,7 +19,7 @@ impl dirtybase_app::contract::ExtensionSetup for MyAwesomeApp {
     fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
         manager.general(None, |router| {
             router
-                .get("/", || async { Html("Hello from awesom app") }, "homepage")
+                .get("/", || async { Html("Hello from awesome app") }, "homepage")
                 .get("/hello/:name", say_hi, "say-hello2")
                 .route(
                     "/hello2/:name",
@@ -52,10 +52,10 @@ async fn say_hi(Path(name): Path<String>) -> Html<String> {
     Html(format!("Hello {}", &name))
 }
 
-struct UrlShortner;
+struct UrlShortener;
 
 #[async_trait::async_trait]
-impl dirtybase_app::contract::ExtensionSetup for UrlShortner {
+impl dirtybase_app::contract::ExtensionSetup for UrlShortener {
     fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
         manager.api(Some("/v1/short"), |router| {
             router.get(
