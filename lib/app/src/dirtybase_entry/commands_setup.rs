@@ -16,6 +16,7 @@ pub(crate) fn register(mut manager: CliCommandManager) -> CliCommandManager {
     // migrate command
     let migrate = clap::Command::new("migrate")
         .about("Execute migration")
+        .arg_required_else_help(true)
         .subcommand(clap::Command::new("up").about("Migrate up"))
         .subcommand(clap::Command::new("down").about("Migrate down"))
         .subcommand(clap::Command::new("refresh").about("Resets and migrate all up"))
