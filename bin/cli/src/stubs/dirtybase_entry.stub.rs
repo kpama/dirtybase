@@ -19,9 +19,9 @@ impl dirtybase_contract::ExtensionSetup for Extension {
     }
 
     fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
-        // manager.general("/be-awsome",
-        //     axum::Router::new().route("/", axum::routing::get(|| async { "Rust or bust" })),
-        // );
+        // manager.general(None, |router| {
+        //     router.get("/be-awesome", || async { "Always" }, "awesomeness")
+        // });
 
         manager
     }
