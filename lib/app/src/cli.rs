@@ -29,13 +29,13 @@ pub async fn init(app: AppService, command: &Commands) -> anyhow::Result<()> {
         match the_command {
             Commands::Migrate { action } => {
                 let migrator = Migrator::from_app(&app).await;
+                log::debug!("executing migration: {:?}", &action);
                 match action {
                     MigrateAction::Up => migrator.up(&app.schema_manger()).await,
                     MigrateAction::Down => migrator.down(&app.schema_manger()).await,
                     MigrateAction::Refresh => migrator.refresh(&app.schema_manger()).await,
                     MigrateAction::Reset => migrator.reset(&app.schema_manger()).await,
                 }
-                log::debug!("executing migration: {:?}", action);
                 token.cancel();
             }
             Commands::Queue { name } => {
