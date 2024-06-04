@@ -951,6 +951,7 @@ dependencies = [
  "dirtybase_config",
  "dirtybase_contract",
  "dirtybase_db",
+ "dirtybase_helper",
  "dirtybase_mail",
  "dotenvy",
  "fama",

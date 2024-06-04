@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use dirtybase_db::{
     base::{manager::Manager, schema::DatabaseKind},
     config::BaseConfig,

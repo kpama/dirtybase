@@ -56,7 +56,7 @@ impl Manager {
         )
     }
 
-    pub fn table_for<T: FromColumnAndValue + Send + Sync + 'static>(
+    pub fn query_builder<T: FromColumnAndValue + Send + Sync + 'static>(
         &self,
         table: &str,
     ) -> EntityQueryBuilder<T> {

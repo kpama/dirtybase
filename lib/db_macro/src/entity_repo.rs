@@ -12,14 +12,16 @@ pub(crate) fn generate_entity_repo(
     table_name: &str,
     input: &DeriveInput,
 ) -> proc_macro2::TokenStream {
-    let struct_name = format_ident!("{}Repo", base_name);
+    let struct_name = format_ident!("{}Repository", base_name);
     let the_table_name = table_name.to_string();
     let mut methods = Vec::new();
     let id_column = pluck_id_column(input);
-    let basic_queries = repo_basic_query::generate_repo_basic_query(base_name, &id_column);
 
     // types queries
+    methods = repo_basic_query::generate(columns, methods, base_name, &id_column);
     methods = type_query::string_query::generate(columns, methods, base_name);
+    methods = type_query::nullable_query::generate(columns, methods, base_name);
+    methods = type_query::number_query::generate(columns, methods, base_name);
 
     quote! {
       pub struct  #struct_name {
@@ -39,7 +41,10 @@ pub(crate) fn generate_entity_repo(
           &self.manager
         }
 
-        #(#basic_queries)*
+        pub fn builder(&self)-> dirtybase_db::base::query::EntityQueryBuilder<#base_name>{
+          self.manager.query_builder(&self.table)
+        }
+
         #(#methods)*
       }
 

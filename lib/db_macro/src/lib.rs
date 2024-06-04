@@ -7,12 +7,12 @@ use syn::{parse_macro_input, DeriveInput};
 mod attribute_type;
 mod entity_repo;
 mod helpers;
-mod query_builder;
 
 #[proc_macro_derive(DirtyTable, attributes(dirty))]
 pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
 
+    let name = input.ident.clone();
     let table_name = pluck_table_name(&input);
     let id_column_method = build_id_method(&input);
     let foreign_id_method = build_foreign_id_method(&input, &table_name);
@@ -20,7 +20,6 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let columns_attributes = pluck_columns(&input);
     let column = pluck_names(&columns_attributes);
 
-    let name = input.ident.clone();
     let generics = input.generics.clone();
     let (_impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
@@ -31,9 +30,10 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let special_column_methods = build_special_column_methods(&columns_attributes);
     let column_name_methods = build_prop_column_names_getter(&columns_attributes);
     let defaults = spread_default(&columns_attributes, &input);
-    //let query_builder = generate_entity_repo(&columns_attributes, &name, &table_name, &input);
-    //  let query_builder =
-    // generate_query_builder_struct(&columns_attributes, &name, &table_name, &input);
+    let entity_repo_struct =
+        entity_repo::generate_entity_repo(&columns_attributes, &name, &table_name, &input);
+    // let query_builder =
+    //     generate_query_builder_struct(&columns_attributes, &name, &table_name, &input);
     let _repo_struct_name = format_ident!("{}Repo", &name);
 
     let expanded = quote! {
@@ -59,13 +59,6 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
           }
         }
 
-        // pub fn repo(manager: dirtybase_db::base::manager::Manager)-> #repo_struct_name {
-        //   #repo_struct_name::new(manager)
-        // }
-
-        // pub async fn repo_instance() ->#repo_struct_name {
-        //     busybody::helpers::get_type_or_inject().await
-        // }
       }
 
       // TableEntityTrait
@@ -143,8 +136,8 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
           }
       }
 
-      // query builder
-      // #query_builder
+      // entity repo
+       #entity_repo_struct
 
     };
 

@@ -10,12 +10,22 @@ use async_trait::async_trait;
 use std::{fmt::Debug, sync::Arc};
 
 #[derive(
-    Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, serde::Deserialize, serde::Serialize,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Clone,
+    serde::Deserialize,
+    serde::Serialize,
+    Default,
 )]
 pub enum DatabaseKind {
     #[serde(rename(deserialize = "mysql"))]
     Mysql,
     #[serde(rename(deserialize = "sqlite"))]
+    #[default]
     Sqlite,
     #[serde(rename(deserialize = "postgres"))]
     Postgres,
@@ -25,12 +35,6 @@ pub enum DatabaseKind {
 pub enum ClientType {
     Read,
     Write,
-}
-
-impl Default for DatabaseKind {
-    fn default() -> Self {
-        Self::Mysql
-    }
 }
 
 impl From<&str> for DatabaseKind {

@@ -47,7 +47,7 @@ pub async fn setup(config: &dirtybase_config::DirtyConfig) -> ConnectionPoolMana
 pub async fn setup_using(config: DirtybaseDbConfig) -> ConnectionPoolManager {
     let pool_manager = ConnectionPoolManager::new(config).await;
 
-    busybody::helpers::service_container().set_type(pool_manager.clone());
+    // busybody::helpers::service_container().set_type(pool_manager.clone());
 
     pool_manager
 }

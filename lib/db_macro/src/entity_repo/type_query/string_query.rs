@@ -16,8 +16,6 @@ pub(crate) fn generate(
                 let by_method = format_ident!("{}", &lower_name);
                 let like_method = format_ident!("{}_like", &lower_name);
                 let all_like_method = format_ident!("all_{}_like", &lower_name);
-                let null_method = format_ident!("{}_is_null", &lower_name);
-                let all_null_method = format_ident!("all_{}_is_null", &lower_name);
                 let start_with_method = format_ident!("{}_starts_with", &lower_name);
                 let all_start_with_method = format_ident!("all_{}_start_with", &lower_name);
                 let end_with_method = format_ident!("{}_ends_with", &lower_name);
@@ -47,73 +45,54 @@ pub(crate) fn generate(
                 // foo_starts_with()
                 pub async fn #start_with_method<V: Into<dirtybase_db::field_values::FieldValue>>(&self, value: V) -> Result<Option<#base_name>, dirtybase_db::anyhow::Error> {
                   self.manager.select_from_table(&self.table,|query| {
+                    let f: dirtybase_db::field_values::FieldValue = value.into(); 
                       query.select_all()
-                      .like(#name, format!("{}%", value));
+                      .like(#name, format!("{}%", f));
                     }).fetch_one_to().await
                 }
                 // foo_ends_with()
                 pub async fn #end_with_method<V: Into<dirtybase_db::field_values::FieldValue>>(&self, value: V) -> Result<Option<#base_name>, dirtybase_db::anyhow::Error> {
                   self.manager.select_from_table(&self.table,|query| {
+                    let f: dirtybase_db::field_values::FieldValue = value.into(); 
                       query.select_all()
-                      .like(#name, format!("%{}", value));
+                      .like(#name, format!("%{}", f));
                     }).fetch_one_to().await
                 }
                 // foo_contains()
                 pub async fn #contains_method<V: Into<dirtybase_db::field_values::FieldValue>>(&self, value: V) -> Result<Option<#base_name>, dirtybase_db::anyhow::Error> {
                   self.manager.select_from_table(&self.table,|query| {
+                    let f: dirtybase_db::field_values::FieldValue = value.into(); 
                       query.select_all()
-                      .like(#name, format!("%{}%", value));
+                      .like(#name, format!("%{}%", f));
                     }).fetch_one_to().await
                 }
                 // all_foo_start_with()
                 pub async fn #all_start_with_method<V: Into<dirtybase_db::field_values::FieldValue>>(&self, value: V) -> Result<Option<Vec<#base_name>>, dirtybase_db::anyhow::Error> {
                   self.manager.select_from_table(&self.table,|query| {
+                      let f: dirtybase_db::field_values::FieldValue = value.into(); 
                       query.select_all()
-                      .like(#name, format!("{}%", value));
+                      .like(#name, format!("{}%", f));
                     }).fetch_all_to().await
                 }
                 // all_foo_end_with()
                 pub async fn #all_end_with_method<V: Into<dirtybase_db::field_values::FieldValue>>(&self, value: V) -> Result<Option<Vec<#base_name>>, dirtybase_db::anyhow::Error> {
                   self.manager.select_from_table(&self.table,|query| {
+                      let f: dirtybase_db::field_values::FieldValue = value.into(); 
                       query.select_all()
-                      .like(#name, format!("%{}", value));
+                      .like(#name, format!("%{}", f));
                     }).fetch_all_to().await
                 }
                 // all_foo_contain()
                 pub async fn #all_contain_method<V: Into<dirtybase_db::field_values::FieldValue>>(&self, value: V) -> Result<Option<Vec<#base_name>>, dirtybase_db::anyhow::Error> {
                   self.manager.select_from_table(&self.table,|query| {
+                      let f: dirtybase_db::field_values::FieldValue = value.into(); 
                       query.select_all()
-                      .like(#name, format!("%{}%", value));
+                      .like(#name, format!("%{}%", f));
                     }).fetch_all_to().await
                 }
               });
-                if attr.optional {
-                    methods.push(quote!{
-                      pub async fn #null_method(&self, is_null: bool) -> Result<Option<#base_name>, dirtybase_db::anyhow::Error> {
-                        self.manager.select_from_table(&self.table,|query| {
-                          query.select_all();
-                          if is_null {
-                            query.is_null(#name);
-                          } else {
-                           query.is_not_null(#name);
-                          }
-                        }).fetch_one_to().await
-                    }
-
-                      pub async fn #all_null_method(&self, is_null: bool) -> Result<Option<Vec<#base_name>>, dirtybase_db::anyhow::Error> {
-                        self.manager.select_from_table(&self.table,|query| {
-                          query.select_all();
-                          if is_null {
-                            query.is_null(#name);
-                          } else {
-                           query.is_not_null(#name);
-                          }
-                        }).fetch_all_to().await
-                    }
-                })
-                }
             }
-            _ => (),
+          _ => (),
         }
     }
 

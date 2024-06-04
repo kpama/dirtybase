@@ -321,7 +321,7 @@ pub(crate) fn build_into_for_calls(
 }
 
 pub(crate) fn pluck_table_name(input: &DeriveInput) -> String {
-    let mut table_name = "".to_owned();
+    let mut table_name = input.ident.clone().to_string().to_lowercase();
 
     for attr in &input.attrs {
         if let Meta::List(the_list) = &attr.meta {
