@@ -39,7 +39,7 @@ impl From<(String, ArgMatches)> for Commands {
             (name, mut args) if name == "handle" => Commands::Handle {
                 cluster: args.remove_one("cluster"),
             },
-            v @ _ => panic!("{} is not a valid command", &v.0),
+            v => panic!("{} is not a valid command", &v.0),
         }
     }
 }

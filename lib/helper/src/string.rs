@@ -1,9 +1,9 @@
-const DEFAULT_DEMARCATORS: &'static [char] = &[
+const DEFAULT_DEMARCATORS: &[char] = &[
     ' ', '_', '-', '/', '\\', '&', '.', ',', '\'', '\"', '/', '+', '=', '\n', '\r', '\t',
 ];
 
 pub fn to_pascal_case(subject: &str) -> String {
-    return to_pascal_case_with(subject, DEFAULT_DEMARCATORS.into_iter());
+    return to_pascal_case_with(subject, DEFAULT_DEMARCATORS.iter());
 }
 
 pub fn to_pascal_case_with<D: Iterator<Item = &'static char>>(
@@ -13,7 +13,7 @@ pub fn to_pascal_case_with<D: Iterator<Item = &'static char>>(
     let mut raw = subject.to_string();
     for demarcator in demarcators {
         raw = raw
-            .split(demarcator.clone())
+            .split(*demarcator)
             .map(|p| {
                 let mut s = p.to_string();
                 format!("{}{s}", s.remove(0).to_uppercase())
@@ -45,7 +45,7 @@ mod test {
 
     #[test]
     fn test_pascal() {
-        for d in DEFAULT_DEMARCATORS.into_iter() {
+        for d in DEFAULT_DEMARCATORS.iter() {
             let subject = format!("foo{d}bar{d}bass");
             assert_eq!(
                 to_pascal_case(&subject),
@@ -61,7 +61,7 @@ mod test {
     fn test_pascal_two() {
         let subject = "my first test";
         assert_eq!(
-            to_pascal_case(&subject),
+            to_pascal_case(subject),
             "MyFirstTest",
             "{} suppose to be {}",
             subject,
@@ -71,10 +71,10 @@ mod test {
 
     #[test]
     fn test_pascal_with() {
-        let subject = format!("fookbarkbass");
+        let subject = "fookbarkbass".to_string();
         let d = &['k'];
         assert_eq!(
-            to_pascal_case_with(&subject, d.into_iter()),
+            to_pascal_case_with(&subject, d.iter()),
             "FooBarBass",
             "{} suppose to be {}",
             subject,

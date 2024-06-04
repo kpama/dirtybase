@@ -102,7 +102,7 @@ impl From<(String, ArgMatches)> for MigrateAction {
             "down" => MigrateAction::Down,
             "refresh" => MigrateAction::Refresh,
             "reset" => MigrateAction::Reset,
-            v @ _ => panic!("{} is not a migration action", v),
+            v => panic!("{} is not a migration action", v),
         }
     }
 }
