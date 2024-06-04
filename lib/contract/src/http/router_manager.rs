@@ -25,7 +25,7 @@ impl RouteCollection {
     }
 
     pub fn add(&mut self, prefix: &str, router: RouterWrapper<Arc<busybody::ServiceContainer>>) {
-        let full_path = format!("{}{}", &self.prefix, prefix);
+        let full_path = format!("{}{}", self.prefix(), prefix);
         if !self.routers.contains_key(&full_path) {
             self.routers.insert(full_path, vec![router]);
         } else {
