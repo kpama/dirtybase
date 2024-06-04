@@ -86,11 +86,7 @@ impl CacheManager {
     }
 
     fn prefix_tags(&self, tags: Option<&[&str]>) -> Option<Vec<String>> {
-        if tags.is_some() {
-            return Some(self.prefix_keys(tags.unwrap()));
-        }
-
-        None
+        tags.map(|t| self.prefix_keys(t))
     }
 
     fn prefix_a_key(&self, key: &str) -> String {
@@ -322,14 +318,13 @@ impl CacheManager {
         R: serde::Serialize + serde::de::DeserializeOwned,
         F: FallbackFn<(), R>,
     {
-        let value = self.get(key).await;
-        if value.is_none() {
+        if let Some(value) = self.get(key).await {
+            value
+        } else {
             let new_value = default.call(()).await;
             let result = serde_json::to_value(&new_value).unwrap();
             self.do_put(key, &result, expiration, tags).await;
             new_value
-        } else {
-            value.unwrap()
         }
     }
 

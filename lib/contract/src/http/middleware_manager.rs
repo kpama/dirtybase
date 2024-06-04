@@ -11,6 +11,12 @@ pub trait MiddlewareRegisterer: Send + Sync {
 
 pub struct MiddlewareManager(HashMap<String, Box<dyn MiddlewareRegisterer>>);
 
+impl Default for MiddlewareManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MiddlewareManager {
     pub fn new() -> Self {
         Self(HashMap::new())

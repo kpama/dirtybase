@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use dirtybase_db::base::manager::Manager;
+use dirtybase_db::base::query::QueryBuilder;
 use dirtybase_db::{field_values::FieldValue, TableEntityTrait};
 use dirtybase_helper::time::now;
 
@@ -16,19 +17,21 @@ impl CacheDbStoreRepository {
     }
 
     pub async fn get(&self, key: &str, with_trashed: bool) -> Option<CacheDbStoreEntity> {
+        let find_by_key = |query: &mut QueryBuilder| {
+            query.select_all();
+            if !with_trashed {
+                // TODO: Add time condition
+            }
+
+            query.eq(
+                CacheDbStoreEntity::prefix_with_tbl(CacheDbStoreEntity::col_name_for_key()),
+                key,
+            );
+        };
+
         match self
             .manager
-            .select_from_table(CacheDbStoreEntity::table_name(), |query| {
-                query.select_all();
-                if !with_trashed {
-                    // TODO: Add time condition
-                }
-
-                query.eq(
-                    CacheDbStoreEntity::prefix_with_tbl(CacheDbStoreEntity::col_name_for_key()),
-                    key,
-                );
-            })
+            .select_from_table(CacheDbStoreEntity::table_name(), find_by_key)
             .fetch_one_to()
             .await
         {
@@ -42,27 +45,29 @@ impl CacheDbStoreRepository {
         keys: &[String],
         with_trashed: bool,
     ) -> Option<Vec<CacheDbStoreEntity>> {
+        let query_by_keys = |query: &mut QueryBuilder| {
+            query.select_all();
+
+            query.is_in(
+                CacheDbStoreEntity::prefix_with_tbl(CacheDbStoreEntity::col_name_for_key()),
+                keys.iter().map(|s| s.to_string()).collect::<Vec<String>>(),
+            );
+
+            if !with_trashed {
+                query
+                    .is_null(CacheDbStoreEntity::prefix_with_tbl(
+                        CacheDbStoreEntity::col_name_for_expiration(),
+                    ))
+                    .or_le_or_eq(
+                        CacheDbStoreEntity::col_name_for_expiration(),
+                        now().timestamp(),
+                    );
+            }
+        };
+
         match self
             .manager
-            .select_from_table(CacheDbStoreEntity::table_name(), |query| {
-                query.select_all();
-
-                query.is_in(
-                    CacheDbStoreEntity::prefix_with_tbl(CacheDbStoreEntity::col_name_for_key()),
-                    keys.iter().map(|s| s.to_string()).collect::<Vec<String>>(),
-                );
-
-                if !with_trashed {
-                    query
-                        .is_null(CacheDbStoreEntity::prefix_with_tbl(
-                            CacheDbStoreEntity::col_name_for_expiration(),
-                        ))
-                        .or_le_or_eq(
-                            CacheDbStoreEntity::col_name_for_expiration(),
-                            now().timestamp(),
-                        );
-                }
-            })
+            .select_from_table(CacheDbStoreEntity::table_name(), query_by_keys)
             .fetch_all_to::<CacheDbStoreEntity>()
             .await
         {
@@ -190,10 +195,10 @@ impl CacheDbStoreRepository {
             );
         }
 
-        if expiration.is_some() {
+        if let Some(exp) = expiration {
             payload.insert(
                 CacheDbStoreEntity::col_name_for_expiration().to_string(),
-                expiration.unwrap().into(),
+                exp.into(),
             );
         }
 

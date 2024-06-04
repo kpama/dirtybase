@@ -12,13 +12,11 @@ pub fn to_pascal_case_with<D: Iterator<Item = &'static char>>(
 ) -> String {
     let mut raw = subject.to_string();
     for demarcator in demarcators {
-        raw = raw
-            .split(*demarcator)
-            .map(|p| {
-                let mut s = p.to_string();
-                format!("{}{s}", s.remove(0).to_uppercase())
-            })
-            .collect();
+        raw = raw.split(*demarcator).fold("".to_string(), |mut acc, p| {
+            let mut s = p.to_string();
+            acc.push_str(&format!("{}{s}", s.remove(0).to_uppercase()));
+            acc
+        });
     }
 
     print!("stop: {}", &raw);

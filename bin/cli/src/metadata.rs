@@ -20,16 +20,13 @@ pub(crate) fn read_package_metadata(package: &str) -> std::path::PathBuf {
     if !package.is_empty() {
         let pass_name = package.to_lowercase();
         for pkg in packages {
-            match pkg.get("name") {
-                Some(value) => {
-                    if pass_name == value.as_str().unwrap() {
-                        path = pkg.get("targets").unwrap().as_array().unwrap()[0]
-                            .get("src_path")
-                            .unwrap();
-                        break;
-                    }
+            if let Some(value) = pkg.get("name") {
+                if pass_name == value.as_str().unwrap() {
+                    path = pkg.get("targets").unwrap().as_array().unwrap()[0]
+                        .get("src_path")
+                        .unwrap();
+                    break;
                 }
-                None => (),
             }
         }
     }

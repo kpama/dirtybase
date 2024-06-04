@@ -26,10 +26,12 @@ impl MigrationRepository {
     }
 
     pub async fn exist(&self, name: &str) -> bool {
-        match self.find_by_name(name).await {
-            Ok(Some(_)) => true,
-            _ => false,
-        }
+        // if let Ok(Some(_)) = self.find_by_name(name).await {
+        //     true
+        // } else {
+        //     false
+        // }
+        matches!(self.find_by_name(name).await, Ok(Some(_)))
     }
 
     pub async fn find_by_name(&self, name: &str) -> Result<Option<MigrationEntity>, anyhow::Error> {

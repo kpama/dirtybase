@@ -26,9 +26,9 @@ pub async fn init() {
     }
 }
 
-pub async fn get_client() -> Result<redis::aio::Connection, anyhow::Error> {
+pub async fn get_client() -> Result<redis::aio::MultiplexedConnection, anyhow::Error> {
     if let Some(client) = busybody::helpers::service_container().get::<redis::Client>() {
-        Ok(client.get_async_connection().await.unwrap())
+        Ok(client.get_multiplexed_async_connection().await.unwrap())
     } else {
         log::error!("Could not get redis client");
         Err(anyhow!("Could not get redis client"))

@@ -13,12 +13,11 @@ fn main() {
         Commands::Init => {
             commands::init::init(args.package.as_ref());
         }
-        Commands::Make { what } => match what {
-            MakeSubcommand::Migration { name } => {
+        Commands::Make { what } => {
+            if let MakeSubcommand::Migration { name } = what {
                 commands::make_migration::make(args.package.as_ref(), name);
             }
-            _ => (),
-        },
+        }
     }
 }
 

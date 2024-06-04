@@ -105,7 +105,7 @@ impl QueryBuilder {
         }
     }
 
-    pub fn sub_query<F>(&mut self, table: &str, mut callback: F) -> &mut Self
+    pub fn sub_query<F>(&mut self, table: &str, mut callback: F) -> QueryValue
     where
         F: FnMut(&mut QueryBuilder),
     {
@@ -119,9 +119,7 @@ impl QueryBuilder {
 
         callback(&mut query_builder);
 
-        QueryValue::SubQuery(query_builder);
-
-        self
+        QueryValue::SubQuery(query_builder)
     }
 
     pub fn select_all(&mut self) -> &mut Self {

@@ -10,11 +10,11 @@ use super::CacheStoreTrait;
 
 #[derive(Clone)]
 pub struct RedisStore {
-    redis_client: Arc<RwLock<redis::aio::Connection>>,
+    redis_client: Arc<RwLock<redis::aio::MultiplexedConnection>>,
 }
 
 impl RedisStore {
-    pub fn new(conn: redis::aio::Connection) -> Self {
+    pub fn new(conn: redis::aio::MultiplexedConnection) -> Self {
         Self {
             redis_client: Arc::new(RwLock::new(conn)),
         }

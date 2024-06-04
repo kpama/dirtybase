@@ -10,8 +10,7 @@ pub(crate) fn generate(
     base_name: &Ident,
 ) -> Vec<TokenStream> {
     for (name, attr) in columns {
-        match attr.the_type.as_str() {
-            "String" => {
+           if attr.the_type.as_str()  == "String" {
                 let lower_name = name.to_lowercase();
                 let by_method = format_ident!("{}", &lower_name);
                 let like_method = format_ident!("{}_like", &lower_name);
@@ -92,8 +91,6 @@ pub(crate) fn generate(
                 }
               });
             }
-          _ => (),
-        }
     }
 
     methods

@@ -66,13 +66,12 @@ async fn inject_user_email(
     service: DirtybaseUserService,
 ) -> UserLoginPayload {
     if payload.email.is_none() {
-        match service
+        if let Ok(Some(user)) = service
             .user_service()
             .get_user_by_username(payload.username.as_ref().unwrap(), true)
             .await
         {
-            Ok(Some(user)) => payload.email = user.email,
-            _ => (),
+            payload.email = user.email;
         }
     }
 

@@ -26,11 +26,7 @@ impl RouteCollection {
 
     pub fn add(&mut self, prefix: &str, router: RouterWrapper<Arc<busybody::ServiceContainer>>) {
         let full_path = format!("{}{}", self.prefix(), prefix);
-        if !self.routers.contains_key(&full_path) {
-            self.routers.insert(full_path, vec![router]);
-        } else {
-            self.routers.get_mut(&full_path).unwrap().push(router);
-        }
+        self.routers.entry(full_path).or_default().push(router);
     }
 }
 
@@ -54,9 +50,9 @@ impl RouterManager {
     ) -> Self {
         let mut routers = HashMap::new();
 
-        let api = api_prefix.unwrap_or_else(|| "/api").to_string();
-        let insecure_api = insecure_api_prefix.unwrap_or_else(|| "/_open").to_string();
-        let backend = backend_prefix.unwrap_or_else(|| "/_admin").to_string();
+        let api = api_prefix.unwrap_or("/api").to_string();
+        let insecure_api = insecure_api_prefix.unwrap_or("/_open").to_string();
+        let backend = backend_prefix.unwrap_or("/_admin").to_string();
 
         // general
         routers.insert(RouteType::General, RouteCollection::new("".to_string()));

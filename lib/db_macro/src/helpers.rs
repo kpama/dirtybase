@@ -196,7 +196,7 @@ pub(crate) fn names_of_from_cv_handlers(
 }
 
 pub(crate) fn spread_default(
-    columns_attributes: &Vec<(String, DirtybaseAttributes)>,
+    columns_attributes: &[(String, DirtybaseAttributes)],
     input: &DeriveInput,
 ) -> TokenStream {
     let length = match &input.data {

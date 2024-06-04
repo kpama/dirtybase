@@ -10,6 +10,12 @@ pub struct CliCommandManager {
     commands: Vec<clap::Command>,
 }
 
+impl Default for CliCommandManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CliCommandManager {
     pub fn new() -> Self {
         Self {

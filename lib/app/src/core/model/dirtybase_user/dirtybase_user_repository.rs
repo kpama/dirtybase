@@ -56,13 +56,7 @@ impl DirtybaseUserRepository {
                 })
                 .fetch_all()
                 .await
-                .and_then(|list| {
-                    if list.is_none() {
-                        Err(anyhow::anyhow!("User not found"))
-                    } else {
-                        Ok(self.build_entity_result(list.unwrap()))
-                    }
-                })
+                .map(|list| self.build_entity_result(list.expect("user not found")))
         } else {
             Err(anyhow::anyhow!("Both username and email values are empty"))
         }
@@ -83,11 +77,11 @@ impl DirtybaseUserRepository {
             })
             .fetch_all()
             .await
-            .and_then(|list| {
-                if list.is_none() {
-                    Err(anyhow::anyhow!("User not found"))
+            .map(|list| {
+                if let Some(result) = list {
+                    self.build_dto_result(result)
                 } else {
-                    Ok(self.build_dto_result(list.unwrap()))
+                    self.build_dto_result(list.unwrap())
                 }
             })
     }
@@ -211,10 +205,7 @@ impl DirtybaseUserRepository {
     fn is_sys_admin(&self, field_value: Option<&FieldValue>) -> bool {
         if let Some(FieldValue::Object(obj)) = field_value {
             if let Some(value) = obj.get(SysAdminEntity::col_name_for_core_user_id()) {
-                match value {
-                    FieldValue::String(_) => true,
-                    _ => false,
-                }
+                matches!(value, FieldValue::String(_))
             } else {
                 false
             }
@@ -228,24 +219,22 @@ impl DirtybaseUserRepository {
         apps: &mut HashMap<String, UserAppDto>,
         data: &mut StructuredColumnAndValue,
     ) {
-        if let Some(app) = data.get(APPS_JOIN_PREFIX) {
-            if let FieldValue::Object(app_obj) = app {
-                let id = if let Some(i) = app_obj.get("id") {
-                    i.to_string()
-                } else {
-                    "".into()
-                };
+        if let Some(FieldValue::Object(app_obj)) = data.get(APPS_JOIN_PREFIX) {
+            let id = if let Some(i) = app_obj.get("id") {
+                i.to_string()
+            } else {
+                "".into()
+            };
 
-                if apps.get(&id).is_none() {
-                    apps.insert(id.clone(), UserAppDto::from_column_value(app_obj.clone()));
-                }
+            if apps.get(&id).is_none() {
+                apps.insert(id.clone(), UserAppDto::from_column_value(app_obj.clone()));
+            }
 
-                if app_obj.contains_key("roles") {
-                    apps.get_mut(&id)
-                        .unwrap()
-                        .roles
-                        .push(app_obj.get("roles").unwrap().into());
-                }
+            if app_obj.contains_key("roles") {
+                apps.get_mut(&id)
+                    .unwrap()
+                    .roles
+                    .push(app_obj.get("roles").unwrap().into());
             }
         }
     }
