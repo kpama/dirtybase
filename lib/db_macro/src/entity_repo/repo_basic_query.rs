@@ -64,21 +64,5 @@ pub(crate) fn generate(
         });
     }
 
-    // fetch by id / ids
-    if !id_column.is_empty() {
-        methods.push(quote!{
-          pub async fn id<V: Into<dirtybase_db::field_values::FieldValue>>(&self, id: V) -> Result<Option<#base_name>, dirtybase_db::anyhow::Error> {
-             self.query_by(#id_column, id).fetch_one_to().await
-          }
-
-          pub async fn ids<V: Into<dirtybase_db::field_values::FieldValue> + IntoIterator >(&self, ids: V) -> Result<Option<Vec<#base_name>>, dirtybase_db::anyhow::Error> {
-           self.manager.select_from_table(&self.table,|query| {
-                query.select_all()
-                .is_in(#id_column, ids);
-             }).fetch_all_to().await
-          }
-       })
-    }
-
     methods
 }
