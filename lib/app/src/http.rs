@@ -22,9 +22,10 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
     let config = app.config();
 
     let mut router = Router::new();
-
     let mut manager = RouterManager::new(Some("/api"), Some("/_admin"), Some("/_open"));
     let mut middleware_manager = MiddlewareManager::new();
+    let mut has_routes = false;
+
     let lock = app.extensions.read().await;
     for ext in lock.iter() {
         manager = ext.register_routes(manager);
@@ -33,6 +34,11 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
     drop(lock);
 
     for (route_type, collection) in manager.take() {
+        if collection.routers.len() == 0 {
+            continue;
+        }
+        has_routes = true;
+
         match route_type {
             RouteType::Api => {
                 if app.config().web_enable_api_routes() {
@@ -66,7 +72,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
                     // TODO: Apply core Backend middleware
 
-                    router = router.merge(backend_router.into_router())
+                    router = router.merge(backend_router.into_router());
                 }
             }
             RouteType::General => {
@@ -78,7 +84,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
                     // TODO: Apply core General middleware
 
-                    router = router.merge(general_router.into_router())
+                    router = router.merge(general_router.into_router());
                 }
             }
         }
@@ -87,8 +93,12 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
     let mut app = RouterWrapper::from(router);
 
     app = middleware_manager.register(app, config.middleware().general());
+    drop(middleware_manager);
 
-    app = app.middleware(my_middleware_test);
+    // axum requires that at least a route exist before adding a middleware
+    if has_routes {
+        app = app.middleware(my_middleware_test);
+    }
 
     let listener =
         tokio::net::TcpListener::bind((config.web_ip_address().as_str(), config.web_port()))
