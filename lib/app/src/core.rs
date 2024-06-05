@@ -106,3 +106,36 @@ impl App {
         &self.config
     }
 }
+
+pub struct AppServiceExtractor(AppService);
+
+impl AppServiceExtractor {
+    pub fn inner(self) -> AppService {
+        self.0
+    }
+}
+
+impl Deref for AppServiceExtractor {
+    type Target = AppService;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Into<AppService> for AppServiceExtractor {
+    fn into(self) -> AppService {
+        self.0
+    }
+}
+
+#[async_trait::async_trait]
+impl<S> FromRequestParts<S> for AppServiceExtractor
+where
+    S: Send + Sync,
+{
+    type Rejection = Infallible;
+
+    async fn from_request_parts(_parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        Ok(AppServiceExtractor(busybody::helpers::provide().await))
+    }
+}
