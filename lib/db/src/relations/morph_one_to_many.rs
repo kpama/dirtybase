@@ -1,0 +1,108 @@
+use std::sync::Arc;
+
+use crate::{
+    base::{manager::Manager, query::QueryBuilder},
+    field_values::FieldValue,
+    types::StructuredColumnAndValue,
+    TableEntityTrait,
+};
+
+use super::{MorphManyToMany, RelationMany, RelationOne, RelationQueryBuilder};
+
+pub struct MorphOneToMany<P, C>
+where
+    P: TableEntityTrait,
+    C: TableEntityTrait,
+{
+    relation: MorphManyToMany<P, C>,
+}
+
+impl<P, C> MorphOneToMany<P, C>
+where
+    P: TableEntityTrait,
+    C: TableEntityTrait,
+{
+    pub fn new(manager: Arc<Manager>, child_field: &str, child_type_field: &str) -> Self {
+        Self::new_with_custom(
+            manager,
+            child_field,
+            P::table_name(),
+            child_type_field,
+            C::table_name(),
+        )
+    }
+
+    pub fn new_with_custom(
+        manager: Arc<Manager>,
+        child_field: &str,
+        child_type: &str,
+        child_type_field: &str,
+        child_table: &str,
+    ) -> Self {
+        Self {
+            relation: MorphManyToMany::new_with_custom(
+                manager,
+                child_field,
+                child_type,
+                child_type_field,
+                child_table,
+            ),
+        }
+    }
+}
+
+impl<P, C> RelationQueryBuilder for MorphOneToMany<P, C>
+where
+    P: TableEntityTrait + Send,
+    C: TableEntityTrait + Send,
+{
+    type Target = C;
+    fn constrain_keys<K: Into<FieldValue> + IntoIterator>(&mut self, keys: K) {
+        let mut qb = QueryBuilder::new(
+            C::table_name(),
+            crate::base::query::QueryAction::Query {
+                columns: Some(C::table_column_full_names()),
+            },
+        );
+
+        let value = if let FieldValue::Array(v) = keys.into() {
+            v.into_iter().next().unwrap_or(FieldValue::Null)
+        } else {
+            FieldValue::Null
+        };
+        qb.eq(&self.relation.child_field, value);
+        qb.eq(&self.relation.child_type_field, &self.relation.child_type);
+
+        self.relation.query_builder = qb;
+    }
+}
+
+#[async_trait::async_trait]
+impl<P, C> RelationOne for MorphOneToMany<P, C>
+where
+    P: TableEntityTrait + Send,
+    C: TableEntityTrait + Send,
+{
+    async fn one_s(&mut self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
+        self.relation.one_s().await
+    }
+
+    async fn one(&mut self) -> Result<Option<Self::Target>, anyhow::Error> {
+        self.relation.one().await
+    }
+}
+
+#[async_trait::async_trait]
+impl<P, C> RelationMany for MorphOneToMany<P, C>
+where
+    P: TableEntityTrait + Send,
+    C: TableEntityTrait + Send,
+{
+    async fn get(&mut self) -> Result<Option<Vec<Self::Target>>, anyhow::Error> {
+        self.relation.get().await
+    }
+
+    async fn get_s(&mut self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
+        self.relation.get_s().await
+    }
+}
