@@ -28,7 +28,7 @@ pub use morph_one_to_one::*;
 pub trait RelationQueryBuilder {
     type Target: TableEntityTrait;
 
-    fn constrain_keys<K: Into<FieldValue> + IntoIterator>(&mut self, keys: K);
+    fn constrain_keys<K: Into<FieldValue> + IntoIterator>(&mut self, keys: K) -> &mut Self;
 
     fn constrain_key<K: Into<FieldValue>>(&mut self, key: K) {
         self.constrain_keys(vec![key]);
