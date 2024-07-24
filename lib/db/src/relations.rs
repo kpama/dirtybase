@@ -41,6 +41,8 @@ pub trait RelationQueryBuilder {
     fn parent_key<K: Into<FieldValue>>(&mut self, key: K) {
         self.constrain_keys(vec![key]);
     }
+
+    fn query_builder(&mut self) -> &mut QueryBuilder;
 }
 
 #[async_trait::async_trait]
