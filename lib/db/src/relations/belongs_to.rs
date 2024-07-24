@@ -1,7 +1,6 @@
 use std::{
     marker::PhantomData,
     ops::{Deref, DerefMut},
-    sync::Arc,
 };
 
 use crate::{
@@ -21,7 +20,7 @@ where
     parent_field: String,
     parent_table: String,
     query_builder: QueryBuilder,
-    manager: Arc<Manager>,
+    manager: Manager,
     child_phantom: PhantomData<C>,
     parent_phantom: PhantomData<P>,
 }
@@ -31,11 +30,11 @@ where
     C: TableEntityTrait,
     P: TableEntityTrait,
 {
-    pub fn new(manager: Arc<Manager>) -> Self {
+    pub fn new(manager: Manager) -> Self {
         Self::new_with_custom(manager, P::id_column().as_ref().unwrap(), P::table_name())
     }
 
-    pub fn new_with_custom(manager: Arc<Manager>, parent_field: &str, parent_table: &str) -> Self {
+    pub fn new_with_custom(manager: Manager, parent_field: &str, parent_table: &str) -> Self {
         let mut qb = QueryBuilder::new(
             parent_table,
             crate::base::query::QueryAction::Query {
@@ -63,7 +62,7 @@ where
 {
     type Target = P;
 
-    fn constrain_keys<K: Into<FieldValue> + IntoIterator>(&mut self, keys: K) {
+    fn constrain_keys<K: Into<FieldValue> + IntoIterator>(&mut self, keys: K) -> &mut Self {
         let mut qb = QueryBuilder::new(
             &self.parent_table,
             crate::base::query::QueryAction::Query {
@@ -73,6 +72,12 @@ where
         qb.is_in(&self.parent_field, keys);
 
         self.query_builder = qb;
+
+        self
+    }
+
+    fn query_builder(&mut self) -> &mut QueryBuilder {
+        &mut self.query_builder
     }
 }
 

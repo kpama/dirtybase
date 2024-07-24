@@ -1,8 +1,4 @@
-use std::{
-    marker::PhantomData,
-    ops::{Deref, DerefMut},
-    sync::Arc,
-};
+use std::marker::PhantomData;
 
 use crate::{
     base::{manager::Manager, query::QueryBuilder},
@@ -20,7 +16,7 @@ where
 {
     child_field: String,
     child_table: String,
-    manager: Arc<Manager>,
+    manager: Manager,
     query_builder: QueryBuilder,
     parent_phantom: PhantomData<P>,
     child_phantom: PhantomData<C>,
@@ -31,7 +27,7 @@ where
     P: TableEntityTrait,
     C: TableEntityTrait,
 {
-    pub fn new(manager: Arc<Manager>) -> Self {
+    pub fn new(manager: Manager) -> Self {
         Self::new_with_custom(
             manager,
             P::foreign_id_column().as_ref().unwrap(),
@@ -39,7 +35,7 @@ where
         )
     }
 
-    pub fn new_with_custom(manager: Arc<Manager>, child_field: &str, child_table: &str) -> Self {
+    pub fn new_with_custom(manager: Manager, child_field: &str, child_table: &str) -> Self {
         let mut qb = QueryBuilder::new(
             &child_table,
             crate::base::query::QueryAction::Query {
@@ -47,8 +43,7 @@ where
             },
         );
 
-        qb.is_in(child_field, vec!["-notset-"])
-            .is_not_null(child_field);
+        qb.is_in(child_field, Vec::<&str>::new());
 
         Self {
             child_field: child_field.to_string(),
@@ -78,17 +73,22 @@ where
 {
     type Target = C;
 
-    fn constrain_keys<K: Into<FieldValue> + IntoIterator>(&mut self, keys: K) {
+    fn constrain_keys<K: Into<FieldValue> + IntoIterator>(&mut self, keys: K) -> &mut Self {
         let mut qb = QueryBuilder::new(
             &self.child_table,
             crate::base::query::QueryAction::Query {
                 columns: Some(C::table_column_full_names()),
             },
         );
-        qb.is_in(&self.child_field, keys)
-            .is_not_null(&self.child_field);
+        qb.is_in(&self.child_field, keys);
 
         self.query_builder = qb;
+
+        self
+    }
+
+    fn query_builder(&mut self) -> &mut QueryBuilder {
+        &mut self.query_builder
     }
 }
 
@@ -131,26 +131,5 @@ where
             .execute_query(self.query_builder.clone())
             .fetch_one_to()
             .await
-    }
-}
-
-impl<P, C> Deref for HasMany<P, C>
-where
-    P: TableEntityTrait,
-    C: TableEntityTrait,
-{
-    type Target = QueryBuilder;
-    fn deref(&self) -> &Self::Target {
-        &self.query_builder
-    }
-}
-
-impl<P, C> DerefMut for HasMany<P, C>
-where
-    P: TableEntityTrait,
-    C: TableEntityTrait,
-{
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.query_builder
     }
 }

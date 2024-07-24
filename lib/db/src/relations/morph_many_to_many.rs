@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, sync::Arc};
+use std::marker::PhantomData;
 
 use crate::{
     base::{manager::Manager, query::QueryBuilder},
@@ -21,7 +21,7 @@ where
     pub(crate) query_builder: QueryBuilder,
     parent_phantom: PhantomData<P>,
     child_phantom: PhantomData<C>,
-    pub(crate) manager: Arc<Manager>,
+    pub(crate) manager: Manager,
 }
 
 impl<P, C> MorphManyToMany<P, C>
@@ -29,7 +29,7 @@ where
     P: TableEntityTrait,
     C: TableEntityTrait,
 {
-    pub fn new(manager: Arc<Manager>, child_field: &str, child_type_field: &str) -> Self {
+    pub fn new(manager: Manager, child_field: &str, child_type_field: &str) -> Self {
         Self::new_with_custom(
             manager,
             child_field,
@@ -40,7 +40,7 @@ where
     }
 
     pub fn new_with_custom(
-        manager: Arc<Manager>,
+        manager: Manager,
         child_field: &str,
         child_type: &str,
         child_type_field: &str,
@@ -76,7 +76,7 @@ where
 {
     type Target = C;
 
-    fn constrain_keys<K: Into<FieldValue> + IntoIterator>(&mut self, keys: K) {
+    fn constrain_keys<K: Into<FieldValue> + IntoIterator>(&mut self, keys: K) -> &mut Self {
         let mut qb = QueryBuilder::new(
             &self.child_table,
             crate::base::query::QueryAction::Query {
@@ -88,6 +88,12 @@ where
         qb.eq(&self.child_type_field, &self.child_type);
 
         self.query_builder = qb;
+
+        self
+    }
+
+    fn query_builder(&mut self) -> &mut QueryBuilder {
+        &mut self.query_builder
     }
 }
 

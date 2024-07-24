@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, sync::Arc};
+use std::marker::PhantomData;
 
 use crate::{
     base::{manager::Manager, query::QueryBuilder},
@@ -24,7 +24,7 @@ where
     pivot_phantom: PhantomData<PV>,
     parent_phantom: PhantomData<P>,
     query_builder: QueryBuilder,
-    manager: Arc<Manager>,
+    manager: Manager,
 }
 
 impl<C, PV, P> BelongsToMany<C, PV, P>
@@ -33,7 +33,7 @@ where
     PV: TableEntityTrait,
     P: TableEntityTrait,
 {
-    pub fn new(manager: Arc<Manager>) -> Self {
+    pub fn new(manager: Manager) -> Self {
         Self::new_with_custom(
             manager,
             C::foreign_id_column().as_ref().unwrap(),
@@ -46,7 +46,7 @@ where
     }
 
     pub fn new_with_custom<V: Into<FieldValue> + IntoIterator>(
-        manager: Arc<Manager>,
+        manager: Manager,
         pivot_field: &str,
         pivot_parent_field: &str,
         pivot_table: &str,
@@ -110,7 +110,7 @@ where
 {
     type Target = P;
 
-    fn constrain_keys<K: Into<FieldValue> + IntoIterator>(&mut self, keys: K) {
+    fn constrain_keys<K: Into<FieldValue> + IntoIterator>(&mut self, keys: K) -> &mut Self {
         *self = Self::new_with_custom(
             self.manager.clone(),
             &self.pivot_field,
@@ -120,6 +120,12 @@ where
             &self.parent_table,
             keys,
         );
+
+        self
+    }
+
+    fn query_builder(&mut self) -> &mut QueryBuilder {
+        &mut self.query_builder
     }
 }
 

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{
     base::{manager::Manager, query::QueryBuilder},
     field_values::FieldValue,
@@ -18,7 +16,7 @@ where
     P: TableEntityTrait,
     C: TableEntityTrait,
 {
-    pub fn new(manager: Arc<Manager>, child_field: &str, child_type_field: &str) -> Self {
+    pub fn new(manager: Manager, child_field: &str, child_type_field: &str) -> Self {
         Self::new_with_custom(
             manager,
             child_field,
@@ -29,7 +27,7 @@ where
     }
 
     pub fn new_with_custom(
-        manager: Arc<Manager>,
+        manager: Manager,
         child_field: &str,
         child_type: &str,
         child_type_field: &str,
@@ -118,7 +116,7 @@ where
 {
     type Target = C;
 
-    fn constrain_keys<K: Into<FieldValue> + IntoIterator>(&mut self, keys: K) {
+    fn constrain_keys<K: Into<FieldValue> + IntoIterator>(&mut self, keys: K) -> &mut Self {
         let mut qb = QueryBuilder::new(
             C::table_name(),
             crate::base::query::QueryAction::Query {
@@ -135,5 +133,11 @@ where
         qb.eq(&self.relation.child_type_field, &self.relation.child_type);
 
         self.relation.query_builder = qb;
+
+        self
+    }
+
+    fn query_builder(&mut self) -> &mut QueryBuilder {
+        self.relation.query_builder()
     }
 }

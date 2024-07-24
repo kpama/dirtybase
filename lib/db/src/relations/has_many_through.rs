@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, sync::Arc};
+use std::marker::PhantomData;
 
 use crate::{
     base::{manager::Manager, query::QueryBuilder},
@@ -20,8 +20,8 @@ where
     pivot_table: String,
     child_field: String,
     child_table: String,
-    query_builder: QueryBuilder,
-    manager: Arc<Manager>,
+    pub(crate) query_builder: QueryBuilder,
+    pub(crate) manager: Manager,
     parent_phatom: PhantomData<P>,
     pivot_phatom: PhantomData<PV>,
     child_phatom: PhantomData<C>,
@@ -33,7 +33,7 @@ where
     PV: TableEntityTrait,
     C: TableEntityTrait,
 {
-    pub fn new(manager: Arc<Manager>) -> Self {
+    pub fn new(manager: Manager) -> Self {
         Self::new_with_custom(
             manager,
             P::foreign_id_column().as_ref().unwrap(),
@@ -45,7 +45,7 @@ where
     }
 
     pub fn new_with_custom(
-        manager: Arc<Manager>,
+        manager: Manager,
         pivot_field: &str,
         pivot_child_field: &str,
         pivot_table: &str,
@@ -126,7 +126,10 @@ where
 {
     type Target = C;
 
-    fn constrain_keys<K: Into<crate::field_values::FieldValue> + IntoIterator>(&mut self, keys: K) {
+    fn constrain_keys<K: Into<crate::field_values::FieldValue> + IntoIterator>(
+        &mut self,
+        keys: K,
+    ) -> &mut Self {
         let value = if let FieldValue::Array(v) = keys.into() {
             v.into_iter().next().unwrap_or(FieldValue::Null)
         } else {
@@ -141,6 +144,12 @@ where
             &self.child_field,
             &self.child_table,
         );
+
+        self
+    }
+
+    fn query_builder(&mut self) -> &mut QueryBuilder {
+        &mut self.query_builder
     }
 }
 

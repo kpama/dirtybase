@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{base::manager::Manager, types::StructuredColumnAndValue, TableEntityTrait};
 
 use super::{HasManyThrough, RelationOne, RelationQueryBuilder};
@@ -19,7 +17,7 @@ where
     PV: TableEntityTrait,
     C: TableEntityTrait,
 {
-    pub fn new(manager: Arc<Manager>) -> Self {
+    pub fn new(manager: Manager) -> Self {
         Self::new_with_custom(
             manager,
             P::foreign_id_column().as_ref().unwrap(),
@@ -31,7 +29,7 @@ where
     }
 
     pub fn new_with_custom(
-        manager: Arc<Manager>,
+        manager: Manager,
         pivot_field: &str,
         pivot_child_field: &str,
         pivot_table: &str,
@@ -67,8 +65,17 @@ where
 {
     type Target = C;
 
-    fn constrain_keys<K: Into<crate::field_values::FieldValue> + IntoIterator>(&mut self, keys: K) {
+    fn constrain_keys<K: Into<crate::field_values::FieldValue> + IntoIterator>(
+        &mut self,
+        keys: K,
+    ) -> &mut Self {
         self.relation.constrain_keys(keys);
+
+        self
+    }
+
+    fn query_builder(&mut self) -> &mut crate::base::query::QueryBuilder {
+        self.relation.query_builder()
     }
 }
 
