@@ -389,6 +389,15 @@ pub(crate) fn build_id_method(input: &DeriveInput) -> TokenStream {
     }
 }
 
+pub(crate) fn pluck_foreign_column(input: &DeriveInput, table_name: &str) -> String {
+    let id_field = pluck_id_column(input);
+    format!(
+        "{}_{}",
+        inflector::string::singularize::to_singular(table_name),
+        &id_field
+    )
+}
+
 pub(crate) fn build_foreign_id_method(input: &DeriveInput, table_name: &str) -> TokenStream {
     let id_field = pluck_id_column(input);
 
@@ -399,7 +408,7 @@ pub(crate) fn build_foreign_id_method(input: &DeriveInput, table_name: &str) -> 
             }
         }
     } else {
-        let name = format!("{}_{}", table_name, &id_field);
+        let name = pluck_foreign_column(input, table_name);
         quote! {
             fn foreign_id_column() -> Option<&'static str> {
                 Some(#name)
