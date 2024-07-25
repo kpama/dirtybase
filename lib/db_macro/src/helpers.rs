@@ -1,17 +1,17 @@
-use crate::attribute_type::DirtybaseAttributes;
+use crate::{attribute_type::DirtybaseAttributes, relationship::process_relation_attribute};
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
+use quote::{format_ident, quote, ToTokens};
 use std::collections::HashMap;
 use syn::{Data, DeriveInput, GenericArgument, Meta, MetaList, PathArguments, TypePath};
 
-pub(crate) fn pluck_columns(input: &DeriveInput) -> Vec<(String, DirtybaseAttributes)> {
-    let mut columns = Vec::new();
+pub(crate) fn pluck_columns(input: &DeriveInput) -> HashMap<String, DirtybaseAttributes> {
+    let mut columns = HashMap::new();
 
     if let Data::Struct(data) = &input.data {
         if let syn::Fields::Named(fields) = &data.fields {
             for a_field in fields.named.iter() {
                 if let Some(a_col) = get_real_column_name(a_field) {
-                    columns.push(a_col);
+                    columns.insert(a_col.0, a_col.1);
                 }
             }
         }
@@ -160,7 +160,9 @@ fn walk_and_find_type(p: &TypePath, dirty_attribute: &mut DirtybaseAttributes) {
     }
 }
 
-pub(crate) fn pluck_names(columns_attributes: &[(String, DirtybaseAttributes)]) -> Vec<String> {
+pub(crate) fn pluck_names(
+    columns_attributes: &HashMap<String, DirtybaseAttributes>,
+) -> Vec<String> {
     columns_attributes
         .iter()
         .filter(|c| !c.1.skip_select)
@@ -169,7 +171,7 @@ pub(crate) fn pluck_names(columns_attributes: &[(String, DirtybaseAttributes)]) 
 }
 
 pub(crate) fn names_of_from_cv_handlers(
-    columns_attributes: &[(String, DirtybaseAttributes)],
+    columns_attributes: &HashMap<String, DirtybaseAttributes>,
 ) -> Vec<TokenStream> {
     columns_attributes
         .iter()
@@ -178,7 +180,7 @@ pub(crate) fn names_of_from_cv_handlers(
             let column = item.1.name.clone();
             let handler = format_ident!("{}", &item.1.from_handler);
             let field_name = item.0.clone();
-            if item.0 == item.1.name {
+            if *item.0 == item.1.name {
                 quote! {
                     #struct_field: Self::#handler(cv.get(#column))
                 }
@@ -196,7 +198,7 @@ pub(crate) fn names_of_from_cv_handlers(
 }
 
 pub(crate) fn spread_default(
-    columns_attributes: &[(String, DirtybaseAttributes)],
+    columns_attributes: &HashMap<String, DirtybaseAttributes>,
     input: &DeriveInput,
 ) -> TokenStream {
     let length = match &input.data {
@@ -219,7 +221,7 @@ pub(crate) fn spread_default(
 }
 
 pub(crate) fn build_from_handlers(
-    columns_attributes: &[(String, DirtybaseAttributes)],
+    columns_attributes: &HashMap<String, DirtybaseAttributes>,
 ) -> Vec<proc_macro2::TokenStream> {
     let mut built: Vec<proc_macro2::TokenStream> = Vec::new();
     for item in columns_attributes.iter() {
@@ -406,7 +408,7 @@ pub(crate) fn build_foreign_id_method(input: &DeriveInput, table_name: &str) -> 
 }
 
 pub(crate) fn build_special_column_methods(
-    columns_attributes: &[(String, DirtybaseAttributes)],
+    columns_attributes: &HashMap<String, DirtybaseAttributes>,
 ) -> Vec<proc_macro2::TokenStream> {
     let mut built: HashMap<&str, proc_macro2::TokenStream> = HashMap::new();
 
@@ -476,7 +478,7 @@ pub(crate) fn build_special_column_methods(
 /// Builds static method for each field/prop in the struct
 /// that corresponds to a table column
 pub(crate) fn build_prop_column_names_getter(
-    columns_attributes: &[(String, DirtybaseAttributes)],
+    columns_attributes: &HashMap<String, DirtybaseAttributes>,
 ) -> Vec<proc_macro2::TokenStream> {
     let mut built: Vec<proc_macro2::TokenStream> = Vec::new();
 
