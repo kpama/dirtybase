@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use proc_macro2::Ident;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
@@ -5,7 +7,7 @@ use quote::{format_ident, quote};
 use crate::attribute_type::DirtybaseAttributes;
 
 pub(crate) fn generate(
-    columns: &Vec<(String, DirtybaseAttributes)>,
+    columns: &HashMap<String, DirtybaseAttributes>,
     mut methods: Vec<TokenStream>,
     base_name: &Ident,
     id_column: &str,
