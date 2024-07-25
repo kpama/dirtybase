@@ -16,9 +16,10 @@ pub fn generate_arc_ulid() -> ArcUlid {
 /// Transform a table name to a column name.
 /// The table name is appended by the table's primary key or defaults to `_id`
 pub fn to_fk_column(foreign_table: &str, id: Option<&str>) -> String {
+    let name = inflector::string::singularize::to_singular(foreign_table);
     format!(
         "{}_{}",
-        foreign_table.to_ascii_lowercase(),
+        inflector::cases::snakecase::to_snake_case(&name),
         id.unwrap_or("id")
     )
 }
