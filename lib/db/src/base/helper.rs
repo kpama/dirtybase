@@ -35,6 +35,12 @@ mod tests {
     }
 
     #[test]
+    fn test_that_foreign_keys_is_in_singular_form() {
+        let name = to_fk_column("foos", None);
+        assert_eq!(name, "foo_id");
+    }
+
+    #[test]
     fn test_that_foreign_keys_ends_with_key() {
         let name = to_fk_column("foo", Some("key"));
         assert_eq!(name, "foo_key");
