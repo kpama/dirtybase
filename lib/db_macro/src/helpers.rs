@@ -348,7 +348,7 @@ pub(crate) fn pluck_table_name(input: &DeriveInput) -> String {
 }
 
 pub(crate) fn pluck_id_column(input: &DeriveInput) -> String {
-    let mut id_field = "".to_owned();
+    let mut id_field = "id".to_owned(); // by default the primary key will be `id`
 
     for attr in &input.attrs {
         if let Meta::List(the_list) = &attr.meta {
