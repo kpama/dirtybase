@@ -80,6 +80,10 @@ impl Time {
 
         Self { now }
     }
+
+    pub fn as_datetime(self) -> DateTime<Utc> {
+        self.now
+    }
 }
 
 pub fn now() -> Time {
