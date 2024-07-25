@@ -323,7 +323,8 @@ pub(crate) fn build_into_for_calls(
 }
 
 pub(crate) fn pluck_table_name(input: &DeriveInput) -> String {
-    let mut table_name = input.ident.clone().to_string().to_lowercase();
+    let mut table_name =
+        inflector::cases::tablecase::to_table_case(&input.ident.clone().to_string());
 
     for attr in &input.attrs {
         if let Meta::List(the_list) = &attr.meta {

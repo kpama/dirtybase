@@ -16,6 +16,7 @@ syn = { workspace = true }
 sqlx = { workspace = true }
 proc-macro2 = { version = "1.0.62", default-features = false }
 anyhow = { workspace = true }
+Inflector = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread"] }
