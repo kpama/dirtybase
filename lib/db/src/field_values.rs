@@ -153,6 +153,15 @@ where
     }
 }
 
+impl<T> From<Box<T>> for FieldValue
+where
+    T: Into<FieldValue>,
+{
+    fn from(value: Box<T>) -> Self {
+        value.into()
+    }
+}
+
 impl<T, E> From<Result<T, E>> for FieldValue
 where
     T: Into<FieldValue>,
