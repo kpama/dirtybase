@@ -17,7 +17,5 @@ pub async fn api_auth_middleware(
 ) -> axum::response::Response {
     let jwt = request.headers().get("authorization");
 
-    log::info!("auth: {:?}", jwt);
-
     next.run(request).await
 }
