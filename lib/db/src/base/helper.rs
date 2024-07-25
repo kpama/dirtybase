@@ -1,9 +1,16 @@
+use std::sync::Arc;
+
 use ulid::Ulid;
 
 pub type UlidString = String;
+pub type ArcUlid = Arc<str>;
 
 pub fn generate_ulid() -> UlidString {
     Ulid::new().to_string().to_lowercase()
+}
+
+pub fn generate_arc_ulid() -> ArcUlid {
+    generate_ulid().into()
 }
 
 /// Transform a table name to a column name.

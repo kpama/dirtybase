@@ -1,5 +1,7 @@
 use chrono::{DateTime, Utc};
 
+use crate::base::helper::ArcUlid;
+
 use super::field_values::FieldValue;
 use std::collections::HashMap;
 
@@ -7,11 +9,13 @@ pub type ColumnAndValue = HashMap<String, FieldValue>;
 
 pub type InternalIdField = Option<i64>; // works across databases
 pub type SingedIntegerField = Option<i64>;
-pub type NumberField = Option<i64>;
+pub type IntegerField = Option<i64>;
+pub type NumberField = Option<f64>;
 pub type UnsignedIntegerField = Option<u64>;
 pub type FloatField = Option<f64>;
 pub type StringField = Option<String>;
 pub type UlidField = Option<String>;
+pub type ArcUlidField = Option<ArcUlid>;
 pub type DateTimeField = Option<DateTime<Utc>>;
 pub type TimestampField = Option<DateTime<Utc>>;
 pub type BooleanField = Option<bool>;
