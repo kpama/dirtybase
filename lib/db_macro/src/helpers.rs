@@ -268,7 +268,7 @@ pub(crate) fn build_from_handlers(
 
 // TODO: implement "into handler"
 pub(crate) fn build_into_handlers(
-    columns_attributes: &[(String, DirtybaseAttributes)],
+    columns_attributes: &HashMap<String, DirtybaseAttributes>,
 ) -> Vec<proc_macro2::TokenStream> {
     let mut built: Vec<proc_macro2::TokenStream> = Vec::new();
 
@@ -303,7 +303,7 @@ pub(crate) fn build_into_handlers(
 }
 
 pub(crate) fn build_into_for_calls(
-    columns_attributes: &[(String, DirtybaseAttributes)],
+    columns_attributes: &HashMap<String, DirtybaseAttributes>,
 ) -> Vec<proc_macro2::TokenStream> {
     let mut built: Vec<proc_macro2::TokenStream> = Vec::new();
     for item in columns_attributes.iter() {
