@@ -106,7 +106,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
 
     async fn drop_table(&self, name: &str) -> bool {
         if self.has_table(name).await {
-            let query = QueryBuilder::new(vec![name.to_string()], QueryAction::DropTable);
+            let query = QueryBuilder::new(name, QueryAction::DropTable);
             self.do_execute(query).await;
             return true;
         }
@@ -246,7 +246,7 @@ impl MySqlSchemaManager {
                 sql = format!(
                     "INSERT {} INTO {} ",
                     if *do_soft_insert { "IGNORE" } else { "" },
-                    query.tables().join(",")
+                    query.table()
                 );
 
                 if !rows.is_empty() {
@@ -286,7 +286,7 @@ impl MySqlSchemaManager {
                         params.push(self.field_value_to_string(entry.1));
                     }
                 }
-                sql = format!("UPDATE `{}` SET ", query.tables().join(","));
+                sql = format!("UPDATE `{}` SET ", query.table());
                 for entry in columns.iter().enumerate() {
                     if entry.0 > 0 {
                         sql = format!("{}, `{}` = ? ", sql, *entry.1);
@@ -301,29 +301,25 @@ impl MySqlSchemaManager {
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
             }
             QueryAction::Delete => {
-                sql = format!("DELETE {0} FROM {0} ", query.tables().join(","));
+                sql = format!("DELETE {0} FROM {0} ", query.table());
                 // joins
                 sql = format!("{} {}", sql, self.build_join(&query, &mut params));
                 // where
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
             }
             QueryAction::DropTable => {
-                sql = query
-                    .tables()
-                    .iter()
-                    .map(|name| format!("DROP TABLE {};", name))
-                    .fold(String::new(), |sum, sub| format!("{} {}", sum, sub));
+                sql = format!("DROP TABLE {};", query.table());
             }
             QueryAction::RenameColumn { old, new } => {
-                let table = query.tables().first().unwrap();
+                let table = query.table();
                 sql = format!("ALTER TABLE {} RENAME COLUMN {} TO {}", table, old, new);
             }
             QueryAction::RenameTable(new) => {
-                let table = query.tables().first().unwrap();
+                let table = query.table();
                 sql = format!("ALTER TABLE {} RENAME TO {}", table, new);
             }
             QueryAction::DropColumn(column) => {
-                let table = query.tables().first().unwrap();
+                let table = query.table();
                 sql = format!("ALTER TABLE {} DROP {}", table, column);
             }
             _ => {
@@ -456,10 +452,9 @@ impl MySqlSchemaManager {
             }
             ColumnType::Datetime => the_type.push_str("datetime"),
             ColumnType::Timestamp => the_type.push_str("timestamp"),
-            // ColumnType::Float not sure
             ColumnType::Integer => the_type.push_str("bigint(20)"),
             ColumnType::Json => the_type.push_str("json"),
-            ColumnType::Number => the_type.push_str("double"),
+            ColumnType::Number | ColumnType::Float => the_type.push_str("double"),
             ColumnType::String(length) => {
                 let q = format!("varchar({}) COLLATE 'utf8mb4_unicode_ci'", length);
                 the_type.push_str(q.as_str());
@@ -522,15 +517,11 @@ impl MySqlSchemaManager {
         let mut sql = "SELECT".to_owned();
 
         // fields
-        if let QueryAction::Query {
-            columns,
-            select_all,
-        } = query.action()
-        {
-            if *select_all {
-                sql = format!("{} *", sql) // Select all columns by default
-            } else if let Some(fields) = columns {
+        if let QueryAction::Query { columns } = query.action() {
+            if let Some(fields) = columns {
                 sql = format!("{} {}", sql, fields.join(","));
+            } else {
+                sql = format!("{} *", sql) // Select all columns by default
             }
         }
 
@@ -547,7 +538,7 @@ impl MySqlSchemaManager {
         }
 
         // from
-        sql = format!("{} FROM {}", sql, query.tables().join(","));
+        sql = format!("{} FROM {}", sql, query.table());
 
         // joins
         sql = format!("{} {}", sql, self.build_join(query, params));
@@ -564,7 +555,12 @@ impl MySqlSchemaManager {
 
         // having
 
-        // limit, offset
+        // limit
+        if let Some(limit) = query.limit_by() {
+            sql = format!("{} {}", sql, limit);
+        }
+
+        //  offset
 
         sql
     }
@@ -603,7 +599,7 @@ impl MySqlSchemaManager {
     }
 
     fn build_order_by(&self, query: &QueryBuilder) -> Option<String> {
-        query.order_by().as_ref().map(|order| order.to_string())
+        query.order_by().map(|order| order.to_string())
     }
 
     fn transform_condition(&self, condition: &Condition, params: &mut Vec<String>) -> String {

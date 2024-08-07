@@ -7,6 +7,7 @@ edition = { workspace = true }
 
 [dependencies]
 dirtybase_config = { path = "../config" }
+dirtybase_contract = { path = "../contract" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
@@ -23,3 +24,4 @@ futures = { workspace = true }
 futures-util = { workspace = true }
 futures-channel = { workspace = true }
 Inflector = { workspace = true }
+busstop = { workspace = true }

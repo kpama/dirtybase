@@ -24,8 +24,7 @@ impl UserRepository {
     ) -> Result<Option<UserEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(UserEntity::table_name(), |q| {
-                q.select_all()
-                    .eq(UserEntity::col_name_for_internal_id(), id)
+                q.eq(UserEntity::col_name_for_internal_id(), id)
                     .and_is_null(UserEntity::col_name_for_deleted_at());
                 if without_trash {
                     q.without_table_trash::<UserEntity>();
@@ -38,8 +37,7 @@ impl UserRepository {
     pub async fn find_one_by_id(&self, id: &str) -> Result<Option<UserEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(UserEntity::table_name(), |q| {
-                q.select_all()
-                    .eq(UserEntity::col_name_for_id(), id)
+                q.eq(UserEntity::col_name_for_id(), id)
                     .and_is_null(UserEntity::col_name_for_deleted_at());
             })
             .fetch_one_to()
@@ -55,7 +53,6 @@ impl UserRepository {
         if !username.is_empty() || !email.is_empty() {
             self.manager()
                 .select_from_table(UserEntity::table_name(), |q| {
-                    q.select_all();
                     if without_trash {
                         q.without_table_trash::<UserEntity>();
                     }
@@ -79,9 +76,7 @@ impl UserRepository {
     ) -> Result<Option<UserEntity>, anyhow::Error> {
         self.manager
             .select_from_table(UserEntity::table_name(), |query| {
-                query
-                    .select_all()
-                    .eq(UserEntity::col_name_for_username(), username);
+                query.eq(UserEntity::col_name_for_username(), username);
 
                 if without_trash {
                     query.without_table_trash::<UserEntity>();
@@ -99,8 +94,7 @@ impl UserRepository {
     ) -> Result<Option<UserEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(UserEntity::table_name(), |q| {
-                q.select_all()
-                    .eq(UserEntity::col_name_for_username(), username)
+                q.eq(UserEntity::col_name_for_username(), username)
                     .eq(UserEntity::col_name_for_email(), email);
                 if without_trash {
                     q.without_table_trash::<UserEntity>();

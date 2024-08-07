@@ -1,6 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
+use anyhow::anyhow;
 use async_trait::async_trait;
+use dirtybase_contract::db::config::ConfigSet;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
 use crate::{
@@ -8,7 +10,7 @@ use crate::{
         connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait},
         schema::{ClientType, DatabaseKind, SchemaManagerTrait},
     },
-    config::{BaseConfig, DirtybaseDbConfig},
+    config::BaseConfig,
 };
 
 use super::postgres_schema_manager::PostgresSchemaManager;
@@ -19,42 +21,31 @@ pub struct PostgresPoolManagerRegisterer;
 impl ConnectionPoolRegisterTrait for PostgresPoolManagerRegisterer {
     async fn register(
         &self,
-        config: &DirtybaseDbConfig,
-    ) -> Option<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>> {
+        config_set: &ConfigSet,
+    ) -> Result<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>, anyhow::Error> {
         let mut pools: HashMap<ClientType, Box<dyn ConnectionPoolTrait>> = HashMap::new();
-
-        // read pool
-        if let Some(read_config) = &config.postgres_read {
-            if read_config.enable {
-                if let Ok(db_pool) = db_connect(read_config).await {
-                    pools.insert(
-                        ClientType::Read,
-                        Box::new(PostgresPoolManager {
-                            db_pool: Arc::new(db_pool),
-                        }),
-                    );
+        for (client_type, config) in config_set.iter() {
+            if config.kind() == DatabaseKind::Postgres {
+                match db_connect(config).await {
+                    Ok(db_pool) => {
+                        pools.insert(
+                            client_type.clone(),
+                            Box::new(PostgresPoolManager {
+                                db_pool: Arc::new(db_pool),
+                            }),
+                        );
+                    }
+                    Err(e) => return Err(e),
                 }
             }
         }
-
-        // write pool
-        if let Some(write_config) = &config.postgres_write {
-            if write_config.enable {
-                if let Ok(db_pool) = db_connect(write_config).await {
-                    pools.insert(
-                        ClientType::Write,
-                        Box::new(PostgresPoolManager {
-                            db_pool: Arc::new(db_pool),
-                        }),
-                    );
-                }
-            }
-        }
-
         if pools.is_empty() {
-            None
+            Err(anyhow!(
+                "could not create any pool manager for kind: {:?}",
+                &DatabaseKind::Postgres
+            ))
         } else {
-            Some(pools)
+            Ok(pools)
         }
     }
 }
@@ -86,7 +77,8 @@ pub async fn db_connect(config: &BaseConfig) -> anyhow::Result<Pool<Postgres>> {
         }
         Err(e) => {
             // TODO: Use i18n
-            panic!("could not connect to postgres: {:#?}", &e);
+            log::error!("could not connect to postgres: {:#?}", &e);
+            Err(anyhow!(e))
         }
     }
 }

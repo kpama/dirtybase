@@ -37,6 +37,7 @@ pub trait ExtensionSetup: Send + Sync {
         manager
     }
 
+    // TODO: Make the returned type an option
     fn migrations(&self) -> ExtensionMigrations {
         Vec::new()
     }

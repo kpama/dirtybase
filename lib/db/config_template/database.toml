@@ -1,44 +1,36 @@
 default = "sqlite"
 
-# Mysql configuration
-[mysql_write]
-enable = false
-url = "mysql://root:dbpassword@db/dirtybase"
-max = 2
-sticky = true
-sticky_duration = 10
+[clients]
 
-[mysql_read]
-enable = false
-url = "mysql://root:dbpassword@db/dirtybase"
-max = 2
+# Mysql configuration
+[clients.mysql]
+write = { enable = false, kind = "mysql", client_type = "write", url = "mysql://root:dbpassword@db/dirtybase", max = 2, sticky = true, sticky_duration = 10 }
+read = { enable = false, kind = "mysql", client_type = "read", url = "mysql://root:dbpassword@db/dirtybase", max = 2 }
 
 
 # Sqlite configuration
-[sqlite_write]
-enable = true
-url = "sqlite:data/dirtybase.db"
-max = 2
-foreign_key = true
-busy_timeout = 60
-sticky = true
-sticky_duration = 10
-
-[sqlite_read]
-enable = true
-url = "sqlite:data/dirtybase.db"
-max = 2
+[clients.sqlite]
+write = { enable = true, url = "./data/dirtybase.db", kind = "sqlite", client_type = "write", max = 2, foreign_key = true, busy_timeout = 60, sticky = true, sticky_duration = 10 }
+read = { enable = true, kind = "sqlite", client_type = "read", url = "./data/dirtybase.db", max = 2 }
 
 
 # Postgresql configuration
-[postgres_write]
-enable = false
-url = "postgres://root:dbpassword@db/dirtybase"
-max = 5
-sticky = true
-sticky_duration = 10
+[clients.postgres]
+write.enable = false
+write.kind = "postgres"
+write.client_type = "write"
+write.url = "postgres://root:dbpassword@db/dirtybase"
+write.max = 5
+write.sticky = true
+write.sticky_duration = 10
 
-[postgres_read]
-enable = false
-url = "postgres://root:dbpassword@db/dirtybase"
-max = 5
+read.enable = false
+read.kind = "postgres"
+read.client_type = "read"
+read.url = "postgres://root:dbpassword@db/dirtybase"
+read.max = 5
+
+
+[clients.custom1]
+write = { enable = false, url = "", kind = { custom = "custom_client" }, client_type = "write", max = 2, foreign_key = true, busy_timeout = 60, sticky = true, sticky_duration = 10 }
+read = { enable = false, url = "", kind = { custom = "custom_client" }, client_type = "read", max = 2 }

@@ -1,60 +1,56 @@
-mod column_value_builder;
-mod pool_manager;
-mod table_entity;
-
-pub mod base;
-pub mod config;
 pub mod connector;
-pub mod event;
-pub mod event_handler;
-pub mod field_values;
-pub mod migration;
-pub mod query_values;
-pub mod types;
+mod db_dirtybase_entry;
 
-use orsomafo::Dispatchable;
-use std::{
-    collections::HashMap,
-    sync::{OnceLock, RwLock},
+use base::{connection::ConnectionPoolRegisterTrait, schema::DatabaseKind};
+use connection_bus::MakePoolManagerCommand;
+use connector::{
+    mysql::mysql_pool_manager::MySqlPoolManagerRegisterer,
+    postgres::postgres_pool_manager::PostgresPoolManagerRegisterer,
+    sqlite::sqlite_pool_manager::SqlitePoolManagerRegisterer,
 };
+pub use db_dirtybase_entry::*;
+pub use dirtybase_contract::db::*;
 
-use base::schema::DatabaseKind;
-use config::DirtybaseDbConfig;
-use event::SchemeWroteEvent;
-use event_handler::HandleSchemaWroteEvent;
+use busstop::DispatchableQuery;
 
 pub use anyhow;
-pub use column_value_builder::*;
+// pub use column_value_builder::*;
 pub use dirtybase_config;
-pub use pool_manager::*;
-pub use table_entity::*;
-
-pub(crate) static LAST_WRITE_TS: OnceLock<RwLock<HashMap<DatabaseKind, i64>>> = OnceLock::new();
 
 pub const USER_TABLE: &str = "core_user";
 
-pub async fn setup(config: &dirtybase_config::DirtyConfig) -> ConnectionPoolManager {
-    let base_config = DirtybaseDbConfig::new(config).await;
-
-    LAST_WRITE_TS.get_or_init(|| RwLock::new(HashMap::new()));
-
-    // event handlers
-    _ = SchemeWroteEvent::subscribe::<HandleSchemaWroteEvent>().await;
-
-    setup_using(base_config).await
-}
-
-pub async fn setup_using(config: DirtybaseDbConfig) -> ConnectionPoolManager {
-    
-
-    // busybody::helpers::service_container().set_type(pool_manager.clone());
-
-    ConnectionPoolManager::new(config).await
-}
-
-#[busybody::async_trait]
-impl busybody::Injectable for ConnectionPoolManager {
-    async fn inject(container: &busybody::ServiceContainer) -> Self {
-        container.get_type().unwrap()
-    }
+pub async fn setup_handlers() {
+    MakePoolManagerCommand::query_middleware(|dispatched, next| {
+        Box::pin(async {
+            if let Some(query) = dispatched.the_query::<MakePoolManagerCommand>() {
+                match query.kind() {
+                    DatabaseKind::Mysql => {
+                        let mysql_pool_registerer = MySqlPoolManagerRegisterer;
+                        let r = mysql_pool_registerer.register(query.config_set_ref()).await;
+                        query.set_result(&dispatched, r);
+                        return dispatched;
+                    }
+                    DatabaseKind::Postgres => {
+                        let postgres_pool_registerer = PostgresPoolManagerRegisterer;
+                        let r = postgres_pool_registerer
+                            .register(query.config_set_ref())
+                            .await;
+                        query.set_result(&dispatched, r);
+                        return dispatched;
+                    }
+                    DatabaseKind::Sqlite => {
+                        let sqlite_pool_registerer = SqlitePoolManagerRegisterer;
+                        let r = sqlite_pool_registerer
+                            .register(query.config_set_ref())
+                            .await;
+                        query.set_result(&dispatched, r);
+                        return dispatched;
+                    }
+                    _ => return next.call(dispatched).await,
+                }
+            }
+            next.call(dispatched).await
+        })
+    })
+    .await;
 }

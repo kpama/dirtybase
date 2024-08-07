@@ -1,4 +1,6 @@
+use anyhow::anyhow;
 use async_trait::async_trait;
+use dirtybase_contract::db::config::ConfigSet;
 use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
 use std::{collections::HashMap, sync::Arc};
 
@@ -7,7 +9,7 @@ use crate::{
         connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait},
         schema::{ClientType, DatabaseKind, SchemaManagerTrait},
     },
-    config::{BaseConfig, DirtybaseDbConfig},
+    config::BaseConfig,
 };
 
 use super::mysql_schema_manager::MySqlSchemaManager;
@@ -18,42 +20,32 @@ pub struct MySqlPoolManagerRegisterer;
 impl ConnectionPoolRegisterTrait for MySqlPoolManagerRegisterer {
     async fn register(
         &self,
-        config: &DirtybaseDbConfig,
-    ) -> Option<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>> {
+        config_set: &ConfigSet,
+    ) -> Result<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>, anyhow::Error> {
         let mut pools: HashMap<ClientType, Box<dyn ConnectionPoolTrait>> = HashMap::new();
-
-        // read pool
-        if let Some(read_config) = &config.mysql_read {
-            if read_config.enable {
-                if let Ok(db_pool) = db_connect(read_config).await {
-                    pools.insert(
-                        ClientType::Read,
-                        Box::new(MysqlPoolManager {
-                            db_pool: Arc::new(db_pool),
-                        }),
-                    );
-                }
-            }
-        }
-
-        // write pool
-        if let Some(write_config) = &config.mysql_write {
-            if write_config.enable {
-                if let Ok(db_pool) = db_connect(write_config).await {
-                    pools.insert(
-                        ClientType::Write,
-                        Box::new(MysqlPoolManager {
-                            db_pool: Arc::new(db_pool),
-                        }),
-                    );
+        for (client_type, config) in config_set.iter() {
+            if config.kind() == DatabaseKind::Mysql {
+                match db_connect(config).await {
+                    Ok(db_pool) => {
+                        pools.insert(
+                            client_type.clone(),
+                            Box::new(MysqlPoolManager {
+                                db_pool: Arc::new(db_pool),
+                            }),
+                        );
+                    }
+                    Err(e) => return Err(e),
                 }
             }
         }
 
         if pools.is_empty() {
-            return None;
+            Err(anyhow!(
+                "could not create any pool manager for kind: {:?}",
+                &DatabaseKind::Mysql
+            ))
         } else {
-            return Some(pools);
+            Ok(pools)
         }
     }
 }
@@ -86,7 +78,8 @@ pub async fn db_connect(config: &BaseConfig) -> anyhow::Result<Pool<MySql>> {
         }
         Err(e) => {
             // TODO: Use i18n
-            panic!("could not connect to mysql/mariadb: {:?}", e);
+            log::error!("could not connect to mysql/mariadb: {:?}", e);
+            Err(anyhow!(e))
         }
     }
 }

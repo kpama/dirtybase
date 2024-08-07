@@ -7,9 +7,9 @@ edition = "2021"
 
 [dependencies]
 clap = { workspace = true, features = ["unstable-doc"] }
-dirtybase_db = { path = "../db" }
+# dirtybase_db = { path = "../db" }
 dirtybase_config = { path = "../config" }
-dirtybase_db_macro = { path = "../db_macro" }
+# dirtybase_db_macro = { path = "../db_macro" }
 async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -20,11 +20,12 @@ ulid = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }
 log = { workspace = true }
-bcrypt = { workspace = true }
+# bcrypt = { workspace = true }
 tokio = { workspace = true, features = ["sync"] }
 tokio-stream = { workspace = true }
 axum = { workspace = true }
 named_routes_axum = { workspace = true }
 futures = { workspace = true }
 futures-util = { workspace = true }
-sha2 = { workspace = true }
+# sha2 = { workspace = true }
+Inflector = { workspace = true }

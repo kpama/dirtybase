@@ -5,9 +5,11 @@ use crate::{
         connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait},
         schema::{ClientType, DatabaseKind},
     },
-    config::{BaseConfig, DirtybaseDbConfig},
+    config::BaseConfig,
 };
+use anyhow::anyhow;
 use async_trait::async_trait;
+use dirtybase_contract::db::config::ConfigSet;
 use sqlx::{
     sqlite::SqliteJournalMode,
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
@@ -22,42 +24,32 @@ pub struct SqlitePoolManagerRegisterer;
 impl ConnectionPoolRegisterTrait for SqlitePoolManagerRegisterer {
     async fn register(
         &self,
-        config: &DirtybaseDbConfig,
-    ) -> Option<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>> {
+        config_set: &ConfigSet,
+    ) -> Result<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>, anyhow::Error> {
         let mut pools: HashMap<ClientType, Box<dyn ConnectionPoolTrait>> = HashMap::new();
-
-        // read pool
-        if let Some(read_config) = &config.sqlite_read {
-            if read_config.enable {
-                if let Ok(db_pool) = db_connect(read_config, false).await {
-                    pools.insert(
-                        ClientType::Read,
-                        Box::new(SqlitePoolManager {
-                            db_pool: Arc::new(db_pool),
-                        }),
-                    );
-                }
-            }
-        }
-
-        // write pool
-        if let Some(write_config) = &config.sqlite_write {
-            if write_config.enable {
-                if let Ok(db_pool) = db_connect(write_config, true).await {
-                    pools.insert(
-                        ClientType::Write,
-                        Box::new(SqlitePoolManager {
-                            db_pool: Arc::new(db_pool),
-                        }),
-                    );
+        for (client_type, config) in config_set.iter() {
+            if config.kind() == DatabaseKind::Sqlite {
+                match db_connect(config).await {
+                    Ok(db_pool) => {
+                        pools.insert(
+                            client_type.clone(),
+                            Box::new(SqlitePoolManager {
+                                db_pool: Arc::new(db_pool),
+                            }),
+                        );
+                    }
+                    Err(e) => return Err(e),
                 }
             }
         }
 
         if pools.is_empty() {
-            None
+            Err(anyhow!(
+                "could not create any pool manager for kind: {:?}",
+                &DatabaseKind::Sqlite
+            ))
         } else {
-            Some(pools)
+            Ok(pools)
         }
     }
 }
@@ -77,13 +69,13 @@ impl ConnectionPoolTrait for SqlitePoolManager {
     }
 }
 
-pub async fn db_connect(config: &BaseConfig, for_write: bool) -> anyhow::Result<Pool<Sqlite>> {
+pub async fn db_connect(config: &BaseConfig) -> anyhow::Result<Pool<Sqlite>> {
     let mut option = SqliteConnectOptions::from_str(&config.url)
         .unwrap()
         .foreign_keys(true)
         .create_if_missing(true);
 
-    if for_write {
+    if config.client_type == ClientType::Write {
         option = option
             .journal_mode(SqliteJournalMode::Wal)
             .busy_timeout(Duration::from_secs(config.busy_timeout.unwrap_or(5)));
@@ -102,7 +94,8 @@ pub async fn db_connect(config: &BaseConfig, for_write: bool) -> anyhow::Result<
         }
         Err(e) => {
             // TODO: Use i18n
-            panic!("could not connect to the database: {:#?}", &e);
+            log::error!("could not connect to the database: {:#?}", &e);
+            Err(anyhow!(e))
         }
     }
 }

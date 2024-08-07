@@ -93,7 +93,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
 
     async fn drop_table(&self, name: &str) -> bool {
         if self.has_table(name).await {
-            let query = QueryBuilder::new(vec![name.to_string()], QueryAction::DropTable);
+            let query = QueryBuilder::new(name, QueryAction::DropTable);
             self.execute(query).await;
             return true;
         }
@@ -144,9 +144,10 @@ impl SchemaManagerTrait for SqliteSchemaManager {
 
     async fn fetch_one(
         &self,
-        query_builder: &QueryBuilder,
+        query_builder: &QueryBuilder, // TODO: Take ownership of the query builder
     ) -> Result<Option<ColumnAndValue>, anyhow::Error> {
         let mut params = Vec::new();
+
         let statement = self.build_query(query_builder, &mut params);
 
         let mut query = sqlx::query(&statement);
@@ -261,7 +262,7 @@ impl SqliteSchemaManager {
                 sql = format!(
                     "INSERT {} INTO {} ",
                     if *do_soft_insert { "OR IGNORE" } else { "" },
-                    query.tables().join(",")
+                    query.table()
                 );
                 if !rows.is_empty() {
                     let keys = rows
@@ -300,7 +301,7 @@ impl SqliteSchemaManager {
                         params.push(self.field_value_to_string(entry.1));
                     }
                 }
-                sql = format!("UPDATE `{}` SET ", query.tables().join(","));
+                sql = format!("UPDATE `{}` SET ", query.table());
                 for entry in columns.iter().enumerate() {
                     if entry.0 > 0 {
                         sql = format!("{}, `{}` = ? ", sql, *entry.1);
@@ -312,29 +313,25 @@ impl SqliteSchemaManager {
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
             }
             QueryAction::Delete => {
-                sql = format!("DELETE {0} FROM {0} ", query.tables().join(","));
+                sql = format!("DELETE {0} FROM {0} ", query.table());
                 // joins
                 sql = format!("{} {}", sql, self.build_join(&query, &mut params));
                 // where
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
             }
             QueryAction::DropTable => {
-                sql = query
-                    .tables()
-                    .iter()
-                    .map(|name| format!("DROP TABLE {};", name))
-                    .fold(String::new(), |sum, sub| format!("{} {}", sum, sub));
+                sql = format!("DROP TABLE {};", query.table());
             }
             QueryAction::RenameColumn { old, new } => {
-                let table = query.tables().first().unwrap();
+                let table = query.table();
                 sql = format!("ALTER TABLE {} RENAME COLUMN {} TO {}", table, old, new);
             }
             QueryAction::RenameTable(new) => {
-                let table = query.tables().first().unwrap();
+                let table = query.table();
                 sql = format!("ALTER TABLE {} RENAME TO {}", table, new);
             }
             QueryAction::DropColumn(column) => {
-                let table = query.tables().first().unwrap();
+                let table = query.table();
                 sql = format!("ALTER TABLE {} DROP {}", table, column);
             }
             _ => {
@@ -505,10 +502,10 @@ impl SqliteSchemaManager {
             ColumnType::Datetime => the_type.push_str("datetime"),
             ColumnType::Timestamp => the_type.push_str("timestamp"),
             // ColumnType::File() shouldn't be here
-            // ColumnType::Float not sure
+            ColumnType::Float => the_type.push_str("double"),
             ColumnType::Integer => the_type.push_str("INTEGER"),
             ColumnType::Json => the_type.push_str("json"),
-            ColumnType::Number => the_type.push_str("double"),
+            ColumnType::Number | ColumnType::Float => the_type.push_str("double"),
             // ColumnType::Relation { relation_type, table_name }
             // ColumnType::Select()
             ColumnType::String(length) => {
@@ -577,15 +574,11 @@ impl SqliteSchemaManager {
         let mut sql = "SELECT".to_owned();
 
         // fields
-        if let QueryAction::Query {
-            columns,
-            select_all,
-        } = query.action()
-        {
-            if *select_all {
-                sql = format!("{} *", sql) // Select all columns by default
-            } else if let Some(fields) = columns {
+        if let QueryAction::Query { columns } = query.action() {
+            if let Some(fields) = columns {
                 sql = format!("{} {}", sql, fields.join(","));
+            } else {
+                sql = format!("{} *", sql) // Select all columns by default
             }
         }
 
@@ -602,13 +595,27 @@ impl SqliteSchemaManager {
         }
 
         // from
-        sql = format!("{} FROM {}", sql, query.tables().join(","));
+        sql = format!("{} FROM {}", sql, query.table());
 
         // joins
         sql = format!("{} {}", sql, self.build_join(query, params));
 
         // wheres
         sql = format!("{} {}", sql, self.build_where_clauses(query, params));
+
+        // group by
+
+        // order by
+        if let Some(order) = self.build_order_by(query) {
+            sql = format!("{} {}", sql, order);
+        }
+
+        // limit
+        if let Some(limit) = query.limit_by() {
+            sql = format!("{} {}", sql, limit);
+        }
+
+        // offset
 
         sql
     }
@@ -628,6 +635,10 @@ impl SqliteSchemaManager {
         }
 
         sql
+    }
+
+    fn build_order_by(&self, query: &QueryBuilder) -> Option<String> {
+        query.order_by().map(|order| order.to_string())
     }
 
     fn build_where_clauses(&self, query: &QueryBuilder, params: &mut Vec<String>) -> String {
@@ -719,7 +730,7 @@ impl SqliteSchemaManager {
                         this_row.insert(name, 0_i64.into());
                     }
                 }
-                "DOUBLE" | "FLOAT" => {
+                "REAL" | "DOUBLE" | "FLOAT" => {
                     let v = row.try_get::<f64, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, v.into());
