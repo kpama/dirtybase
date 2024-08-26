@@ -25,7 +25,7 @@ impl SysAdminRepository {
     pub async fn find_by_user_id(&self, id: &str) -> Result<Option<SysAdminEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(SYS_ADMIN_TABLE, |q| {
-                q.select_all().eq(SYS_ADMIN_TABLE_USER_ID_FIELD, id);
+                q.eq(SYS_ADMIN_TABLE_USER_ID_FIELD, id);
             })
             .fetch_one_to()
             .await
@@ -50,14 +50,5 @@ impl SysAdminRepository {
             })
             .await;
         Ok(true)
-    }
-}
-
-#[busybody::async_trait]
-impl busybody::Injectable for SysAdminRepository {
-    async fn inject(ci: &busybody::ServiceContainer) -> Self {
-        let app = ci.get::<App>().unwrap();
-
-        Self::new(app.schema_manger())
     }
 }

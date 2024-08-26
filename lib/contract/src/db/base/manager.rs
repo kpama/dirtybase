@@ -11,7 +11,7 @@ use crate::db::{
 use super::{
     query::{EntityQueryBuilder, QueryBuilder},
     schema::{DatabaseKind, SchemaManagerTrait, SchemaWrapper},
-    table::BaseTable,
+    table::TableBlueprint,
 };
 use orsomafo::Dispatchable;
 
@@ -104,7 +104,11 @@ impl Manager {
     }
 
     // Create a new table
-    pub async fn create_table_schema(&self, name: &str, callback: impl FnOnce(&mut BaseTable)) {
+    pub async fn create_table_schema(
+        &self,
+        name: &str,
+        callback: impl FnOnce(&mut TableBlueprint),
+    ) {
         if !self.has_table(name).await {
             let mut table = self.write_schema_manager().fetch_table_for_update(name);
             table.set_is_new(true);
@@ -116,7 +120,11 @@ impl Manager {
     }
 
     // Get an existing table for updating
-    pub async fn update_table_schema(&self, name: &str, callback: impl FnOnce(&mut BaseTable)) {
+    pub async fn update_table_schema(
+        &self,
+        name: &str,
+        callback: impl FnOnce(&mut TableBlueprint),
+    ) {
         if self.has_table(name).await {
             let mut table = self.write_schema_manager().fetch_table_for_update(name);
             table.set_is_new(false);

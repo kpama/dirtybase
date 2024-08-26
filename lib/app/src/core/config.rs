@@ -1,5 +1,5 @@
 use dirtybase_config::DirtyConfig;
-use dirtybase_contract::db::entity::user::hash_password;
+use dirtybase_user::entity::user::hash_password;
 
 use super::App;
 

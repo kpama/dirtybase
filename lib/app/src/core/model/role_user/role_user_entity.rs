@@ -1,9 +1,10 @@
 use crate::core::model::role::RoleEntity;
-use dirtybase_contract::db::{entity::user::UserEntity, macros::DirtyTable};
 use dirtybase_contract::db::{
     types::{DateTimeField, UlidField},
     TableEntityTrait,
 };
+use dirtybase_db_macro::DirtyTable;
+use dirtybase_user::entity::user::UserEntity;
 
 #[derive(Debug, Clone, Default, DirtyTable)]
 #[dirty(table = "core_role_user")]

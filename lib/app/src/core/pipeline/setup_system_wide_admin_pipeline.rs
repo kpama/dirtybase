@@ -9,7 +9,7 @@ use crate::core::{
     App, Config,
 };
 use busybody::Service;
-use dirtybase_contract::db::entity::user::UserEntity;
+use dirtybase_user::entity::user::UserEntity;
 use fama::PipeContent;
 
 #[derive(Clone, Default)]
@@ -36,10 +36,10 @@ impl fama::PipelineBuilderTrait for NewSysAdminData {
             .register(|pipeline| {
                 Box::pin(async {
                     pipeline
-                        .through_fn(find_or_create_admin_user)
-                        .await
-                        .through_fn(add_user_to_system_wide_admin)
-                        .await
+                        // .through_fn(find_or_create_admin_user)
+                        // .await
+                        // .through_fn(add_user_to_system_wide_admin)
+                        // .await
                         .through_fn(create_default_company)
                         .await
                         .through_fn(create_default_app_add_user)

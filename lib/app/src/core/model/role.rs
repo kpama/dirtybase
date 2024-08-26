@@ -1,5 +1,6 @@
-use dirtybase_contract::db::{base::manager::Manager, entity::user::UserEntity};
+use dirtybase_contract::db::base::manager::Manager;
 use dirtybase_db::TableEntityTrait;
+use dirtybase_user::entity::user::UserEntity;
 
 use super::app_entity::AppEntity;
 

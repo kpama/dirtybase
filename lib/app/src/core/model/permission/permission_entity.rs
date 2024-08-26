@@ -1,9 +1,9 @@
 use std::fmt::{Debug, Display};
 
-use dirtybase_contract::db::entity::user::UserEntity;
-use dirtybase_contract::db::macros::DirtyTable;
+use dirtybase_db_macro::DirtyTable;
+use dirtybase_user::entity::user::UserEntity;
 
-use dirtybase_db::types::{DateTimeField, InternalIdField, StringField, UlidField};
+use dirtybase_contract::db::types::{DateTimeField, InternalIdField, StringField, UlidField};
 
 use crate::core::model::company::CompanyEntity;
 

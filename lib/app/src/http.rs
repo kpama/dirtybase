@@ -6,6 +6,7 @@ use std::{env, sync::Arc};
 
 use axum::Router;
 use dirtybase_contract::http::{MiddlewareManager, RouteCollection, RouteType, RouterManager};
+use middleware::authenticate_middleware;
 use named_routes_axum::RouterWrapper;
 
 use crate::{
@@ -98,6 +99,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
     // axum requires that at least a route exist before adding a middleware
     if has_routes {
         app = app.middleware(my_middleware_test);
+        app = app.middleware(authenticate_middleware);
     }
 
     let listener =

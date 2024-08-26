@@ -24,7 +24,6 @@ impl PermissionRepository {
     ) -> Result<Option<PermissionEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(PermissionEntity::table_name(), |query| {
-                query.select_all();
                 query.eq(PermissionEntity::col_name_for_name(), name);
 
                 if with_trashed {
@@ -42,7 +41,6 @@ impl PermissionRepository {
     ) -> Result<Option<PermissionEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(PermissionEntity::table_name(), |query| {
-                query.select_all();
                 query.eq(PermissionEntity::col_name_for_id(), id);
 
                 if with_trashed {
@@ -60,9 +58,7 @@ impl PermissionRepository {
     ) -> Result<Option<Vec<PermissionEntity>>, anyhow::Error> {
         self.manager()
             .select_from_table(PermissionEntity::table_name(), |query| {
-                query
-                    .select_all()
-                    .eq(PermissionEntity::col_name_for_core_company_id(), company_id);
+                query.eq(PermissionEntity::col_name_for_core_company_id(), company_id);
 
                 if with_trashed {
                     query.with_trash();

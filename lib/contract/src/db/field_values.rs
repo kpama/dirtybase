@@ -7,34 +7,23 @@ mod insert_value;
 pub mod to_raw_values;
 pub use insert_value::InsertValueBuilder;
 
+use super::types::ColumnAndValue;
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum FieldValue {
-    #[serde(rename(serialize = "null"))]
     Null,
-    #[serde(rename(serialize = "not_set"))]
     NotSet,
-    #[serde(rename(serialize = "u64"))]
     U64(u64),
-    #[serde(rename(serialize = "i64"))]
     I64(i64),
-    #[serde(rename(serialize = "f64"))]
     F64(f64),
-    #[serde(rename(serialize = "string"))]
     String(String),
-    #[serde(rename(serialize = "boolean"))]
     Boolean(bool),
-    #[serde(rename(serialize = "object"))]
     Object(HashMap<String, FieldValue>),
-    #[serde(rename(serialize = "array"))]
     Array(Vec<FieldValue>),
-    #[serde(rename(serialize = "datetime"))]
     DateTime(chrono::DateTime<chrono::Utc>),
-    #[serde(rename(serialize = "timestamp"))]
     Timestamp(chrono::DateTime<chrono::Utc>),
-    #[serde(rename(serialize = "date"))]
     Date(chrono::NaiveDate),
-    #[serde(rename(serialize = "time"))]
     Time(chrono::NaiveTime),
 }
 
@@ -200,5 +189,37 @@ impl<'a> From<HashMap<&'a str, FieldValue>> for FieldValue {
 impl<A: Into<FieldValue>> FromIterator<A> for FieldValue {
     fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
         Self::Array(iter.into_iter().map(|x| x.into()).collect())
+    }
+}
+
+impl From<&FieldValue> for ColumnAndValue {
+    fn from(value: &FieldValue) -> Self {
+        match value {
+            FieldValue::Object(obj) => obj.clone(),
+            FieldValue::String(inner) => {
+                if let Ok(kv) = serde_json::from_str::<HashMap<String, FieldValue>>(inner) {
+                    kv
+                } else {
+                    HashMap::new()
+                }
+            }
+            _ => HashMap::new(),
+        }
+    }
+}
+
+impl From<FieldValue> for ColumnAndValue {
+    fn from(value: FieldValue) -> Self {
+        match value {
+            FieldValue::Object(obj) => obj,
+            FieldValue::String(inner) => {
+                if let Ok(kv) = serde_json::from_str::<HashMap<String, FieldValue>>(&inner) {
+                    kv
+                } else {
+                    HashMap::new()
+                }
+            }
+            _ => HashMap::new(),
+        }
     }
 }

@@ -1,9 +1,7 @@
-use dirtybase_contract::db::{
-    macros::DirtyTable,
-    types::{DateTimeField, InternalIdField, NumberField, StringField},
-};
+use dirtybase_contract::db::types::{DateTimeField, InternalIdField, NumberField, StringField};
+use dirtybase_db_macro::DirtyTable;
 
-#[derive(Debug, Default, DirtyTable)]
+#[derive(Debug, Default, DirtyTable, Clone)]
 #[dirty(table = "core_migration", id = "id")]
 pub struct MigrationEntity {
     id: InternalIdField,

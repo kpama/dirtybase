@@ -1,7 +1,9 @@
 use crate::core::model::company::CompanyEntity;
-use dirtybase_contract::db::macros::DirtyTable;
-use dirtybase_db::base::helper::generate_ulid;
-use dirtybase_db::types::{BooleanField, DateTimeField, InternalIdField, StringField, UlidField};
+use dirtybase_contract::db::base::helper::generate_ulid;
+use dirtybase_contract::db::types::{
+    BooleanField, DateTimeField, InternalIdField, StringField, UlidField,
+};
+use dirtybase_db_macro::DirtyTable;
 
 #[derive(Debug, Clone, Default, DirtyTable, serde::Deserialize, serde::Serialize)]
 #[dirty(table = "core_app", id = "id")]

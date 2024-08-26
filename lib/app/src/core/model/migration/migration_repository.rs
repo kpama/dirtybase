@@ -37,9 +37,7 @@ impl MigrationRepository {
     pub async fn find_by_name(&self, name: &str) -> Result<Option<MigrationEntity>, anyhow::Error> {
         self.manager
             .select_from_table(MigrationEntity::table_name(), |query| {
-                query
-                    .select_all()
-                    .eq(MigrationEntity::col_name_for_name(), name);
+                query.eq(MigrationEntity::col_name_for_name(), name);
             })
             .fetch_one_to()
             .await

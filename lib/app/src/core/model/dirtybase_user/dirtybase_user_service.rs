@@ -15,7 +15,7 @@ use super::{
 use anyhow::anyhow;
 use busybody::helpers::provide;
 use dirtybase_cache::CacheManager;
-use dirtybase_contract::db::entity::user::{
+use dirtybase_user::entity::user::{
     verify_password, UserEntity, UserRepository, UserService, UserStatus,
 };
 
@@ -100,6 +100,7 @@ impl DirtybaseUserService {
         mut user: DirtybaseUserEntity,
         password: &str,
     ) -> Result<LoggedInUser, AuthenticationErrorStatus> {
+        dbg!("the user: {:#?}", &user);
         if verify_password(password, user.user.password.as_ref().unwrap()) {
             let mut out_dto: LoggedInUser = user.clone().into();
 

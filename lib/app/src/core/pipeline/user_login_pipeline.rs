@@ -71,6 +71,7 @@ async fn inject_user_email(
             .get_user_by_username(payload.username.as_ref().unwrap(), true)
             .await
         {
+            println!("user email -----> : {:#?}", &user.email);
             payload.email = user.email;
         }
     }

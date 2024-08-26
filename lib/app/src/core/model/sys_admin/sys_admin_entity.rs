@@ -1,5 +1,5 @@
-use dirtybase_contract::db::macros::DirtyTable;
 use dirtybase_contract::db::types::UlidField;
+use dirtybase_db_macro::DirtyTable;
 
 #[derive(Debug, Clone, DirtyTable)]
 #[dirty(table = "core_sys_admin")]

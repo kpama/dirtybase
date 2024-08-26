@@ -43,12 +43,3 @@ impl SysAdminService {
         self.sys_admin_repo.create(sys_admin).await
     }
 }
-
-#[busybody::async_trait]
-impl busybody::Injectable for SysAdminService {
-    async fn inject(ci: &busybody::ServiceContainer) -> Self {
-        let repo = ci.provide::<SysAdminRepository>().await;
-
-        Self::new(repo)
-    }
-}

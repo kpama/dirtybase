@@ -13,9 +13,10 @@ use super::model::{
 };
 
 use dirtybase_contract::db::{
-    base::manager::Manager, entity::user::setup_users_table, entity::user::UserEntity,
+    base::manager::Manager,
+    TableEntityTrait, //  entity::user::setup_users_table, entity::user::UserEntity,
 };
-use dirtybase_db::TableEntityTrait;
+use dirtybase_user::entity::user::{setup_users_table, UserEntity};
 
 pub const APPLICATION_TABLE: &str = "core_app";
 

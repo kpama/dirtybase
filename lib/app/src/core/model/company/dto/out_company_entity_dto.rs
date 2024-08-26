@@ -1,4 +1,4 @@
-use dirtybase_contract::db::macros::DirtyTable;
+use dirtybase_db_macro::DirtyTable;
 
 use crate::core::model::company::CompanyEntity;
 

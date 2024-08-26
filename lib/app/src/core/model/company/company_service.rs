@@ -1,5 +1,6 @@
 use anyhow::anyhow;
-use dirtybase_contract::db::{base::helper::generate_ulid, entity::user::UserEntity};
+use dirtybase_contract::db::base::helper::generate_ulid;
+use dirtybase_user::entity::user::UserEntity;
 
 use super::{CompanyEntity, CompanyRepository};
 

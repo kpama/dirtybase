@@ -1,7 +1,7 @@
 use super::{AppEntity, AppRepository};
 use anyhow::anyhow;
-use dirtybase_contract::db::entity::user::UserEntity;
-use dirtybase_db::base::helper::generate_ulid;
+use dirtybase_contract::db::base::helper::generate_ulid;
+use dirtybase_user::entity::user::UserEntity;
 
 pub struct AppEntityService {
     app_repo: AppRepository,

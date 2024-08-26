@@ -17,7 +17,7 @@ impl<T: TableEntityTrait> TableRepo<T> {
         }
     }
 
-    pub(crate) async fn get(&self) -> Result<Option<Vec<T>>, dirtybase_db::anyhow::Error> {
+    pub(crate) async fn get(&self) -> Result<Option<Vec<T>>, ::anyhow::Error> {
         self.manager
             .select_from_table(&self.table, |q| {})
             .fetch_all_to()

@@ -23,7 +23,7 @@ use base::{
 pub use column_value_builder::*;
 pub use table_entity::*;
 
-pub const USER_TABLE: &str = "core_user";
+pub const USER_TABLE: &str = "users";
 
 pub type PoolManagerSet = HashMap<ClientType, Box<dyn ConnectionPoolTrait>>;
 

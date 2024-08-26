@@ -1,5 +1,5 @@
-use dirtybase_contract::db::macros::DirtyTable;
 use dirtybase_contract::db::types::{DateTimeField, StringField};
+use dirtybase_db_macro::DirtyTable;
 
 #[derive(Debug, Clone, Default, DirtyTable, serde::Deserialize, serde::Serialize)]
 #[dirty(table = "core_app_schema", id = "id")]

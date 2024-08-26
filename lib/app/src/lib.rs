@@ -4,6 +4,7 @@ pub mod cli;
 pub mod core;
 pub mod dirtybase_entry;
 pub mod http;
+
 pub use axum;
 pub use busybody;
 pub use dirtybase_config as config;
@@ -32,10 +33,12 @@ pub async fn setup() -> anyhow::Result<AppService> {
 /// ```
 ///
 pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
-    let pool_manager = dirtybase_db::setup(config.dirty_config()).await;
     let cache_manager = dirtybase_cache::setup(config.dirty_config()).await;
 
-    let app = core::App::new(config, pool_manager, cache_manager).await?;
+    let app = core::App::new(config, cache_manager).await?;
+
+    // extensions
+    app.register(dirtybase_db::Extension).await;
     app.register(dirtybase_entry::Extension).await;
 
     Ok(app)

@@ -21,7 +21,7 @@ pub type TimestampField = Option<DateTime<Utc>>;
 pub type BooleanField = Option<bool>;
 
 pub trait IntoColumnAndValue {
-    fn into_column_value(self) -> ColumnAndValue;
+    fn into_column_value(&self) -> ColumnAndValue;
 }
 
 pub trait FromColumnAndValue {
@@ -124,7 +124,7 @@ fn build_structure(
 
 // Allows the user to pass a hashmap if they want to
 impl IntoColumnAndValue for ColumnAndValue {
-    fn into_column_value(self) -> ColumnAndValue {
-        self
+    fn into_column_value(&self) -> ColumnAndValue {
+        self.clone()
     }
 }

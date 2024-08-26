@@ -1,13 +1,12 @@
-use dirtybase_contract::db::{
-    base::{helper::to_fk_column, manager::Manager},
-    entity::user::UserEntity,
-};
+use dirtybase_contract::db::base::{helper::to_fk_column, manager::Manager};
+
+use dirtybase_user::entity::user::UserEntity;
 
 mod role_user_entity;
 mod role_user_repository;
 mod role_user_service;
 
-use dirtybase_db::TableEntityTrait;
+use dirtybase_contract::db::TableEntityTrait;
 pub use role_user_entity::RoleUserEntity;
 pub use role_user_repository::RoleUserRepository;
 pub use role_user_service::RoleUserService;

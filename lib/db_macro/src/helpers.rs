@@ -83,6 +83,15 @@ pub(crate) fn attribute_to_attribute_type(
     let mut include = true;
     if let Some(key) = walker.next() {
         match key.to_string().as_str() {
+            "rel" => {
+                if let Some(tree) = walker.next() {
+                    include = process_relation_attribute(
+                        field,
+                        dirty_attribute,
+                        tree.into_token_stream(),
+                    );
+                }
+            }
             "col" => {
                 _ = walker.next();
                 dirty_attribute.name = walker.next().unwrap().to_string().replace('\"', "");
@@ -107,6 +116,12 @@ pub(crate) fn attribute_to_attribute_type(
             }
             "skip" => {
                 include = false;
+            }
+            "flatten" => {
+                dirty_attribute.flatten = true;
+            },
+            "embeded" => {
+                dirty_attribute.embeded = true;
             }
             _ => (),
         };
@@ -180,6 +195,15 @@ pub(crate) fn names_of_from_cv_handlers(
             let column = item.1.name.clone();
             let handler = format_ident!("{}", &item.1.from_handler);
             let field_name = item.0.clone();
+
+
+            if item.1.flatten {
+                let the_type = format_ident!("{}", &item.1.the_type);
+                return quote! {
+                    #struct_field:#the_type::from_column_value(cv.clone()) 
+                }
+            }
+
             if *item.0 == item.1.name {
                 quote! {
                     #struct_field: Self::#handler(cv.get(#column))
@@ -236,28 +260,28 @@ pub(crate) fn build_from_handlers(
                     if item.1.optional {
                         if item.1.is_vec {
                         quote! {
-                            pub fn #fn_name <'a>(field: Option<&'a dirtybase_db::field_values::FieldValue>) -> Option<Vec<#returns>> {
-                                dirtybase_db::field_values::FieldValue::from_ref_option_into_option(field)
+                            pub fn #fn_name <'a>(field: Option<&'a ::dirtybase_contract::db::field_values::FieldValue>) -> Option<Vec<#returns>> {
+                                ::dirtybase_contract::db::field_values::FieldValue::from_ref_option_into_option(field)
                             }
                         }
                         } else {
-
-                        quote! {
-                            pub fn #fn_name <'a>(field: Option<&'a dirtybase_db::field_values::FieldValue>) -> Option<#returns> {
-                                dirtybase_db::field_values::FieldValue::from_ref_option_into_option(field)
+                            quote! {
+                                pub fn #fn_name <'a>(field: Option<&'a ::dirtybase_contract::db::field_values::FieldValue>) -> Option<#returns> {
+                                ::dirtybase_contract::db::field_values::FieldValue::from_ref_option_into_option(field)
+                                }
                             }
-                        }
                         }
                     } else if item.1.is_vec {
                             quote! {
-                                pub fn #fn_name <'a> (field: Option<&'a dirtybase_db::field_values::FieldValue>) -> Vec<#returns> {
-                                    dirtybase_db::field_values::FieldValue::from_ref_option_into(field)
+                                pub fn #fn_name <'a> (field: Option<&'a ::dirtybase_contract::db::field_values::FieldValue>) -> Vec<#returns> {
+                                    ::dirtybase_contract::db::field_values::FieldValue::from_ref_option_into(field)
                                 }
                             }
-                        } else {
+                        } 
+                        else {
                             quote! {
-                                pub fn #fn_name <'a> (field: Option<&'a dirtybase_db::field_values::FieldValue>) -> #returns {
-                                    dirtybase_db::field_values::FieldValue::from_ref_option_into(field)
+                                pub fn #fn_name <'a> (field: Option<&'a ::dirtybase_contract::db::field_values::FieldValue>) -> #returns {
+                                    ::dirtybase_contract::db::field_values::FieldValue::from_ref_option_into(field)
                                 }
                         }
                     });
@@ -281,21 +305,39 @@ pub(crate) fn build_into_handlers(
         }
 
         built.push(if item.1.optional {
-            quote! {
-                    pub fn #fn_name(&self) ->Option<dirtybase_db::field_values::FieldValue> {
+            if item.1.embeded {
+                quote! {
+                    pub fn #fn_name(&self) ->Option<::dirtybase_contract::db::field_values::FieldValue> {
+                        if let Some(value) = &self.#struct_field {
+                            Some(value.into_embedable())
+                        } else {
+                            None
+                        }
+                    }
+                }
+            } else {
+                quote! {
+                    pub fn #fn_name(&self) ->Option<::dirtybase_contract::db::field_values::FieldValue> {
                         if let Some(value) = &self.#struct_field {
                             Some(value.clone().into())
                         } else {
                             None
                         }
                     }
+                }
             }
-        } else {
+        } else if item.1.embeded {
             quote! {
-                    pub fn #fn_name(&self) ->Option<dirtybase_db::field_values::FieldValue> {
+                pub fn #fn_name(&self) ->Option<::dirtybase_contract::db::field_values::FieldValue> {
+                     Some(self.#struct_field.into_embedable())
+                    }
+                }
+            } else {
+                quote! {
+                    pub fn #fn_name(&self) ->Option<::dirtybase_contract::db::field_values::FieldValue> {
                         Some(self.#struct_field.clone().into())
                     }
-            }
+                }
         });
     }
 
@@ -311,6 +353,14 @@ pub(crate) fn build_into_for_calls(
         let method_name = format_ident!("{}", &item.1.into_handler);
 
         if item.1.skip_insert {
+            continue;
+        }
+
+        if item.1.flatten {
+            let prop_name = format_ident!("{}", &item.1.name);
+            built.push(quote! {
+                merge_column_value(::dirtybase_contract::db::types::IntoColumnAndValue::into_column_value(&self.#prop_name))
+            });
             continue;
         }
 

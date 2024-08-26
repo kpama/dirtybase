@@ -31,8 +31,7 @@ impl RoleUserRepository {
     ) -> Result<Option<RoleUserEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(RoleUserEntity::table_name(), |q| {
-                q.select_all()
-                    .eq(RoleUserEntity::col_name_for_core_user_id(), user_id)
+                q.eq(RoleUserEntity::col_name_for_core_user_id(), user_id)
                     .eq(RoleUserEntity::col_name_for_core_app_role_id(), app_id);
                 if !with_trashed {
                     q.is_null(RoleUserEntity::deleted_at_column().unwrap());

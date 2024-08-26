@@ -11,10 +11,11 @@ use crate::core::{
 };
 use dirtybase_contract::db::{
     base::{manager::Manager, query::QueryBuilder},
-    entity::user::UserEntity,
     types::{FromColumnAndValue, IntoColumnAndValue, StructuredColumnAndValue},
 };
+
 use dirtybase_db::{field_values::FieldValue, TableEntityTrait};
+use dirtybase_user::entity::user::UserEntity;
 use std::collections::HashMap;
 
 const USER_JOIN_PREFIX: &str = "user";
@@ -92,7 +93,6 @@ impl DirtybaseUserRepository {
     ) -> Result<Option<DirtybaseUserEntity>, anyhow::Error> {
         self.manager
             .select_from_table(DirtybaseUserEntity::table_name(), |q| {
-                q.select_all();
                 q.eq(UserEntity::foreign_id_column().unwrap(), core_user_id);
             })
             .fetch_one_to()

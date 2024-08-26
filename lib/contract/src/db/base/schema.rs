@@ -1,6 +1,6 @@
 use super::{
     query::{QueryAction, QueryBuilder},
-    table::BaseTable,
+    table::TableBlueprint,
 };
 use crate::db::{
     field_values::FieldValue,
@@ -95,10 +95,10 @@ pub trait RelationalDbTrait: SchemaManagerTrait {
 #[async_trait]
 pub trait SchemaManagerTrait: Send + Sync {
     // update an existing table
-    fn fetch_table_for_update(&self, name: &str) -> BaseTable;
+    fn fetch_table_for_update(&self, name: &str) -> TableBlueprint;
 
     // commit schema changes
-    async fn apply(&self, table: BaseTable);
+    async fn apply(&self, table: TableBlueprint);
 
     async fn execute(&self, query_builder: QueryBuilder);
 

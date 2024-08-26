@@ -1,7 +1,7 @@
 use crate::db::field_values::FieldValue;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct BaseColumn {
+pub struct ColumnBlueprint {
     pub name: String,
     pub after: Option<String>,
     pub column_type: ColumnType,
@@ -80,7 +80,7 @@ pub enum ColumnType {
     Uuid,
 }
 
-impl BaseColumn {
+impl ColumnBlueprint {
     pub fn new(name: &str, column_type: ColumnType) -> Self {
         Self {
             name: name.to_owned(),

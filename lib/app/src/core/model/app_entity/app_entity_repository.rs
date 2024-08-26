@@ -1,13 +1,13 @@
 use super::{AppEntity, APP_TABLE, APP_TABLE_ID_FIELD};
 use crate::core::model::{role::RoleEntity, role_user::RoleUserEntity};
 use crate::core::App;
-use dirtybase_contract::db::entity::user::{UserEntity, USER_TABLE};
 use dirtybase_db::TableEntityTrait;
 use dirtybase_db::{
     base::manager::Manager,
     field_values::FieldValue,
     types::{IntoColumnAndValue, StructuredColumnAndValue},
 };
+use dirtybase_user::entity::user::UserEntity;
 
 pub struct AppRepository {
     manager: Manager,
@@ -31,7 +31,7 @@ impl AppRepository {
         core_user_id: &str,
     ) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
         self.manager()
-            .select_from_table(USER_TABLE, |q| {
+            .select_from_table(UserEntity::table_name(), |q| {
                 let app_columns = AppEntity::table_column_full_names()
                     .iter()
                     .enumerate()
@@ -57,7 +57,7 @@ impl AppRepository {
     pub async fn find_by_id(&self, id: &str) -> Result<Option<AppEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(APP_TABLE, |q| {
-                q.select_all().eq(APP_TABLE_ID_FIELD, id);
+                q.eq(APP_TABLE_ID_FIELD, id);
             })
             .fetch_one_to()
             .await

@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use dirtybase_contract::db::entity::user::UserEntity;
+use dirtybase_user::entity::user::UserEntity;
 
 use super::{RoleUserEntity, RoleUserRepository};
 

@@ -11,11 +11,30 @@ pub async fn my_middleware_test(
     next.run(request).await
 }
 
+pub async fn authenticate_middleware(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let header = request.headers().get("authorization");
+    // 1. check session
+    // 2. url
+    // 3. autorization header
+
+    println!("auth header: {:?}", &header);
+
+    // add the context
+
+    next.run(request).await
+}
+
 pub async fn api_auth_middleware(
     request: axum::extract::Request,
     next: axum::middleware::Next,
 ) -> axum::response::Response {
     let jwt = request.headers().get("authorization");
+
+    println!("jwt: {:?}", &jwt);
+    println!("api_auth_middleware....");
 
     next.run(request).await
 }

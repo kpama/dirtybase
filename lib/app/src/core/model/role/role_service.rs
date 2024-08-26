@@ -1,7 +1,8 @@
 use super::{RoleEntity, RoleRepository, ROLE_ADMIN, ROLE_USER};
 use crate::core::model::app_entity::AppEntity;
 use anyhow::anyhow;
-use dirtybase_contract::db::{base::helper::generate_ulid, entity::user::UserEntity};
+use dirtybase_contract::db::base::helper::generate_ulid;
+use dirtybase_user::entity::user::UserEntity;
 
 pub struct RoleService {
     role_repo: RoleRepository,

@@ -26,8 +26,7 @@ impl CompanyRepository {
     ) -> Result<Option<CompanyEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(CompanyEntity::table_name(), |q| {
-                q.select_all()
-                    .eq(CompanyEntity::col_name_for_internal_id(), id)
+                q.eq(CompanyEntity::col_name_for_internal_id(), id)
                     .and_is_null(CompanyEntity::col_name_for_deleted_at());
             })
             .fetch_one_to()
@@ -37,8 +36,7 @@ impl CompanyRepository {
     pub async fn find_by_id(&self, id: &str) -> Result<Option<CompanyEntity>, anyhow::Error> {
         self.manager()
             .select_from_table(CompanyEntity::table_name(), |q| {
-                q.select_all()
-                    .eq(CompanyEntity::col_name_for_id(), id)
+                q.eq(CompanyEntity::col_name_for_id(), id)
                     .and_is_null(CompanyEntity::col_name_for_deleted_at());
             })
             .fetch_one_to()

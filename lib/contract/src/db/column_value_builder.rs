@@ -58,6 +58,16 @@ impl ColumnAndValueBuilder {
         self
     }
 
+    pub fn merge(self, other: Self) -> Self {
+        self.data.borrow_mut().extend(other.build());
+        self
+    }
+
+    pub fn merge_column_value(self, cv: ColumnAndValue) -> Self {
+        self.data.borrow_mut().extend(cv);
+        self
+    }
+
     pub fn build(self) -> ColumnAndValue {
         self.data.into_inner()
     }

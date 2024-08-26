@@ -7,7 +7,7 @@ use crate::db::{
 
 use super::{
     aggregate::Aggregate,
-    column::BaseColumn,
+    column::ColumnBlueprint,
     join_builder::JoinQueryBuilder,
     order_by_builder::{LimitBuilder, OffsetBuilder, OrderByBuilder},
     query_conditions::Condition,
@@ -39,7 +39,7 @@ pub enum QueryAction {
     DropTable,
     RenameTable(String),
     DropColumn(String),
-    AddColumn(BaseColumn),
+    AddColumn(ColumnBlueprint),
     RenameColumn {
         old: String,
         new: String,

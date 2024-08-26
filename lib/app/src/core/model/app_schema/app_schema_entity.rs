@@ -1,5 +1,6 @@
 use dirtybase_contract::db::types::{DateTimeField, InternalIdField, StringField, UlidField};
-use dirtybase_contract::db::{entity::user::UserEntity, macros::DirtyTable};
+use dirtybase_db_macro::DirtyTable;
+use dirtybase_user::entity::user::UserEntity;
 
 use crate::core::model::app_entity::AppEntity;
 
