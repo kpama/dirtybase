@@ -67,6 +67,11 @@ impl DirtyConfig {
             .unwrap()
     }
 
+    pub fn dotenv_prefix(&self, prefix: &str) -> config::ConfigBuilder<DefaultState> {
+        self.builder()
+            .add_source(config::Environment::with_prefix(prefix))
+    }
+
     pub fn optional_file(
         &self,
         filename: &str,
@@ -91,17 +96,27 @@ impl DirtyConfig {
 
     pub fn load_optional_file(
         &self,
-        full_path: &str,
+        filename: &str,
         dotenv_prefix: Option<&str>,
     ) -> config::ConfigBuilder<DefaultState> {
-        let mut builder = self
-            .builder()
-            .add_source(config::File::with_name(full_path).required(false));
+        let path = Path::new(&self.config_dir).join(filename);
+
+        let mut builder = if let Some(full_path) = path.to_str() {
+            self.builder()
+                .add_source(config::File::with_name(full_path).required(false))
+        } else {
+            self.builder()
+                .add_source(config::File::with_name(filename).required(false))
+        };
+
+        builder = self.append_optional(builder, filename);
 
         if let Some(prefix) = dotenv_prefix {
             builder =
                 builder.add_source(config::Environment::with_prefix(prefix).try_parsing(true));
         }
+
+        builder = self.append_optional(builder, filename);
 
         builder
     }
@@ -114,10 +129,13 @@ impl DirtyConfig {
         let path = Path::new(&self.config_dir).join(filename);
 
         let mut builder = if let Some(real) = path.to_str() {
-            self.builder().add_source(config::File::with_name(real))
+            let builder = self.builder().add_source(config::File::with_name(real));
+            builder
         } else {
             self.builder().add_source(config::File::with_name(filename))
         };
+
+        builder = self.append_optional(builder, filename);
 
         if let Some(prefix) = dotenv_prefix {
             builder = builder.add_source(config::Environment::with_prefix(prefix));
@@ -139,6 +157,23 @@ impl DirtyConfig {
             builder = builder.add_source(config::Environment::with_prefix(prefix));
         }
 
+        builder
+    }
+
+    fn append_optional(
+        &self,
+        mut builder: config::ConfigBuilder<DefaultState>,
+        filename: &str,
+    ) -> config::ConfigBuilder<DefaultState> {
+        let env_version = ["_prod.", "_stage.", "_dev."];
+        for name in env_version {
+            let new_file_name = filename.replacen('.', name, 1);
+            let path = Path::new(&self.config_dir).join(new_file_name);
+
+            if let Some(full_path) = path.to_str() {
+                builder = builder.add_source(config::File::with_name(full_path).required(false));
+            }
+        }
         builder
     }
 }
