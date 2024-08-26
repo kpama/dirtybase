@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use dirtybase_db::base::manager::Manager;
-use dirtybase_db::base::query::QueryBuilder;
-use dirtybase_db::{field_values::FieldValue, TableEntityTrait};
+use dirtybase_contract::db::base::manager::Manager;
+use dirtybase_contract::db::base::query::QueryBuilder;
+use dirtybase_contract::db::{field_values::FieldValue, TableEntityTrait};
 use dirtybase_helper::time::now;
 
 use super::{CacheDbPivotEntity, CacheDbStoreEntity, CacheDbTagStoreEntity};
@@ -18,7 +18,6 @@ impl CacheDbStoreRepository {
 
     pub async fn get(&self, key: &str, with_trashed: bool) -> Option<CacheDbStoreEntity> {
         let find_by_key = |query: &mut QueryBuilder| {
-            query.select_all();
             if !with_trashed {
                 // TODO: Add time condition
             }
@@ -46,8 +45,6 @@ impl CacheDbStoreRepository {
         with_trashed: bool,
     ) -> Option<Vec<CacheDbStoreEntity>> {
         let query_by_keys = |query: &mut QueryBuilder| {
-            query.select_all();
-
             query.is_in(
                 CacheDbStoreEntity::prefix_with_tbl(CacheDbStoreEntity::col_name_for_key()),
                 keys.iter().map(|s| s.to_string()).collect::<Vec<String>>(),
@@ -264,13 +261,5 @@ impl CacheDbStoreRepository {
         }
 
         false
-    }
-}
-
-#[busybody::async_trait]
-impl busybody::Injectable for CacheDbStoreRepository {
-    async fn inject(c: &busybody::ServiceContainer) -> Self {
-        let pool_manager = c.get::<dirtybase_db::ConnectionPoolManager>().unwrap();
-        Self::new(pool_manager.default_schema_manager().unwrap())
     }
 }

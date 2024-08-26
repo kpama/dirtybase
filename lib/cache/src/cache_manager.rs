@@ -21,21 +21,24 @@ pub struct CacheManager {
 }
 
 impl CacheManager {
+    // TODO: remove this code
     async fn get_store(store_name: &str) -> StoreDriver {
-        match store_name {
-            _ if store_name == DatabaseStore::store_name() => {
-                Arc::new(Box::new(provide::<DatabaseStore>().await))
-            }
-            _ if store_name == RedisStore::store_name() => {
-                Arc::new(Box::new(provide::<RedisStore>().await))
-            }
-            _ => Arc::new(Box::new(provide::<MemoryStore>().await)),
-        }
+        Arc::new(Box::new(provide::<MemoryStore>().await))
+        // match store_name {
+        //     _ if store_name == DatabaseStore::store_name() => {
+        //         Arc::new(Box::new(provide::<DatabaseStore>().await))
+        //     }
+        //     _ if store_name == RedisStore::store_name() => {
+        //         Arc::new(Box::new(provide::<RedisStore>().await))
+        //     }
+        //     _ => Arc::new(Box::new(provide::<MemoryStore>().await)),
+        // }
     }
 
     pub async fn new(config: &CacheConfig) -> Self {
+        // TODO: The store must be passed as an argument
         Self {
-            store: Self::get_store(config.cache_store()).await,
+            store: Arc::new(Box::new(provide::<MemoryStore>().await)),
             prefix: None,
             tags: Vec::new(),
         }

@@ -82,16 +82,3 @@ impl CacheStoreTrait for DatabaseStore {
         self.repo.delete_all(tags).await
     }
 }
-
-#[busybody::async_trait]
-impl busybody::Injectable for DatabaseStore {
-    async fn inject(container: &busybody::ServiceContainer) -> Self {
-        if let Some(store) = container.get_type::<Self>() {
-            return store;
-        } else {
-            let repo: CacheDbStoreRepository = container.provide().await;
-            let store = Self::new(repo);
-            return container.set_type(store).get_type::<Self>().unwrap();
-        }
-    }
-}
