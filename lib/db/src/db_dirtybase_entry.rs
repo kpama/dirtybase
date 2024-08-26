@@ -1,5 +1,4 @@
-use dirtybase_config::DirtyConfig;
-use dirtybase_contract::ExtensionSetup;
+use dirtybase_contract::{dirtybase_config::DirtyConfig, ExtensionSetup};
 
 pub struct Extension;
 

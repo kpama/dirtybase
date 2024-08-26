@@ -1,10 +1,10 @@
 use crate::base::{
-    column::{BaseColumn, ColumnDefault, ColumnType},
+    column::{ColumnBlueprint, ColumnDefault, ColumnType},
     query::{QueryAction, QueryBuilder},
     query_conditions::Condition,
     query_operators::Operator,
     schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
-    table::BaseTable,
+    table::TableBlueprint,
 };
 use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAndValue};
 use anyhow::anyhow;
@@ -51,8 +51,8 @@ impl RelationalDbTrait for PostgresSchemaManager {
 
 #[async_trait]
 impl SchemaManagerTrait for PostgresSchemaManager {
-    fn fetch_table_for_update(&self, name: &str) -> BaseTable {
-        BaseTable::new(name)
+    fn fetch_table_for_update(&self, name: &str) -> TableBlueprint {
+        TableBlueprint::new(name)
     }
     async fn has_table(&self, name: &str) -> bool {
         let query = "SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_name = ?";
@@ -102,7 +102,7 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         false
     }
 
-    async fn apply(&self, table: BaseTable) {
+    async fn apply(&self, table: TableBlueprint) {
         self.do_apply(table).await
     }
 
@@ -212,7 +212,7 @@ impl SchemaManagerTrait for PostgresSchemaManager {
 }
 
 impl PostgresSchemaManager {
-    async fn do_apply(&self, table: BaseTable) {
+    async fn do_apply(&self, table: TableBlueprint) {
         if table.view_query.is_some() {
             // working with view table
             self.create_or_replace_view(table).await
@@ -333,7 +333,7 @@ impl PostgresSchemaManager {
         }
     }
 
-    async fn create_or_replace_view(&self, table: BaseTable) {
+    async fn create_or_replace_view(&self, table: TableBlueprint) {
         if let Some(query) = &table.view_query {
             let mut params = Vec::new();
             let sql = self.build_query(query, &mut params);
@@ -365,7 +365,7 @@ impl PostgresSchemaManager {
         }
     }
 
-    async fn apply_table_changes(&self, table: BaseTable) {
+    async fn apply_table_changes(&self, table: TableBlueprint) {
         let columns: Vec<String> = table
             .columns()
             .iter()
@@ -428,7 +428,7 @@ impl PostgresSchemaManager {
         }
     }
 
-    fn create_column(&self, column: &BaseColumn) -> String {
+    fn create_column(&self, column: &ColumnBlueprint) -> String {
         let mut entry = format!("\"{}\"", &column.name);
         let mut the_type = " ".to_owned();
 

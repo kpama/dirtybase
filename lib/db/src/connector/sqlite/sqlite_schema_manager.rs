@@ -1,11 +1,11 @@
 use crate::base::{
-    column::{BaseColumn, ColumnDefault, ColumnType},
+    column::{ColumnBlueprint, ColumnDefault, ColumnType},
     index::IndexType,
     query::{QueryAction, QueryBuilder},
     query_conditions::Condition,
     query_operators::Operator,
     schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
-    table::{BaseTable, UPDATED_AT_FIELD},
+    table::{TableBlueprint, UPDATED_AT_FIELD},
 };
 use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAndValue};
 use anyhow::anyhow;
@@ -51,8 +51,8 @@ impl RelationalDbTrait for SqliteSchemaManager {
 
 #[async_trait]
 impl SchemaManagerTrait for SqliteSchemaManager {
-    fn fetch_table_for_update(&self, name: &str) -> BaseTable {
-        BaseTable::new(name)
+    fn fetch_table_for_update(&self, name: &str) -> TableBlueprint {
+        TableBlueprint::new(name)
     }
     async fn has_table(&self, name: &str) -> bool {
         let query = "SELECT name FROM sqlite_master WHERE name = ?";
@@ -100,7 +100,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         false
     }
 
-    async fn apply(&self, table: BaseTable) {
+    async fn apply(&self, table: TableBlueprint) {
         self.do_apply(table).await
     }
 
@@ -240,7 +240,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
 }
 
 impl SqliteSchemaManager {
-    async fn do_apply(&self, table: BaseTable) {
+    async fn do_apply(&self, table: TableBlueprint) {
         if table.view_query.is_some() {
             // working with view table
             self.create_or_replace_view(table).await
@@ -352,12 +352,13 @@ impl SqliteSchemaManager {
                 log::debug!("{} result: {:#?}", query.action(), r);
             }
             Err(e) => {
+                dbg!(&e, &sql);
                 log::debug!("{} failed: {}", query.action(), e);
             }
         }
     }
 
-    async fn create_or_replace_view(&self, table: BaseTable) {
+    async fn create_or_replace_view(&self, table: TableBlueprint) {
         if let Some(query) = &table.view_query {
             let mut params = Vec::new();
             let sql = self.build_query(query, &mut params);
@@ -389,7 +390,7 @@ impl SqliteSchemaManager {
         }
     }
 
-    async fn apply_table_changes(&self, table: BaseTable) {
+    async fn apply_table_changes(&self, table: TableBlueprint) {
         let mut foreigns = Vec::new();
         let columns: Vec<String> = table
             .columns()
@@ -487,7 +488,7 @@ impl SqliteSchemaManager {
         }
     }
 
-    fn create_column(&self, column: &BaseColumn, foreigns: &mut Vec<String>) -> String {
+    fn create_column(&self, column: &ColumnBlueprint, foreigns: &mut Vec<String>) -> String {
         let mut entry = format!("`{}`", &column.name);
         let mut the_type = " ".to_owned();
 

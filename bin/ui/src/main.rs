@@ -1,66 +1,70 @@
-// use include_dir::{include_dir, Dir};
+use busybody::{helpers::provide, Service};
+use dirtybase_app::{
+    axum::{
+        extract::Path,
+        http::{header::CONTENT_TYPE, HeaderValue, Response},
+        response::IntoResponse,
+    },
+    contract::{http::RouterManager, ExtensionSetup},
+    core::App,
+};
+use include_dir::{include_dir, Dir};
 
-// static UI_EMBEDDED_ASSETS: Dir = include_dir!("bin/ui/src/app/dist/spa");
+static UI_EMBEDDED_ASSETS: Dir = include_dir!("bin/ui/src/app/dist/spa");
 
-// #[get("/")]
-// async fn home() -> impl Responder {
-//     if let Some(file) = UI_EMBEDDED_ASSETS.get_file("index.html") {
-//         let config = provide::<Service<DirtyBaseApp>>().await.config();
-//         HttpResponse::Ok().body(
-//             file.contents_utf8()
-//                 .unwrap()
-//                 .replace("DTY_APP_NAME", config.app_name()),
-//         )
-//     } else {
-//         HttpResponse::ServiceUnavailable().body("Web application not built")
-//     }
-// }
+async fn home() -> impl IntoResponse {
+    // static UI_EMBEDDED_ASSETS: Dir = include_dir!("app/dist/spa");
+    if let Some(file) = UI_EMBEDDED_ASSETS.get_file("index.html") {
+        let config = provide::<Service<App>>().await.config();
+        Response::builder()
+            .body(
+                file.contents_utf8()
+                    .unwrap()
+                    .replace("DTY_APP_NAME", config.app_name())
+                    .to_owned(),
+            )
+            .unwrap()
+    } else {
+        Response::new("Web application not built".to_string())
+    }
+}
 
-// #[get("/_ui/{tail:.*}")]
-// async fn assets(path: web::Path<String>) -> impl Responder {
-//     log::info!("serving: {}", &path.as_str());
-//     if let Some(file) = UI_EMBEDDED_ASSETS.get_file(path.as_str()) {
-//         let mut response = HttpResponse::Ok();
-//         let path_str = path.as_str();
-//         if path_str.ends_with(".js") {
-//             response.content_type("text/javascript");
-//             return response.body(file.contents_utf8().unwrap());
-//         } else if path_str.ends_with(".css") {
-//             response.content_type("text/css");
-//             return response.body(file.contents_utf8().unwrap());
-//         } else if path_str.ends_with(".woff2") {
-//             response.content_type("font/woff2");
-//         } else if path_str.ends_with(".woff") {
-//             response.content_type("font/woff");
-//         }
-//         response.body(file.contents())
-//     } else {
-//         HttpResponse::NotFound().body(format!("'{}' not found", path.as_str()))
-//     }
-// }
+async fn assets(Path(path): Path<String>) -> impl IntoResponse {
+    log::debug!("serving: {}", &path.as_str());
+    if let Some(file) = UI_EMBEDDED_ASSETS.get_file(path.as_str()) {
+        let mut response = Response::new(file.contents_utf8().unwrap().to_owned());
+        let path_str = path.as_str();
+        let mime_type = mime_guess::from_path(path_str).first_or(mime_guess::mime::TEXT_PLAIN);
+        log::debug!("content type: {:?}", &mime_type);
+        response.headers_mut().insert(
+            CONTENT_TYPE,
+            HeaderValue::from_str(mime_type.essence_str()).unwrap(),
+        );
+        response
+    } else {
+        Response::builder().status(404).body("".to_owned()).unwrap()
+    }
+}
 
-fn main() {
-    // pretty_env_logger::init();
+#[tokio::main]
+async fn main() {
+    pretty_env_logger::init();
+    let app_service = dirtybase_app::setup().await.unwrap();
 
-    // let dirtybase_app = app::setup().await;
-    // let config = dirtybase_app.config();
+    app_service.register(UiApp).await;
 
-    // log::info!(
-    //     "Server exposed at: {} on port: {}",
-    //     config.web_ip_address(),
-    //     config.web_port()
-    // );
+    _ = dirtybase_app::run(app_service.clone()).await;
+}
 
-    // dirtybase::http::display_welcome_info(config.web_ip_address(), config.web_port());
-    // println!("This version comes with a web GUI");
+struct UiApp;
 
-    // HttpServer::new(|| {
-    //     App::new()
-    //         .service(home)
-    //         .service(assets)
-    //         .service(dirtybase::http::register_rest_endpoints())
-    // })
-    // .bind((config.web_ip_address().as_str(), config.web_port()))?
-    // .run()
-    // .await
+impl ExtensionSetup for UiApp {
+    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
+        manager.general(None, |router| {
+            router
+                .get("/", home, "home")
+                .get("/_ui/*path", assets, "assets")
+        });
+        manager
+    }
 }

@@ -12,6 +12,8 @@ dirtybase_cache = { path = "../cache" }
 dirtybase_mail = { path = "../mail" }
 dirtybase_contract = { path = "../contract" }
 dirtybase_helper = { path = "../helper" }
+dirtybase_db_macro = { path = "../db_macro" }
+dirtybase_user = { path = "../user" }
 anyhow = { workspace = true }
 clap = { workspace = true }
 dotenvy = { workspace = true }
@@ -42,3 +44,11 @@ axum = { workspace = true }
 busstop = { workspace = true }
 tower-service = { workspace = true }
 named_routes_axum = { workspace = true }
+axum-extra = { workspace = true }
+
+
+[features]
+db = []
+user = ["db"]
+auth = ["user", "db"]
+full = ["auth", "user", "db"]

@@ -8,8 +8,7 @@ edition = "2021"
 
 [workspace.dependencies]
 axum = { version = "0.7.4" }
-actix-web = "4.3.0"
-actix-session = { version = "0.8.0", features = ["cookie-session"] }
+dashmap = { version = "6" }
 anyhow = "1.0.68"
 clap = { version = "4.1.4", features = ["derive", "unstable-doc"] }
 dotenv = "0.15.0"
@@ -17,17 +16,16 @@ serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.91"
 toml = "0.8.0"
 sqlx = { version = "0.7.3", features = [
-  "runtime-tokio",
-  "tls-rustls",
-  "all-databases",
-  "chrono",
-  "json",
+	"runtime-tokio",
+	"tls-rustls",
+	"all-databases",
+	"chrono",
+	"json",
 ] }
 chrono = { version = "0.4.31", features = ["serde"] }
 async-trait = "0.1.64"
 pretty_env_logger = "0.5.0"
 log = "0.4.17"
-actix-files = "0.6.2"
 bcrypt = "0.15.0"
 rand = "0.8.5"
 futures = "0.3.27"
@@ -52,10 +50,10 @@ orsomafo = { version = "0.3" }
 fama = { version = "0.3" }
 busstop = { version = "0.2" }
 redis = { version = "0.25", features = [
-  "tokio-comp",
-  "aio",
-  # "tls-native-tls",
-  "cluster-async",
+	"tokio-comp",
+	"aio",
+	# "tls-native-tls",
+	"cluster-async",
 ] }
 lettre = { version = "0.11.0" }
 config = "0.14"
@@ -67,3 +65,12 @@ tower-service = { version = "0.3" }
 named_routes_axum = { version = "0.1" }
 simple-middleware = { version = "0.1" }
 Inflector = { version = "0.11.4" }
+axum-extra = { version = "0.9.3", features = [
+	"form",
+	"cookie",
+	"cookie-private",
+	"cookie-signed",
+	"query",
+	"protobuf",
+] }
+mime_guess = { version = "2.0.5" }
