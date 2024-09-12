@@ -119,9 +119,9 @@ pub(crate) fn attribute_to_attribute_type(
             }
             "flatten" => {
                 dirty_attribute.flatten = true;
-            },
-            "embeded" => {
-                dirty_attribute.embeded = true;
+            }
+            "embedded" => {
+                dirty_attribute.embedded = true;
             }
             _ => (),
         };
@@ -196,12 +196,11 @@ pub(crate) fn names_of_from_cv_handlers(
             let handler = format_ident!("{}", &item.1.from_handler);
             let field_name = item.0.clone();
 
-
             if item.1.flatten {
                 let the_type = format_ident!("{}", &item.1.the_type);
                 return quote! {
-                    #struct_field:#the_type::from_column_value(cv.clone()) 
-                }
+                    #struct_field:#the_type::from_column_value(cv.clone())
+                };
             }
 
             if *item.0 == item.1.name {
@@ -305,11 +304,11 @@ pub(crate) fn build_into_handlers(
         }
 
         built.push(if item.1.optional {
-            if item.1.embeded {
+            if item.1.embedded {
                 quote! {
                     pub fn #fn_name(&self) ->Option<::dirtybase_contract::db::field_values::FieldValue> {
                         if let Some(value) = &self.#struct_field {
-                            Some(value.into_embedable())
+                            Some(value.into_embeddable())
                         } else {
                             None
                         }
@@ -326,10 +325,10 @@ pub(crate) fn build_into_handlers(
                     }
                 }
             }
-        } else if item.1.embeded {
+        } else if item.1.embedded {
             quote! {
                 pub fn #fn_name(&self) ->Option<::dirtybase_contract::db::field_values::FieldValue> {
-                     Some(self.#struct_field.into_embedable())
+                     Some(self.#struct_field.into_embeddable())
                     }
                 }
             } else {

@@ -54,7 +54,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
           }
         }
 
-        pub fn into_embedable(&self) -> ::dirtybase_contract::db::field_values::FieldValue {
+        pub fn into_embeddable(&self) -> ::dirtybase_contract::db::field_values::FieldValue {
           match ::dirtybase_contract::db::field_values::FieldValue::from(self) {
             ::dirtybase_contract::db::field_values::FieldValue::Object(obj) =>  ::dirtybase_contract::db::field_values::FieldValue::String(::serde_json::to_string(&obj).unwrap()),
             _ => ::dirtybase_contract::db::field_values::FieldValue::NotSet

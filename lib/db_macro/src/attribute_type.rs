@@ -37,7 +37,7 @@ pub(crate) struct DirtybaseAttributes {
     pub(crate) the_type: String,
     pub(crate) is_vec: bool,
     pub(crate) flatten: bool,
-    pub(crate) embeded: bool,
+    pub(crate) embedded: bool,
     pub(crate) from_handler: String,
     pub(crate) has_custom_from_handler: bool,
     pub(crate) skip_select: bool, // Don't include the column in the list of columns when selecting
