@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use chrono::{DateTime, Utc};
 
@@ -87,5 +87,59 @@ impl From<u64> for FieldValue {
 impl From<Arc<str>> for FieldValue {
     fn from(value: Arc<str>) -> Self {
         Self::String(String::from(value.as_ref()))
+    }
+}
+
+impl From<serde_json::Number> for FieldValue {
+    fn from(value: serde_json::Number) -> Self {
+        if value.is_f64() {
+            Self::F64(value.as_f64().unwrap_or_default())
+        } else {
+            Self::I64(value.as_i64().unwrap_or_default())
+        }
+    }
+}
+impl From<&serde_json::Number> for FieldValue {
+    fn from(value: &serde_json::Number) -> Self {
+        Self::from(value.clone())
+    }
+}
+
+impl From<serde_json::value::Map<String, serde_json::Value>> for FieldValue {
+    fn from(value: serde_json::value::Map<String, serde_json::Value>) -> Self {
+        let mut map = HashMap::new();
+        for (k, v) in value {
+            map.insert(k, Self::from(v));
+        }
+        Self::Object(map)
+    }
+}
+
+impl From<&serde_json::value::Map<String, serde_json::Value>> for FieldValue {
+    fn from(value: &serde_json::value::Map<String, serde_json::Value>) -> Self {
+        Self::from(value.clone())
+    }
+}
+
+impl From<serde_json::Value> for FieldValue {
+    fn from(value: serde_json::Value) -> Self {
+        match value {
+            serde_json::Value::Null => Self::Null,
+            serde_json::Value::Bool(v) => Self::Boolean(v),
+            serde_json::Value::String(s) => Self::String(s),
+            serde_json::Value::Number(n) => n.into(),
+            serde_json::Value::Array(a) => Self::Array(
+                a.into_iter()
+                    .map(|m| Self::from(m))
+                    .collect::<Vec<FieldValue>>(),
+            ),
+            serde_json::Value::Object(o) => Self::from(o),
+        }
+    }
+}
+
+impl From<&serde_json::Value> for FieldValue {
+    fn from(value: &serde_json::Value) -> Self {
+        Self::from(value.clone())
     }
 }

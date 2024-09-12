@@ -19,6 +19,8 @@ pub type ArcUlidField = Option<ArcUlid>;
 pub type DateTimeField = Option<DateTime<Utc>>;
 pub type TimestampField = Option<DateTime<Utc>>;
 pub type BooleanField = Option<bool>;
+pub type OptionalJsonField = Option<serde_json::Map<String, serde_json::value::Value>>;
+pub type JsonField = serde_json::Map<String, serde_json::value::Value>;
 
 pub trait IntoColumnAndValue {
     fn into_column_value(&self) -> ColumnAndValue;

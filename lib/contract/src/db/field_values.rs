@@ -85,8 +85,16 @@ impl Display for FieldValue {
             }
             Self::Object(v) => {
                 let mut data = "".to_owned();
+                let mut is_first = true;
                 for entry in v {
-                    data = format!("{} {}: {},", data, entry.0, entry.1);
+                    data = format!(
+                        "{} {} \"{}\": {}",
+                        data,
+                        if !is_first { "," } else { "" },
+                        entry.0,
+                        serde_json::to_string(entry.1).unwrap()
+                    );
+                    is_first = false;
                 }
 
                 write!(f, "{{{}}}", data)
