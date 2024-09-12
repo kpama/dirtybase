@@ -488,7 +488,7 @@ impl SqliteSchemaManager {
         }
     }
 
-    fn create_column(&self, column: &ColumnBlueprint, foreigns: &mut Vec<String>) -> String {
+    fn create_column(&self, column: &ColumnBlueprint, foreign: &mut Vec<String>) -> String {
         let mut entry = format!("`{}`", &column.name);
         let mut the_type = " ".to_owned();
 
@@ -496,7 +496,7 @@ impl SqliteSchemaManager {
         match column.column_type {
             ColumnType::AutoIncrementId => {
                 the_type.push_str("INTEGER");
-                foreigns.push(format!("PRIMARY KEY('{}' AUTOINCREMENT)", &column.name));
+                foreign.push(format!("PRIMARY KEY('{}' AUTOINCREMENT)", &column.name));
             }
             ColumnType::Boolean => the_type.push_str("BOOLEAN"),
             ColumnType::Char(length) => the_type.push_str(&format!("VARCHAR({})", length)),
@@ -506,7 +506,7 @@ impl SqliteSchemaManager {
             ColumnType::Float => the_type.push_str("double"),
             ColumnType::Integer => the_type.push_str("INTEGER"),
             ColumnType::Json => the_type.push_str("json"),
-            ColumnType::Number | ColumnType::Float => the_type.push_str("double"),
+            ColumnType::Number => the_type.push_str("double"),
             // ColumnType::Relation { relation_type, table_name }
             // ColumnType::Select()
             ColumnType::String(length) => {
