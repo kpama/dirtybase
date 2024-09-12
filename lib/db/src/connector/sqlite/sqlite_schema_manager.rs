@@ -391,11 +391,11 @@ impl SqliteSchemaManager {
     }
 
     async fn apply_table_changes(&self, table: TableBlueprint) {
-        let mut foreigns = Vec::new();
+        let mut foreign = Vec::new();
         let columns: Vec<String> = table
             .columns()
             .iter()
-            .map(|column| self.create_column(column, &mut foreigns))
+            .map(|column| self.create_column(column, &mut foreign))
             .collect();
 
         let mut query = if table.is_new() {
@@ -405,10 +405,10 @@ impl SqliteSchemaManager {
         };
 
         if !columns.is_empty() {
-            query = if foreigns.is_empty() {
+            query = if foreign.is_empty() {
                 format!("{} ({})", query, columns.join(","))
             } else {
-                format!("{} ({}, {})", query, columns.join(","), foreigns.join(","))
+                format!("{} ({}, {})", query, columns.join(","), foreign.join(","))
             }
         }
 
