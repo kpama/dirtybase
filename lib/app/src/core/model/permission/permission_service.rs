@@ -1,5 +1,4 @@
 use super::{permission_entity::PermissionEntity, permission_repository::PermissionRepository};
-use anyhow::anyhow;
 
 pub struct PermissionService {
     repo: PermissionRepository,
@@ -28,16 +27,9 @@ impl PermissionService {
     ) -> Result<Option<PermissionEntity>, anyhow::Error> {
         let the_id = permission.id.clone();
 
-        if let Some(id) = &the_id {
-            // TODO: Validate the data
+        permission.name = None;
 
-            // Name should never be changed
-            permission.name = None;
-
-            self.repo.update(permission, id).await
-        } else {
-            Err(anyhow!("Permission does not have an ID"))
-        }
+        self.repo.update(permission, &the_id).await
     }
 }
 

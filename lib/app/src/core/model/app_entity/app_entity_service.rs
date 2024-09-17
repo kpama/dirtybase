@@ -1,6 +1,5 @@
 use super::{AppEntity, AppRepository};
 use anyhow::anyhow;
-use dirtybase_contract::db::base::helper::generate_ulid;
 use dirtybase_user::entity::user::UserEntity;
 
 pub struct AppEntityService {
@@ -30,25 +29,25 @@ impl AppEntityService {
         blame: UserEntity,
     ) -> Result<Option<AppEntity>, anyhow::Error> {
         // TODO: Validation....
-        if app.core_company_id.is_none() {
+        if app.core_company_id.is_empty() {
             return Err(anyhow!("An application requires a company"));
         }
 
-        if app.name.is_none() {
+        if app.name.is_empty() {
             return Err(anyhow!("Application must have a name"));
         }
 
-        if blame.id.is_none() {
+        if blame.id.is_empty() {
             return Err(anyhow!(
                 "Some has to be blamed for creating this application"
             ));
         }
 
-        if app.id.is_none() {
-            app.id = Some(generate_ulid());
+        if app.id.is_empty() {
+            app.id = Default::default();
         }
 
-        app.creator_id = Some(blame.id.unwrap());
+        app.creator_id = blame.id;
 
         self.app_repo().create(app).await
     }
@@ -60,21 +59,21 @@ impl AppEntityService {
         blame: UserEntity,
     ) -> Result<Option<AppEntity>, anyhow::Error> {
         // TODO: Validation
-        if app.core_company_id.is_none() {
+        if app.core_company_id.is_empty() {
             return Err(anyhow!("An application requires a company"));
         }
 
-        if app.name.is_none() {
+        if app.name.is_empty() {
             return Err(anyhow!("Application must have a name"));
         }
 
-        if blame.id.is_none() {
+        if blame.id.is_empty() {
             return Err(anyhow!(
                 "Some has to be blamed for creating this application"
             ));
         }
 
-        app.editor_id = Some(blame.id.unwrap());
+        app.editor_id = Some(blame.id);
         self.app_repo().update(id, app).await
     }
 }

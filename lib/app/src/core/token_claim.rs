@@ -2,6 +2,7 @@ use super::model::dirtybase_user::{
     dirtybase_user_helpers::jwt_manager::JWTManager, DirtybaseUserEntity,
 };
 use busybody::helpers::provide;
+use dirtybase_db::types::UlidField;
 use std::{collections::HashMap, fmt::Display};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -26,7 +27,7 @@ impl Display for JWTClaim {
 
 #[derive(Debug, Default)]
 pub struct ClaimBuilder {
-    user_id: String,
+    user_id: UlidField,
     salt: String,
     app: String,
     role: String,
@@ -37,7 +38,7 @@ pub struct ClaimBuilder {
 impl ClaimBuilder {
     pub fn new(user: &DirtybaseUserEntity) -> Self {
         Self {
-            user_id: user.core_user_id.as_ref().unwrap().clone(),
+            user_id: user.core_user_id.clone(),
             salt: user.salt.clone(),
             is_sys_admin: if user.is_sys_admin {
                 "yes".into()
@@ -48,8 +49,8 @@ impl ClaimBuilder {
         }
     }
 
-    pub fn user_id(mut self, id: &str) -> Self {
-        self.user_id = id.into();
+    pub fn user_id(mut self, id: UlidField) -> Self {
+        self.user_id = id;
         self
     }
 
@@ -79,7 +80,7 @@ impl ClaimBuilder {
 
     pub fn build(self) -> HashMap<String, String> {
         let mut claims = HashMap::new();
-        claims.insert("user".into(), self.user_id);
+        claims.insert("user".into(), self.user_id.to_string());
         claims.insert("salt".into(), self.salt);
         claims.insert("app".into(), self.app);
         claims.insert("role".into(), self.role);

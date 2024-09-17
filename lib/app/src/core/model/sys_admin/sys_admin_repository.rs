@@ -1,5 +1,3 @@
-use crate::core::App;
-
 use super::{SysAdminEntity, SYS_ADMIN_TABLE, SYS_ADMIN_TABLE_USER_ID_FIELD};
 use dirtybase_contract::db::{
     base::manager::Manager, field_values::FieldValue, types::IntoColumnAndValue,

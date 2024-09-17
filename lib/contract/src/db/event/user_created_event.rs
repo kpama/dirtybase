@@ -1,13 +1,15 @@
+use crate::db::types::UlidField;
+
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct UserCreatedEvent {
-    id: String,
+    id: UlidField,
 }
 
 impl UserCreatedEvent {
-    pub fn new(id: &str) -> Self {
-        Self { id: id.into() }
+    pub fn new(id: UlidField) -> Self {
+        Self { id }
     }
-    pub fn id(&self) -> String {
+    pub fn id(&self) -> UlidField {
         self.id.clone()
     }
 }

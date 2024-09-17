@@ -2,6 +2,7 @@ use crate::core::App;
 
 use super::permission_entity::PermissionEntity;
 use dirtybase_db::base::manager::Manager;
+use dirtybase_db::types::UlidField;
 use dirtybase_db::{field_values::FieldValue, types::IntoColumnAndValue, TableEntityTrait};
 
 pub struct PermissionRepository {
@@ -34,14 +35,17 @@ impl PermissionRepository {
             .await
     }
 
-    pub async fn by_id(
+    pub async fn by_id<'a, I>(
         &self,
-        id: &str,
+        id: &'a I,
         with_trashed: bool,
-    ) -> Result<Option<PermissionEntity>, anyhow::Error> {
+    ) -> Result<Option<PermissionEntity>, anyhow::Error>
+    where
+        UlidField: From<&'a I>,
+    {
         self.manager()
             .select_from_table(PermissionEntity::table_name(), |query| {
-                query.eq(PermissionEntity::col_name_for_id(), id);
+                query.eq(PermissionEntity::col_name_for_id(), UlidField::from(id));
 
                 if with_trashed {
                     query.with_trash();
@@ -83,17 +87,20 @@ impl PermissionRepository {
         self.by_name(&id, false).await
     }
 
-    pub async fn update(
+    pub async fn update<'a, I>(
         &self,
         record: impl IntoColumnAndValue,
-        id: &str,
-    ) -> Result<Option<PermissionEntity>, anyhow::Error> {
+        id: &'a I,
+    ) -> Result<Option<PermissionEntity>, anyhow::Error>
+    where
+        UlidField: From<&'a I>,
+    {
         self.manager()
             .update(
                 PermissionEntity::table_name(),
                 record.into_column_value(),
                 |query| {
-                    query.eq(PermissionEntity::col_name_for_id(), id);
+                    query.eq(PermissionEntity::col_name_for_id(), UlidField::from(id));
                 },
             )
             .await;

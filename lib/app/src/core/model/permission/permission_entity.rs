@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Display};
 
+use dirtybase_db::types::OptionalStringField;
 use dirtybase_db_macro::DirtyTable;
 use dirtybase_user::entity::user::UserEntity;
 
@@ -28,7 +29,7 @@ impl Debug for PermissionName {
 pub struct PermissionEntity {
     pub internal_id: InternalIdField,
     pub id: UlidField,
-    pub name: StringField,
+    pub name: OptionalStringField,
     pub label: StringField,
     pub description: StringField,
 

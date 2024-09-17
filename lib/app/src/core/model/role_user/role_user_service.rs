@@ -30,14 +30,14 @@ impl RoleUserService {
         blame: UserEntity,
     ) -> Result<Option<RoleUserEntity>, anyhow::Error> {
         // TODO: validation...
-        if role_user.core_app_role_id.is_none() || role_user.core_user_id.is_none() {
+        if role_user.core_app_role_id.is_empty() || role_user.core_user_id.is_empty() {
             return Err(anyhow!("user and app role IDs are always require"));
         }
-        if blame.id.is_none() {
+        if blame.id.is_empty() {
             return Err(anyhow!("Role user entity requires a user to blame"));
         }
 
-        role_user.creator_id = Some(blame.id.unwrap());
+        role_user.creator_id = blame.id;
 
         self.role_user_repo().create(role_user).await
     }
@@ -47,15 +47,15 @@ impl RoleUserService {
         mut role_user: RoleUserEntity,
         blame: UserEntity,
     ) -> Result<Option<RoleUserEntity>, anyhow::Error> {
-        if role_user.core_app_role_id.is_none() || role_user.core_user_id.is_none() {
+        if role_user.core_app_role_id.is_empty() || role_user.core_user_id.is_empty() {
             return Err(anyhow!("user and app role IDs are always require"));
         }
 
-        if blame.id.is_none() {
+        if blame.id.is_empty() {
             return Err(anyhow!("Role user entity requires a user to blame"));
         }
 
-        role_user.editor_id = Some(blame.id.unwrap());
+        role_user.editor_id = Some(blame.id);
 
         self.role_user_repo().update(role_user).await
     }

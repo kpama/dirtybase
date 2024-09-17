@@ -1,7 +1,7 @@
 use super::{RoleEntity, RoleRepository, ROLE_ADMIN, ROLE_USER};
 use crate::core::model::app_entity::AppEntity;
 use anyhow::anyhow;
-use dirtybase_contract::db::base::helper::generate_ulid;
+use dirtybase_db::types::UlidField;
 use dirtybase_user::entity::user::UserEntity;
 
 pub struct RoleService {
@@ -30,17 +30,17 @@ impl RoleService {
         app: AppEntity,
         blame: UserEntity,
     ) -> Result<Option<Vec<RoleEntity>>, anyhow::Error> {
-        if app.id.is_none() {
+        if app.id.is_empty() {
             return Err(anyhow!("A role must be assigned to an application"));
         }
 
-        let id = app.id.unwrap();
+        let id = app.id;
         let mut result = Vec::with_capacity(2);
 
         // admin role
         let mut admin_role = self.new_role();
-        admin_role.name = Some(ROLE_ADMIN.into());
-        admin_role.core_app_id = Some(id.clone());
+        admin_role.name = ROLE_ADMIN.into();
+        admin_role.core_app_id = id.clone();
 
         if let Ok(Some(role)) = self.create(admin_role, blame.clone()).await {
             result.push(role);
@@ -48,8 +48,8 @@ impl RoleService {
 
         // user role
         let mut user_role = self.new_role();
-        user_role.name = Some(ROLE_USER.into());
-        user_role.core_app_id = Some(id);
+        user_role.name = ROLE_USER.into();
+        user_role.core_app_id = id;
 
         if let Ok(Some(role)) = self.create(user_role, blame).await {
             result.push(role);
@@ -64,23 +64,23 @@ impl RoleService {
         blame: UserEntity,
     ) -> Result<Option<RoleEntity>, anyhow::Error> {
         // TODO: validation
-        if role.name.is_none() {
+        if role.name.is_empty() {
             return Err(anyhow!("A new role requires a name"));
         }
 
-        if role.core_app_id.is_none() {
+        if role.core_app_id.is_empty() {
             return Err(anyhow!("A role must be assigned to an application"));
         }
 
-        if blame.id.is_none() {
+        if blame.id.is_empty() {
             return Err(anyhow!("Role entity requires a user to blame"));
         }
 
         // prep
-        if role.id.is_none() {
-            role.id = Some(generate_ulid());
+        if role.id.is_empty() {
+            role.id = Default::default();
         }
-        role.creator_id = Some(blame.id.unwrap());
+        role.creator_id = blame.id;
 
         self.role_repo.create(role).await
     }
@@ -88,15 +88,15 @@ impl RoleService {
     pub async fn update(
         &self,
         mut role: RoleEntity,
-        id: &str,
+        id: &UlidField,
         blame: UserEntity,
     ) -> Result<Option<RoleEntity>, anyhow::Error> {
         // TODO: Validation ....
-        if blame.id.is_none() {
+        if blame.id.is_empty() {
             return Err(anyhow!("Role entity requires a user to blame"));
         }
 
-        role.editor_id = Some(blame.id.unwrap());
+        role.editor_id = Some(blame.id);
         self.role_repo.update(id, role).await
     }
 }

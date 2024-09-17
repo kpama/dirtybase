@@ -1,8 +1,6 @@
 use busybody::ServiceContainer;
-use dirtybase_contract::db::{
-    base::helper::generate_ulid,
-    types::{DateTimeField, InternalIdField, StringField, UlidField},
-};
+use dirtybase_contract::db::types::{DateTimeField, InternalIdField, StringField, UlidField};
+use dirtybase_db::types::{OptionalStringField, OptionalUlidField};
 use dirtybase_db_macro::DirtyTable;
 use dirtybase_user::entity::user::UserEntity;
 
@@ -12,13 +10,13 @@ pub struct CompanyEntity {
     pub internal_id: InternalIdField,
     pub id: UlidField,
     pub name: StringField,
-    pub description: StringField,
+    pub description: OptionalStringField,
     pub core_user_id: UlidField,
     #[dirty(col = "creator_id", skip_select)]
     pub creator: Option<UserEntity>,
     #[dirty(skip_select)]
     pub creator_id: UlidField,
-    pub editor_id: UlidField,
+    pub editor_id: OptionalUlidField,
     pub created_at: DateTimeField,
     pub updated_at: DateTimeField,
     pub deleted_at: DateTimeField,
@@ -33,9 +31,6 @@ impl busybody::Injectable for CompanyEntity {
 
 impl CompanyEntity {
     pub fn new() -> Self {
-        Self {
-            id: Some(generate_ulid()),
-            ..Self::default()
-        }
+        Self { ..Self::default() }
     }
 }

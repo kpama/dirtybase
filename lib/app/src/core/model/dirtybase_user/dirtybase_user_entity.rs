@@ -1,10 +1,10 @@
 use super::dtos::out_user_app::UserAppDto;
 use dirtybase_contract::db::{
     base::helper::generate_ulid,
-    types::{StructuredColumnAndValue, TimestampField, UlidField},
+    types::{StructuredColumnAndValue, UlidField},
 };
 
-use dirtybase_db::TableEntityTrait;
+use dirtybase_db::{types::OptionalTimestampField, TableEntityTrait};
 use dirtybase_db_macro::DirtyTable;
 use dirtybase_user::entity::user::UserEntity;
 use sha2::{Digest, Sha256};
@@ -14,7 +14,7 @@ use sha2::{Digest, Sha256};
 pub struct DirtybaseUserEntity {
     pub core_user_id: UlidField,
     pub login_attempt: i64,
-    pub last_login_at: TimestampField,
+    pub last_login_at: OptionalTimestampField,
     pub salt: String,
     #[dirty(skip_select, skip_insert)]
     pub apps: Vec<UserAppDto>,

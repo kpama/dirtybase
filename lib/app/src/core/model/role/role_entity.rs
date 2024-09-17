@@ -1,7 +1,5 @@
-use dirtybase_contract::db::{
-    base::helper::generate_ulid,
-    types::{DateTimeField, InternalIdField, StringField, UlidField},
-};
+use dirtybase_contract::db::types::{DateTimeField, InternalIdField, StringField, UlidField};
+use dirtybase_db::types::OptionalUlidField;
 use dirtybase_db_macro::DirtyTable;
 
 #[derive(Debug, Clone, Default, DirtyTable)]
@@ -12,7 +10,7 @@ pub struct RoleEntity {
     pub name: StringField,
     pub core_app_id: UlidField,
     pub creator_id: UlidField,
-    pub editor_id: UlidField,
+    pub editor_id: OptionalUlidField,
     pub created_at: DateTimeField,
     pub updated_at: DateTimeField,
     pub deleted_at: DateTimeField,
@@ -20,9 +18,6 @@ pub struct RoleEntity {
 
 impl RoleEntity {
     pub fn new() -> Self {
-        Self {
-            id: Some(generate_ulid()),
-            ..Self::default()
-        }
+        Self { ..Self::default() }
     }
 }

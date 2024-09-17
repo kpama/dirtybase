@@ -5,11 +5,15 @@ pub mod core;
 pub mod dirtybase_entry;
 pub mod http;
 
+pub use async_trait;
 pub use axum;
+pub use busstop;
 pub use busybody;
+pub use clap;
 pub use dirtybase_config as config;
 pub use dirtybase_contract as contract;
 pub use dirtybase_db as db;
+pub use dirtybase_db_macro as db_macro;
 pub use dirtybase_helper as helper;
 pub use dirtybase_mail as mail;
 pub use orsomafo;
@@ -66,6 +70,7 @@ pub async fn run_cli(
 
 pub async fn run(app_service: AppService) -> anyhow::Result<()> {
     let mut manager = CliCommandManager::new();
+    app_service.init().await;
 
     let lock = app_service.extensions.read().await;
     for ext in lock.iter() {

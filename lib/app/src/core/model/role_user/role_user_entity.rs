@@ -3,6 +3,7 @@ use dirtybase_contract::db::{
     types::{DateTimeField, UlidField},
     TableEntityTrait,
 };
+use dirtybase_db::types::OptionalUlidField;
 use dirtybase_db_macro::DirtyTable;
 use dirtybase_user::entity::user::UserEntity;
 
@@ -12,7 +13,7 @@ pub struct RoleUserEntity {
     pub core_app_role_id: UlidField,
     pub core_user_id: UlidField,
     pub creator_id: UlidField,
-    pub editor_id: UlidField,
+    pub editor_id: OptionalUlidField,
     pub created_at: DateTimeField,
     pub updated_at: DateTimeField,
     pub deleted_at: DateTimeField,

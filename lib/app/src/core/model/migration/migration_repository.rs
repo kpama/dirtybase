@@ -57,7 +57,7 @@ impl MigrationRepository {
             if let Ok(Some(collection)) = self
                 .manager
                 .select_from_table(MigrationEntity::table_name(), |q| {
-                    q.eq(MigrationEntity::col_name_for_batch(), last.batch.unwrap())
+                    q.eq(MigrationEntity::col_name_for_batch(), last.batch)
                         .desc(MigrationEntity::col_name_for_created_at());
                 })
                 .fetch_all_to::<MigrationEntity>()
@@ -65,7 +65,7 @@ impl MigrationRepository {
             {
                 return collection
                     .into_iter()
-                    .map(|m| (m.name.as_ref().unwrap().to_string(), m))
+                    .map(|m| (m.name.clone(), m))
                     .collect::<BTreeMap<String, MigrationEntity>>();
             }
         }

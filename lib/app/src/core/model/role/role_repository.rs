@@ -2,7 +2,7 @@ use crate::core::App;
 
 use super::RoleEntity;
 use dirtybase_contract::db::{base::manager::Manager, types::IntoColumnAndValue};
-use dirtybase_db::{field_values::FieldValue, TableEntityTrait};
+use dirtybase_db::{field_values::FieldValue, types::UlidField, TableEntityTrait};
 
 pub struct RoleRepository {
     manager: Manager,
@@ -54,7 +54,7 @@ impl RoleRepository {
 
     pub async fn update(
         &self,
-        id: &str,
+        id: &UlidField,
         record: impl IntoColumnAndValue,
     ) -> Result<Option<RoleEntity>, anyhow::Error> {
         let column_and_values = record.into_column_value();

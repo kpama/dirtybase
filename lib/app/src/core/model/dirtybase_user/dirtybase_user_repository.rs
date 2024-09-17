@@ -103,7 +103,7 @@ impl DirtybaseUserRepository {
         &self,
         record: DirtybaseUserEntity,
     ) -> Result<Option<DirtybaseUserEntity>, anyhow::Error> {
-        let core_user_id = record.core_user_id.as_ref().unwrap().clone();
+        let core_user_id = record.core_user_id.clone();
 
         self.manager
             .insert(DirtybaseUserEntity::table_name(), record)
@@ -113,7 +113,7 @@ impl DirtybaseUserRepository {
     }
 
     pub async fn update(&self, record: DirtybaseUserEntity) -> Result<bool, anyhow::Error> {
-        let core_user_id = record.core_user_id.as_ref().unwrap().clone();
+        let core_user_id = record.core_user_id.clone();
         let fields = record.into_column_value();
         self.manager
             .update(DirtybaseUserEntity::table_name(), fields, |query| {

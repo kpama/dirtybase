@@ -31,7 +31,7 @@ impl From<DirtybaseUserEntity> for LoggedInUser {
             apps: value.apps.into_iter().collect(),
             user: value.user.into(),
             is_sys_admin: value.is_sys_admin,
-            last_login_at: value.last_login_at,
+            last_login_at: value.last_login_at.unwrap_or_default(),
         }
     }
 }

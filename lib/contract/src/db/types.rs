@@ -1,26 +1,42 @@
 use chrono::{DateTime, Utc};
 
-use super::base::helper::ArcUlid;
-
 use super::field_values::FieldValue;
 use std::collections::HashMap;
 
+mod arc_ulid;
+mod ulid;
+
+pub use arc_ulid::*;
+pub use ulid::*;
 pub type ColumnAndValue = HashMap<String, FieldValue>;
 
-pub type InternalIdField = Option<i64>; // works across databases
-pub type SingedIntegerField = Option<i64>;
-pub type IntegerField = Option<i64>;
-pub type NumberField = Option<f64>;
-pub type UnsignedIntegerField = Option<u64>;
-pub type FloatField = Option<f64>;
-pub type StringField = Option<String>;
-pub type UlidField = Option<String>;
-pub type ArcUlidField = Option<ArcUlid>;
-pub type DateTimeField = Option<DateTime<Utc>>;
-pub type TimestampField = Option<DateTime<Utc>>;
-pub type BooleanField = Option<bool>;
-pub type OptionalJsonField = Option<serde_json::Map<String, serde_json::value::Value>>;
+// TODO: prefix optional field with the word "Optional"
+pub type InternalIdField = i64; // works across databases
+pub type OptionalInternalIdField = Option<i64>; // works across databases
+pub type SingedIntegerField = i64;
+pub type OptionalSingedIntegerField = Option<i64>;
+pub type IntegerField = i64;
+pub type OptionalIntegerField = Option<i64>;
+pub type NumberField = f64;
+pub type OptionalNumberField = Option<f64>;
+pub type UnsignedIntegerField = u64;
+pub type OptionalUnsignedIntegerField = Option<u64>;
+pub type FloatField = f64;
+pub type OptionalFloatField = Option<f64>;
+pub type StringField = String;
+pub type OptionalStringField = Option<String>;
+// pub type UlidField = String;
+pub type OptionalUlidField = Option<UlidField>;
+// pub type ArcUlidField = ArcUlid;
+pub type OptionalArcUlidField = Option<ArcUlidField>;
+pub type DateTimeField = DateTime<Utc>;
+pub type OptionalDateTimeField = Option<DateTime<Utc>>;
+pub type TimestampField = DateTime<Utc>;
+pub type OptionalTimestampField = Option<DateTime<Utc>>;
+pub type BooleanField = bool;
+pub type OptionalBooleanField = Option<bool>;
 pub type JsonField = serde_json::Map<String, serde_json::value::Value>;
+pub type OptionalJsonField = Option<serde_json::Map<String, serde_json::value::Value>>;
 
 pub trait IntoColumnAndValue {
     fn into_column_value(&self) -> ColumnAndValue;

@@ -1,5 +1,6 @@
 use super::{SysAdminEntity, SysAdminRepository};
 use anyhow::anyhow;
+use dirtybase_db::types::UlidField;
 
 pub struct SysAdminService {
     sys_admin_repo: SysAdminRepository,
@@ -22,9 +23,12 @@ impl SysAdminService {
         SysAdminEntity::new()
     }
 
-    pub async fn add_user(&self, user_id: &str) -> Result<Option<SysAdminEntity>, anyhow::Error> {
+    pub async fn add_user(
+        &self,
+        user_id: UlidField,
+    ) -> Result<Option<SysAdminEntity>, anyhow::Error> {
         let mut sys_admin = self.new_sys_admin();
-        sys_admin.core_user_id = Some(user_id.into());
+        sys_admin.core_user_id = user_id;
         self.create(sys_admin).await
     }
 
@@ -36,7 +40,7 @@ impl SysAdminService {
         &self,
         sys_admin: SysAdminEntity,
     ) -> Result<Option<SysAdminEntity>, anyhow::Error> {
-        if sys_admin.core_user_id.is_none() {
+        if sys_admin.core_user_id.is_empty() {
             return Err(anyhow!("Sys admin permission requires a user"));
         }
 

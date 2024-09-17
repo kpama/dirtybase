@@ -98,9 +98,8 @@ impl ColumnBlueprint {
         self
     }
 
-    // TODO: Value should be anything that can be turned into FieldValue
-    pub fn set_default(&mut self, default: &str) -> &mut Self {
-        self.default = Some(ColumnDefault::Custom(default.to_owned()));
+    pub fn set_default<D: ToString>(&mut self, default: D) -> &mut Self {
+        self.default = Some(ColumnDefault::Custom(default.to_string()));
         self
     }
 

@@ -97,7 +97,7 @@ async fn add_user_to_system_wide_admin(
 ) -> Option<PipeContent> {
     if new_admin_data.user.is_some()
         && sys_admin_service
-            .add_user(new_admin_data.user.as_ref().unwrap().id.as_ref().unwrap())
+            .add_user(new_admin_data.user.as_ref().unwrap().id.clone())
             .await
             .is_err()
     {
@@ -116,7 +116,7 @@ async fn create_default_company(
 ) -> Option<PipeContent> {
     if new_admin_data.user.is_some() {
         let user = new_admin_data.user.as_ref().unwrap();
-        new_company.name = Some(config.app_name().clone());
+        new_company.name = config.app_name().clone();
         new_company.description = Some("This is the core/main company".into());
 
         if let Ok(Some(company)) = company_service
@@ -144,9 +144,9 @@ async fn create_default_app_add_user(
         let user = new_admin_data.user.as_ref().unwrap().clone();
 
         let mut app_entity = app_service.new_app();
-        app_entity.name = Some(format!("{} app", &config.app_name()));
-        app_entity.core_company_id = Some(company.id.unwrap());
-        app_entity.is_system_app = Some(true);
+        app_entity.name = format!("{} app", &config.app_name());
+        app_entity.core_company_id = company.id;
+        app_entity.is_system_app = true;
         app_entity.description = Some("This is the core/main application".into());
 
         if let Ok(Some(app)) = app_service.create(app_entity, user.clone()).await {
@@ -155,10 +155,10 @@ async fn create_default_app_add_user(
                 .await
             {
                 for a_role in &roles {
-                    if a_role.name.as_ref().unwrap() == ROLE_ADMIN {
+                    if a_role.name == ROLE_ADMIN {
                         let mut role_user = role_user_service.new_role_user();
-                        role_user.core_app_role_id = Some(a_role.id.as_ref().unwrap().into());
-                        role_user.core_user_id = Some(user.id.as_deref().unwrap().into());
+                        role_user.core_app_role_id = a_role.id.clone();
+                        role_user.core_user_id = user.id.clone();
 
                         let _ = role_user_service.create(role_user, user.clone()).await;
                         break;

@@ -1,5 +1,4 @@
 use anyhow::anyhow;
-use dirtybase_contract::db::base::helper::generate_ulid;
 use dirtybase_user::entity::user::UserEntity;
 
 use super::{CompanyEntity, CompanyRepository};
@@ -28,24 +27,24 @@ impl CompanyService {
         blame: UserEntity,
     ) -> Result<Option<CompanyEntity>, anyhow::Error> {
         // TODO: validate the record
-        if company.name.is_none() {
+        if company.name.is_empty() {
             return Err(anyhow!("Name field is required")); // TODO: Insert this in map and return all the errors at once?
         }
 
-        if company_user.id.is_none() {
+        if company_user.id.is_empty() {
             return Err(anyhow!("A company must have a super administrator"));
         }
 
-        if blame.id.is_none() {
+        if blame.id.is_empty() {
             return Err(anyhow!("Company entity requires a user to blame"));
         }
 
         // prep
-        if company.id.is_none() {
-            company.id = Some(generate_ulid());
+        if company.id.is_empty() {
+            company.id = Default::default();
         }
-        company.core_user_id = Some(company_user.id.unwrap());
-        company.creator_id = Some(blame.id.unwrap());
+        company.core_user_id = company_user.id;
+        company.creator_id = blame.id;
 
         self.company_repo.create(company).await
     }
@@ -57,11 +56,11 @@ impl CompanyService {
         blame: UserEntity,
     ) -> Result<Option<CompanyEntity>, anyhow::Error> {
         // TODO: Validation ....
-        if blame.id.is_none() {
+        if blame.id.is_empty() {
             return Err(anyhow!("Company entity requires a user to blame"));
         }
 
-        company.editor_id = Some(blame.id.unwrap());
+        company.editor_id = Some(blame.id);
         self.company_repo.update(id, company).await
     }
 }

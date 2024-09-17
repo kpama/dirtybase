@@ -61,7 +61,7 @@ impl DirtybaseUserService {
         &self,
         entity: DirtybaseUserEntity,
     ) -> Result<Option<DirtybaseUserEntity>, anyhow::Error> {
-        if entity.core_user_id.is_some() {
+        if entity.core_user_id.is_empty() {
             return self.repo.create(entity).await;
         }
 
