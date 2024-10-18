@@ -9,28 +9,16 @@ use crate::base::{
 use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAndValue};
 use anyhow::anyhow;
 use async_trait::async_trait;
+use dirtybase_contract::db::base::index::IndexType;
 use futures::stream::TryStreamExt;
-use sqlx::{postgres::PgRow, types::chrono, Column, Pool, Postgres, Row};
+use sqlx::{
+    postgres::{PgArguments, PgRow},
+    types::chrono,
+    Arguments, Column, Pool, Postgres, Row,
+};
 use std::{collections::HashMap, sync::Arc};
 
 const LOG_TARGET: &str = "postgresql_db_driver";
-
-#[derive(Debug, Clone)]
-struct ActiveQuery {
-    statement: String,
-    params: Vec<String>,
-}
-
-impl ActiveQuery {
-    fn to_sql_string(&self) -> String {
-        let mut query = self.statement.clone();
-        for a_param in &self.params {
-            query = query.replacen('?', a_param, 1);
-        }
-
-        query
-    }
-}
 
 pub struct PostgresSchemaManager {
     db_pool: Arc<Pool<Postgres>>,
@@ -73,13 +61,14 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         query_builder: &QueryBuilder,
         sender: tokio::sync::mpsc::Sender<ColumnAndValue>,
     ) {
-        let mut params = Vec::new();
+        let mut params = PgArguments::default();
+
         let statement = self.build_query(query_builder, &mut params);
 
-        let mut query = sqlx::query(&statement);
-        for p in &params {
-            query = query.bind::<&str>(p);
-        }
+        let query = sqlx::query_with(&statement, params);
+        // for p in &params {
+        //     query = query.bind::<&str>(p);
+        // }
 
         let mut rows = query.fetch(self.db_pool.as_ref());
         while let Ok(result) = rows.try_next().await {
@@ -115,14 +104,11 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         query_builder: &QueryBuilder,
     ) -> Result<Option<Vec<HashMap<String, FieldValue>>>, anyhow::Error> {
         let mut results = Vec::new();
+        let mut params = PgArguments::default();
 
-        let mut params = Vec::new();
         let statement = self.build_query(query_builder, &mut params);
 
-        let mut query = sqlx::query(&statement);
-        for p in &params {
-            query = query.bind::<&str>(p);
-        }
+        let query = sqlx::query_with(&statement, params);
 
         let mut rows = query.fetch(self.db_pool.as_ref());
         loop {
@@ -148,13 +134,10 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         &self,
         query_builder: &QueryBuilder,
     ) -> Result<Option<ColumnAndValue>, anyhow::Error> {
-        let mut params = Vec::new();
+        let mut params = PgArguments::default();
         let statement = self.build_query(query_builder, &mut params);
 
-        let mut query = sqlx::query(&statement);
-        for p in &params {
-            query = query.bind::<&str>(p);
-        }
+        let query = sqlx::query_with(&statement, params);
 
         return match query.fetch_optional(self.db_pool.as_ref()).await {
             Ok(result) => match result {
@@ -165,16 +148,10 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         };
     }
 
-    async fn raw_insert(
-        &self,
-        sql: &str,
-        values: Vec<Vec<FieldValue>>,
-    ) -> Result<bool, anyhow::Error> {
+    async fn raw_insert(&self, sql: &str, row: Vec<FieldValue>) -> Result<bool, anyhow::Error> {
         let mut query = sqlx::query(sql);
-        for row in values {
-            for field in row {
-                query = query.bind(field.to_string());
-            }
+        for field in row {
+            query = query.bind(field.to_string());
         }
         match query.execute(self.db_pool.as_ref()).await {
             Err(e) => Err(e.into()),
@@ -223,46 +200,64 @@ impl PostgresSchemaManager {
     }
 
     async fn do_execute(&self, query: QueryBuilder) {
-        let mut params = Vec::new();
+        let mut params = PgArguments::default();
 
-        let mut sql;
+        // let mut sql;
+        let mut sql = String::new();
         match query.action() {
             QueryAction::Create {
                 rows,
                 do_soft_insert,
             } => {
                 sql = format!(
-                    "INSERT {} INTO {} ",
+                    "INSERT {} INTO \"{}\" ",
                     if *do_soft_insert { "IGNORE" } else { "" },
                     query.table()
                 );
 
                 if !rows.is_empty() {
-                    let keys = rows
-                        .first()
-                        .unwrap()
-                        .keys()
-                        .cloned()
-                        .collect::<Vec<String>>();
+                    let first_row = rows.first().unwrap();
+                    let keys = first_row.keys().cloned().collect::<Vec<String>>();
+                    // let placeholders = keys
+                    //     .iter()
+                    //     .enumerate()
+                    //     .map(|(i, n)| match first_row.get(n).unwrap() {
+                    //         FieldValue::Binary(_) => format!("${}::bytea", i + 1),
+                    //         FieldValue::Object(_) => format!("${}::jsonb", i + 1),
+                    //         FieldValue::Array(_) => format!("${}::jsonb", i + 1),
+                    //         FieldValue::F64(_) => format!("${}::jsonb", i + 1),
 
-                    let placeholders = keys.iter().map(|_| "?").collect::<Vec<&str>>().join(",");
+                    //         _ => format!("${}", i + 1),
+                    //     })
+                    //     .collect::<Vec<String>>()
+                    //     .join(",");
+                    let placeholders2 = keys
+                        .iter()
+                        .enumerate()
+                        .map(|(i, _n)| format!("${}", i + 1))
+                        .collect::<Vec<String>>()
+                        .join(",");
                     let columns = keys
                         .iter()
-                        .map(|e| format!("`{}`", e))
+                        .map(|e| format!("{}", e))
                         .collect::<Vec<String>>()
                         .join(",");
 
+                    // sql = format!("{} ({}) VALUES ", sql, columns);
                     sql = format!("{} ({}) VALUES ", sql, columns);
 
                     for a_row in rows.iter().enumerate() {
-                        let values = keys.iter().map(|col| {
+                        // let values =
+                        keys.iter().for_each(|col| {
                             let field = a_row.1.get(col).unwrap();
-                            self.field_value_to_string(field)
+                            self.field_value_to_args(field, &mut params);
+                            // self.field_value_to_string(field)
                         });
                         let separator = if a_row.0 > 0 { "," } else { "" };
 
-                        params.extend(values);
-                        sql = format!("{} {} ({})", sql, separator, &placeholders);
+                        // params.extend(values);
+                        // sql = format!("{} {} ({})", sql, &separator, &placeholders);
+                        sql = format!("{} {} ({})", sql, separator, &placeholders2);
                     }
                 }
             }
@@ -271,32 +266,32 @@ impl PostgresSchemaManager {
                 for entry in column_values {
                     if *entry.1 != FieldValue::NotSet {
                         columns.push(entry.0);
-                        params.push(self.field_value_to_string(entry.1));
+                        self.field_value_to_args(&entry.1, &mut params);
                     }
                 }
-                sql = format!("UPDATE `{}` SET ", query.table());
+                sql = format!("UPDATE \"{}\" SET ", query.table());
                 for entry in columns.iter().enumerate() {
                     if entry.0 > 0 {
-                        sql = format!("{}, `{}` = ? ", sql, *entry.1);
+                        sql = format!("{}, \"{}\" = ${} ", sql, *entry.1, entry.0);
                     } else {
-                        sql = format!("{} `{}` = ? ", sql, *entry.1);
+                        sql = format!("{} \"{}\" = ${} ", sql, *entry.1, entry.0);
                     }
                 }
 
                 // joins
-                sql = format!("{} {}", sql, self.build_join(&query, &mut params));
+                sql = format!("{} {}", sql, self.build_join(&query));
                 // where
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
             }
             QueryAction::Delete => {
                 sql = format!("DELETE {0} FROM {0} ", query.table());
                 // joins
-                sql = format!("{} {}", sql, self.build_join(&query, &mut params));
+                sql = format!("{} {}", sql, self.build_join(&query));
                 // where
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
             }
             QueryAction::DropTable => {
-                sql = format!("DROP TABLE {};", query.table());
+                sql = format!("DROP TABLE IF EXISTS {};", query.table());
             }
             QueryAction::RenameColumn { old, new } => {
                 let table = query.table();
@@ -315,41 +310,48 @@ impl PostgresSchemaManager {
             }
         }
 
-        let mut query_statement = sqlx::query(&sql);
+        // let mut pp = PgArguments::default();
+        // _ = Arguments::add(&mut pp, 4);
+        // _ = Arguments::add(&mut pp, "okay");
+        // let mut xyz = sqlx::query_with(&sql, pp);
+        // .execute(self.db_pool.as_ref())
+        // .await;
+        // xyz.(self.db_pool.as_ref()).await;
+        // for p in pp {
+        //     qq = qq.bind(p);
+        // }
 
-        for p in &params {
-            query_statement = query_statement.bind(p);
-        }
+        // let mut query_statement = sqlx::query(&sql);
 
-        let result = query_statement.execute(self.db_pool.as_ref()).await;
+        // for p in &params {
+        //     query_statement = query_statement.bind(p);
+        // }
+
+        //let result = query_statement.execute(self.db_pool.as_ref()).await;
+        let result = sqlx::query_with(&sql, params)
+            .execute(self.db_pool.as_ref())
+            .await;
 
         match result {
             Ok(r) => {
                 log::debug!("{} result: {:#?}", query.action(), r);
             }
             Err(e) => {
-                log::debug!("{} failed: {}", query.action(), e);
+                log::error!("{} failed: {}", query.action(), e);
             }
         }
     }
 
     async fn create_or_replace_view(&self, table: TableBlueprint) {
         if let Some(query) = &table.view_query {
-            let mut params = Vec::new();
+            let mut params = PgArguments::default();
             let sql = self.build_query(query, &mut params);
 
-            let active_query = ActiveQuery {
-                statement: sql,
-                params,
-            };
+            let query = format!("CREATE OR REPLACE VIEW \"{}\" AS ({})", &table.name, sql);
 
-            let query = format!(
-                "CREATE OR REPLACE VIEW `{}` AS ({})",
-                &table.name,
-                active_query.to_sql_string()
-            );
-
-            let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
+            let result = sqlx::query_with(&query, params)
+                .execute(self.db_pool.as_ref())
+                .await;
             match result {
                 Ok(_) => {
                     log::info!("View '{}' created or replaced successfully", &table.name);
@@ -366,26 +368,22 @@ impl PostgresSchemaManager {
     }
 
     async fn apply_table_changes(&self, table: TableBlueprint) {
+        let mut query = String::new();
         let columns: Vec<String> = table
             .columns()
             .iter()
             .map(|column| self.create_column(column))
             .collect();
 
-        let mut query = if table.is_new() {
-            //quote_ident
-            format!("CREATE TABLE \"{}\"", &table.name)
+        query = if table.is_new() {
+            format!("{} CREATE TABLE IF NOT EXISTS \"{}\"", &query, &table.name)
         } else {
-            format!("ALTER TABLE \"{}\"", &table.name)
+            format!("{} ALTER TABLE \"{}\"", &query, &table.name)
         };
 
         if !columns.is_empty() {
             query = format!("{} ({})", query, columns.join(","));
         }
-
-        // query = format!("{} ENGINE='InnoDB';", query);
-
-        dbg!(&query);
 
         let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
 
@@ -415,12 +413,39 @@ impl PostgresSchemaManager {
         // create/update indexes
         if let Some(indexes) = &table.indexes {
             for entry in indexes {
-                let sql = format!("ALTER TABLE {} {}", &table.name, entry);
+                let sql;
+                match entry {
+                    IndexType::Index(index) | IndexType::Primary(index) => {
+                        if index.delete_index() {
+                            sql = format!("DROP INDEX IF EXISTS {}.{}", &table.name, index.name());
+                        } else {
+                            sql = format!(
+                                "CREATE INDEX IF NOT EXISTS '{}' ON {} ({})",
+                                index.name(),
+                                &table.name,
+                                index.concat_columns()
+                            );
+                        }
+                    }
+                    IndexType::Unique(index) => {
+                        if index.delete_index() {
+                            sql = format!("DROP INDEX IF EXISTS {}.{}", &table.name, index.name());
+                        } else {
+                            sql = format!(
+                                "CREATE UNIQUE  INDEX IF NOT EXISTS '{}' ON {} ({})",
+                                &table.name,
+                                index.name(),
+                                index.concat_columns()
+                            );
+                        }
+                    }
+                }
 
                 let index_result = sqlx::query(&sql).execute(self.db_pool.as_ref()).await;
                 match index_result {
-                    Ok(_e) => log::info!("table index created"),
+                    Ok(_) => log::info!("table index created"),
                     Err(e) => {
+                        log::error!("postgres: {}", &sql);
                         log::error!("could not create table index: {}", e.to_string())
                     }
                 }
@@ -436,26 +461,34 @@ impl PostgresSchemaManager {
         match column.column_type {
             ColumnType::AutoIncrementId => the_type.push_str("BIGSERIAL PRIMARY KEY"),
             ColumnType::Boolean => the_type.push_str("tinyint(1)"),
-            ColumnType::Char(length) => {
-                // the_type.push_str(&format!("char({}) COLLATE 'utf8mb4_unicode_ci'", length))
-                the_type.push_str(&format!("varchar({})", length))
-            }
+            ColumnType::Char(length) => the_type.push_str(&format!("varchar({})", length)),
             ColumnType::Datetime => the_type.push_str("datetime"),
             ColumnType::Timestamp => the_type.push_str("timestamptz"),
-            // ColumnType::File() shouldn't be here
-            ColumnType::Integer => the_type.push_str("bigint(20)"),
-            ColumnType::Json => the_type.push_str("json"),
-            ColumnType::Number | ColumnType::Float => the_type.push_str("double"),
-            // ColumnType::Relation { relation_type, table_name }
-            // ColumnType::Select()
+            ColumnType::Integer => the_type.push_str("bigint"),
+            ColumnType::Json => the_type.push_str("jsonb"),
+            ColumnType::Number | ColumnType::Float => the_type.push_str("double precision"),
+            ColumnType::Binary => the_type.push_str("BYTEA"),
             ColumnType::String(length) => {
-                // let q = format!("varchar({}) COLLATE 'utf8mb4_unicode_ci'", length);
                 let q = format!("varchar({})", length);
                 the_type.push_str(q.as_str());
             }
             ColumnType::Text => the_type.push_str("longtext"),
             ColumnType::Uuid => the_type.push_str("uuid"),
-            _ => the_type.push_str("varchar(255)"),
+            ColumnType::Enum(ref opt) => {
+                if column.check.is_none() {
+                    let list = opt
+                        .iter()
+                        .map(|e| format!("'{}'", e))
+                        .collect::<Vec<String>>()
+                        .join(",");
+                    the_type.push_str(&format!(
+                        "varchar(255) CONSTRAINT {0}_chk check (\"{0}\" in ({1}))",
+                        column.name, list
+                    ));
+                } else {
+                    the_type.push_str("varchar(255)"); // the check will be added below
+                }
+            }
         };
 
         // column is nullable
@@ -491,7 +524,7 @@ impl PostgresSchemaManager {
         // column relationship
         if let Some(relationship) = &column.relationship {
             the_type.push_str(&format!(
-                ", FOREIGN KEY (`{}`) REFERENCES `{}` (`{}`)",
+                ", FOREIGN KEY (\"{}\") REFERENCES \"{}\" (\"{}\")",
                 &column.name,
                 &relationship.table(),
                 &relationship.column()
@@ -501,11 +534,34 @@ impl PostgresSchemaManager {
             }
         }
 
+        // column constrain check
+        if let Some(check) = &column.check {
+            match column.column_type {
+                ColumnType::Enum(ref opt) => {
+                    let list = opt
+                        .iter()
+                        .map(|e| format!("'{}'", e))
+                        .collect::<Vec<String>>()
+                        .join(",");
+                    the_type.push_str(&format!(
+                        " CONSTRAINT {0}_chk CHECK ({1} AND \"{0}\" in ({2}) )",
+                        &column.name, check, list
+                    ));
+                }
+                _ => {
+                    the_type.push_str(&format!(
+                        " CONSTRAINT {}_chk CHECK ({})",
+                        &column.name, check
+                    ));
+                }
+            }
+        }
+
         entry.push_str(&the_type);
         entry
     }
 
-    fn build_query(&self, query: &QueryBuilder, params: &mut Vec<String>) -> String {
+    fn build_query(&self, query: &QueryBuilder, params: &mut PgArguments) -> String {
         let mut sql = "SELECT".to_owned();
 
         // fields
@@ -533,7 +589,7 @@ impl PostgresSchemaManager {
         sql = format!("{} FROM {}", sql, query.table());
 
         // joins
-        sql = format!("{} {}", sql, self.build_join(query, params));
+        sql = format!("{} {}", sql, self.build_join(query));
 
         // wheres
         sql = format!("{} {}", sql, self.build_where_clauses(query, params));
@@ -557,7 +613,7 @@ impl PostgresSchemaManager {
         sql
     }
 
-    fn build_join(&self, query: &QueryBuilder, _params: &mut [String]) -> String {
+    fn build_join(&self, query: &QueryBuilder) -> String {
         let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
             for a_join in joins {
@@ -578,7 +634,7 @@ impl PostgresSchemaManager {
         query.order_by().map(|order| order.to_string())
     }
 
-    fn build_where_clauses(&self, query: &QueryBuilder, params: &mut Vec<String>) -> String {
+    fn build_where_clauses(&self, query: &QueryBuilder, params: &mut PgArguments) -> String {
         let mut wheres = "".to_owned();
         for where_join in query.where_clauses() {
             wheres = where_join.as_clause(
@@ -594,7 +650,7 @@ impl PostgresSchemaManager {
         wheres
     }
 
-    fn transform_condition(&self, condition: &Condition, params: &mut Vec<String>) -> String {
+    fn transform_condition(&self, condition: &Condition, params: &mut PgArguments) -> String {
         self.transform_value(condition.value(), params);
 
         let placeholder =
@@ -616,12 +672,12 @@ impl PostgresSchemaManager {
             .as_clause(condition.column(), &placeholder)
     }
 
-    fn transform_value(&self, value: &QueryValue, params: &mut Vec<String>) {
+    fn transform_value(&self, value: &QueryValue, params: &mut PgArguments) {
         match value {
             QueryValue::SubQuery(q) => {
                 self.build_query(q, params);
             }
-            _ => value.to_param(params),
+            QueryValue::Field(field) => self.field_value_to_args(field, params),
         }
     }
 
@@ -659,12 +715,20 @@ impl PostgresSchemaManager {
                         this_row.insert(name, 0_i32.into());
                     }
                 }
-                "BIGINT" => {
+                "BIGINT" | "INT8" => {
                     let v = row.try_get::<i64, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, v.into());
                     } else {
                         this_row.insert(name, 0_i64.into());
+                    }
+                }
+                "FLOAT8" => {
+                    let v = row.try_get::<f64, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(name, v.into());
+                    } else {
+                        this_row.insert(name, 0_f64.into());
                     }
                 }
                 "TINYINT UNSIGNED" => {
@@ -699,7 +763,7 @@ impl PostgresSchemaManager {
                         this_row.insert(name, 0_u64.into());
                     }
                 }
-                "DOUBLE" | "FLOAT" => {
+                "DOUBLE" | "DOUBLE PRECISION" | "FLOAT" => {
                     let v = row.try_get::<f64, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, v.into());
@@ -746,8 +810,13 @@ impl PostgresSchemaManager {
                         this_row.insert(col.name().to_owned(), FieldValue::Null);
                     }
                 }
-                "VARBINARY" | "BINARY" | "BLOB" => {
-                    // TODO find a means to represent binary
+                "VARBINARY" | "BINARY" | "BLOB" | "BYTEA" => {
+                    let v = row.try_get::<Vec<u8>, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(col.name().to_string(), FieldValue::Binary(v));
+                    } else {
+                        this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
+                    }
                 }
                 "NULL" => {
                     if let Ok(v) = row.try_get::<i64, &str>(col.name()) {
@@ -770,15 +839,49 @@ impl PostgresSchemaManager {
         this_row
     }
 
-    fn field_value_to_string(&self, field: &FieldValue) -> String {
+    fn field_value_to_args<'a>(&self, field: &FieldValue, params: &mut PgArguments) {
         match field {
             FieldValue::DateTime(dt) => {
-                format!("{}", dt.format("%F %T"))
+                _ = Arguments::add(params, dt); // format!("{}", dt.format("%F %T")));
             }
             FieldValue::Timestamp(dt) => {
-                format!("{}", dt.format("%F %T"))
+                _ = Arguments::add(params, dt); //format!("{}", dt.format("%F %T")));
             }
-            _ => field.to_string(),
+            FieldValue::Date(d) => {
+                _ = Arguments::add(params, d); //format!("{}", d.format("%F")));
+            }
+            FieldValue::Binary(d) => {
+                _ = Arguments::add(params, d);
+            }
+            FieldValue::Object(d) => {
+                _ = Arguments::add(params, sqlx::types::Json(d));
+            }
+            FieldValue::F64(v) => {
+                _ = Arguments::add(params, v);
+            }
+            FieldValue::I64(v) => {
+                _ = Arguments::add(params, v);
+            }
+            FieldValue::String(v) => {
+                _ = Arguments::add(params, sqlx::types::Text(v));
+            }
+            FieldValue::Array(v) => {
+                _ = Arguments::add(params, sqlx::types::Json(v));
+            }
+            FieldValue::Boolean(v) => {
+                _ = Arguments::add(params, v);
+            }
+            FieldValue::Time(t) => {
+                _ = Arguments::add(params, t); // format!("{}", t.format("%T"))
+            }
+            FieldValue::U64(v) => {
+                let v = v.clone() as i64;
+                _ = Arguments::add(params, v);
+            }
+            FieldValue::Null => {
+                _ = Arguments::add(params, "NULL");
+            }
+            FieldValue::NotSet => (),
         }
     }
 }

@@ -24,3 +24,4 @@ futures-util = { workspace = true }
 futures-channel = { workspace = true }
 Inflector = { workspace = true }
 busstop = { workspace = true }
+hex = { workspace = true }
