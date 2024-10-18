@@ -1,7 +1,8 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::ops::Deref;
 
 use serde::{Deserialize, Serialize};
+use ulid::Ulid;
 
 use crate::db::{base::helper::generate_ulid, field_values::FieldValue};
 
@@ -29,15 +30,21 @@ impl Deref for UlidField {
     }
 }
 
-impl ToString for UlidField {
-    fn to_string(&self) -> String {
-        self.0.clone()
+impl AsRef<str> for UlidField {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
 }
 
 impl Debug for UlidField {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl Display for UlidField {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.0)
     }
 }
 
@@ -92,5 +99,12 @@ impl From<&ArcUlidField> for UlidField {
 impl From<&UlidField> for UlidField {
     fn from(value: &UlidField) -> Self {
         value.clone()
+    }
+}
+
+impl From<&str> for UlidField {
+    fn from(value: &str) -> Self {
+        let x = Ulid::from_string(value).unwrap();
+        UlidField(x.to_string().to_ascii_lowercase())
     }
 }

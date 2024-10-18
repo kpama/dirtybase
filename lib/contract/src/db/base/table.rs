@@ -1,7 +1,7 @@
 use crate::db::{TableEntityTrait, USER_TABLE};
 
 use super::{
-    column::{ColumnBlueprint, ColumnType, RelationType},
+    column::{ColumnBlueprint, ColumnType},
     helper::to_fk_column,
     index::{IndexProp, IndexType},
     query::QueryBuilder,
@@ -89,16 +89,6 @@ impl TableBlueprint {
         })
     }
 
-    pub fn file(
-        &mut self,
-        name: &'static str,
-        relation_type: RelationType,
-    ) -> &mut ColumnBlueprint {
-        self.column(name, |column| {
-            column.set_type(ColumnType::File(relation_type));
-        })
-    }
-
     pub fn float(&mut self, name: &'static str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::Float);
@@ -123,29 +113,20 @@ impl TableBlueprint {
         })
     }
 
-    pub fn relation(
-        &mut self,
-        name: &'static str,
-        relation_type: RelationType,
-        table_name: &'static str,
-    ) -> &mut ColumnBlueprint {
+    pub fn enum_<T>(&mut self, name: &'static str, options: &[T]) -> &mut ColumnBlueprint
+    where
+        T: ToString,
+    {
         self.column(name, |column| {
-            column.set_type(ColumnType::Relation {
-                relation_type,
-                table_name: table_name.to_owned(),
-            });
+            column.set_type(ColumnType::Enum(
+                options
+                    .into_iter()
+                    .map(|e| e.to_string())
+                    .collect::<Vec<String>>(),
+            ));
         })
     }
 
-    pub fn select(
-        &mut self,
-        name: &'static str,
-        relation_type: RelationType,
-    ) -> &mut ColumnBlueprint {
-        self.column(name, |column| {
-            column.set_type(ColumnType::Select(relation_type));
-        })
-    }
     pub fn string(&mut self, name: &'static str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::String(255));
@@ -161,6 +142,12 @@ impl TableBlueprint {
     pub fn text(&mut self, name: &'static str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::Text);
+        })
+    }
+
+    pub fn binary(&mut self, name: &'static str) -> &mut ColumnBlueprint {
+        self.column(name, |column| {
+            column.set_type(ColumnType::Binary);
         })
     }
 

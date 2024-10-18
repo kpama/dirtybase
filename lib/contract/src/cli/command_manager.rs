@@ -2,7 +2,7 @@ use clap::command;
 use futures::future::BoxFuture;
 use std::{collections::HashMap, sync::Arc};
 
-pub type CommandHandler = Box<
+type CommandHandler = Box<
     dyn FnMut(String, clap::ArgMatches, Arc<busybody::ServiceContainer>) -> BoxFuture<'static, ()>,
 >;
 pub struct CliCommandManager {

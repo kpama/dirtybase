@@ -5,7 +5,7 @@ use crate::db::{
     event::SchemeWroteEvent,
     field_values::FieldValue,
     types::{ColumnAndValue, FromColumnAndValue, IntoColumnAndValue},
-    DatabaseKindPoolCollection,
+    DatabaseKindPoolCollection, TableEntityTrait,
 };
 
 use super::{
@@ -70,8 +70,22 @@ impl Manager {
         }
     }
 
+    pub fn select_from<T>(&self, callback: impl FnOnce(&mut QueryBuilder)) -> SchemaWrapper
+    where
+        T: TableEntityTrait,
+    {
+        self.select_from_table(T::table_name(), callback)
+    }
+
     pub fn table(&self, table: &str) -> QueryBuilder {
         QueryBuilder::new(table, super::query::QueryAction::Query { columns: None })
+    }
+
+    pub fn select_table<T>(&self) -> QueryBuilder
+    where
+        T: TableEntityTrait,
+    {
+        self.table(T::table_name())
     }
 
     pub fn query_builder<T: FromColumnAndValue + Send + Sync + 'static>(
@@ -80,21 +94,6 @@ impl Manager {
     ) -> EntityQueryBuilder<T> {
         EntityQueryBuilder::new(self.table(table), self.read_schema_manager())
     }
-
-    // // Get tables or view for querying
-    // pub fn select_from_tables<F>(&self, tables: Vec<String>, callback: F) -> SchemaWrapper
-    // where
-    //     F: FnOnce(&mut QueryBuilder),
-    // {
-    //     let mut query_builder =
-    //         QueryBuilder::new(tables, super::query::QueryAction::Query { columns: None });
-    //     callback(&mut query_builder);
-
-    //     SchemaWrapper {
-    //         query_builder,
-    //         inner: self.read_schema_manager(),
-    //     }
-    // }
 
     pub fn execute_query(&self, query_builder: QueryBuilder) -> SchemaWrapper {
         SchemaWrapper {
@@ -260,24 +259,30 @@ impl Manager {
         self.dispatch_written_event();
     }
 
-    pub async fn raw_insert(
+    pub async fn raw_insert<V: Into<FieldValue>>(
         &self,
         sql: &str,
-        values: Vec<Vec<FieldValue>>,
+        row: Vec<V>,
     ) -> Result<bool, anyhow::Error> {
-        let result = self.write_schema_manager().raw_insert(sql, values).await;
+        let result = self
+            .write_schema_manager()
+            .raw_insert(sql, row.into_iter().map(|v| v.into()).collect())
+            .await;
         if result.is_ok() {
             self.dispatch_written_event();
         }
         result
     }
 
-    pub async fn raw_update(
+    pub async fn raw_update<V: Into<FieldValue>>(
         &self,
         sql: &str,
-        params: Vec<FieldValue>,
+        params: Vec<V>,
     ) -> Result<u64, anyhow::Error> {
-        let result = self.write_schema_manager().raw_update(sql, params).await;
+        let result = self
+            .write_schema_manager()
+            .raw_update(sql, params.into_iter().map(|v| v.into()).collect())
+            .await;
         if result.is_ok() {
             self.dispatch_written_event();
         }
@@ -285,12 +290,15 @@ impl Manager {
         result
     }
 
-    pub async fn raw_delete(
+    pub async fn raw_delete<P: Into<FieldValue>>(
         &self,
         sql: &str,
-        params: Vec<FieldValue>,
+        params: Vec<P>,
     ) -> Result<u64, anyhow::Error> {
-        let result = self.write_schema_manager().raw_delete(sql, params).await;
+        let result = self
+            .write_schema_manager()
+            .raw_delete(sql, params.into_iter().map(|v| v.into()).collect())
+            .await;
         if result.is_ok() {
             self.dispatch_written_event();
         }
@@ -298,12 +306,14 @@ impl Manager {
         result
     }
 
-    pub async fn raw_select(
+    pub async fn raw_select<P: Into<FieldValue>>(
         &self,
         sql: &str,
-        params: Vec<FieldValue>,
+        params: Vec<P>,
     ) -> Result<Vec<ColumnAndValue>, anyhow::Error> {
-        self.read_schema_manager().raw_select(sql, params).await
+        self.read_schema_manager()
+            .raw_select(sql, params.into_iter().map(|v| v.into()).collect())
+            .await
     }
 
     pub async fn raw_statement(&self, sql: &str) -> Result<bool, anyhow::Error> {

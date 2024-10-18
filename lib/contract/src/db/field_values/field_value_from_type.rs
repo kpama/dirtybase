@@ -40,6 +40,12 @@ impl From<&str> for FieldValue {
     }
 }
 
+impl From<&&str> for FieldValue {
+    fn from(value: &&str) -> Self {
+        Self::from(*value)
+    }
+}
+
 impl From<String> for FieldValue {
     fn from(value: String) -> Self {
         Self::String(value)
@@ -141,5 +147,23 @@ impl From<serde_json::Value> for FieldValue {
 impl From<&serde_json::Value> for FieldValue {
     fn from(value: &serde_json::Value) -> Self {
         Self::from(value.clone())
+    }
+}
+
+impl From<Vec<u8>> for FieldValue {
+    fn from(value: Vec<u8>) -> Self {
+        Self::Binary(value)
+    }
+}
+
+impl From<&Vec<u8>> for FieldValue {
+    fn from(value: &Vec<u8>) -> Self {
+        Self::Binary(value.clone())
+    }
+}
+
+impl From<&[u8]> for FieldValue {
+    fn from(value: &[u8]) -> Self {
+        Self::Binary(value.to_vec())
     }
 }

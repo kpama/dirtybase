@@ -1,11 +1,14 @@
+mod context;
+
 use std::{
     collections::HashMap,
-    future::Future,
     sync::{atomic::AtomicI64, Arc},
 };
 
-use futures::{future::BoxFuture, FutureExt};
+use futures::future::BoxFuture;
 use tokio::{sync::RwLock, time::sleep};
+
+pub use context::*;
 
 type ContextCollection<T> = Arc<RwLock<HashMap<String, ContextWrapper<T>>>>;
 
@@ -38,7 +41,8 @@ impl<T> ContextWrapper<T> {
         }
         let current_ts = std::time::UNIX_EPOCH.elapsed().unwrap().as_secs() as i64;
 
-        current_ts - self.last_ts.load(std::sync::atomic::Ordering::Relaxed) > self.idle_duration && self.idle_duration > 0
+        current_ts - self.last_ts.load(std::sync::atomic::Ordering::Relaxed) > self.idle_duration
+            && self.idle_duration > 0
     }
 }
 
@@ -72,28 +76,28 @@ impl<T: Send + Sync + 'static> ContextManager<T> {
             );
 
             if idle_duration > 0 {
-            let list = Arc::clone(&self.collection);
-            let name2 = name.to_string();
+                let list = Arc::clone(&self.collection);
+                let name2 = name.to_string();
 
-            tokio::spawn(async move {
-                loop {
-                    sleep(std::time::Duration::from_secs(2)).await;
-                    let read_lock = list.read().await;
+                tokio::spawn(async move {
+                    loop {
+                        sleep(std::time::Duration::from_secs(2)).await;
+                        let read_lock = list.read().await;
 
-                    if read_lock.contains_key(&name2) {
-                        if read_lock.get(&name2).unwrap().is_expired() {
-                            drop(read_lock);
-                            let mut write_lock = list.write().await;
-                            write_lock.remove(&name2);
-                            drop(write_lock);
+                        if read_lock.contains_key(&name2) {
+                            if read_lock.get(&name2).unwrap().is_expired() {
+                                drop(read_lock);
+                                let mut write_lock = list.write().await;
+                                write_lock.remove(&name2);
+                                drop(write_lock);
+                                break;
+                            }
+                        } else {
                             break;
                         }
-                    } else {
-                        break;
                     }
-                }
-            });
-          }
+                });
+            }
         }
 
         lock.get(name).unwrap().context()

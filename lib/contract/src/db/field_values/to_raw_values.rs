@@ -7,6 +7,7 @@ pub mod field_value_to_i64;
 pub mod field_value_to_serde_json;
 pub mod field_value_to_string;
 pub mod field_value_to_u64;
+pub mod field_value_to_vec;
 
 impl<T> From<FieldValue> for Vec<T>
 where

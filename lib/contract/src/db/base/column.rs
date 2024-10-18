@@ -9,6 +9,7 @@ pub struct ColumnBlueprint {
     pub is_unique: bool,
     pub is_nullable: Option<bool>,
     pub relationship: Option<ForeignKey>,
+    pub check: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -40,12 +41,6 @@ impl ForeignKey {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum RelationType {
-    Single,
-    Multiple(isize),
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub enum ColumnDefault {
     Custom(String),
     EmptyString,
@@ -65,16 +60,13 @@ pub enum ColumnType {
     Char(usize),
     Datetime,
     Timestamp,
-    File(RelationType),
     Float,
     Integer,
     Json,
+    // TODO: Add jsonb ? Jsonb,
+    Binary,
+    Enum(Vec<String>),
     Number,
-    Relation {
-        relation_type: RelationType,
-        table_name: String,
-    },
-    Select(RelationType),
     String(usize),
     Text,
     Uuid,
@@ -90,6 +82,7 @@ impl ColumnBlueprint {
             is_unique: false,
             is_nullable: Some(false),
             relationship: None,
+            check: None,
         }
     }
 
@@ -164,6 +157,11 @@ impl ColumnBlueprint {
 
     pub fn set_is_unique(&mut self, unique: bool) -> &mut Self {
         self.is_unique = unique;
+        self
+    }
+
+    pub fn set_check(&mut self, check: &str) -> &mut Self {
+        self.check = Some(check.to_string());
         self
     }
 

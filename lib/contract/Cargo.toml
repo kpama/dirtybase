@@ -7,9 +7,7 @@ edition = "2021"
 
 [dependencies]
 clap = { workspace = true, features = ["unstable-doc"] }
-# dirtybase_db = { path = "../db" }
 dirtybase_config = { path = "../config" }
-# dirtybase_db_macro = { path = "../db_macro" }
 async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -29,3 +27,4 @@ futures = { workspace = true }
 futures-util = { workspace = true }
 # sha2 = { workspace = true }
 Inflector = { workspace = true }
+hex = { workspace = true }

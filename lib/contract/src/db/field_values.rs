@@ -21,6 +21,7 @@ pub enum FieldValue {
     Boolean(bool),
     Object(HashMap<String, FieldValue>),
     Array(Vec<FieldValue>),
+    Binary(Vec<u8>),
     DateTime(chrono::DateTime<chrono::Utc>),
     Timestamp(chrono::DateTime<chrono::Utc>),
     Date(chrono::NaiveDate),
@@ -83,21 +84,9 @@ impl Display for FieldValue {
             Self::Boolean(v) => {
                 write!(f, "{}", if *v { 1 } else { 0 })
             }
-            Self::Object(v) => {
-                let mut data = "".to_owned();
-                let mut is_first = true;
-                for entry in v {
-                    data = format!(
-                        "{} {} \"{}\": {}",
-                        data,
-                        if !is_first { "," } else { "" },
-                        entry.0,
-                        serde_json::to_string(entry.1).unwrap()
-                    );
-                    is_first = false;
-                }
-
-                write!(f, "{{{}}}", data)
+            Self::Object(v) => f.write_str(&serde_json::to_string(v).unwrap()),
+            Self::Binary(data) => {
+                write!(f, "{}", hex::encode(data))
             }
             Self::Array(v) => {
                 let mut data = "".to_owned();

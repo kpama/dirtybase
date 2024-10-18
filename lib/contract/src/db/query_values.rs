@@ -6,12 +6,6 @@ pub enum QueryValue {
     SubQuery(QueryBuilder),
 }
 
-// impl From<FieldValue> for QueryValue {
-//     fn from(value: FieldValue) -> Self {
-//         Self::Field(value)
-//     }
-// }
-
 impl QueryValue {
     // Transform base field value to string
     fn field_to_param(&self, field: &FieldValue) -> String {
@@ -36,6 +30,7 @@ impl QueryValue {
                 FieldValue::Null => (),
                 FieldValue::Object(_) => (),
                 FieldValue::NotSet => (),
+                FieldValue::Binary(_) => (),
                 FieldValue::U64(_) => params.push(self.field_to_param(field)),
                 FieldValue::I64(_) => params.push(self.field_to_param(field)),
                 FieldValue::F64(_) => params.push(self.field_to_param(field)),
