@@ -202,8 +202,7 @@ impl PostgresSchemaManager {
     async fn do_execute(&self, query: QueryBuilder) {
         let mut params = PgArguments::default();
 
-        // let mut sql;
-        let mut sql = String::new();
+        let mut sql;
         match query.action() {
             QueryAction::Create {
                 rows,
@@ -218,23 +217,10 @@ impl PostgresSchemaManager {
                 if !rows.is_empty() {
                     let first_row = rows.first().unwrap();
                     let keys = first_row.keys().cloned().collect::<Vec<String>>();
-                    // let placeholders = keys
-                    //     .iter()
-                    //     .enumerate()
-                    //     .map(|(i, n)| match first_row.get(n).unwrap() {
-                    //         FieldValue::Binary(_) => format!("${}::bytea", i + 1),
-                    //         FieldValue::Object(_) => format!("${}::jsonb", i + 1),
-                    //         FieldValue::Array(_) => format!("${}::jsonb", i + 1),
-                    //         FieldValue::F64(_) => format!("${}::jsonb", i + 1),
-
-                    //         _ => format!("${}", i + 1),
-                    //     })
-                    //     .collect::<Vec<String>>()
-                    //     .join(",");
                     let placeholders2 = keys
                         .iter()
                         .enumerate()
-                        .map(|(i, _n)| format!("${}", i + 1))
+                        .map(|(i, _)| format!("${}", i + 1))
                         .collect::<Vec<String>>()
                         .join(",");
                     let columns = keys
@@ -243,20 +229,15 @@ impl PostgresSchemaManager {
                         .collect::<Vec<String>>()
                         .join(",");
 
-                    // sql = format!("{} ({}) VALUES ", sql, columns);
                     sql = format!("{} ({}) VALUES ", sql, columns);
 
                     for a_row in rows.iter().enumerate() {
-                        // let values =
                         keys.iter().for_each(|col| {
                             let field = a_row.1.get(col).unwrap();
                             self.field_value_to_args(field, &mut params);
-                            // self.field_value_to_string(field)
                         });
                         let separator = if a_row.0 > 0 { "," } else { "" };
 
-                        // params.extend(values);
-                        // sql = format!("{} {} ({})", sql, &separator, &placeholders);
                         sql = format!("{} {} ({})", sql, separator, &placeholders2);
                     }
                 }
@@ -310,24 +291,6 @@ impl PostgresSchemaManager {
             }
         }
 
-        // let mut pp = PgArguments::default();
-        // _ = Arguments::add(&mut pp, 4);
-        // _ = Arguments::add(&mut pp, "okay");
-        // let mut xyz = sqlx::query_with(&sql, pp);
-        // .execute(self.db_pool.as_ref())
-        // .await;
-        // xyz.(self.db_pool.as_ref()).await;
-        // for p in pp {
-        //     qq = qq.bind(p);
-        // }
-
-        // let mut query_statement = sqlx::query(&sql);
-
-        // for p in &params {
-        //     query_statement = query_statement.bind(p);
-        // }
-
-        //let result = query_statement.execute(self.db_pool.as_ref()).await;
         let result = sqlx::query_with(&sql, params)
             .execute(self.db_pool.as_ref())
             .await;
