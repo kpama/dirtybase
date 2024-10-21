@@ -35,7 +35,7 @@ pub fn make(package: Option<&String>, name: &str) {
     let struct_name = format!(
         "Mig{}{}",
         ts,
-        dirtybase_helper::string::to_pascal_case(name)
+        dirtybase_helper::inflector::cases::pascalcase::to_pascal_case(name)
     );
 
     let built = MIGRATION_STUB.replace("struct_name", &struct_name);
