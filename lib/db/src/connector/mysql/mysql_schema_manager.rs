@@ -280,7 +280,7 @@ impl MySqlSchemaManager {
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
             }
             QueryAction::DropTable => {
-                sql = format!("DROP TABLE IFN EXISTS {};", query.table());
+                sql = format!("DROP TABLE IF EXISTS {}", query.table());
             }
             QueryAction::RenameColumn { old, new } => {
                 let table = query.table();
