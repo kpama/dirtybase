@@ -59,13 +59,17 @@ impl Migrator {
 
         let collection = repo.get_last_batch().await;
 
-        for (name, _) in collection {
+        for (name, _) in &collection {
             for entry in &self.migrations {
-                if entry.id() == name {
+                if entry.id() == *name {
                     log::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
                     entry.down(manager).await;
                 }
             }
+        }
+
+        if let Some((_, entry)) = collection.iter().next() {
+            repo.delete_batch(entry.batch).await;
         }
     }
 
