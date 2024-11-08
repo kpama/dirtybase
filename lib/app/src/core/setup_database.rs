@@ -93,7 +93,6 @@ pub(crate) async fn drop_default_tables(manager: &Manager) {
         CompanyEntity::table_name(),
         AuditLogEntity::table_name(),
         UserEntity::table_name(),
-        MigrationEntity::table_name(),
     ];
 
     for name in tables {
