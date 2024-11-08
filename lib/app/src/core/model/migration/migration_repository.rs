@@ -73,6 +73,14 @@ impl MigrationRepository {
         BTreeMap::new()
     }
 
+    pub async fn delete_batch(&self, batch: i64) {
+        self.manager()
+            .delete(MigrationEntity::table_name(), |q| {
+                q.eq(MigrationEntity::col_name_for_batch(), batch);
+            })
+            .await;
+    }
+
     pub async fn create(
         &self,
         name: &str,
