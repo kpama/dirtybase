@@ -7,7 +7,7 @@ edition = { workspace = true }
 
 [dependencies]
 include_dir = { version = "0.7.3" }
-dirtybase_app = { path = "../../lib/app" }
+dirtybase_app = { path = "../../packages/app" }
 log = { workspace = true }
 pretty_env_logger = { workspace = true }
 busybody = { workspace = true }
