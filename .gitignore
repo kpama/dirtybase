@@ -3,4 +3,5 @@
 /public/*
 !/public/index.html
 /data/*
+data/*
 !/data/README.md
