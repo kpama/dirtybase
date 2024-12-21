@@ -1,0 +1,22 @@
+use std::time::Duration;
+
+use dirtybase_cache::{config::CacheConfig, CacheManager};
+
+#[tokio::main]
+async fn main() {
+    let dty_config = dirtybase_config::DirtyConfig::default();
+    let config = CacheConfig::new(&dty_config);
+    let manager = CacheManager::new(&config).await;
+
+    manager
+        .add(
+            "message",
+            "The quick brown fox jumps over the lazy dog",
+            None,
+        )
+        .await;
+
+    dbg!("result: {:?}", manager.get::<String>("message").await);
+    let ts = Duration::from_secs(5);
+    println!("{}", ts.as_secs());
+}

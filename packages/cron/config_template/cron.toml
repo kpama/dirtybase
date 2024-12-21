@@ -1,0 +1,10 @@
+enable = false
+
+
+# Jobs 
+
+[jobs.0]
+enable = true
+schedule = "0/10 * * * * * *"
+id = "foo::job"
+description = "This is the description of what foo:job does...."

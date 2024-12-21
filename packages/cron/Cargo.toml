@@ -1,0 +1,17 @@
+[package]
+name = "dirtybase_cron"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+cron = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+busybody = { workspace = true }
+busstop = { workspace = true }
+english-to-cron = { workspace = true }
+orsomafo = { workspace = true }
+serde = { workspace = true }
+dirtybase_config = { path = "../config" }
+dirtybase_contract = { path = "../contract" }
