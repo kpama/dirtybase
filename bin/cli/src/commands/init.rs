@@ -69,9 +69,6 @@ pub(crate) fn init(package: Option<&String>) {
             } else {
                 ""
             };
-
-            println!("content: {:?}", content);
-
             _ = std::fs::write(path, content);
         }
     }
