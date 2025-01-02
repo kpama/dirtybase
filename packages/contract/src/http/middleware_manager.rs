@@ -1,12 +1,11 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use named_routes_axum::RouterWrapper;
 
+pub type WrappedRouter = RouterWrapper<Arc<busybody::ServiceContainer>>;
+
 pub trait MiddlewareRegisterer: Send + Sync {
-    fn register(
-        &self,
-        router: RouterWrapper<Arc<busybody::ServiceContainer>>,
-    ) -> RouterWrapper<Arc<busybody::ServiceContainer>>;
+    fn register(&self, router: WrappedRouter) -> WrappedRouter;
 }
 
 pub struct MiddlewareManager(HashMap<String, Box<dyn MiddlewareRegisterer>>);
@@ -21,7 +20,9 @@ impl MiddlewareManager {
     pub fn new() -> Self {
         Self(HashMap::new())
     }
-    pub fn add(
+
+    /// Register a middleware that maybe apply later
+    pub fn register(
         &mut self,
         name: &str,
         registerer: impl MiddlewareRegisterer + 'static,
@@ -30,14 +31,19 @@ impl MiddlewareManager {
         self
     }
 
-    pub fn register(
-        &mut self,
+    /// Apply the specified middlewares on the router
+    pub fn apply<I>(
+        &self,
         mut router: RouterWrapper<Arc<busybody::ServiceContainer>>,
-        order: impl IntoIterator<Item = String>,
-    ) -> RouterWrapper<Arc<busybody::ServiceContainer>> {
+        order: impl IntoIterator<Item = I>,
+    ) -> RouterWrapper<Arc<busybody::ServiceContainer>>
+    where
+        I: Into<String>,
+    {
         for m in order.into_iter() {
-            if self.0.contains_key(&m) {
-                router = MiddlewareRegisterer::register(self.0.get(&m).unwrap().as_ref(), router);
+            let key = m.into();
+            if self.0.contains_key(&key) {
+                router = MiddlewareRegisterer::register(self.0.get(&key).unwrap().as_ref(), router);
             }
         }
 

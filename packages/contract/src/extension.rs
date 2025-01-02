@@ -1,5 +1,8 @@
 #![allow(unused)]
-use std::{collections::HashMap, sync::OnceLock};
+use std::{
+    collections::HashMap,
+    sync::{Arc, OnceLock},
+};
 
 use dirtybase_config::DirtyConfig;
 use tokio::sync::RwLock;
@@ -37,7 +40,11 @@ pub trait ExtensionSetup: Send + Sync {
     }
 
     /// Register HTTP routes
-    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
+    fn register_routes(
+        &self,
+        mut manager: RouterManager,
+        middleware_manager: &MiddlewareManager,
+    ) -> RouterManager {
         manager
     }
 

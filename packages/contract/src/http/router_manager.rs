@@ -2,7 +2,9 @@ use std::{collections::HashMap, sync::Arc};
 
 use named_routes_axum::RouterWrapper;
 
-pub type ExtensionRouter = named_routes_axum::RouterWrapper<Arc<busybody::ServiceContainer>>;
+use super::WrappedRouter;
+
+pub type ExtensionRouter = WrappedRouter;
 
 pub struct RouteCollection {
     pub prefix: String,
@@ -69,7 +71,7 @@ impl RouterManager {
     pub fn api(
         &mut self,
         prefix: Option<&str>,
-        callback: fn(ExtensionRouter) -> ExtensionRouter,
+        mut callback: impl FnMut(ExtensionRouter) -> ExtensionRouter,
     ) -> &mut Self {
         let router = callback(RouterWrapper::new());
         self.append(RouteType::Api, prefix.unwrap_or_default(), router)
@@ -87,7 +89,7 @@ impl RouterManager {
     pub fn backend(
         &mut self,
         prefix: Option<&str>,
-        callback: fn(ExtensionRouter) -> ExtensionRouter,
+        mut callback: impl FnMut(ExtensionRouter) -> ExtensionRouter,
     ) -> &mut Self {
         let router = callback(RouterWrapper::new());
         self.append(RouteType::Backend, prefix.unwrap_or_default(), router)
@@ -96,7 +98,7 @@ impl RouterManager {
     pub fn general(
         &mut self,
         prefix: Option<&str>,
-        callback: fn(ExtensionRouter) -> ExtensionRouter,
+        mut callback: impl FnMut(ExtensionRouter) -> ExtensionRouter,
     ) -> &mut Self {
         let router = callback(RouterWrapper::new());
         self.append(RouteType::General, prefix.unwrap_or_default(), router)
