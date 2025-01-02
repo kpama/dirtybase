@@ -6,7 +6,6 @@ use super::App;
 #[derive(Debug, serde::Deserialize, Clone)]
 pub struct MiddlewareConfig {
     global: String,
-    general: String,
     general_route: String,
     api_route: String,
     insecure_api_route: String,
@@ -16,9 +15,6 @@ pub struct MiddlewareConfig {
 impl MiddlewareConfig {
     pub fn global(&self) -> Vec<String> {
         self.global.split(',').map(String::from).collect()
-    }
-    pub fn general(&self) -> Vec<String> {
-        self.general.split(',').map(String::from).collect()
     }
 
     pub fn general_route(&self) -> Vec<String> {
