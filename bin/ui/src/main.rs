@@ -5,7 +5,7 @@ use dirtybase_app::{
         http::{header::CONTENT_TYPE, HeaderValue, Response},
         response::IntoResponse,
     },
-    contract::{http::RouterManager, ExtensionSetup},
+    contract::{http::prelude::*, ExtensionSetup},
     core::App,
 };
 use include_dir::{include_dir, Dir};
@@ -59,7 +59,11 @@ async fn main() {
 struct UiApp;
 
 impl ExtensionSetup for UiApp {
-    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
+    fn register_routes(
+        &self,
+        mut manager: RouterManager,
+        _middlware: &MiddlewareManager,
+    ) -> RouterManager {
         manager.general(None, |router| {
             router
                 .get("/", home, "home")
