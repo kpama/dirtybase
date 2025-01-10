@@ -5,14 +5,12 @@ pub mod http_helper;
 use std::{env, sync::Arc};
 
 use axum::Router;
-use busybody::ServiceContainer;
 use dirtybase_contract::{
     app::Context,
     http::{MiddlewareManager, RouteCollection, RouteType, RouterManager},
     ExtensionManager,
 };
 use named_routes_axum::RouterWrapper;
-use tower_service::Service;
 
 use crate::{core::AppService, shutdown_signal};
 
