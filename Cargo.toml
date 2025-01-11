@@ -41,11 +41,11 @@ tokio-util = { version = "0.7", features = ["full"] }
 hmac = "0.12"
 mime = "0.3"
 jwt = "0.16"
+jsonwebtoken = "9"
 sha2 = "0.10"
 quote = "1.0"
 syn = { version = "2.0", features = ["extra-traits"] }
 dotenvy = "0.15"
-# cookie = { version = "0.17", features= ["default", "secure-cookies"] }
 busybody = { version = "0.3" }
 orsomafo = { version = "0.3" }
 fama = { version = "0.3" }
@@ -67,15 +67,48 @@ tower-service = { version = "0.3" }
 named_routes_axum = { version = "0.1" }
 simple-middleware = { version = "0.1" }
 Inflector = { version = "0.11" }
-axum-extra = { version = "0.9", features = [
+axum-extra = { version = "0.10", features = [
 	"form",
 	"cookie",
 	"cookie-private",
 	"cookie-signed",
 	"query",
 	"protobuf",
+	"typed-header",
+	"async-read-body",
+	"multipart",
+	"file-stream",
 ] }
 mime_guess = { version = "2.0" }
 tower-http = { version = "0.6", features = ["full"] }
 hex = { version = "0.4" }
-utoipa = { version = "5" }
+utoipa = { version = "5", features = ["axum"] }
+utoipa-axum = { version = "0.1" }
+uuid7 = { version = "1", features = ["serde", "uuid"] }
+uuid25 = { version = "0.3", features = ["gen", "serde", "uuid"] }
+dirtybase_app = { version = "*" }
+dirtybase_contract = { version = "*" }
+dirtybase_helper = { version = "*" }
+dirtybase_db = { version = "*" }
+dirtybase_config = { version = "*" }
+dirtybase_cache = { version = "*" }
+dirtybase_mail = { version = "*" }
+dirtybase_db_macro = { version = "*" }
+dirtybase_user = { version = "*" }
+dirtybase_auth = { version = "*" }
+dirtybase_cron = { version = "*" }
+dirtybase_3rd_client = { version = "*" }
+
+[patch.crates-io]
+dirtybase_contract = { path = "./packages/contract" }
+dirtybase_db_macro = { path = "./packages/db_macro" }
+dirtybase_3rd_client = { path = "./packages/3rd_client" }
+dirtybase_app = { path = "./packages/app" }
+dirtybase_helper = { path = "./packages/helper" }
+dirtybase_db = { path = "./packages/db" }
+dirtybase_config = { path = "./packages/config" }
+dirtybase_cache = { path = "./packages/cache" }
+dirtybase_mail = { path = "./packages/mail" }
+dirtybase_user = { path = "./packages/user" }
+dirtybase_auth = { path = "./packages/auth" }
+dirtybase_cron = { path = "./packages/cron" }
