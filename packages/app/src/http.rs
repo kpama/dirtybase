@@ -150,6 +150,9 @@ fn flatten_routes(collection: RouteCollection) -> RouterWrapper<Arc<busybody::Se
     let mut base = collection.base_route;
     for (sub_path, collection) in collection.routers {
         for a_router in collection {
+            if sub_path.is_empty() || sub_path == "/" {
+                base = base.merge(a_router);
+            } else {
             base = base.nest(&sub_path, a_router);
         }
     }
