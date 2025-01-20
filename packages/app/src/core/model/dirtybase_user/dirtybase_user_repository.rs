@@ -167,7 +167,7 @@ impl DirtybaseUserRepository {
             query.without_table_trash::<UserEntity>();
         }
         query
-            .select_multiple(&DirtybaseUserEntity::table_column_full_names())
+            .select_multiple(DirtybaseUserEntity::table_column_full_names())
             .left_join_table_and_select::<UserEntity, DirtybaseUserEntity>(
                 UserEntity::id_column().unwrap(),
                 UserEntity::foreign_id_column().unwrap(),

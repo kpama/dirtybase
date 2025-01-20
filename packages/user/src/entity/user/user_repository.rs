@@ -4,6 +4,10 @@ use super::UserEntity;
 use dirtybase_contract::db::{
     base::manager::Manager, field_values::FieldValue, types::IntoColumnAndValue, TableEntityTrait,
 };
+use orsomafo::async_trait;
+
+#[async_trait]
+pub trait UserRepositoryTrait {}
 
 pub struct UserRepository {
     manager: Manager,

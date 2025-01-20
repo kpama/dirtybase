@@ -129,8 +129,7 @@ impl DirtyConfig {
         let path = Path::new(&self.config_dir).join(filename);
 
         let mut builder = if let Some(real) = path.to_str() {
-            let builder = self.builder().add_source(config::File::with_name(real));
-            builder
+            self.builder().add_source(config::File::with_name(real))
         } else {
             self.builder().add_source(config::File::with_name(filename))
         };

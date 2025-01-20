@@ -3,7 +3,7 @@ use crate::db::{base::query::QueryBuilder, field_values::FieldValue};
 #[derive(Debug, Clone)]
 pub enum QueryValue {
     Field(FieldValue),
-    SubQuery(QueryBuilder),
+    SubQuery(Box<QueryBuilder>),
 }
 
 impl QueryValue {

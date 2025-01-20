@@ -579,11 +579,8 @@ impl SqliteSchemaManager {
         // join fields
         if let Some(joins) = query.joins() {
             for a_join in joins {
-                match a_join.select_columns() {
-                    Some(columns) => {
-                        sql = format!("{}, {}", sql, columns.join(","));
-                    }
-                    None => (),
+                if let Some(columns) = a_join.select_columns() {
+                    sql = format!("{}, {}", sql, columns.join(","));
                 }
             }
         }
@@ -806,7 +803,7 @@ impl SqliteSchemaManager {
         this_row
     }
 
-    fn field_value_to_args<'a>(&self, field: &FieldValue, params: &mut SqliteArguments<'a>) {
+    fn field_value_to_args(&self, field: &FieldValue, params: &mut SqliteArguments) {
         match field.clone() {
             // sqlite arguments uses a lifetime
             FieldValue::DateTime(dt) => {
@@ -843,7 +840,7 @@ impl SqliteSchemaManager {
                 _ = Arguments::add(params, t);
             }
             FieldValue::U64(v) => {
-                let v = v.clone() as i64;
+                let v = v as i64;
                 _ = Arguments::add(params, v);
             }
             FieldValue::Null => {

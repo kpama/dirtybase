@@ -1,5 +1,8 @@
 use dirtybase_config::DirtyConfig;
-use dirtybase_contract::{cli::CliCommandManager, http::RouterManager};
+use dirtybase_contract::{
+    cli::CliCommandManager,
+    http::{RouterManager, WebMiddlewareManager},
+};
 
 use crate::http;
 
@@ -22,7 +25,11 @@ impl dirtybase_contract::ExtensionSetup for Extension {
         log::info!("--- main application is shutting down -- ");
     }
 
-    fn register_routes(&self, manager: RouterManager) -> RouterManager {
+    fn register_routes(
+        &self,
+        manager: RouterManager,
+        _middleware: &WebMiddlewareManager,
+    ) -> RouterManager {
         http::controllers::register(manager)
     }
 

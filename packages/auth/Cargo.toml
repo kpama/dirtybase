@@ -1,17 +1,19 @@
 [package]
-name = "dritybase_auth"
+name = "dirtybase_auth"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
-dirtybase_db_macro = { path = "../db_macro" }
-dirtybase_contract = { path = "../contract" }
+dirtybase_db_macro = { workspace = true }
+dirtybase_contract = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
 orsomafo = { workspace = true }
+busybody = { workspace = true }
 sha2 = { workspace = true }
 log = { workspace = true }
 bcrypt = { workspace = true }
 tokio = { workspace = true }
 futures = { workspace = true }
+jsonwebtoken = { workspace = true }

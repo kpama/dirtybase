@@ -6,15 +6,17 @@ edition.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dirtybase_db = { path = "../db" }
-dirtybase_config = { path = "../config" }
-dirtybase_cache = { path = "../cache" }
-dirtybase_mail = { path = "../mail" }
-dirtybase_contract = { path = "../contract" }
-dirtybase_helper = { path = "../helper" }
-dirtybase_db_macro = { path = "../db_macro" }
-dirtybase_user = { path = "../user" }
-dirtybase_cron = { path = "../cron" }
+dirtybase_db = { workspace = true }
+dirtybase_config = { workspace = true }
+dirtybase_cache = { workspace = true }
+dirtybase_mail = { workspace = true }
+dirtybase_contract = { workspace = true }
+dirtybase_helper = { workspace = true }
+dirtybase_db_macro = { workspace = true }
+dirtybase_user = { workspace = true }
+dirtybase_cron = { workspace = true }
+dirtybase_auth = { workspace = true }
+simple-middleware = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }
 dotenvy = { workspace = true }

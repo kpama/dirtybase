@@ -5,8 +5,8 @@ use axum::{
     extract::State,
     response::{Html, IntoResponse, Response},
 };
-use dirtybase_app::core::{helper, AppServiceExtractor};
-use dirtybase_contract::http::{MiddlewareManager, MiddlewareRegisterer, RouterManager};
+use dirtybase_app::core::AppServiceExtractor;
+use dirtybase_contract::http::{RouterManager, WebMiddlewareManager, WebMiddlewareRegisterer};
 use tower_service::Service;
 
 #[tokio::main]
@@ -25,7 +25,11 @@ struct MyApp;
 
 #[async_trait::async_trait]
 impl dirtybase_app::contract::ExtensionSetup for MyApp {
-    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
+    fn register_routes(
+        &self,
+        mut manager: RouterManager,
+        _middleware: &WebMiddlewareManager,
+    ) -> RouterManager {
         manager
             .general(None, |router| {
                 router
@@ -42,9 +46,9 @@ impl dirtybase_app::contract::ExtensionSetup for MyApp {
         manager
     }
 
-    fn register_web_middlewares(&self, mut manager: MiddlewareManager) -> MiddlewareManager {
-        manager.add("example1", Example1Middleware);
-        manager.add("example3", Example3Middleware);
+    fn register_web_middlewares(&self, mut manager: WebMiddlewareManager) -> WebMiddlewareManager {
+        manager.register("example1", Example1Middleware);
+        manager.register("example3", Example3Middleware);
 
         manager
     }
@@ -75,7 +79,7 @@ async fn another_one() -> impl IntoResponse {
 
 struct Example1Middleware;
 
-impl MiddlewareRegisterer for Example1Middleware {
+impl WebMiddlewareRegisterer for Example1Middleware {
     fn register(
         &self,
         router: named_routes_axum::RouterWrapper<std::sync::Arc<busybody::ServiceContainer>>,
@@ -91,7 +95,7 @@ impl MiddlewareRegisterer for Example1Middleware {
 
 struct Example3Middleware;
 
-impl MiddlewareRegisterer for Example3Middleware {
+impl WebMiddlewareRegisterer for Example3Middleware {
     fn register(
         &self,
         router: named_routes_axum::RouterWrapper<std::sync::Arc<busybody::ServiceContainer>>,

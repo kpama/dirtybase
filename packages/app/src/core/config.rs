@@ -35,6 +35,10 @@ impl MiddlewareConfig {
     pub fn admin_route(&self) -> Vec<String> {
         self.admin_route.split(',').map(String::from).collect()
     }
+
+    pub fn dev_route(&self) -> Vec<String> {
+        self.admin_route.split(',').map(String::from).collect()
+    }
 }
 
 #[derive(Debug, serde::Deserialize, Clone)]
@@ -50,6 +54,11 @@ struct ConfigEntry {
     web_enable_insecure_api_routes: bool,
     web_enable_admin_routes: bool,
     web_enable_general_routes: bool,
+    web_enable_dev_routes: bool,
+    web_api_route_prefix: String,
+    web_insecure_api_route_prefix: String,
+    web_admin_route_prefix: String,
+    web_dev_route_prefix: String,
     #[serde(rename = "web_public_directory")]
     web_public_dir: String,
     web_middleware: MiddlewareConfig,
@@ -85,31 +94,31 @@ impl Config {
         &self.entry.web_middleware
     }
 
-    pub fn app_name(&self) -> &String {
-        &self.entry.name
+    pub fn app_name(&self) -> &str {
+        self.entry.name.as_str()
     }
 
-    pub fn secret(&self) -> &String {
-        &self.entry.secret
+    pub fn secret(&self) -> &str {
+        self.entry.secret.as_str()
     }
 
-    pub fn admin_username(&self) -> &String {
-        &self.entry.sys_admin_username
+    pub fn admin_username(&self) -> &str {
+        self.entry.sys_admin_username.as_str()
     }
 
-    pub fn admin_email(&self) -> &String {
-        &self.entry.sys_admin_email
+    pub fn admin_email(&self) -> &str {
+        self.entry.sys_admin_email.as_str()
     }
-    pub fn admin_password(&self) -> &String {
-        &self.entry.sys_admin_password
+    pub fn admin_password(&self) -> &str {
+        self.entry.sys_admin_password.as_str()
     }
 
     pub fn web_port(&self) -> u16 {
         self.entry.web_port
     }
 
-    pub fn web_ip_address(&self) -> &String {
-        &self.entry.web_ip_address
+    pub fn web_ip_address(&self) -> &str {
+        self.entry.web_ip_address.as_str()
     }
 
     pub fn web_enable_api_routes(&self) -> bool {
@@ -127,8 +136,28 @@ impl Config {
     pub fn web_enable_general_routes(&self) -> bool {
         self.entry.web_enable_general_routes
     }
-    pub fn web_public_dir(&self) -> &String {
-        &self.entry.web_public_dir
+    pub fn web_enable_dev_routes(&self) -> bool {
+        self.entry.web_enable_dev_routes
+    }
+
+    pub fn web_api_route_prefix(&self) -> &str {
+        self.entry.web_api_route_prefix.as_str()
+    }
+
+    pub fn web_insecure_api_route_prefix(&self) -> &str {
+        self.entry.web_insecure_api_route_prefix.as_str()
+    }
+
+    pub fn web_admin_route_prefix(&self) -> &str {
+        self.entry.web_admin_route_prefix.as_str()
+    }
+
+    pub fn web_dev_route_prefix(&self) -> &str {
+        self.entry.web_dev_route_prefix.as_str()
+    }
+
+    pub fn web_public_dir(&self) -> &str {
+        self.entry.web_public_dir.as_str()
     }
 
     pub fn environment(&self) -> &dirtybase_config::CurrentEnvironment {

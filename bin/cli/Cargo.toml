@@ -10,8 +10,8 @@ path = "src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dirtybase_contract = { path = "../../packages/contract" }
-dirtybase_helper = { path = "../../packages/helper" }
+dirtybase_contract = { workspace = true }
+dirtybase_helper = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 chrono = { workspace = true }
 serde = { workspace = true }

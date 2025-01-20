@@ -125,13 +125,12 @@ impl Deref for AppServiceExtractor {
     }
 }
 
-impl Into<AppService> for AppServiceExtractor {
-    fn into(self) -> AppService {
-        self.0
+impl From<AppServiceExtractor> for AppService {
+    fn from(value: AppServiceExtractor) -> Self {
+        value.0
     }
 }
 
-#[async_trait::async_trait]
 impl<S> FromRequestParts<S> for AppServiceExtractor
 where
     S: Send + Sync,

@@ -7,7 +7,7 @@ use std::{env, sync::Arc};
 use axum::Router;
 use dirtybase_contract::{
     app::Context,
-    http::{MiddlewareManager, RouteCollection, RouteType, RouterManager},
+    http::{RouteCollection, RouteType, RouterManager, WebMiddlewareManager},
     ExtensionManager,
 };
 use named_routes_axum::RouterWrapper;
@@ -22,8 +22,13 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
     let config = app.config();
 
     let mut router = Router::new();
-    let mut manager = RouterManager::new(Some("/api"), Some("/_admin"), Some("/_open"));
-    let mut middleware_manager = MiddlewareManager::new();
+    let mut manager = RouterManager::new(
+        config.web_api_route_prefix(),
+        config.web_admin_route_prefix(),
+        config.web_insecure_api_route_prefix(),
+        config.web_dev_route_prefix(),
+    );
+    let mut middleware_manager = WebMiddlewareManager::new();
     let mut has_routes = false;
 
     let lock = ExtensionManager::list().read().await;
@@ -38,7 +43,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
     drop(lock);
 
     for (route_type, collection) in manager.take() {
-        if collection.routers.len() == 0 {
+        if collection.routers.is_empty() {
             continue;
         }
         has_routes = true;
@@ -82,6 +87,16 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                     router = router.merge(general_router.into_router());
                 }
             }
+            RouteType::Dev => {
+                if app.config().web_enable_dev_routes() {
+                    let dev_router = middleware_manager.apply(
+                        flatten_routes(collection),
+                        app.config().middleware().general_route(),
+                    );
+
+                    router = router.merge(dev_router.into_router());
+                }
+            }
         }
     }
 
@@ -89,6 +104,14 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
     if has_routes {
         web_app = middleware_manager.apply(web_app, config.middleware().global());
+        // call extensions request handler
+        web_app = web_app.middleware(|mut req, next| async {
+            for ext in ExtensionManager::list().read().await.iter() {
+                req = ext.on_web_request(req).await;
+            }
+
+            next.run(req).await
+        });
     }
     drop(middleware_manager);
 
@@ -96,19 +119,17 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
     // this should be the last middleware registered.
     // It sets up the current request specific context
     web_app = web_app.middleware(|mut req, next| async {
-        println!("setting up request context");
+        log::debug!("setting up request context: {}", req.uri());
 
-        // FIXME: use the current request to build context ??
+        // Add the request context
         let context = Context::default();
         req.extensions_mut().insert(context);
-
         next.run(req).await
     });
 
-    let listener =
-        tokio::net::TcpListener::bind((config.web_ip_address().as_str(), config.web_port()))
-            .await
-            .unwrap();
+    let listener = tokio::net::TcpListener::bind((config.web_ip_address(), config.web_port()))
+        .await
+        .unwrap();
 
     log::info!("Serving static file from: {}", static_assets_path);
     log::info!(
@@ -153,7 +174,8 @@ fn flatten_routes(collection: RouteCollection) -> RouterWrapper<Arc<busybody::Se
             if sub_path.is_empty() || sub_path == "/" {
                 base = base.merge(a_router);
             } else {
-            base = base.nest(&sub_path, a_router);
+                base = base.nest(&sub_path, a_router);
+            }
         }
     }
 

@@ -70,7 +70,7 @@ impl JobManager {
             return;
         }
 
-        for (_, config) in self.cron_config.jobs() {
+        for config in self.cron_config.jobs().values() {
             if let Some(job) = self.jobs.remove(config.id()) {
                 match CronJob::register(config.schedule(), job, config.id().id()).await {
                     Ok(context) => {

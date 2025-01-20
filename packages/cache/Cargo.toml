@@ -7,11 +7,11 @@ edition.workspace = true
 
 [dependencies]
 busybody = { workspace = true }
-dirtybase_db_macro = { path = "../db_macro" }
-dirtybase_contract = { path = "../contract" }
-dirtybase_config = { path = "../config" }
-dirtybase_helper = { path = "../helper" }
-dirtybase_3rd_client = { path = "../3rd_client" }
+dirtybase_db_macro = { workspace = true }
+dirtybase_contract = { workspace = true }
+dirtybase_config = { workspace = true }
+dirtybase_helper = { workspace = true }
+dirtybase_3rd_client = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 log = { workspace = true }

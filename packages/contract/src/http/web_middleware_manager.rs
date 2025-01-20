@@ -1,22 +1,22 @@
-use std::{collections::HashMap, ops::Deref, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use named_routes_axum::RouterWrapper;
 
 pub type WrappedRouter = RouterWrapper<Arc<busybody::ServiceContainer>>;
 
-pub trait MiddlewareRegisterer: Send + Sync {
+pub trait WebMiddlewareRegisterer: Send + Sync {
     fn register(&self, router: WrappedRouter) -> WrappedRouter;
 }
 
-pub struct MiddlewareManager(HashMap<String, Box<dyn MiddlewareRegisterer>>);
+pub struct WebMiddlewareManager(HashMap<String, Box<dyn WebMiddlewareRegisterer>>);
 
-impl Default for MiddlewareManager {
+impl Default for WebMiddlewareManager {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl MiddlewareManager {
+impl WebMiddlewareManager {
     pub fn new() -> Self {
         Self(HashMap::new())
     }
@@ -25,7 +25,7 @@ impl MiddlewareManager {
     pub fn register(
         &mut self,
         name: &str,
-        registerer: impl MiddlewareRegisterer + 'static,
+        registerer: impl WebMiddlewareRegisterer + 'static,
     ) -> &mut Self {
         self.0.insert(name.into(), Box::new(registerer));
         self
@@ -43,7 +43,8 @@ impl MiddlewareManager {
         for m in order.into_iter() {
             let key = m.into();
             if self.0.contains_key(&key) {
-                router = MiddlewareRegisterer::register(self.0.get(&key).unwrap().as_ref(), router);
+                router =
+                    WebMiddlewareRegisterer::register(self.0.get(&key).unwrap().as_ref(), router);
             }
         }
 

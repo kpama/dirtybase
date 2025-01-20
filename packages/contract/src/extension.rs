@@ -4,12 +4,14 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
+use axum::extract::Request;
+use clap::ArgMatches;
 use dirtybase_config::DirtyConfig;
 use tokio::sync::RwLock;
 
 use crate::{
     cli::CliCommandManager,
-    http::{MiddlewareManager, RouterManager},
+    http::{RouterManager, WebMiddlewareManager},
 };
 
 pub(crate) static EXTENSION_COLLECTION: OnceLock<RwLock<Vec<Box<dyn ExtensionSetup>>>> =
@@ -43,15 +45,27 @@ pub trait ExtensionSetup: Send + Sync {
     fn register_routes(
         &self,
         mut manager: RouterManager,
-        middleware_manager: &MiddlewareManager,
+        middleware_manager: &WebMiddlewareManager,
     ) -> RouterManager {
         manager
     }
 
-    /// Register Middlewares
-    fn register_web_middlewares(&self, mut manager: MiddlewareManager) -> MiddlewareManager {
+    /// Calls for each web requests
+    async fn on_web_request(&self, req: Request) -> Request {
+        req
+    }
+
+    /// Calls for a cli command
+    async fn on_cli_command(&self, cmd: &str, matches: ArgMatches) -> ArgMatches {
+        matches
+    }
+
+    /// Register web Middlewares
+    fn register_web_middlewares(&self, mut manager: WebMiddlewareManager) -> WebMiddlewareManager {
         manager
     }
+
+    // Rgister cli middlewares
 
     /// register cli sub commands
     fn register_cli_commands(&self, mut manager: CliCommandManager) -> CliCommandManager {

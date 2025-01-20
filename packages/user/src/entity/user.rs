@@ -20,9 +20,6 @@ pub fn verify_password(raw: &str, hash: &str) -> bool {
     bcrypt::verify(raw, hash).unwrap()
 }
 
-// We need to have this table in the orm lib as
-// the "own" fields are assuming there is a user
-// table
 pub async fn setup_users_table(manager: &Manager) {
     manager
         .create_table_schema(UserEntity::table_name(), |table| {

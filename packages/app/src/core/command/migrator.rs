@@ -59,7 +59,7 @@ impl Migrator {
 
         let collection = repo.get_last_batch().await;
 
-        for (name, _) in &collection {
+        for name in collection.keys() {
             for entry in &self.migrations {
                 if entry.id() == *name {
                     log::debug!(target: LOG_TARGET, "migrating {} down", entry.id());

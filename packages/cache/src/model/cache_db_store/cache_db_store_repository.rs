@@ -28,15 +28,11 @@ impl CacheDbStoreRepository {
             );
         };
 
-        match self
-            .manager
+        self.manager
             .select_from_table(CacheDbStoreEntity::table_name(), find_by_key)
             .fetch_one_to()
             .await
-        {
-            Ok(result) => result,
-            _ => None,
-        }
+            .unwrap_or_default()
     }
 
     pub async fn get_many(
@@ -62,15 +58,11 @@ impl CacheDbStoreRepository {
             }
         };
 
-        match self
-            .manager
+        self.manager
             .select_from_table(CacheDbStoreEntity::table_name(), query_by_keys)
             .fetch_all_to::<CacheDbStoreEntity>()
             .await
-        {
-            Ok(list) => list,
-            _ => None,
-        }
+            .unwrap_or_default()
     }
 
     pub async fn update_many(

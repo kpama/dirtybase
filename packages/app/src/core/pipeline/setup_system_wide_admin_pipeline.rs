@@ -116,7 +116,7 @@ async fn create_default_company(
 ) -> Option<PipeContent> {
     if new_admin_data.user.is_some() {
         let user = new_admin_data.user.as_ref().unwrap();
-        new_company.name = config.app_name().clone();
+        new_company.name = config.app_name().to_string();
         new_company.description = Some("This is the core/main company".into());
 
         if let Ok(Some(company)) = company_service

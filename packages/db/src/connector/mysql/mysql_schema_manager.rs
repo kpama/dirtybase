@@ -534,11 +534,8 @@ impl MySqlSchemaManager {
         // join fields
         if let Some(joins) = query.joins() {
             for a_join in joins {
-                match a_join.select_columns() {
-                    Some(columns) => {
-                        sql = format!("{}, {}", sql, columns.join(","));
-                    }
-                    None => (),
+                if let Some(columns) = a_join.select_columns() {
+                    sql = format!("{}, {}", sql, columns.join(","));
                 }
             }
         }
@@ -804,7 +801,7 @@ impl MySqlSchemaManager {
     //     }
     // }
 
-    fn field_value_to_args<'a>(&self, field: &FieldValue, params: &mut MySqlArguments) {
+    fn field_value_to_args(&self, field: &FieldValue, params: &mut MySqlArguments) {
         match field {
             FieldValue::DateTime(dt) => {
                 _ = Arguments::add(params, dt); // format!("{}", dt.format("%F %T")));
@@ -841,7 +838,7 @@ impl MySqlSchemaManager {
                 // format!("{}", t.format("%T"))
             }
             FieldValue::U64(v) => {
-                let v = v.clone() as i64;
+                let v = *v as i64;
                 _ = Arguments::add(params, v);
             }
             FieldValue::Null => {

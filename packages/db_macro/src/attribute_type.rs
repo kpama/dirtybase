@@ -114,20 +114,20 @@ pub struct RelationAttribute {
     pub(crate) pivot_tbl: Option<String>,
 }
 
-impl Into<RelationAttribute> for HashMap<String, String> {
-    fn into(mut self) -> RelationAttribute {
+impl From<HashMap<String, String>> for RelationAttribute {
+    fn from(mut val: HashMap<String, String>) -> Self {
         RelationAttribute {
-            foreign_key: self.remove("foreign_key"),
-            foreign_tbl: self.remove("foreign_tbl"),
-            local_key: self.remove("local_key"),
-            this_tbl: self.remove("this_tbl"),
-            final_key: self.remove("final_key"),
-            final_tbl: self.remove("final_tbl"),
-            through_tbl: self.remove("through_tbl"),
-            through_key: self.remove("through_key"),
-            through_final_key: self.remove("through_final_key"),
-            pivot_key: self.remove("pivot_key"),
-            pivot_tbl: self.remove("pivot_tbl"),
+            foreign_key: val.remove("foreign_key"),
+            foreign_tbl: val.remove("foreign_tbl"),
+            local_key: val.remove("local_key"),
+            this_tbl: val.remove("this_tbl"),
+            final_key: val.remove("final_key"),
+            final_tbl: val.remove("final_tbl"),
+            through_tbl: val.remove("through_tbl"),
+            through_key: val.remove("through_key"),
+            through_final_key: val.remove("through_final_key"),
+            pivot_key: val.remove("pivot_key"),
+            pivot_tbl: val.remove("pivot_tbl"),
         }
     }
 }

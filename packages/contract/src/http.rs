@@ -1,14 +1,19 @@
-mod middleware_manager;
 mod router_manager;
+mod web_middleware_manager;
 
-pub use middleware_manager::*;
+use std::sync::Arc;
+
 pub use router_manager::*;
+pub use web_middleware_manager::*;
+pub type WebAppState = Arc<busybody::ServiceContainer>;
 
 pub mod prelude {
-    pub use super::middleware_manager::*;
     pub use super::router_manager::*;
+    pub use super::web_middleware_manager::*;
+    pub use super::WebAppState;
     pub use axum::body::*;
     pub use axum::extract::Request;
+    pub use axum::extract::*;
     pub use axum::http::*;
     pub use axum::middleware::*;
     pub use axum::response::IntoResponse;

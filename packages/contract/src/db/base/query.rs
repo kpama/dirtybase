@@ -116,7 +116,7 @@ impl QueryBuilder {
 
         callback(&mut query_builder);
 
-        QueryValue::SubQuery(query_builder)
+        QueryValue::SubQuery(Box::new(query_builder))
     }
 
     /// By default all fields are select

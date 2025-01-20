@@ -29,7 +29,7 @@ impl ConnectionPoolRegisterTrait for PostgresPoolManagerRegisterer {
                 match db_connect(config).await {
                     Ok(db_pool) => {
                         pools.insert(
-                            client_type.clone(),
+                            *client_type,
                             Box::new(PostgresPoolManager {
                                 db_pool: Arc::new(db_pool),
                             }),

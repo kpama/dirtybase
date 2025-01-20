@@ -7,7 +7,7 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace.dependencies]
-axum = { version = "0.7", features = ["ws", "multipart"] }
+axum = { version = "0.8", features = ["ws", "multipart"] }
 dashmap = { version = "6" }
 anyhow = "1.0"
 clap = { version = "4.5", features = ["derive", "unstable-doc"] }
@@ -32,7 +32,7 @@ rand = "0.8"
 futures = "0.3"
 futures-util = "0.3"
 ulid = { version = "1.0", features = ["serde", "rand", "std"] }
-tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
+tokio-tungstenite = { version = "0.26", features = ["native-tls"] }
 futures-channel = "0.3"
 native-tls = "0.2"
 tokio = { version = "1", features = ["full"] }
@@ -64,7 +64,7 @@ cron = { version = "0.12" }
 english-to-cron = { version = "0.1" }
 validator = { version = "0.18", features = ["derive"] }
 tower-service = { version = "0.3" }
-named_routes_axum = { version = "0.1" }
+named_routes_axum = { version = "0.2" }
 simple-middleware = { version = "0.1" }
 Inflector = { version = "0.11" }
 axum-extra = { version = "0.10", features = [

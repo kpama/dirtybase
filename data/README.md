@@ -1,1 +1,0 @@
-# Sqlite database default location

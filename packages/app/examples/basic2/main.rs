@@ -1,5 +1,10 @@
+use std::sync::Arc;
+
 use axum::{extract::Path, response::Html, routing::get};
-use dirtybase_contract::{http::RouterManager, ExtensionSetup};
+use dirtybase_contract::{
+    http::{RouterManager, WebMiddlewareManager},
+    ExtensionSetup,
+};
 use named_routes_axum::helpers::get_path_with;
 use tower_service::Service;
 
@@ -17,7 +22,11 @@ struct MyAwesomeApp;
 
 #[async_trait::async_trait]
 impl dirtybase_app::contract::ExtensionSetup for MyAwesomeApp {
-    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
+    fn register_routes(
+        &self,
+        mut manager: RouterManager,
+        middleware: &WebMiddlewareManager,
+    ) -> RouterManager {
         manager.general(None, |router| {
             router
                 .get("/", || async { Html("Hello from awesome app") }, "homepage")
@@ -69,7 +78,11 @@ struct UrlShortener;
 
 #[async_trait::async_trait]
 impl dirtybase_app::contract::ExtensionSetup for UrlShortener {
-    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
+    fn register_routes(
+        &self,
+        mut manager: RouterManager,
+        _middleware: &WebMiddlewareManager,
+    ) -> RouterManager {
         manager.api(Some("/v1/short"), |router| {
             router.get(
                 "/url-shortener",

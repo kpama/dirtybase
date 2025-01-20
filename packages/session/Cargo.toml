@@ -1,0 +1,6 @@
+[package]
+name = "session"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]

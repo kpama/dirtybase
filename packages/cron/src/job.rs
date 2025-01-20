@@ -24,7 +24,7 @@ impl CronJob {
         schedule: &str,
         handler: impl FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     ) -> Result<Self, String> {
-        let sch = str_cron_syntax(&schedule.to_string()).unwrap_or_else(|_| schedule.to_string());
+        let sch = str_cron_syntax(schedule).unwrap_or_else(|_| schedule.to_string());
 
         match Schedule::from_str(&sch) {
             Ok(s) => Ok(Self {

@@ -4,8 +4,8 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-dirtybase_contract = { path = "../contract" }
-dirtybase_config = { path = "../config" }
+dirtybase_contract = { workspace = true }
+dirtybase_config = { workspace = true }
 async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

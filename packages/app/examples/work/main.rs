@@ -27,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
 
     // sqlite
     let base_config = BaseConfig {
-        url: "packages/app/examples/work/db/database.db".to_string(),
+        url: "packages/app/examples/work/data/database.db".to_string(),
         ..Default::default()
     };
 

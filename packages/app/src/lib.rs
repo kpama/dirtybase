@@ -44,6 +44,7 @@ pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
     app.register(dirtybase_cache::Extension).await;
     app.register(dirtybase_cron::Extension).await;
     app.register(dirtybase_db::Extension).await;
+    app.register(dirtybase_auth::Extension).await;
     app.register(dirtybase_entry::Extension).await;
 
     Ok(app)
@@ -70,16 +71,38 @@ pub async fn run_cli(
 }
 
 pub async fn run(app_service: AppService) -> anyhow::Result<()> {
-    let mut manager = CliCommandManager::new();
-    app_service.init().await;
+    let manager = make_cli_command_manager(app_service).await;
+    manager.handle().await;
+    Ok(())
+}
 
-    let lock = ExtensionManager::list().read().await;
-    for ext in lock.iter() {
-        manager = ext.register_cli_commands(manager);
-    }
-    drop(lock);
+pub async fn run_command<I, T>(command: I) -> anyhow::Result<()>
+where
+    I: IntoIterator<Item = T>,
+    T: Into<String>,
+{
+    let app_service = if let Some(s) = busybody::helpers::get_type::<AppService>() {
+        s
+    } else {
+        setup().await?
+    };
 
-    manager.handle(busybody::helpers::service_container()).await;
+    make_cli_command_manager(app_service)
+        .await
+        .handle_command(Some(command))
+        .await;
+    Ok(())
+}
+
+pub async fn run_command_with<I, T>(command: I, app_service: AppService) -> anyhow::Result<()>
+where
+    I: IntoIterator<Item = T>,
+    T: Into<String>,
+{
+    make_cli_command_manager(app_service)
+        .await
+        .handle_command(Some(command))
+        .await;
     Ok(())
 }
 
@@ -88,6 +111,18 @@ pub async fn setup_and_run() -> anyhow::Result<()> {
         Ok(service) => run(service).await,
         Err(e) => Err(e),
     }
+}
+
+pub(crate) async fn make_cli_command_manager(app_service: AppService) -> CliCommandManager {
+    let mut manager = CliCommandManager::new();
+    app_service.init().await;
+
+    let lock = ExtensionManager::list().read().await;
+    for ext in lock.iter() {
+        manager = ext.register_cli_commands(manager);
+    }
+    drop(lock);
+    manager
 }
 
 pub(crate) async fn shutdown_signal() {

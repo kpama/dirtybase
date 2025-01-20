@@ -62,7 +62,7 @@ impl ExtensionSetup for UiApp {
     fn register_routes(
         &self,
         mut manager: RouterManager,
-        _middlware: &MiddlewareManager,
+        _middlware: &WebMiddlewareManager,
     ) -> RouterManager {
         manager.general(None, |router| {
             router

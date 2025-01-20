@@ -38,7 +38,7 @@ impl CronConfig {
     }
 }
 
-impl<'a> From<&'a DirtyConfig> for CronConfig {
+impl From<&DirtyConfig> for CronConfig {
     fn from(base: &DirtyConfig) -> Self {
         base.optional_file("cron.toml", Some("DTY_CRON"))
             .build()
@@ -67,7 +67,7 @@ impl JobConfig {
             id: id.into(),
             schedule: schedule.to_string(),
             enable,
-            description: description,
+            description,
         }
     }
 
