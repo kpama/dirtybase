@@ -16,9 +16,8 @@ pub use config;
 ///  - .env.stage
 ///  - .env
 ///  - .env.dev
-/// Values are merged from these files
 ///
-
+/// Values are merged from these files
 pub const APP_NAME_KEY: &str = "DTY_APP_NAME";
 pub const APP_DEFAULT_NAME: &str = "A Dirty App";
 pub const ENVIRONMENT_KEY: &str = "DTY_APP_ENV";
