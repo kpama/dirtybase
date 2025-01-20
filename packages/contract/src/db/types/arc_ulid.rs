@@ -28,7 +28,7 @@ impl Serialize for ArcUlidField {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.0.as_ref())
+        serializer.serialize_str(self.0.as_ref())
     }
 }
 

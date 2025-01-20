@@ -6,9 +6,7 @@ mod database_store;
 mod memory_store;
 mod redis_store;
 
-pub use database_store::DatabaseStore;
 pub use memory_store::MemoryStore;
-pub use redis_store::RedisStore;
 
 use super::cache_entry::CacheEntry;
 

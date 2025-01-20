@@ -120,7 +120,7 @@ impl TableBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::Enum(
                 options
-                    .into_iter()
+                    .iter()
                     .map(|e| e.to_string())
                     .collect::<Vec<String>>(),
             ));

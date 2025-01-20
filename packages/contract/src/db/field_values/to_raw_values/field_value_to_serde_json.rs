@@ -3,7 +3,7 @@ use crate::db::field_values::FieldValue;
 impl From<FieldValue> for serde_json::Value {
     fn from(value: FieldValue) -> Self {
         if let Ok(r) = serde_json::to_value(value) {
-            return r;
+            r
         } else {
             serde_json::Value::Null
         }

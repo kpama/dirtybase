@@ -12,10 +12,10 @@ pub struct Context {
 
 impl Default for Context {
     fn default() -> Self {
-        let instance = Self {
+        
+        Self {
             sc: Arc::new(busybody::helpers::make_proxy()),
-        };
-        instance
+        }
     }
 }
 
@@ -70,7 +70,7 @@ impl UserContext {
     }
 
     pub fn status(&self) -> UserStatus {
-        self.status.clone()
+        self.status
     }
 
     pub fn role(&self) -> &RoleContext {

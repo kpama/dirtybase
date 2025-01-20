@@ -128,7 +128,7 @@ impl QueryBuilder {
     }
 
     pub fn count(&mut self, column: &str) -> &mut Self {
-        let as_name = format!("count_{}", column.to_string());
+        let as_name = format!("count_{}", column);
         self.count_as(column, &as_name)
     }
 
@@ -136,13 +136,13 @@ impl QueryBuilder {
         self.select(format!(
             "{} as '{}'",
             Aggregate::Count(column.to_string()),
-            as_name.to_string()
+            as_name
         ));
         self
     }
 
     pub fn max(&mut self, column: &str) -> &mut Self {
-        let as_name = format!("max_{}", column.to_string());
+        let as_name = format!("max_{}", column);
         self.max_as(column, &as_name)
     }
 
@@ -150,7 +150,7 @@ impl QueryBuilder {
         self.select(format!(
             "{} as '{}'",
             Aggregate::Max(column.to_string()),
-            as_name.to_string()
+            as_name
         ));
         self
     }
@@ -270,7 +270,7 @@ impl QueryBuilder {
 
     /// Adds a table to the list of tables to select from
     pub fn select_table<T: TableEntityTrait>(&mut self) -> &mut Self {
-        self.select_multiple(&T::table_column_full_names())
+        self.select_multiple(T::table_column_full_names())
     }
 
     /// Adds multiple columns to be selected

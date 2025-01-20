@@ -136,7 +136,7 @@ impl From<serde_json::Value> for FieldValue {
             serde_json::Value::Number(n) => n.into(),
             serde_json::Value::Array(a) => Self::Array(
                 a.into_iter()
-                    .map(|m| Self::from(m))
+                    .map(Self::from)
                     .collect::<Vec<FieldValue>>(),
             ),
             serde_json::Value::Object(o) => Self::from(o),

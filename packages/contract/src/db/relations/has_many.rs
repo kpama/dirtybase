@@ -37,7 +37,7 @@ where
 
     pub fn new_with_custom(manager: Manager, child_field: &str, child_table: &str) -> Self {
         let mut qb = QueryBuilder::new(
-            &child_table,
+            child_table,
             crate::db::base::query::QueryAction::Query {
                 columns: Some(C::table_column_full_names()),
             },

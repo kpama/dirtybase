@@ -154,7 +154,7 @@ mod test {
             .await;
 
         sleep(std::time::Duration::from_secs(6)).await;
-        assert_eq!(manager.has_context("counter").await, false);
+        assert!(!(manager.has_context("counter").await));
     }
 
     #[tokio::test]
@@ -165,6 +165,6 @@ mod test {
             .context("counter", 3, || Box::pin(async { 100 }))
             .await;
 
-        assert_eq!(manager.has_context("counter").await, true);
+        assert!(manager.has_context("counter").await);
     }
 }

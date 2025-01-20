@@ -1,4 +1,3 @@
-use std::sync::Arc;
 
 use axum::{extract::Path, response::Html, routing::get};
 use dirtybase_contract::{

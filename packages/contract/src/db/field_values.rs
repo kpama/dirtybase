@@ -49,7 +49,7 @@ impl FieldValue {
     where
         Self: Into<T>,
     {
-        return Self::from_ref_option_ref(field).clone().into();
+        Self::from_ref_option_ref(field).clone().into()
     }
 
     pub fn from_ref_option_into_option<T>(field: Option<&FieldValue>) -> Option<T>
@@ -194,11 +194,7 @@ impl From<&FieldValue> for ColumnAndValue {
         match value {
             FieldValue::Object(obj) => obj.clone(),
             FieldValue::String(inner) => {
-                if let Ok(kv) = serde_json::from_str::<HashMap<String, FieldValue>>(inner) {
-                    kv
-                } else {
-                    HashMap::new()
-                }
+                serde_json::from_str::<HashMap<String, FieldValue>>(inner).unwrap_or_default()
             }
             _ => HashMap::new(),
         }
@@ -210,11 +206,7 @@ impl From<FieldValue> for ColumnAndValue {
         match value {
             FieldValue::Object(obj) => obj,
             FieldValue::String(inner) => {
-                if let Ok(kv) = serde_json::from_str::<HashMap<String, FieldValue>>(&inner) {
-                    kv
-                } else {
-                    HashMap::new()
-                }
+                serde_json::from_str::<HashMap<String, FieldValue>>(&inner).unwrap_or_default()
             }
             _ => HashMap::new(),
         }

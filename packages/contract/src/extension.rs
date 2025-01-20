@@ -154,6 +154,6 @@ impl ExtensionManager {
     }
 
     pub(crate) fn init() {
-        let manager = EXTENSION_COLLECTION.get_or_init(|| Default::default());
+        let manager = EXTENSION_COLLECTION.get_or_init(Default::default);
     }
 }

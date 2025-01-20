@@ -36,8 +36,8 @@ impl Manager {
         let mut is_writable = false;
 
         if let Some(config) = config_set.get(&super::schema::ClientType::Write) {
-            write_is_sticky = config.sticky.clone().unwrap_or_default();
-            sticky_duration = config.sticky_duration.clone().unwrap_or_default();
+            write_is_sticky = config.sticky.unwrap_or_default();
+            sticky_duration = config.sticky_duration.unwrap_or_default();
             is_writable = true;
         }
 
@@ -331,7 +331,7 @@ impl Manager {
     }
 
     fn create_schema_manager(&self, for_write: bool) -> Box<dyn SchemaManagerTrait + Send> {
-        return match self.connections.get(&self.kind) {
+        match self.connections.get(&self.kind) {
             Some(pool) => {
                 if for_write {
                     if let Some(write_pool) = pool.get(&super::schema::ClientType::Write) {
@@ -349,8 +349,7 @@ impl Manager {
                     let ts = std::time::UNIX_EPOCH.elapsed().unwrap().as_secs() as i64;
                     let last_ts = self
                         .last_write_ts
-                        .load(std::sync::atomic::Ordering::Relaxed)
-                        as i64;
+                        .load(std::sync::atomic::Ordering::Relaxed);
                     if self.write_is_sticky && ts - last_ts <= self.sticky_duration {
                         return self.create_schema_manager(true);
                     }
@@ -368,7 +367,7 @@ impl Manager {
                 log::error!(target: "dirtybase_db", "could not get pool manager for: {:?}", self.kind);
                 panic!("could not get pool manager for: {:?}", self.kind);
             }
-        };
+        }
     }
 
     fn dispatch_written_event(&self) {

@@ -57,7 +57,7 @@ where
         qb.eq(child_type_field, child_type);
 
         Self {
-            manager: manager,
+            manager,
             query_builder: qb,
             child_field: child_field.to_string(),
             child_type: child_type.to_string(),

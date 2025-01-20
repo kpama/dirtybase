@@ -1,6 +1,6 @@
 use crate::config::CacheConfig;
 
-use self::cache_store::{CacheStoreTrait, DatabaseStore, MemoryStore, RedisStore};
+use self::cache_store::{CacheStoreTrait, MemoryStore};
 use busybody::helpers::provide;
 use std::collections::HashMap;
 use std::future::Future;

@@ -1,6 +1,4 @@
-use std::collections::HashMap;
 
-use dirtybase_contract::db::field_values::FieldValue;
 
 pub trait DomainEvent {
     fn event_type(&self) -> &str;
