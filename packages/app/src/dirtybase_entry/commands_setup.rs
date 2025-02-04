@@ -5,9 +5,10 @@ use crate::{core::command::Commands, run_cli, run_http};
 pub(crate) fn register(mut manager: CliCommandManager) -> CliCommandManager {
     // serve command
     let serve = clap::Command::new("serve").about("Start the web application server");
-    manager.register(serve, |_name, _c, service| {
+    manager.register(serve, |_name, _c, context| {
         Box::pin(async move {
-            if let Err(e) = run_http(service.provide().await).await {
+            let ci = context.service_container();
+            if let Err(e) = run_http(ci.provide().await).await {
                 log::error!("{}", e)
             }
         })
@@ -23,10 +24,12 @@ pub(crate) fn register(mut manager: CliCommandManager) -> CliCommandManager {
         .subcommand(clap::Command::new("reset").about("Migrate all down"));
 
     // -
-    manager.register(migrate, |name, matches, service| {
+    manager.register(migrate, |name, matches, context| {
         Box::pin(async move {
             let commands: Commands = Commands::from((name, matches));
-            if let Err(e) = run_cli(service.provide().await, &commands).await {
+            if let Err(e) =
+                run_cli(context.service_container_ref().provide().await, &commands).await
+            {
                 log::error!("{}", e)
             }
         })
@@ -40,10 +43,12 @@ pub(crate) fn register(mut manager: CliCommandManager) -> CliCommandManager {
                 .short('n')
                 .help("the id of the queue"),
         );
-    manager.register(queue, |name, matches, service| {
+    manager.register(queue, |name, matches, context| {
         Box::pin(async move {
             let commands: Commands = Commands::from((name, matches));
-            if let Err(e) = run_cli(service.provide().await, &commands).await {
+            if let Err(e) =
+                run_cli(context.service_container_ref().provide().await, &commands).await
+            {
                 log::error!("{}", e)
             }
         })
@@ -57,10 +62,12 @@ pub(crate) fn register(mut manager: CliCommandManager) -> CliCommandManager {
                 .short('c')
                 .help("the cluster to listen at"),
         );
-    manager.register(queue, |name, matches, service| {
+    manager.register(queue, |name, matches, context| {
         Box::pin(async move {
             let commands: Commands = Commands::from((name, matches));
-            if let Err(e) = run_cli(service.provide().await, &commands).await {
+            if let Err(e) =
+                run_cli(context.service_container_ref().provide().await, &commands).await
+            {
                 log::error!("{}", e)
             }
         })

@@ -2,12 +2,12 @@ use std::{
     env,
     path::{Path, PathBuf},
 };
-
 mod dirtybase_config;
 
-pub use dirtybase_config::DirtyConfig;
+pub use dirtybase_config::*;
 
 pub use config;
+use serde::{Deserialize, Serialize};
 
 /// Loads configuration from .env files.
 /// Multiple .env files are check in the following order
@@ -50,10 +50,13 @@ fn load_dot_env<P: AsRef<Path>>(mut dir: Option<P>) {
     env::set_var(LOADED_FLAG_KEY, LOADED_FLAG_VALUE);
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum CurrentEnvironment {
+    #[serde(rename = "prod")]
     Production,
+    #[serde(rename = "staging")]
     Staging,
+    #[serde(rename = "dev")]
     Development,
 }
 

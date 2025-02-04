@@ -5,12 +5,14 @@ pub mod http_helper;
 use std::{env, sync::Arc};
 
 use axum::Router;
+use axum_extra::extract::CookieJar;
 use dirtybase_contract::{
     app::Context,
     http::{RouteCollection, RouteType, RouterManager, WebMiddlewareManager},
     ExtensionManager,
 };
 use named_routes_axum::RouterWrapper;
+use tracing::{field, Instrument};
 
 use crate::{core::AppService, shutdown_signal};
 
@@ -33,11 +35,11 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
     let lock = ExtensionManager::list().read().await;
 
-    for ext in lock.iter() {
+    for ext in lock.values() {
         middleware_manager = ext.register_web_middlewares(middleware_manager);
     }
 
-    for ext in lock.iter() {
+    for ext in lock.values() {
         manager = ext.register_routes(manager, &middleware_manager);
     }
     drop(lock);
@@ -51,50 +53,50 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
         match route_type {
             RouteType::Api => {
                 if app.config().web_enable_api_routes() {
-                    let middleware_order = app.config().middleware().api_route();
-                    let api_router =
-                        middleware_manager.apply(flatten_routes(collection), middleware_order);
-
-                    router = router.merge(api_router.into_router());
+                    if let Some(order) = app.config().middleware().api_route() {
+                        let api_router =
+                            middleware_manager.apply(flatten_routes(collection), order);
+                        router = router.merge(api_router.into_router());
+                    }
                 }
             }
             RouteType::InsecureApi => {
                 if app.config().web_enable_insecure_api_routes() {
-                    let insecure_api_router = middleware_manager.apply(
-                        flatten_routes(collection),
-                        app.config().middleware().insecure_api_route(),
-                    );
-                    router = router.merge(insecure_api_router.into_router());
+                    if let Some(order) = app.config().middleware().insecure_api_route() {
+                        let insecure_api_router =
+                            middleware_manager.apply(flatten_routes(collection), order);
+                        router = router.merge(insecure_api_router.into_router());
+                    }
                 }
             }
             RouteType::Backend => {
                 if app.config().web_enable_admin_routes() {
-                    let backend_router = middleware_manager.apply(
-                        flatten_routes(collection),
-                        app.config().middleware().admin_route(),
-                    );
+                    if let Some(order) = app.config().middleware().admin_route() {
+                        let backend_router =
+                            middleware_manager.apply(flatten_routes(collection), order);
 
-                    router = router.merge(backend_router.into_router());
+                        router = router.merge(backend_router.into_router());
+                    }
                 }
             }
             RouteType::General => {
                 if app.config().web_enable_general_routes() {
-                    let general_router = middleware_manager.apply(
-                        flatten_routes(collection),
-                        app.config().middleware().general_route(),
-                    );
+                    if let Some(order) = app.config().middleware().general_route() {
+                        let general_router =
+                            middleware_manager.apply(flatten_routes(collection), order);
 
-                    router = router.merge(general_router.into_router());
+                        router = router.merge(general_router.into_router());
+                    }
                 }
             }
             RouteType::Dev => {
                 if app.config().web_enable_dev_routes() {
-                    let dev_router = middleware_manager.apply(
-                        flatten_routes(collection),
-                        app.config().middleware().general_route(),
-                    );
+                    if let Some(order) = app.config().middleware().general_route() {
+                        let dev_router =
+                            middleware_manager.apply(flatten_routes(collection), order);
 
-                    router = router.merge(dev_router.into_router());
+                        router = router.merge(dev_router.into_router());
+                    }
                 }
             }
         }
@@ -103,29 +105,68 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
     let mut web_app = RouterWrapper::from(router);
 
     if has_routes {
-        web_app = middleware_manager.apply(web_app, config.middleware().global());
+        if let Some(order) = config.middleware().global() {
+            web_app = middleware_manager.apply(web_app, order);
+        }
+
         // call extensions request handler
+        // First middleware to run
         web_app = web_app.middleware(|mut req, next| async {
-            for ext in ExtensionManager::list().read().await.iter() {
-                req = ext.on_web_request(req).await;
+            let cookie = CookieJar::from_headers(req.headers());
+            let context = req.extensions().get::<Context>().cloned().unwrap();
+            for ext in ExtensionManager::list().read().await.values() {
+                req = ext.on_web_request(req, context.clone(), &cookie).await;
             }
 
             next.run(req).await
         });
+
+        // proxy container
+        // this should be the last middleware registered.
+        // It sets up the current request specific context
+        web_app = web_app.middleware(|mut req, next| async {
+            let context = Context::default();
+            let span = tracing::trace_span!("http", ctx_id = context.id_ref(), data = field::Empty);
+
+            tracing::dispatcher::get_default(|dispatch| {
+                let _context = context.clone();
+
+                if let Some(id) = span.id() {
+                    if let Some(current) = dispatch.current_span().id() {
+                        dispatch.record_follows_from(&id, current)
+                    }
+                } else {
+                    log::error!("tracing has not being setup"); // FIXME: translation
+                }
+            });
+
+            async move {
+                log::trace!("{:?}", req.uri());
+
+                tracing::trace!("setting up request context: {}", req.uri());
+
+                // Add the request context
+                req.extensions_mut().insert(context.clone());
+                req.extensions_mut().insert(context.id());
+
+                let mut response = next.run(req).await;
+
+                let mut cookie = CookieJar::from_headers(response.headers());
+
+                response.extensions_mut().insert(context.clone());
+
+                for ext in ExtensionManager::list().read().await.values() {
+                    (response, cookie) =
+                        ext.on_web_response(response, cookie, context.clone()).await;
+                }
+
+                (cookie, response)
+            }
+            .instrument(span.clone())
+            .await
+        });
     }
     drop(middleware_manager);
-
-    // proxy container
-    // this should be the last middleware registered.
-    // It sets up the current request specific context
-    web_app = web_app.middleware(|mut req, next| async {
-        log::debug!("setting up request context: {}", req.uri());
-
-        // Add the request context
-        let context = Context::default();
-        req.extensions_mut().insert(context);
-        next.run(req).await
-    });
 
     let listener = tokio::net::TcpListener::bind((config.web_ip_address(), config.web_port()))
         .await

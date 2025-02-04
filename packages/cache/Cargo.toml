@@ -9,7 +9,6 @@ edition.workspace = true
 busybody = { workspace = true }
 dirtybase_db_macro = { workspace = true }
 dirtybase_contract = { workspace = true }
-dirtybase_config = { workspace = true }
 dirtybase_helper = { workspace = true }
 dirtybase_3rd_client = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

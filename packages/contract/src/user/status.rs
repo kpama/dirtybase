@@ -5,15 +5,15 @@ use crate::db::field_values::FieldValue;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
 pub enum UserStatus {
-    #[serde(rename(serialize = "active"))]
+    #[serde(rename = "active")]
     Active,
-    #[serde(rename(serialize = "inactive"))]
+    #[serde(rename = "inactive")]
     Inactive,
-    #[serde(rename(serialize = "pending"))]
+    #[serde(rename = "pending")]
     Pending,
-    #[serde(rename(serialize = "suspended"))]
+    #[serde(rename = "suspended")]
     Suspended,
-    #[serde(rename(serialize = "unknown"))]
+    #[serde(rename = "unknown")]
     Unknown,
 }
 

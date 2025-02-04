@@ -4,16 +4,7 @@ use dirtybase_contract::{
     http::prelude::*,
 };
 
-pub struct BasicAuthMiddleware;
-
-impl WebMiddlewareRegisterer for BasicAuthMiddleware {
-    fn register(&self, router: WrappedRouter) -> WrappedRouter {
-        log::debug!("registering basic auth middleware");
-        router.middleware(handle_basic_auth_middleware)
-    }
-}
-
-async fn handle_basic_auth_middleware(req: Request, next: Next) -> impl IntoResponse {
+pub async fn handle_basic_auth_middleware(req: Request, next: Next) -> impl IntoResponse {
     log::debug!(">>>> Basic auth ran <<<<<");
     let user_provider = busybody::helpers::service::<UserProviderService>().await;
 

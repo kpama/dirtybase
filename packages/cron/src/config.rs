@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use dirtybase_config::DirtyConfig;
+use dirtybase_contract::config::DirtyConfig;
 use english_to_cron::str_cron_syntax;
 
 use crate::JobId;

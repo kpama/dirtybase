@@ -1,0 +1,12 @@
+[package]
+name = "dirtybase_encrypt"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+aes-gcm = { workspace = true }
+crypto = { workspace = true }
+base64ct = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }

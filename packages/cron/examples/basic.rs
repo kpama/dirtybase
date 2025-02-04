@@ -1,10 +1,11 @@
 use std::time::Duration;
 
+use dirtybase_contract::config::DirtyConfig;
 use dirtybase_cron::config::CronConfig;
 #[tokio::main]
 async fn main() {
     // 1. Setup the configuration using the default config template
-    let base_config = dirtybase_config::DirtyConfig::new();
+    let base_config = DirtyConfig::new();
     let config = base_config
         .optional_file("./config_template/cron.toml", Some("DTY_CRON"))
         .build()

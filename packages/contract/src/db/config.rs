@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::config::DirtyConfig;
+
 use super::base::schema::{ClientType, DatabaseKind};
 
 pub type ConfigSet = HashMap<ClientType, BaseConfig>;
@@ -45,7 +47,7 @@ impl BaseConfig {
         self.kind.clone()
     }
 
-    pub fn set_from(dirty_config: &dirtybase_config::DirtyConfig) -> ConfigSet {
+    pub fn set_from(dirty_config: &DirtyConfig) -> ConfigSet {
         let config = dirty_config
             .optional_file("database.toml", Some("DTY_DB"))
             .build()

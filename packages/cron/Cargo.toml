@@ -13,5 +13,4 @@ busstop = { workspace = true }
 english-to-cron = { workspace = true }
 orsomafo = { workspace = true }
 serde = { workspace = true }
-dirtybase_config = { workspace = true }
 dirtybase_contract = { workspace = true }

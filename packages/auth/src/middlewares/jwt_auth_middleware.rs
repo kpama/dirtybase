@@ -1,18 +1,6 @@
 use dirtybase_contract::{app::Context, http::prelude::*};
 
-pub struct JWTAuthMiddleware;
-
-impl WebMiddlewareRegisterer for JWTAuthMiddleware {
-    fn register(
-        &self,
-        router: dirtybase_contract::http::WrappedRouter,
-    ) -> dirtybase_contract::http::WrappedRouter {
-        println!("registering jwt auth middleware");
-        router.middleware(handle_jwt_auth_middleware)
-    }
-}
-
-async fn handle_jwt_auth_middleware(req: Request, next: Next) -> impl IntoResponse {
+pub async fn handle_jwt_auth_middleware(req: Request, next: Next) -> impl IntoResponse {
     println!(">>>> jwt auth ran <<<<");
 
     if let Some(context) = req.extensions().get::<Context>() {

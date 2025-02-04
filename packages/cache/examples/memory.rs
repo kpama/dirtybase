@@ -1,10 +1,11 @@
 use std::time::Duration;
 
 use dirtybase_cache::{config::CacheConfig, CacheManager};
+use dirtybase_contract::config::DirtyConfig;
 
 #[tokio::main]
 async fn main() {
-    let dty_config = dirtybase_config::DirtyConfig::default();
+    let dty_config = DirtyConfig::default();
     let config = CacheConfig::new(&dty_config);
     let manager = CacheManager::new(&config).await;
 

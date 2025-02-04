@@ -1,7 +1,4 @@
-use super::model::dirtybase_user::{
-    dirtybase_user_helpers::jwt_manager::JWTManager, DirtybaseUserEntity,
-};
-use busybody::helpers::provide;
+use super::model::dirtybase_user::DirtybaseUserEntity;
 use dirtybase_db::types::UlidField;
 use std::{collections::HashMap, fmt::Display};
 
@@ -91,9 +88,10 @@ impl ClaimBuilder {
     }
 
     pub async fn generate(self) -> Option<String> {
-        let jwt_manager = provide::<JWTManager>().await;
+        // let jwt_manager = provide::<JWTManager>().await;
 
-        jwt_manager.sign_to_jwt(self.build())
+        // jwt_manager.sign_to_jwt(self.build())
+        unimplemented!()
     }
 }
 

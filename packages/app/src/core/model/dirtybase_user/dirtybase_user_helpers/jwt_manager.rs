@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use crate::core::Config;
-use hmac::{Hmac, Mac};
+use hmac::Hmac;
 use jwt::SignWithKey;
 use jwt::VerifyWithKey;
 use sha2::Sha256;
@@ -29,16 +28,6 @@ impl JWTManager {
                 log::info!("Could not verify JWT: {}", e.to_string());
                 None
             }
-        }
-    }
-}
-
-#[busybody::async_trait]
-impl busybody::Injectable for JWTManager {
-    async fn inject(ci: &busybody::ServiceContainer) -> Self {
-        let config = ci.provide::<Config>().await;
-        Self {
-            hmac_key: Hmac::new_from_slice(config.secret().as_bytes()).unwrap(),
         }
     }
 }

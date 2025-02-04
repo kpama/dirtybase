@@ -1,44 +1,65 @@
 use clap::command;
 use futures::future::BoxFuture;
-use std::{collections::HashMap, sync::Arc};
 
-use crate::ExtensionManager;
+use crate::{app::Context, ExtensionManager};
 
-type CommandHandler = Box<
-    dyn FnMut(String, clap::ArgMatches, Arc<busybody::ServiceContainer>) -> BoxFuture<'static, ()>,
->;
+use super::CliMiddlewareManager;
+
 pub struct CliCommandManager {
-    command_handlers: HashMap<String, CommandHandler>,
-    commands: Vec<clap::Command>,
+    commands: Vec<(
+        clap::Command,
+        Box<
+            dyn FnMut(String, clap::ArgMatches, Context) -> BoxFuture<'static, ()>
+                + Send
+                + Sync
+                + 'static,
+        >,
+        Option<Vec<String>>,
+    )>,
+    middleware_manager: CliMiddlewareManager,
 }
 
 impl Default for CliCommandManager {
     fn default() -> Self {
-        Self::new()
+        Self::new(CliMiddlewareManager::new())
     }
 }
 
 impl CliCommandManager {
-    pub fn new() -> Self {
+    pub fn new(middleware_manager: CliMiddlewareManager) -> Self {
         Self {
-            command_handlers: HashMap::new(),
             commands: Vec::new(),
+            middleware_manager,
         }
     }
 
     pub fn register<H>(&mut self, command: clap::Command, handler: H) -> &mut Self
     where
-        H: FnMut(
-                String,
-                clap::ArgMatches,
-                Arc<busybody::ServiceContainer>,
-            ) -> BoxFuture<'static, ()>
+        H: FnMut(String, clap::ArgMatches, Context) -> BoxFuture<'static, ()>
+            + Send
+            + Sync
             + 'static,
     {
-        self.command_handlers
-            .insert(command.get_name().to_string(), Box::new(handler));
+        self.commands.push((command, Box::new(handler), None));
 
-        self.commands.push(command);
+        self
+    }
+
+    pub fn apply<H, I>(
+        &mut self,
+        command: clap::Command,
+        handler: H,
+        order: impl IntoIterator<Item = I>,
+    ) -> &mut Self
+    where
+        H: FnMut(String, clap::ArgMatches, Context) -> BoxFuture<'static, ()>
+            + Send
+            + Sync
+            + 'static,
+        I: Into<String>,
+    {
+        let o = order.into_iter().map(|v| v.into()).collect::<Vec<String>>();
+        self.commands.push((command, Box::new(handler), Some(o)));
 
         self
     }
@@ -57,7 +78,7 @@ impl CliCommandManager {
             .subcommand_required(true)
             .arg_required_else_help(true);
 
-        for cmd in self.commands.into_iter() {
+        for (cmd, _, _) in self.commands.iter() {
             command = command.subcommand(cmd);
         }
 
@@ -69,15 +90,20 @@ impl CliCommandManager {
             }
             None => command.get_matches(),
         };
-        let service_container = busybody::helpers::service_container();
 
-        if let Some((cmd, mut command)) = matches.remove_subcommand() {
-            for ext in ExtensionManager::list().read().await.iter() {
-                command = ext.on_cli_command(cmd.as_str(), command).await;
+        if let Some((name, mut command)) = matches.remove_subcommand() {
+            for ext in ExtensionManager::list().read().await.values() {
+                command = ext.on_cli_command(name.as_str(), command).await;
             }
 
-            if let Some(handler) = self.command_handlers.get_mut(&cmd) {
-                (handler)(cmd, command, service_container).await;
+            for (cmd, handler, order) in self.commands.into_iter() {
+                let middleware = self
+                    .middleware_manager
+                    .apply(handler, order.unwrap_or_default());
+                if name == cmd.get_name() {
+                    middleware.send((name, command, Context::default())).await;
+                    break;
+                }
             }
         }
     }

@@ -6,7 +6,7 @@ use axum::{
     response::{Html, IntoResponse, Response},
 };
 use dirtybase_app::core::AppServiceExtractor;
-use dirtybase_contract::http::{RouterManager, WebMiddlewareManager, WebMiddlewareRegisterer};
+use dirtybase_contract::http::{RouterManager, WebMiddlewareManager};
 use tower_service::Service;
 
 #[tokio::main]
@@ -16,9 +16,9 @@ async fn main() -> anyhow::Result<()> {
 
     app_service.register(MyApp).await;
 
-    app_service.init().await;
+    // app_service.init().await;
 
-    dirtybase_app::run(app_service.clone()).await
+    dirtybase_app::run(app_service).await
 }
 
 struct MyApp;
@@ -28,16 +28,19 @@ impl dirtybase_app::contract::ExtensionSetup for MyApp {
     fn register_routes(
         &self,
         mut manager: RouterManager,
-        _middleware: &WebMiddlewareManager,
+        middleware: &WebMiddlewareManager,
     ) -> RouterManager {
         manager
-            .general(None, |router| {
-                router
+            .general(None, |mut router| {
+                router = router
                     .get("/", handle_home, "home")
                     .get("/home2", handle_home2, "home2")
                     .get_x("/one", another_one)
                     .get("/new", my_world, "new-test")
                     .get("/new2", || async { "Hello from new two" }, "new2")
+                    .get_x("/middleware", || async { "Testing middleware features" });
+
+                middleware.apply(router, ["example1", "auth:normal"])
             })
             .api("/jj".into(), |router| {
                 router.get("/people", || async { "List of people" }, "api-people")
@@ -47,8 +50,22 @@ impl dirtybase_app::contract::ExtensionSetup for MyApp {
     }
 
     fn register_web_middlewares(&self, mut manager: WebMiddlewareManager) -> WebMiddlewareManager {
-        manager.register("example1", Example1Middleware);
-        manager.register("example3", Example3Middleware);
+        manager.register("example1", |router| {
+            router
+                .middleware(|req, mut next| async move {
+                    println!(">>>>> we are in the basic example middleware");
+                    next.call(req).await
+                })
+                .middleware_with_state(
+                    |State(state): State<MyAppState>, request, mut next| async move {
+                        let total = state.increment();
+                        println!("Total visitors: {}", total);
+
+                        next.call(request).await
+                    },
+                    MyAppState::new(),
+                )
+        });
 
         manager
     }
@@ -75,41 +92,6 @@ async fn my_world() -> impl IntoResponse {
 }
 async fn another_one() -> impl IntoResponse {
     "This works!!!!!"
-}
-
-struct Example1Middleware;
-
-impl WebMiddlewareRegisterer for Example1Middleware {
-    fn register(
-        &self,
-        router: named_routes_axum::RouterWrapper<std::sync::Arc<busybody::ServiceContainer>>,
-    ) -> named_routes_axum::RouterWrapper<std::sync::Arc<busybody::ServiceContainer>> {
-        dbg!("-----> registering example 1 middleware");
-
-        router.middleware(|request, mut next| async move {
-            dbg!(" ***** A new request just got in ****** ");
-            next.call(request).await
-        })
-    }
-}
-
-struct Example3Middleware;
-
-impl WebMiddlewareRegisterer for Example3Middleware {
-    fn register(
-        &self,
-        router: named_routes_axum::RouterWrapper<std::sync::Arc<busybody::ServiceContainer>>,
-    ) -> named_routes_axum::RouterWrapper<std::sync::Arc<busybody::ServiceContainer>> {
-        router.middleware_with_state(
-            |State(state): State<MyAppState>, request, mut next| async move {
-                let total = state.increment();
-                println!("Total visitors: {}", total);
-
-                next.call(request).await
-            },
-            MyAppState::new(),
-        )
-    }
 }
 
 #[derive(Debug, Default, Clone)]

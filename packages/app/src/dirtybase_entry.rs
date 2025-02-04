@@ -1,6 +1,6 @@
-use dirtybase_config::DirtyConfig;
 use dirtybase_contract::{
     cli::CliCommandManager,
+    config::DirtyConfig,
     http::{RouterManager, WebMiddlewareManager},
 };
 
@@ -9,19 +9,20 @@ use crate::http;
 mod commands_setup;
 mod migration;
 
+#[derive(Debug, Default)]
 pub struct Extension;
 
 #[dirtybase_contract::async_trait]
 impl dirtybase_contract::ExtensionSetup for Extension {
-    async fn setup(&self, _config: &DirtyConfig) {
+    async fn setup(&mut self, _config: &DirtyConfig) {
         // event_handler::setup().await;
     }
 
-    fn migrations(&self) -> dirtybase_contract::ExtensionMigrations {
-        migration::setup()
+    fn migrations(&self) -> Option<dirtybase_contract::ExtensionMigrations> {
+        Some(migration::setup())
     }
 
-    async fn shutdown(&self) {
+    async fn shutdown(&mut self) {
         log::info!("--- main application is shutting down -- ");
     }
 

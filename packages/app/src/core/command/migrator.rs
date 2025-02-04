@@ -28,7 +28,9 @@ impl Migrator {
     pub async fn from_app(app: &AppService) -> Self {
         let mut migrations = Vec::new();
         app.extensions(|ext| {
-            migrations.extend(ext.migrations());
+            if let Some(m) = ext.migrations() {
+                migrations.extend(m);
+            }
         })
         .await;
 

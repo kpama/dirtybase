@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use dirtybase_config::DirtyConfig;
+use dirtybase_contract::config::DirtyConfig;
 use dirtybase_db::{base::schema::ClientType, config::BaseConfig};
 
 #[tokio::main]

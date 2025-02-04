@@ -1,14 +1,19 @@
-use std::{env, path::Path};
+use std::{env, path::Path, sync::Arc};
 
-use config::builder::DefaultState;
+use base64ct::Encoding;
+use config::{builder::DefaultState, Environment};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::{load_dot_env, CurrentEnvironment};
+use super::{
+    load_dot_env, CurrentEnvironment, APP_DEFAULT_NAME, APP_NAME_KEY, CONFIG_DIR_KEY,
+    ENVIRONMENT_KEY,
+};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DirtyConfig {
-    app_name: String,
+    app_name: Arc<String>,
     current_env: CurrentEnvironment,
-    config_dir: String,
+    config_dir: Arc<String>,
 }
 
 impl Default for DirtyConfig {
@@ -16,12 +21,14 @@ impl Default for DirtyConfig {
         load_dot_env::<&str>(None);
 
         Self {
-            app_name: env::var(crate::APP_NAME_KEY).unwrap_or(crate::APP_DEFAULT_NAME.into()),
-            current_env: env::var(crate::ENVIRONMENT_KEY)
+            app_name: env::var(APP_NAME_KEY)
+                .unwrap_or(APP_DEFAULT_NAME.into())
+                .into(),
+            current_env: env::var(ENVIRONMENT_KEY)
                 .unwrap_or_default()
                 .as_str()
                 .into(),
-            config_dir: env::var(crate::CONFIG_DIR_KEY).unwrap_or_default(),
+            config_dir: env::var(CONFIG_DIR_KEY).unwrap_or_default().into(),
         }
     }
 }
@@ -40,9 +47,9 @@ impl DirtyConfig {
     pub fn new_with(name: &str, current_env: CurrentEnvironment) -> Self {
         env::set_var(super::LOADED_FLAG_KEY, super::LOADED_FLAG_VALUE);
         Self {
-            app_name: name.to_string(),
+            app_name: Arc::new(name.to_string()),
             current_env,
-            config_dir: env::var(crate::CONFIG_DIR_KEY).unwrap_or_default(),
+            config_dir: Arc::new(env::var(CONFIG_DIR_KEY).unwrap_or_default()),
         }
     }
 
@@ -63,13 +70,12 @@ impl DirtyConfig {
     pub fn builder(&self) -> config::ConfigBuilder<DefaultState> {
         let env = String::from(self.current_env());
         config::Config::builder()
-            .set_override(crate::ENVIRONMENT_KEY, env)
+            .set_override(ENVIRONMENT_KEY, env)
             .unwrap()
     }
 
     pub fn dotenv_prefix(&self, prefix: &str) -> config::ConfigBuilder<DefaultState> {
-        self.builder()
-            .add_source(config::Environment::with_prefix(prefix))
+        self.builder().add_source(self.build_env(prefix))
     }
 
     pub fn optional_file(
@@ -77,29 +83,19 @@ impl DirtyConfig {
         filename: &str,
         dotenv_prefix: Option<&str>,
     ) -> config::ConfigBuilder<DefaultState> {
-        let path = Path::new(&self.config_dir).join(filename);
-
-        let mut builder = if let Some(real) = path.to_str() {
-            self.builder()
-                .add_source(config::File::with_name(real).required(false))
-        } else {
-            self.builder()
-                .add_source(config::File::with_name(filename).required(false))
-        };
-
-        if let Some(prefix) = dotenv_prefix {
-            builder = builder.add_source(config::Environment::with_prefix(prefix));
-        }
-
-        builder
+        self.load_optional_file(filename, dotenv_prefix)
     }
 
-    pub fn load_optional_file(
+    pub fn load_optional_file_fn<F>(
         &self,
         filename: &str,
         dotenv_prefix: Option<&str>,
-    ) -> config::ConfigBuilder<DefaultState> {
-        let path = Path::new(&self.config_dir).join(filename);
+        mut env_callback: F,
+    ) -> config::ConfigBuilder<DefaultState>
+    where
+        F: FnMut(Environment) -> Environment,
+    {
+        let path = Path::new(self.config_dir.as_str()).join(filename);
 
         let mut builder = if let Some(full_path) = path.to_str() {
             self.builder()
@@ -112,13 +108,19 @@ impl DirtyConfig {
         builder = self.append_optional(builder, filename);
 
         if let Some(prefix) = dotenv_prefix {
-            builder =
-                builder.add_source(config::Environment::with_prefix(prefix).try_parsing(true));
+            builder = builder.add_source(env_callback(self.build_env(prefix)));
         }
 
         builder = self.append_optional(builder, filename);
 
         builder
+    }
+    pub fn load_optional_file(
+        &self,
+        filename: &str,
+        dotenv_prefix: Option<&str>,
+    ) -> config::ConfigBuilder<DefaultState> {
+        self.load_optional_file_fn(filename, dotenv_prefix, |ev| ev)
     }
 
     pub fn require_file(
@@ -126,7 +128,7 @@ impl DirtyConfig {
         filename: &str,
         dotenv_prefix: Option<&str>,
     ) -> config::ConfigBuilder<DefaultState> {
-        let path = Path::new(&self.config_dir).join(filename);
+        let path = Path::new(self.config_dir.as_str()).join(filename);
 
         let mut builder = if let Some(real) = path.to_str() {
             self.builder().add_source(config::File::with_name(real))
@@ -137,7 +139,7 @@ impl DirtyConfig {
         builder = self.append_optional(builder, filename);
 
         if let Some(prefix) = dotenv_prefix {
-            builder = builder.add_source(config::Environment::with_prefix(prefix));
+            builder = builder.add_source(self.build_env(prefix));
         }
 
         builder
@@ -153,7 +155,7 @@ impl DirtyConfig {
             .add_source(config::File::with_name(full_path));
 
         if let Some(prefix) = dotenv_prefix {
-            builder = builder.add_source(config::Environment::with_prefix(prefix));
+            builder = builder.add_source(self.build_env(prefix));
         }
 
         builder
@@ -167,7 +169,7 @@ impl DirtyConfig {
         let env_version = ["_prod.", "_stage.", "_dev."];
         for name in env_version {
             let new_file_name = filename.replacen('.', name, 1);
-            let path = Path::new(&self.config_dir).join(new_file_name);
+            let path = Path::new(self.config_dir.as_str()).join(new_file_name);
 
             if let Some(full_path) = path.to_str() {
                 builder = builder.add_source(config::File::with_name(full_path).required(false));
@@ -175,29 +177,78 @@ impl DirtyConfig {
         }
         builder
     }
+
+    fn build_env(&self, prefix: &str) -> config::Environment {
+        config::Environment::with_prefix(prefix).try_parsing(true)
+    }
 }
 
-#[busybody::async_trait]
-impl busybody::Injectable for DirtyConfig {
-    async fn inject(container: &busybody::ServiceContainer) -> Self {
-        match container.get_type() {
-            Some(config) => config,
-            None => {
-                container.set_type(Self::default());
-                container.get_type().unwrap()
-            }
-        }
+/// A deserializer function that will return Vev<String>
+///
+/// Use this function on an attribute where the raw value is a string
+/// that should be split at "," and the pieces return as a Vec<String>
+///  apply the function as the deserializer as `#[serde(deserialize_with = "field_to_array")]`
+pub fn field_to_array<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = serde::de::Deserialize::deserialize(deserializer).unwrap_or_default();
+
+    Ok(s.split(',')
+        .into_iter()
+        .map(|v| v.trim().to_string())
+        .collect::<Vec<String>>())
+}
+
+/// Same as `field_to_array` but an empty string will case a return of `None`
+pub fn field_to_option_array<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = serde::de::Deserialize::deserialize(deserializer).unwrap_or_default();
+    if s.is_empty() {
+        return Ok(None);
     }
+
+    Ok(Some(
+        s.split(',')
+            .into_iter()
+            .map(|v| v.trim().to_string())
+            .collect::<Vec<String>>(),
+    ))
+}
+
+pub fn field_to_vec_u8<'de, D>(deserializer: D) -> Result<Arc<Vec<u8>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = serde::de::Deserialize::deserialize(deserializer).unwrap_or_default();
+    if s.starts_with("base64:") {
+        Ok(Arc::new(
+            base64ct::Base64::decode_vec(&s.replace("base64:", "")).unwrap_or_default(),
+        ))
+    } else {
+        Ok(Arc::new(hex::decode(s).unwrap_or_default()))
+    }
+}
+
+pub fn vec_u8_to_field<S>(v: &[u8], s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    s.serialize_str(&format!("base64:{}", base64ct::Base64::encode_string(v)))
 }
 
 #[cfg(test)]
 mod test {
+    use crate::config::{LOADED_FLAG_KEY, LOADED_FLAG_VALUE};
+
     use super::*;
 
     fn reset_env() {
-        env::remove_var(crate::APP_NAME_KEY);
-        env::remove_var(crate::ENVIRONMENT_KEY);
-        env::remove_var(crate::LOADED_FLAG_KEY);
+        env::remove_var(APP_NAME_KEY);
+        env::remove_var(ENVIRONMENT_KEY);
+        env::remove_var(LOADED_FLAG_KEY);
     }
 
     #[test]
@@ -223,9 +274,9 @@ mod test {
         let app_name = "Test app";
         let environment: String = CurrentEnvironment::Development.into();
 
-        env::set_var(crate::APP_NAME_KEY, app_name);
-        env::set_var(crate::ENVIRONMENT_KEY, environment);
-        env::set_var(crate::LOADED_FLAG_KEY, crate::LOADED_FLAG_VALUE);
+        env::set_var(APP_NAME_KEY, app_name);
+        env::set_var(ENVIRONMENT_KEY, environment);
+        env::set_var(LOADED_FLAG_KEY, LOADED_FLAG_VALUE);
 
         let config = DirtyConfig::new();
 
@@ -237,7 +288,7 @@ mod test {
         reset_env();
         let config = DirtyConfig::new_skip();
 
-        assert_eq!(config.app_name(), crate::APP_DEFAULT_NAME);
+        assert_eq!(config.app_name(), APP_DEFAULT_NAME);
         assert_eq!(config.current_env(), &CurrentEnvironment::Development);
     }
 

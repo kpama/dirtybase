@@ -1,21 +1,50 @@
-use std::{ops::Deref, sync::Arc};
+use std::{fmt::Display, ops::Deref, sync::Arc};
 
 use axum::{extract::FromRequestParts, http::request::Parts};
 use busybody::Service;
 
-use crate::{db::types::ArcUlidField, user::status::UserStatus};
+mod context_metadata;
+mod user_context;
+
+pub use context_metadata::*;
+pub use user_context::*;
+
+#[derive(Clone)]
+pub struct ContextId(Arc<String>);
+
+impl Default for ContextId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ContextId {
+    pub fn new() -> Self {
+        Self(Arc::new(dirtybase_helper::uuid::uuid25_v4_string()))
+    }
+}
+
+impl Display for ContextId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.0)
+    }
+}
 
 #[derive(Clone)]
 pub struct Context {
+    id: ContextId,
     sc: Arc<busybody::ServiceContainer>,
 }
 
 impl Default for Context {
     fn default() -> Self {
-        
-        Self {
+        let instance = Self {
+            id: ContextId::default(),
             sc: Arc::new(busybody::helpers::make_proxy()),
-        }
+        };
+
+        instance.set(ContextMetadata::default());
+        instance
     }
 }
 
@@ -49,89 +78,17 @@ impl Context {
     pub fn get<T: 'static>(&self) -> Option<Service<T>> {
         self.sc.get()
     }
-}
 
-#[derive(Debug, Clone, Default)]
-pub struct UserContext {
-    id: ArcUlidField,
-    username: String,
-    status: UserStatus,
-    role: RoleContext,
-    app: AppContext,
-}
-
-impl UserContext {
-    pub fn id(&self) -> ArcUlidField {
+    pub fn id(&self) -> ContextId {
         self.id.clone()
     }
 
-    pub fn username(&self) -> &str {
-        &self.username
+    pub fn id_ref(&self) -> &String {
+        &self.id.0
     }
 
-    pub fn status(&self) -> UserStatus {
-        self.status
-    }
-
-    pub fn role(&self) -> &RoleContext {
-        &self.role
-    }
-
-    pub fn app(&self) -> &AppContext {
-        &self.app
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct RoleContext {
-    id: ArcUlidField,
-    name: String,
-}
-
-impl RoleContext {
-    pub fn id(&self) -> ArcUlidField {
-        self.id.clone()
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct CompanyContext {
-    id: ArcUlidField,
-    name: String,
-}
-
-impl CompanyContext {
-    pub fn id(&self) -> ArcUlidField {
-        self.id.clone()
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct AppContext {
-    id: ArcUlidField,
-    name: String,
-    company: CompanyContext,
-}
-
-impl AppContext {
-    pub fn id(&self) -> ArcUlidField {
-        self.id.clone()
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn company(&self) -> &CompanyContext {
-        &self.company
+    pub fn metadata(&self) -> Service<ContextMetadata> {
+        self.get().unwrap()
     }
 }
 
@@ -150,8 +107,8 @@ where
 {
     type Rejection = String;
 
-    async fn from_request_parts(req: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let context = req
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let context = parts
             .extensions
             .get::<Context>()
             .ok_or_else(|| "Error".to_string())

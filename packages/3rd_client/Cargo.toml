@@ -13,7 +13,6 @@ deadpool = { workspace = true }
 deadpool-redis = { workspace = true, features = ["serde"] }
 redis = { workspace = true }
 busybody = { workspace = true }
-dirtybase_config = { path = "../config" }
 
 [dev-dependencies]
 tokio = { version = "*", features = ["full"] }

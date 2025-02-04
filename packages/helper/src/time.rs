@@ -90,6 +90,10 @@ pub fn now() -> Time {
     Time::now()
 }
 
+pub fn now_ts() -> i64 {
+    now().timestamp()
+}
+
 impl From<Time> for i64 {
     fn from(value: Time) -> Self {
         value.timestamp()

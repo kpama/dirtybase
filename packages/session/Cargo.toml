@@ -1,6 +1,22 @@
 [package]
-name = "session"
+name = "dirtybase_session"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
+dirtybase_db_macro = { workspace = true }
+dirtybase_contract = { workspace = true }
+dirtybase_helper = { workspace = true }
+dirtybase_cron = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+log = { workspace = true }
+bcrypt = { workspace = true }
+futures = { workspace = true }
+tokio = { workspace = true }
+busybody = { workspace = true }
+async-trait = { workspace = true }
+uuid = { workspace = true }
+uuid25 = { workspace = true }
+tracing = { workspace = true }

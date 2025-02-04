@@ -4,11 +4,9 @@ use named_routes_axum::RouterWrapper;
 
 pub type WrappedRouter = RouterWrapper<Arc<busybody::ServiceContainer>>;
 
-pub trait WebMiddlewareRegisterer: Send + Sync {
-    fn register(&self, router: WrappedRouter) -> WrappedRouter;
-}
+type RegistererFn = Box<dyn Fn(WrappedRouter) -> WrappedRouter + Send + Sync + 'static>;
 
-pub struct WebMiddlewareManager(HashMap<String, Box<dyn WebMiddlewareRegisterer>>);
+pub struct WebMiddlewareManager(HashMap<String, RegistererFn>);
 
 impl Default for WebMiddlewareManager {
     fn default() -> Self {
@@ -22,11 +20,10 @@ impl WebMiddlewareManager {
     }
 
     /// Register a middleware that maybe apply later
-    pub fn register(
-        &mut self,
-        name: &str,
-        registerer: impl WebMiddlewareRegisterer + 'static,
-    ) -> &mut Self {
+    pub fn register<F>(&mut self, name: &str, registerer: F) -> &mut Self
+    where
+        F: Fn(WrappedRouter) -> WrappedRouter + Send + Sync + 'static,
+    {
         self.0.insert(name.into(), Box::new(registerer));
         self
     }
@@ -42,9 +39,14 @@ impl WebMiddlewareManager {
     {
         for m in order.into_iter() {
             let key = m.into();
-            if self.0.contains_key(&key) {
-                router =
-                    WebMiddlewareRegisterer::register(self.0.get(&key).unwrap().as_ref(), router);
+            if key.is_empty() {
+                continue;
+            }
+            if let Some(m) = self.0.get(&key) {
+                router = (m)(router);
+            } else {
+                // FIXME: Add translation
+                tracing::error!("could not find web middleware: {}", key);
             }
         }
 

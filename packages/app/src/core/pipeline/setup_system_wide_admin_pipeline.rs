@@ -112,8 +112,9 @@ async fn create_default_company(
     company_service: CompanyService,
     mut new_company: CompanyEntity,
     pipe: PipeContent,
-    config: Config,
+    app: Service<App>,
 ) -> Option<PipeContent> {
+    let config = app.config();
     if new_admin_data.user.is_some() {
         let user = new_admin_data.user.as_ref().unwrap();
         new_company.name = config.app_name().to_string();
@@ -137,8 +138,9 @@ async fn create_default_app_add_user(
     app_service: AppEntityService,
     role_service: RoleService,
     role_user_service: RoleUserService,
-    config: Config,
+    app: Service<App>,
 ) -> Option<PipeContent> {
+    let config = app.config();
     if new_admin_data.user.is_some() && new_admin_data.company.is_some() {
         let company = new_admin_data.company.as_ref().unwrap().clone();
         let user = new_admin_data.user.as_ref().unwrap().clone();

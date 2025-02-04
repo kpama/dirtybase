@@ -1,4 +1,3 @@
-
 use axum::{extract::Path, response::Html, routing::get};
 use dirtybase_contract::{
     http::{RouterManager, WebMiddlewareManager},
@@ -64,7 +63,7 @@ impl dirtybase_app::contract::ExtensionSetup for MyAwesomeApp {
         manager
     }
 
-    async fn shutdown(&self) {
+    async fn shutdown(&mut self) {
         println!("shutting down our application");
     }
 }

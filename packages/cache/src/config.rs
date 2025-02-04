@@ -1,10 +1,12 @@
+use dirtybase_contract::config::DirtyConfig;
+
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct CacheConfig {
     cache_store: Option<String>,
 }
 
 impl CacheConfig {
-    pub fn new(config: &dirtybase_config::DirtyConfig) -> Self {
+    pub fn new(config: &DirtyConfig) -> Self {
         let mut con: Self = config
             .optional_file("cache.toml", Some("DTY_CACHE"))
             .build()

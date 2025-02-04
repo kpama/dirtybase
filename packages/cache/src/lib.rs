@@ -9,8 +9,9 @@ pub mod model;
 pub use cache_dirtybase_entry::*;
 pub use cache_manager::cache_entry::CacheEntry;
 pub use cache_manager::CacheManager;
+use dirtybase_contract::config::DirtyConfig;
 
-pub async fn setup(config: &dirtybase_config::DirtyConfig) -> cache_manager::CacheManager {
+pub async fn setup(config: &DirtyConfig) -> cache_manager::CacheManager {
     let cache_config = CacheConfig::new(config);
     setup_using(&cache_config).await
 }

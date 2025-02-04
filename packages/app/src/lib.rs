@@ -10,9 +10,9 @@ pub use axum;
 pub use busstop;
 pub use busybody;
 pub use clap;
-pub use dirtybase_config as config;
 pub use dirtybase_contract as contract;
-use dirtybase_contract::ExtensionManager;
+pub use dirtybase_contract::config;
+use dirtybase_contract::{cli::CliMiddlewareManager, ExtensionManager};
 pub use dirtybase_db as db;
 pub use dirtybase_db_macro as db_macro;
 pub use dirtybase_helper as helper;
@@ -38,14 +38,16 @@ pub async fn setup() -> anyhow::Result<AppService> {
 /// ```
 ///
 pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
+    busybody::helpers::register_service(config.clone());
     let app = core::App::new(config).await?;
 
     // core extensions
-    app.register(dirtybase_cache::Extension).await;
-    app.register(dirtybase_cron::Extension).await;
-    app.register(dirtybase_db::Extension).await;
-    app.register(dirtybase_auth::Extension).await;
-    app.register(dirtybase_entry::Extension).await;
+    app.register(dirtybase_cache::Extension::default()).await;
+    app.register(dirtybase_cron::Extension::default()).await;
+    app.register(dirtybase_db::Extension::default()).await;
+    app.register(dirtybase_auth::Extension::default()).await;
+    app.register(dirtybase_session::Extension::default()).await;
+    app.register(dirtybase_entry::Extension::default()).await;
 
     Ok(app)
 }
@@ -114,11 +116,17 @@ pub async fn setup_and_run() -> anyhow::Result<()> {
 }
 
 pub(crate) async fn make_cli_command_manager(app_service: AppService) -> CliCommandManager {
-    let mut manager = CliCommandManager::new();
     app_service.init().await;
 
     let lock = ExtensionManager::list().read().await;
-    for ext in lock.iter() {
+
+    let mut middleware = CliMiddlewareManager::new();
+    for ext in lock.values() {
+        middleware = ext.register_cli_middlewares(middleware);
+    }
+    let mut manager = CliCommandManager::new(middleware);
+
+    for ext in lock.values() {
         manager = ext.register_cli_commands(manager);
     }
     drop(lock);

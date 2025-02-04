@@ -10,6 +10,7 @@ use busstop::DispatchableCommand;
 use command_handler::CronJobCommandHandler;
 use config::CronConfig;
 pub use cron_dirtybase_entry::*;
+use dirtybase_contract::config::DirtyConfig;
 pub use job::*;
 pub use job_context::*;
 pub use manager::*;
@@ -18,7 +19,7 @@ pub mod prelude {
     pub use busstop::*;
 }
 
-pub async fn setup(base_config: &dirtybase_config::DirtyConfig) {
+pub async fn setup(base_config: &DirtyConfig) {
     let config: CronConfig = base_config.into();
     setup_using(config).await;
 }

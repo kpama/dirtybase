@@ -1,20 +1,23 @@
 #![allow(unused)]
 use std::{
+    any::TypeId,
     collections::HashMap,
     sync::{Arc, OnceLock},
 };
 
-use axum::extract::Request;
+use axum::{extract::Request, response::Response};
+use axum_extra::extract::{cookie, CookieJar};
 use clap::ArgMatches;
-use dirtybase_config::DirtyConfig;
 use tokio::sync::RwLock;
 
 use crate::{
-    cli::CliCommandManager,
+    app::Context,
+    cli::{CliCommandManager, CliMiddlewareManager},
+    config::DirtyConfig,
     http::{RouterManager, WebMiddlewareManager},
 };
 
-pub(crate) static EXTENSION_COLLECTION: OnceLock<RwLock<Vec<Box<dyn ExtensionSetup>>>> =
+pub(crate) static EXTENSION_COLLECTION: OnceLock<RwLock<HashMap<TypeId, Box<dyn ExtensionSetup>>>> =
     OnceLock::new();
 
 pub type ExtensionMigrations = Vec<Box<dyn super::db::migration::Migration>>;
@@ -22,21 +25,28 @@ pub type ExtensionMigrations = Vec<Box<dyn super::db::migration::Migration>>;
 #[async_trait::async_trait]
 pub trait ExtensionSetup: Send + Sync {
     /// Setup the extension
-    async fn setup(&self, config: &DirtyConfig) {
+    ///
+    /// First method that will be called.
+    async fn setup(&mut self, config: &DirtyConfig) {
         // --
     }
 
     /// boot
-    async fn boot(&self) {
+    ///
+    /// Second method that will be called.
+    async fn boot(&mut self) {
         // --
     }
 
     /// Run
-    async fn run(&self) {
+    ///
+    /// Third method that will be called.
+    async fn run(&mut self) {
         // --
     }
 
-    async fn shutdown(&self) {
+    /// Shutdown when the application is shutting down
+    async fn shutdown(&mut self) {
         log::debug!("shutting down extension: {}", self.id());
         // logic to run when the server is shutting down
     }
@@ -51,8 +61,18 @@ pub trait ExtensionSetup: Send + Sync {
     }
 
     /// Calls for each web requests
-    async fn on_web_request(&self, req: Request) -> Request {
+    ///
+    /// Use this method to set things up for this particular request
+    async fn on_web_request(&self, req: Request, context: Context, cookie: &CookieJar) -> Request {
         req
+    }
+    async fn on_web_response(
+        &self,
+        resp: Response,
+        cookie_jar: CookieJar,
+        context: Context,
+    ) -> (Response, CookieJar) {
+        (resp, cookie_jar)
     }
 
     /// Calls for a cli command
@@ -65,7 +85,10 @@ pub trait ExtensionSetup: Send + Sync {
         manager
     }
 
-    // Rgister cli middlewares
+    // Register cli middlewares
+    fn register_cli_middlewares(&self, mut manager: CliMiddlewareManager) -> CliMiddlewareManager {
+        manager
+    }
 
     /// register cli sub commands
     fn register_cli_commands(&self, mut manager: CliCommandManager) -> CliCommandManager {
@@ -73,8 +96,8 @@ pub trait ExtensionSetup: Send + Sync {
     }
 
     // TODO: Make the returned type an option
-    fn migrations(&self) -> ExtensionMigrations {
-        Vec::new()
+    fn migrations(&self) -> Option<ExtensionMigrations> {
+        None
     }
 
     fn id(&self) -> &str {
@@ -93,11 +116,14 @@ pub trait ExtensionSetup: Send + Sync {
 pub struct ExtensionManager;
 
 impl ExtensionManager {
-    pub async fn register(extension: impl ExtensionSetup + 'static) {
+    pub async fn register<T>(extension: T)
+    where
+        T: ExtensionSetup + 'static,
+    {
         Self::init();
         if let Some(list) = EXTENSION_COLLECTION.get() {
             let mut lock = list.write().await;
-            lock.push(Box::new(extension));
+            lock.insert(TypeId::of::<T>(), Box::new(extension));
         }
     }
 
@@ -105,24 +131,24 @@ impl ExtensionManager {
         Self::init();
         // setup
         if let Some(list) = EXTENSION_COLLECTION.get() {
-            let lock = list.read().await;
-            for ext in lock.iter() {
+            let mut w_lock = list.write().await;
+            for ext in w_lock.values_mut() {
                 ext.setup(config).await;
             }
         }
 
         // boot
         if let Some(list) = EXTENSION_COLLECTION.get() {
-            let lock = list.read().await;
-            for ext in lock.iter() {
+            let mut w_lock = list.write().await;
+            for ext in w_lock.values_mut() {
                 ext.boot().await;
             }
         }
 
         // run
         if let Some(list) = EXTENSION_COLLECTION.get() {
-            let lock = list.read().await;
-            for ext in lock.iter() {
+            let mut w_lock = list.write().await;
+            for ext in w_lock.values_mut() {
                 ext.run().await;
             }
         }
@@ -130,8 +156,8 @@ impl ExtensionManager {
 
     pub async fn shutdown() {
         if let Some(list) = EXTENSION_COLLECTION.get() {
-            let lock = list.read().await;
-            for ext in lock.iter() {
+            let mut w_lock = list.write().await;
+            for ext in w_lock.values_mut() {
                 ext.shutdown().await;
             }
         }
@@ -142,13 +168,23 @@ impl ExtensionManager {
 
         if let Some(list) = EXTENSION_COLLECTION.get() {
             let lock = list.read().await;
-            for ext in lock.iter() {
+            for ext in lock.values() {
                 callback(ext);
             }
         }
     }
 
-    pub fn list() -> &'static RwLock<Vec<Box<dyn ExtensionSetup>>> {
+    pub async fn extensions_mut(mut callback: impl FnMut(&mut Box<dyn ExtensionSetup>)) {
+        Self::init();
+        if let Some(list) = EXTENSION_COLLECTION.get() {
+            let mut lock = list.write().await;
+            for ext in lock.values_mut() {
+                callback(ext);
+            }
+        }
+    }
+
+    pub fn list() -> &'static RwLock<HashMap<TypeId, Box<dyn ExtensionSetup>>> {
         Self::init();
         EXTENSION_COLLECTION.get().unwrap()
     }

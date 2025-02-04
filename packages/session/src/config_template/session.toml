@@ -1,0 +1,8 @@
+# Storage driver
+driver = "memory"
+
+# lifetime is in minutes
+lifetime = 60
+
+# session cookie name
+cookie = "dty_session"

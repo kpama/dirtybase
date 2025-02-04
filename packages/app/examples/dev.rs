@@ -1,19 +1,33 @@
 use std::collections::HashMap;
 
-use axum_extra::extract::{cookie::Cookie, CookieJar};
-use dirtybase_app::{run, setup};
-use dirtybase_auth::middlewares::{handle_user_login_request, UserCredential};
-use dirtybase_config::DirtyConfig;
+use axum_extra::extract::CookieJar;
+use dirtybase_app::{core::Config, run, setup};
+use dirtybase_auth::middlewares::{handle_user_login_web_request, UserCredential};
+use dirtybase_contract::config::DirtyConfig;
 use dirtybase_contract::{
-    app::{Context, ContextManager},
+    app::{Context, ContextManager, CtxExt},
     prelude::*,
+    session::Session,
 };
+use tracing::Level;
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt()
+        .with_max_level(Level::TRACE)
+        .try_init()
+        .expect("could not setup tracing");
+
     let app_service = setup().await.unwrap();
 
     app_service.register(App).await;
+    println!(
+        "{}",
+        serde_json::to_string(app_service.config_ref()).unwrap()
+    );
+    let c =
+        serde_json::from_str::<Config>(&serde_json::to_string(app_service.config_ref()).unwrap());
+    println!("{:?}", c);
 
     // _ = dirtybase_app::run_command(["serve"]).await;
     _ = run(app_service).await;
@@ -23,9 +37,23 @@ struct App;
 
 #[async_trait::async_trait]
 impl ExtensionSetup for App {
-    async fn setup(&self, _config: &DirtyConfig) {
+    async fn setup(&mut self, _config: &DirtyConfig) {
         busybody::helpers::register_service(UserProviderService::new(MyOwnUserProvider));
         busybody::helpers::register_service(ContextManager::<i32>::new());
+    }
+
+    fn register_cli_middlewares(&self, mut manager: CliMiddlewareManager) -> CliMiddlewareManager {
+        manager.register("say_hi", |middleware| {
+            middleware.next(|v, n| {
+                Box::pin(async {
+                    println!("I am saying hi from say_hi middleware");
+                    n.call(v).await
+                })
+            });
+
+            middleware
+        });
+        manager
     }
 
     fn register_routes(
@@ -34,15 +62,8 @@ impl ExtensionSetup for App {
         middleware_manager: &WebMiddlewareManager,
     ) -> RouterManager {
         manager.general(None, |router| {
-            let router = router.get_x("/", index_request_handler);
-            // .middleware(|req, next| async {
-            //     let context = req.extensions().get::<Context>().unwrap();
-            //     let user = context.user().unwrap();
-            //     println!(">>>>>>>>>>> last middleware to run: {:?}", user.role());
-            //     next.run(req).await
-            // });
-
-            middleware_manager.apply(router, ["auth:jwt", "auth:basic", "auth:normal"])
+            let router = router.get("/", index_request_handler, "index-page");
+            middleware_manager.apply(router, ["auth::normal"])
         });
 
         // login
@@ -56,7 +77,7 @@ impl ExtensionSetup for App {
                     },
                     "do-login",
                 )
-                .post("/do-login2", handle_user_login_request, "do-login2") // FIXME: CSRF Token feature...
+                .post("/do-login2", handle_user_login_web_request, "do-login2") // FIXME: CSRF Token feature...
                 .get("/xx", test_cookie_handler, "xx")
         });
 
@@ -64,42 +85,31 @@ impl ExtensionSetup for App {
     }
 }
 
-async fn test_cookie_handler(mut jar: CookieJar, req: Request) -> impl IntoResponse {
-    println!("testing setting cookies");
-    let entry = Cookie::new("age", 2.to_string());
-    jar = jar.add(entry);
-    (jar, "We are ready to rumble")
+async fn test_cookie_handler(
+    jar: CookieJar,
+    CtxExt(session): CtxExt<Session>,
+    _req: Request,
+) -> impl IntoResponse {
+    session.id().to_string()
 }
 
-async fn index_request_handler(req: Request) -> impl IntoResponse {
-    println!("handling the request");
-    let ctx = req.extensions().get::<Context>().unwrap();
-    let sc = ctx.service_container();
-    let user = ctx.user().unwrap();
-    println!("is container a proxy? {}", sc.is_proxy());
-    println!("current user: {:?}", user);
+async fn index_request_handler(
+    CtxExt(session): CtxExt<Session>,
+    context: Extension<Context>,
+    req: Request,
+) -> impl IntoResponse {
+    context.metadata().add("index handler", true.to_string());
 
-    // if let Some(manager) = ctx.service_container().get::<ContextManager<i32>>() {
-    //     let count = manager
-    //         .context("tenent1", 5, || {
-    //             println!(">>>>>>>>>>>>>>>>>>>> getting the counter....");
-    //             Box::pin(async {
-    //                 tokio::time::sleep(Duration::from_secs(10)).await;
-    //                 1000
-    //             })
-    //         })
-    //         .await;
-
-    //     println!("current count: {}", count);
-    // }
-
-    // let req_sc = req.extensions().get::<ServiceContainer>();
-    // println!("we got the user id via request: {}", req_sc.is_some());
-
-    format!(
-        "Welcome to our secure application. user context id: {}",
-        user.id()
-    )
+    log::info!("in index page");
+    if let Some(user) = context.user() {
+        println!("current user: {:?}", user);
+        format!(
+            "Welcome to our secure application. user context id {}",
+            user.id()
+        )
+    } else {
+        "Welcome unknown user".to_string()
+    }
 }
 
 struct MyOwnUserProvider;
