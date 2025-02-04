@@ -4,9 +4,11 @@ use super::field_values::FieldValue;
 use std::collections::HashMap;
 
 mod arc_ulid;
+mod arc_uuid;
 mod ulid;
 
 pub use arc_ulid::*;
+pub use arc_uuid::*;
 pub use ulid::*;
 pub type ColumnAndValue = HashMap<String, FieldValue>;
 
