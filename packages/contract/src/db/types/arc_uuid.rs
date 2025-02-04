@@ -1,5 +1,5 @@
 use std::{
-    fmt::{write, Debug, Display},
+    fmt::{Debug, Display},
     ops::Deref,
     sync::Arc,
 };
