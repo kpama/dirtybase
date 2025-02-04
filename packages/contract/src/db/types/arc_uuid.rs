@@ -1,6 +1,11 @@
-use std::{fmt::Display, sync::Arc};
+use std::{
+    fmt::{write, Debug, Display},
+    ops::Deref,
+    sync::Arc,
+};
 
 use dirtybase_helper::uuid::Uuid;
+use serde::{Deserialize, Serialize};
 
 use crate::db::field_values::FieldValue;
 
@@ -23,7 +28,20 @@ impl Default for ArcUuid7 {
     }
 }
 
+impl Deref for ArcUuid7 {
+    type Target = Arc<Uuid>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl Display for ArcUuid7 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.0.to_string())
+    }
+}
+
+impl Debug for ArcUuid7 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.0.to_string())
     }
@@ -87,6 +105,25 @@ impl From<&ArcUuid7> for ArcUuid7 {
 impl From<&str> for ArcUuid7 {
     fn from(value: &str) -> Self {
         Self::new(Uuid::parse_str(&value).expect("str is not a valid UUID7")).unwrap()
+    }
+}
+
+impl<'de> Deserialize<'de> for ArcUuid7 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = Uuid::deserialize(deserializer).expect("Require a value that can be stringify");
+        Ok(value.into())
+    }
+}
+
+impl Serialize for ArcUuid7 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.0.to_string())
     }
 }
 
