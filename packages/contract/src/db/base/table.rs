@@ -170,6 +170,19 @@ impl TableBlueprint {
         })
     }
 
+    pub fn uuid_fk(&mut self, foreign_table: &str, cascade_delete: bool) -> &mut ColumnBlueprint {
+        let name = to_fk_column(foreign_table, None);
+
+        self.column_string(name, |column| {
+            column.set_type(ColumnType::Uuid);
+            if cascade_delete {
+                column.references_with_cascade_delete(foreign_table, ID_FIELD);
+            } else {
+                column.references_without_cascade_delete(foreign_table, ID_FIELD);
+            }
+        })
+    }
+
     pub fn ulid_table_fk<F: TableEntityTrait>(
         &mut self,
         cascade_delete: bool,
@@ -180,6 +193,24 @@ impl TableBlueprint {
 
         self.column_string(name, |column| {
             column.set_type(ColumnType::Char(ULID_STRING_LENGTH));
+            if cascade_delete {
+                column.references_with_cascade_delete(foreign_table, id);
+            } else {
+                column.references_without_cascade_delete(foreign_table, id);
+            }
+        })
+    }
+
+    pub fn uuid_table_fk<F: TableEntityTrait>(
+        &mut self,
+        cascade_delete: bool,
+    ) -> &mut ColumnBlueprint {
+        let foreign_table = F::table_name();
+        let id = F::id_column().unwrap();
+        let name = to_fk_column(foreign_table, Some(id));
+
+        self.column_string(name, |column| {
+            column.set_type(ColumnType::Uuid);
             if cascade_delete {
                 column.references_with_cascade_delete(foreign_table, id);
             } else {
@@ -213,6 +244,13 @@ impl TableBlueprint {
     pub fn id_set(&mut self) {
         self.id(Some(INTERNAL_ID_FIELD));
         self.ulid(ID_FIELD)
+            .set_is_unique(true)
+            .set_is_nullable(false);
+    }
+
+    pub fn uuid_id_set(&mut self) {
+        self.id(Some(INTERNAL_ID_FIELD));
+        self.uuid(ID_FIELD)
             .set_is_unique(true)
             .set_is_nullable(false);
     }
