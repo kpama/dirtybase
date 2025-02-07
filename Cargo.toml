@@ -91,6 +91,7 @@ utoipa-axum = { version = "0.2" }
 uuid = { version = "1", features = [
 	"v4",
 	"v7",
+	"serde",
 	"fast-rng",
 	"macro-diagnostics",
 ] }
