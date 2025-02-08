@@ -3,24 +3,24 @@ mod dummy_storage;
 use std::{fmt::Display, sync::Arc};
 
 use busybody::async_trait;
-use dirtybase_helper::uuid::Uuid25;
 use dummy_storage::DummyStorage;
+
+use crate::db::types::ArcUuid7;
 
 use super::SessionData;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, serde::Serialize, serde::Deserialize)]
-pub struct SessionId(Arc<Uuid25>);
+pub struct SessionId(ArcUuid7);
 
 impl SessionId {
     pub fn new() -> Self {
-        Self(Arc::new(dirtybase_helper::uuid::uuid25_v7()))
+        Self(ArcUuid7::default())
     }
 
     pub fn from_str(input: &str) -> Option<Self> {
-        if let Some(id) = dirtybase_helper::uuid::uuid25_from_str(&input) {
-            Some(Self(Arc::new(id)))
-        } else {
-            None
+        match ArcUuid7::try_from(input) {
+            Ok(v) => Some(Self(v)),
+            _ => None,
         }
     }
 }

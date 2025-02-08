@@ -9,14 +9,11 @@ use dirtybase_contract::{
         axum_extra::extract::{cookie::Cookie, CookieJar},
         Request,
     },
-    session::{
-        Session, SessionConfig, SessionId, SessionStorage, SessionStorageDriver,
-        SessionStorageProvider,
-    },
+    session::{Session, SessionId, SessionStorage, SessionStorageProvider},
     ExtensionSetup,
 };
 
-use crate::storage::MemoryStorage;
+use crate::{storage::MemoryStorage, SessionConfig, SessionStorageDriver};
 
 #[derive(Default)]
 pub struct Extension {
@@ -67,8 +64,10 @@ impl Extension {
         cookie: &CookieJar,
     ) -> Request {
         let request_session_id = cookie.get(self.config.cookie_ref());
-        let ci = context.service_container();
-        let session_storage_provider = ci.get_type::<Arc<SessionStorageProvider>>().unwrap();
+        let session_storage_provider = context
+            .container_ref()
+            .get_type::<Arc<SessionStorageProvider>>()
+            .unwrap();
 
         tracing::trace!("request has session id {:?}", request_session_id.is_some());
 

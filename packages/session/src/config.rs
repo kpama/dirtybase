@@ -1,10 +1,6 @@
-use std::sync::Arc;
+use dirtybase_contract::{config::DirtyConfig, session::DEFAULT_LIFETIME};
 
-use crate::config::DirtyConfig;
-
-use super::DEFAULT_LIFETIME;
-
-#[derive(Debug, Clone, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum SessionStorageDriver {
     #[serde(alias = "custom")]
     Custom(String),
@@ -20,11 +16,11 @@ pub enum SessionStorageDriver {
     Redis,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct SessionConfig {
     driver: SessionStorageDriver,
     lifetime: i64,
-    cookie: Arc<String>,
+    cookie: String,
 }
 
 impl Default for SessionConfig {
@@ -54,7 +50,7 @@ impl SessionConfig {
         self.cookie.as_ref()
     }
 
-    pub fn cookie(&self) -> Arc<String> {
+    pub fn cookie(&self) -> String {
         self.cookie.clone()
     }
 }
