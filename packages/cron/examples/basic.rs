@@ -1,38 +1,43 @@
 use std::time::Duration;
 
-use dirtybase_contract::config::DirtyConfig;
-use dirtybase_cron::config::CronConfig;
+use tracing::Level;
+
 #[tokio::main]
 async fn main() {
-    // 1. Setup the configuration using the default config template
-    let base_config = DirtyConfig::new();
-    let config = base_config
-        .optional_file("./config_template/cron.toml", Some("DTY_CRON"))
-        .build()
-        .unwrap()
-        .try_deserialize::<CronConfig>()
-        .unwrap();
+    // for logging purposes
+    tracing_subscriber::fmt()
+        .with_max_level(Level::DEBUG)
+        .try_init()
+        .expect("could not setup tracing");
 
-    // 2. Setup cron manager
-    let mut manager = dirtybase_cron::setup_using(config).await;
+    // 1. Initiate the job dispatcher
+    dirtybase_cron::start().await;
 
-    // 3. register a job
-    manager.register("foo::job", |_ctx| {
-        Box::pin(async {
-            println!(">>>>>>>> running foo::bar......");
-        })
-    });
+    // 2. Register a job
+    let _ctx = dirtybase_cron::CronJob::register(
+        "every 5 seconds",
+        |_ctx| {
+            Box::pin(async {
+                println!("hi from 5 seconds job");
+            })
+        },
+        "example::hi",
+    )
+    .await;
 
-    // 4. Run the enabled jobs
-    manager.run().await;
+    // 3
+    let _ctx = dirtybase_cron::CronJob::register(
+        "0/10 * * * * ? *",
+        |_ctx| {
+            Box::pin(async {
+                println!("hi from 10 seconds job");
+            })
+        },
+        "example::hi2",
+    )
+    .await;
 
-    // 5. This line is added just for testing purposes
-    //    Usually, your program keep running due to the fact that it is accepting connection
-    //    or doing something similar.
-    loop {
-        tokio::time::sleep(Duration::from_secs(60)).await;
-        break;
-    }
-
-    println!("program ended");
+    // 4. Wait for 60 seconds before completing
+    tokio::time::sleep(Duration::from_secs(60)).await;
+    println!("completed");
 }

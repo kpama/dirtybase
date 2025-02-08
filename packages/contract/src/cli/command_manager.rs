@@ -92,7 +92,7 @@ impl CliCommandManager {
         };
 
         if let Some((name, mut command)) = matches.remove_subcommand() {
-            for ext in ExtensionManager::list().read().await.values() {
+            for ext in ExtensionManager::list().read().await.iter() {
                 command = ext.on_cli_command(name.as_str(), command).await;
             }
 

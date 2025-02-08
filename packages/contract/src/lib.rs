@@ -6,12 +6,14 @@ pub mod cli;
 pub mod config;
 pub mod db;
 pub mod http;
+pub mod multitenant;
 pub mod queue;
 pub mod session;
 pub mod user;
 
 pub use async_trait::async_trait;
 pub use axum;
+pub use busybody;
 pub use extension::ExtensionManager;
 pub use extension::ExtensionMigrations;
 pub use extension::ExtensionSetup;

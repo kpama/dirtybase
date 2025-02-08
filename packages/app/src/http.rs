@@ -11,6 +11,12 @@ use dirtybase_contract::{
     http::{RouteCollection, RouteType, RouterManager, WebMiddlewareManager},
     ExtensionManager,
 };
+
+#[cfg(feature = "multitenant")]
+use dirtybase_contract::multitenant::{
+    TenantIdLocation, TenantRepositoryProvider, TenantResolverProvider, TenantResolverTrait,
+};
+
 use named_routes_axum::RouterWrapper;
 use tracing::{field, Instrument};
 
@@ -35,11 +41,11 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
     let lock = ExtensionManager::list().read().await;
 
-    for ext in lock.values() {
+    for ext in lock.iter() {
         middleware_manager = ext.register_web_middlewares(middleware_manager);
     }
 
-    for ext in lock.values() {
+    for ext in lock.iter() {
         manager = ext.register_routes(manager, &middleware_manager);
     }
     drop(lock);
@@ -114,7 +120,8 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
         web_app = web_app.middleware(|mut req, next| async {
             let cookie = CookieJar::from_headers(req.headers());
             let context = req.extensions().get::<Context>().cloned().unwrap();
-            for ext in ExtensionManager::list().read().await.values() {
+            for ext in ExtensionManager::list().read().await.iter() {
+                tracing::trace!("on web request: {}", ext.id());
                 req = ext.on_web_request(req, context.clone(), &cookie).await;
             }
 
@@ -126,7 +133,11 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
         // It sets up the current request specific context
         web_app = web_app.middleware(|mut req, next| async {
             let context = Context::default();
-            let span = tracing::trace_span!("http", ctx_id = context.id_ref(), data = field::Empty);
+            let span = tracing::trace_span!(
+                "http",
+                ctx_id = context.id_ref().to_string(),
+                data = field::Empty
+            );
 
             tracing::dispatcher::get_default(|dispatch| {
                 let _context = context.clone();
@@ -141,21 +152,47 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             });
 
             async move {
-                log::trace!("{:?}", req.uri());
+                log::trace!("uri: {}", req.uri());
+                log::trace!(
+                    "full url: : {}",
+                    dirtybase_contract::http::axum::full_request_url(&req)
+                );
+                tracing::trace!(
+                    "host: {:?}",
+                    dirtybase_contract::http::axum::host_from_request(&req)
+                );
 
-                tracing::trace!("setting up request context: {}", req.uri());
+                // 1. Find the tenant
+                #[cfg(feature = "multitenant")]
+                if let Some(manager) = context.get::<TenantRepositoryProvider>() {
+                    if let Some(manager) = context.get::<TenantResolverProvider>() {
+                        if let Some(raw_id) =
+                            manager.pluck_id_str_from_request(&req, TenantIdLocation::Subdomain)
+                        {
+                            tracing::error!("current tenant Id: {}", raw_id);
+                        } else {
+                            tracing::error!("current tenant Id is not in the subdomain");
+                        }
+                    }
+                } else {
+                    tracing::error!("did not get multitenant manager");
+                }
+                // 2. Find the app
+                // 3. Find the role
+                // 4: Find the user
 
                 // Add the request context
                 req.extensions_mut().insert(context.clone());
-                req.extensions_mut().insert(context.id());
 
+                // pass the request
                 let mut response = next.run(req).await;
 
                 let mut cookie = CookieJar::from_headers(response.headers());
 
                 response.extensions_mut().insert(context.clone());
 
-                for ext in ExtensionManager::list().read().await.values() {
+                for ext in ExtensionManager::list().read().await.iter() {
+                    tracing::trace!("on web response: {}", ext.id());
                     (response, cookie) =
                         ext.on_web_response(response, cookie, context.clone()).await;
                 }
@@ -172,8 +209,8 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
         .await
         .unwrap();
 
-    log::info!("Serving static file from: {}", static_assets_path);
-    log::info!(
+    tracing::info!("Serving static file from: {}", static_assets_path);
+    tracing::info!(
         "Server exposed at: {} on port: {}",
         config.web_ip_address(),
         config.web_port()

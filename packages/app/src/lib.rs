@@ -12,7 +12,7 @@ pub use busybody;
 pub use clap;
 pub use dirtybase_contract as contract;
 pub use dirtybase_contract::config;
-use dirtybase_contract::{cli::CliMiddlewareManager, ExtensionManager};
+use dirtybase_contract::{app::Context, cli::CliMiddlewareManager, ExtensionManager};
 pub use dirtybase_db as db;
 pub use dirtybase_db_macro as db_macro;
 pub use dirtybase_helper as helper;
@@ -39,15 +39,20 @@ pub async fn setup() -> anyhow::Result<AppService> {
 ///
 pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
     busybody::helpers::register_service(config.clone());
+    busybody::helpers::set_type(Context::make_global());
+
     let app = core::App::new(config).await?;
 
     // core extensions
+    app.register(dirtybase_session::Extension::default()).await;
+    app.register(dirtybase_auth::Extension::default()).await;
+    app.register(dirtybase_db::Extension::default()).await;
+    app.register(dirtybase_entry::Extension::default()).await;
     app.register(dirtybase_cache::Extension::default()).await;
     app.register(dirtybase_cron::Extension::default()).await;
-    app.register(dirtybase_db::Extension::default()).await;
-    app.register(dirtybase_auth::Extension::default()).await;
-    app.register(dirtybase_session::Extension::default()).await;
-    app.register(dirtybase_entry::Extension::default()).await;
+    #[cfg(feature = "multitenant")]
+    app.register(dirtybase_multitenant::Extension::default())
+        .await;
 
     Ok(app)
 }
@@ -121,12 +126,12 @@ pub(crate) async fn make_cli_command_manager(app_service: AppService) -> CliComm
     let lock = ExtensionManager::list().read().await;
 
     let mut middleware = CliMiddlewareManager::new();
-    for ext in lock.values() {
+    for ext in lock.iter() {
         middleware = ext.register_cli_middlewares(middleware);
     }
     let mut manager = CliCommandManager::new(middleware);
 
-    for ext in lock.values() {
+    for ext in lock.iter() {
         manager = ext.register_cli_commands(manager);
     }
     drop(lock);

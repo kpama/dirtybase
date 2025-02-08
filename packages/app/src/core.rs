@@ -21,7 +21,6 @@ pub use config::Config;
 pub use config::ConfigBuilder;
 
 use dirtybase_contract::ExtensionManager;
-// use dirtybase_contract::db::entity::user::{UserRepository, UserService};
 use dirtybase_db::base::manager::Manager;
 use dirtybase_db::connection_bus::MakePoolManagerCommand;
 use dirtybase_user::entity::user::UserRepository;

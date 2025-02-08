@@ -24,15 +24,37 @@ impl CronJob {
         schedule: &str,
         handler: impl FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     ) -> Result<Self, String> {
-        let sch = str_cron_syntax(schedule).unwrap_or_else(|_| schedule.to_string());
-
-        match Schedule::from_str(&sch) {
-            Ok(s) => Ok(Self {
-                scheduler: s,
-                handler: Box::new(handler),
-                context: Arc::new(JobContext::new(id)),
-            }),
-            Err(e) => Err(e.to_string()),
+        match Schedule::from_str(schedule) {
+            Ok(scheduler) => {
+                tracing::debug!("job '{}' scheduled to run '{}'", id, schedule);
+                Ok(Self {
+                    scheduler,
+                    handler: Box::new(handler),
+                    context: Arc::new(JobContext::new(id)),
+                })
+            }
+            _ => {
+                let s = str_cron_syntax(schedule);
+                if s.is_err() {
+                    return Err(s.err().unwrap().to_string());
+                }
+                match Schedule::from_str(s.as_ref().unwrap()) {
+                    Ok(s) => {
+                        tracing::debug!(
+                            "job '{}' scheduled to run '{}', original: '{}'",
+                            id,
+                            s.to_string(),
+                            schedule
+                        );
+                        Ok(Self {
+                            scheduler: s,
+                            handler: Box::new(handler),
+                            context: Arc::new(JobContext::new(id)),
+                        })
+                    }
+                    Err(e) => Err(e.to_string()),
+                }
+            }
         }
     }
 

@@ -4,8 +4,6 @@ use aes_gcm::{AeadCore, Aes256Gcm, Key, KeyInit};
 use base64ct::Encoding;
 use crypto::aead::{self, generic_array::GenericArray, Aead, OsRng};
 
-use crate::EncryptedData;
-
 pub struct Encrypter {
     key: Arc<Vec<u8>>,
     previous_keys: Arc<Option<Vec<Vec<u8>>>>,

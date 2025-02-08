@@ -13,7 +13,6 @@ use include_dir::{include_dir, Dir};
 static UI_EMBEDDED_ASSETS: Dir = include_dir!("bin/ui/src/app/dist/spa");
 
 async fn home() -> impl IntoResponse {
-    // static UI_EMBEDDED_ASSETS: Dir = include_dir!("app/dist/spa");
     if let Some(file) = UI_EMBEDDED_ASSETS.get_file("index.html") {
         let config = provide::<Service<App>>().await.config();
         Response::builder()
@@ -62,7 +61,7 @@ impl ExtensionSetup for UiApp {
     fn register_routes(
         &self,
         mut manager: RouterManager,
-        _middlware: &WebMiddlewareManager,
+        _middleware: &WebMiddlewareManager,
     ) -> RouterManager {
         manager.general(None, |router| {
             router

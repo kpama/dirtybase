@@ -1,0 +1,9 @@
+[package]
+name = "dirtybase_multitenant"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+dirtybase_contract = { workspace = true }
+serde = { workspace = true }
+tracing = { workspace = true }

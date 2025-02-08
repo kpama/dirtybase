@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use dirtybase_contract::{
     auth::{UserProviderManager, UserProviderService},
     config::DirtyConfig,
@@ -20,9 +22,9 @@ impl ExtensionSetup for Extension {
     async fn setup(&mut self, base_config: &DirtyConfig) {
         let config = AuthConfig::from(base_config);
 
-        busybody::helpers::register_service(AuthManager::new(config));
+        busybody::helpers::register_type(Arc::new(AuthManager::new(config)));
         // TODO: Move the provider to the auth manager
-        busybody::helpers::register_service(UserProviderService::new(UserProviderManager));
+        busybody::helpers::register_type(Arc::new(UserProviderService::new(UserProviderManager)));
     }
 
     fn register_web_middlewares(&self, mut manager: WebMiddlewareManager) -> WebMiddlewareManager {

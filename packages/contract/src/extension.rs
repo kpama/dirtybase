@@ -17,7 +17,7 @@ use crate::{
     http::{RouterManager, WebMiddlewareManager},
 };
 
-pub(crate) static EXTENSION_COLLECTION: OnceLock<RwLock<HashMap<TypeId, Box<dyn ExtensionSetup>>>> =
+pub(crate) static EXTENSION_COLLECTION: OnceLock<RwLock<Vec<Box<dyn ExtensionSetup>>>> =
     OnceLock::new();
 
 pub type ExtensionMigrations = Vec<Box<dyn super::db::migration::Migration>>;
@@ -104,6 +104,13 @@ pub trait ExtensionSetup: Send + Sync {
         std::any::type_name::<Self>()
     }
 
+    fn the_id() -> &'static str
+    where
+        Self: Sized,
+    {
+        std::any::type_name::<Self>()
+    }
+
     async fn register(self)
     where
         Self: Sized + 'static,
@@ -123,7 +130,7 @@ impl ExtensionManager {
         Self::init();
         if let Some(list) = EXTENSION_COLLECTION.get() {
             let mut lock = list.write().await;
-            lock.insert(TypeId::of::<T>(), Box::new(extension));
+            lock.push(Box::new(extension));
         }
     }
 
@@ -132,7 +139,8 @@ impl ExtensionManager {
         // setup
         if let Some(list) = EXTENSION_COLLECTION.get() {
             let mut w_lock = list.write().await;
-            for ext in w_lock.values_mut() {
+            for ext in w_lock.iter_mut() {
+                tracing::trace!("setup: {}", ext.id());
                 ext.setup(config).await;
             }
         }
@@ -140,7 +148,7 @@ impl ExtensionManager {
         // boot
         if let Some(list) = EXTENSION_COLLECTION.get() {
             let mut w_lock = list.write().await;
-            for ext in w_lock.values_mut() {
+            for ext in w_lock.iter_mut() {
                 ext.boot().await;
             }
         }
@@ -148,7 +156,7 @@ impl ExtensionManager {
         // run
         if let Some(list) = EXTENSION_COLLECTION.get() {
             let mut w_lock = list.write().await;
-            for ext in w_lock.values_mut() {
+            for ext in w_lock.iter_mut() {
                 ext.run().await;
             }
         }
@@ -157,7 +165,7 @@ impl ExtensionManager {
     pub async fn shutdown() {
         if let Some(list) = EXTENSION_COLLECTION.get() {
             let mut w_lock = list.write().await;
-            for ext in w_lock.values_mut() {
+            for ext in w_lock.iter_mut() {
                 ext.shutdown().await;
             }
         }
@@ -168,7 +176,7 @@ impl ExtensionManager {
 
         if let Some(list) = EXTENSION_COLLECTION.get() {
             let lock = list.read().await;
-            for ext in lock.values() {
+            for ext in lock.iter() {
                 callback(ext);
             }
         }
@@ -178,13 +186,13 @@ impl ExtensionManager {
         Self::init();
         if let Some(list) = EXTENSION_COLLECTION.get() {
             let mut lock = list.write().await;
-            for ext in lock.values_mut() {
+            for ext in lock.iter_mut() {
                 callback(ext);
             }
         }
     }
 
-    pub fn list() -> &'static RwLock<HashMap<TypeId, Box<dyn ExtensionSetup>>> {
+    pub fn list() -> &'static RwLock<Vec<Box<dyn ExtensionSetup>>> {
         Self::init();
         EXTENSION_COLLECTION.get().unwrap()
     }

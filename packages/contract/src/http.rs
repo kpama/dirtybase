@@ -1,6 +1,8 @@
 mod router_manager;
 mod web_middleware_manager;
 
+pub mod axum;
+
 use std::sync::Arc;
 
 pub use router_manager::*;

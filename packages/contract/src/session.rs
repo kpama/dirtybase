@@ -1,9 +1,7 @@
-mod config;
 mod session;
 mod session_data;
 mod storage;
 
-pub use config::*;
 pub use session::*;
 pub use session_data::*;
 pub use storage::*;
@@ -15,7 +13,6 @@ pub fn generate_id() -> SessionId {
 }
 
 pub mod prelude {
-    pub use super::config::*;
     pub use super::session::*;
     pub use super::session_data::*;
     pub use super::storage::*;

@@ -1,85 +1,30 @@
-use crate::{db::types::ArcUlidField, user::status::UserStatus};
+use crate::{db::types::ArcUuid7, user::status::UserStatus};
+
+pub const GLOBAL_USER_CONTEXT_ID: &str = "0194d471-0c6d-75f2-b234-03343345edbc";
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct UserContext {
-    id: ArcUlidField,
-    username: String,
+    id: ArcUuid7,
     status: UserStatus,
-    role: RoleContext,
-    app: AppContext,
 }
 
 impl UserContext {
-    pub fn id(&self) -> ArcUlidField {
-        self.id.clone()
+    pub fn make_global() -> Self {
+        Self {
+            id: ArcUuid7::from(GLOBAL_USER_CONTEXT_ID),
+            status: UserStatus::Active,
+        }
     }
 
-    pub fn username(&self) -> &str {
-        &self.username
+    pub fn id(&self) -> ArcUuid7 {
+        self.id.clone()
     }
 
     pub fn status(&self) -> UserStatus {
         self.status
     }
 
-    pub fn role(&self) -> &RoleContext {
-        &self.role
-    }
-
-    pub fn app(&self) -> &AppContext {
-        &self.app
-    }
-}
-
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-pub struct RoleContext {
-    id: ArcUlidField,
-    name: String,
-}
-
-impl RoleContext {
-    pub fn id(&self) -> ArcUlidField {
-        self.id.clone()
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-}
-
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-pub struct CompanyContext {
-    id: ArcUlidField,
-    name: String,
-}
-
-impl CompanyContext {
-    pub fn id(&self) -> ArcUlidField {
-        self.id.clone()
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-}
-
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-pub struct AppContext {
-    id: ArcUlidField,
-    name: String,
-    company: CompanyContext,
-}
-
-impl AppContext {
-    pub fn id(&self) -> ArcUlidField {
-        self.id.clone()
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn company(&self) -> &CompanyContext {
-        &self.company
+    pub fn is_global(&self) -> bool {
+        self.id.to_string() == GLOBAL_USER_CONTEXT_ID
     }
 }

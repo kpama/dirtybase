@@ -14,7 +14,7 @@ dashmap = { version = "6" }
 anyhow = "1.0"
 clap = { version = "4", features = ["derive", "unstable-doc"] }
 dotenv = "0.15"
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1"
 toml = "0.8"
 sqlx = { version = "0.8", features = [
@@ -29,8 +29,8 @@ chrono = { version = "0.4", features = ["serde"] }
 async-trait = "0.1"
 pretty_env_logger = "0.5"
 log = "0.4"
-bcrypt = "0.16"
-rand = "0.8"
+bcrypt = "0.17"
+rand = "0.9"
 futures = "0.3"
 futures-util = "0.3"
 ulid = { version = "1.0", features = ["serde", "rand", "std"] }
@@ -48,7 +48,7 @@ sha2 = "0.10"
 quote = "1.0"
 syn = { version = "2.0", features = ["extra-traits"] }
 dotenvy = "0.15"
-busybody = { version = "0.3" }
+busybody = { version = "0.4" }
 orsomafo = { version = "0.5" }
 fama = { version = "0.3" }
 busstop = { version = "0.2" }
@@ -112,6 +112,7 @@ dirtybase_auth = { version = "*" }
 dirtybase_cron = { version = "*" }
 dirtybase_3rd_client = { version = "*" }
 dirtybase_session = { version = "*" }
+dirtybase_multitenant = { version = "*" }
 
 [patch.crates-io]
 dirtybase_contract = { path = "./packages/contract" }
@@ -127,3 +128,4 @@ dirtybase_user = { path = "./packages/user" }
 dirtybase_auth = { path = "./packages/auth" }
 dirtybase_cron = { path = "./packages/cron" }
 dirtybase_encrypt = { path = "./packages/encrypt" }
+dirtybase_multitenant = { path = "./packages/multitenant" }

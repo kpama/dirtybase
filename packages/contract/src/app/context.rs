@@ -1,45 +1,35 @@
-use std::{fmt::Display, ops::Deref, sync::Arc};
+use std::{ops::Deref, sync::Arc};
 
 use axum::{extract::FromRequestParts, http::request::Parts};
-use busybody::Service;
+use serde::de::DeserializeOwned;
 
+mod app_context;
+mod context_manager;
 mod context_metadata;
+mod role_context;
 mod user_context;
 
+use crate::multitenant::*;
+pub use app_context::*;
+pub use context_manager::*;
 pub use context_metadata::*;
+pub use role_context::*;
 pub use user_context::*;
 
-#[derive(Clone)]
-pub struct ContextId(Arc<String>);
+use crate::db::types::ArcUuid7;
 
-impl Default for ContextId {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl ContextId {
-    pub fn new() -> Self {
-        Self(Arc::new(dirtybase_helper::uuid::uuid25_v4_string()))
-    }
-}
-
-impl Display for ContextId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0)
-    }
-}
+pub const GLOBAL_CONTEXT_ID: &str = "0194d467-2006-75f0-9fe7-575ec6e00b79";
 
 #[derive(Clone)]
 pub struct Context {
-    id: ContextId,
+    id: ArcUuid7,
     sc: Arc<busybody::ServiceContainer>,
 }
 
 impl Default for Context {
     fn default() -> Self {
         let instance = Self {
-            id: ContextId::default(),
+            id: ArcUuid7::default(),
             sc: Arc::new(busybody::helpers::make_proxy()),
         };
 
@@ -49,45 +39,95 @@ impl Default for Context {
 }
 
 impl Context {
-    pub fn set_user(&self, user: UserContext) -> &Self {
-        self.sc.set(user);
-        self
+    pub fn make_global() -> Self {
+        // app
+        busybody::helpers::set_type(Arc::new(AppContext::make_global()));
+        // role
+        busybody::helpers::set_type(Arc::new(RoleContext::make_global()));
+        // tenant
+        busybody::helpers::set_type(Arc::new(TenantContext::make_global()));
+        // user
+        busybody::helpers::set_type(Arc::new(UserContext::make_global()));
+
+        Self {
+            id: ArcUuid7::from(GLOBAL_CONTEXT_ID),
+            sc: Arc::new(busybody::helpers::make_proxy()),
+        }
     }
 
-    pub fn service_container(&self) -> Arc<busybody::ServiceContainer> {
+    pub fn set_user(&self, user: UserContext) -> &Self {
+        self.set(user)
+    }
+
+    pub fn set_role(&self, role: RoleContext) -> &Self {
+        self.set(role)
+    }
+
+    pub fn set_tenant(&self, tenant: TenantContext) -> &Self {
+        self.set(tenant)
+    }
+
+    pub fn set_app(&self, app: AppContext) -> &Self {
+        self.set(app)
+    }
+
+    pub fn is_global(&self) -> bool {
+        self.id.to_string() == GLOBAL_CONTEXT_ID
+    }
+
+    pub fn configure<C>(&self, key: &str)
+    where
+        C: DeserializeOwned + Sync + Send + 'static,
+    {
+        if let Some(app) = self.get::<AppContext>() {
+            if let Some(config) = app.config_to::<C>(key) {
+                self.set(config);
+            }
+        }
+    }
+
+    pub fn container(&self) -> Arc<busybody::ServiceContainer> {
         self.sc.clone()
     }
 
-    pub fn service_container_ref(&self) -> &Arc<busybody::ServiceContainer> {
+    pub fn container_ref(&self) -> &Arc<busybody::ServiceContainer> {
         &self.sc
     }
 
-    pub fn has_user(&self) -> bool {
-        self.sc.get::<UserContext>().is_some()
+    pub fn user(&self) -> Option<Arc<UserContext>> {
+        self.get()
     }
 
-    pub fn user(&self) -> Option<Service<UserContext>> {
-        self.sc.get::<UserContext>()
+    pub fn tenant(&self) -> Option<Arc<TenantContext>> {
+        self.get()
+    }
+
+    pub fn app(&self) -> Option<Arc<AppContext>> {
+        self.get()
+    }
+
+    pub fn role(&self) -> Option<Arc<RoleContext>> {
+        self.get()
     }
 
     pub fn set<T: Send + Sync + 'static>(&self, value: T) -> &Self {
-        self.sc.set(value);
+        self.sc.set_type(Arc::new(value));
         self
     }
 
-    pub fn get<T: 'static>(&self) -> Option<Service<T>> {
-        self.sc.get()
+    pub fn get<T: 'static>(&self) -> Option<Arc<T>> {
+        self.sc.get_type()
     }
 
-    pub fn id(&self) -> ContextId {
+    pub fn id(&self) -> ArcUuid7 {
         self.id.clone()
     }
 
-    pub fn id_ref(&self) -> &String {
-        &self.id.0
+    pub fn id_ref(&self) -> &ArcUuid7 {
+        &self.id
     }
 
-    pub fn metadata(&self) -> Service<ContextMetadata> {
+    pub fn metadata(&self) -> Arc<ContextMetadata> {
         self.get().unwrap()
     }
 }
@@ -98,7 +138,7 @@ impl Context {
 /// before falling back to the the global context
 #[derive(Debug, Clone)]
 #[must_use]
-pub struct CtxExt<T>(pub Service<T>);
+pub struct CtxExt<T>(pub Arc<T>);
 
 impl<T, S> FromRequestParts<S> for CtxExt<T>
 where
@@ -111,19 +151,23 @@ where
         let context = parts
             .extensions
             .get::<Context>()
-            .ok_or_else(|| "Error".to_string())
+            .ok_or_else(|| "Context not yet setup".to_string())
             .cloned()?;
 
         if let Some(ext) = context.get::<T>() {
             Ok(Self(ext))
         } else {
-            Err("Erooor...".to_string())
+            tracing::error!("{} not found in context", std::any::type_name::<T>());
+            Err(format!(
+                "{} not found in context",
+                std::any::type_name::<T>()
+            ))
         }
     }
 }
 
 impl<T> Deref for CtxExt<T> {
-    type Target = Service<T>;
+    type Target = Arc<T>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }

@@ -1,0 +1,2 @@
+enable = true
+id_location = "subdomain" # options are: domain, subdomain, header, query

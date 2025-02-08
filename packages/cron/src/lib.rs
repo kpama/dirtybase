@@ -19,6 +19,10 @@ pub mod prelude {
     pub use busstop::*;
 }
 
+pub async fn start() {
+    CronJob::command_handler::<CronJobCommandHandler>().await;
+}
+
 pub async fn setup(base_config: &DirtyConfig) {
     let config: CronConfig = base_config.into();
     setup_using(config).await;
@@ -26,7 +30,7 @@ pub async fn setup(base_config: &DirtyConfig) {
 
 pub async fn setup_using(config: CronConfig) -> JobManager {
     if config.enable() {
-        CronJob::command_handler::<CronJobCommandHandler>().await;
+        start().await;
     }
     JobManager::new(config)
 }

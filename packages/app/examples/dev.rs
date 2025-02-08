@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use axum_extra::extract::CookieJar;
-use dirtybase_app::{core::Config, run, setup};
+use axum_extra::extract::{CookieJar, Host};
+use dirtybase_app::{run, setup};
 use dirtybase_auth::middlewares::{handle_user_login_web_request, UserCredential};
 use dirtybase_contract::config::DirtyConfig;
 use dirtybase_contract::{
@@ -21,13 +21,6 @@ async fn main() {
     let app_service = setup().await.unwrap();
 
     app_service.register(App).await;
-    println!(
-        "{}",
-        serde_json::to_string(app_service.config_ref()).unwrap()
-    );
-    let c =
-        serde_json::from_str::<Config>(&serde_json::to_string(app_service.config_ref()).unwrap());
-    println!("{:?}", c);
 
     // _ = dirtybase_app::run_command(["serve"]).await;
     _ = run(app_service).await;
@@ -63,7 +56,8 @@ impl ExtensionSetup for App {
     ) -> RouterManager {
         manager.general(None, |router| {
             let router = router.get("/", index_request_handler, "index-page");
-            middleware_manager.apply(router, ["auth::normal"])
+            // middleware_manager.apply(router, ["auth::normal"])
+            router
         });
 
         // login
@@ -96,6 +90,7 @@ async fn test_cookie_handler(
 async fn index_request_handler(
     CtxExt(session): CtxExt<Session>,
     context: Extension<Context>,
+    Host(hostname): Host,
     req: Request,
 ) -> impl IntoResponse {
     context.metadata().add("index handler", true.to_string());
@@ -103,9 +98,20 @@ async fn index_request_handler(
     log::info!("in index page");
     if let Some(user) = context.user() {
         println!("current user: {:?}", user);
+        println!("current user is the global user? {}", user.is_global());
+        let uri = Uri::builder()
+            .scheme("https")
+            .authority("username:password@yahoo.com")
+            .path_and_query("/foo/bar?one=1&two=1")
+            .build()
+            .unwrap();
+        tracing::error!("generated uri: {}", uri);
+        tracing::error!("request uri: {:?}", req.uri().scheme_str());
+
         format!(
-            "Welcome to our secure application. user context id {}",
-            user.id()
+            "Welcome to our secure application. user id {}. host: {}",
+            user.id(),
+            hostname
         )
     } else {
         "Welcome unknown user".to_string()
