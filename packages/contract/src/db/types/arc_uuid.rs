@@ -4,12 +4,12 @@ use std::{
     sync::Arc,
 };
 
-use dirtybase_helper::uuid::Uuid;
+use dirtybase_helper::uuid::{Uuid, Uuid25};
 use serde::{Deserialize, Serialize};
 
 use crate::db::field_values::FieldValue;
 
-#[derive(Clone)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub struct ArcUuid7(Arc<Uuid>);
 
 impl ArcUuid7 {
@@ -19,6 +19,25 @@ impl ArcUuid7 {
             return Err(format!("uuid is not version 7: {}", value.to_string()));
         }
         Ok(ArcUuid7(Arc::new(value)))
+    }
+
+    pub fn to_uuid25(&self) -> Uuid25 {
+        Uuid25::parse_unwrap(&self.to_string())
+    }
+    pub fn to_uuid25_string(&self) -> String {
+        self.to_uuid25().to_string()
+    }
+
+    pub fn try_from_str(value: &str) -> Option<Self> {
+        if let Ok(u) = Uuid::parse_str(value) {
+            if u.get_version_num() != 7 {
+                tracing::error!("uuid is not version 7: {}", value.to_string());
+                return None;
+            }
+            return Some(u.into());
+        }
+
+        None
     }
 }
 
@@ -65,6 +84,12 @@ impl From<FieldValue> for Option<ArcUuid7> {
     }
 }
 
+impl From<Uuid25> for ArcUuid7 {
+    fn from(value: Uuid25) -> Self {
+        value.to_hyphenated().to_string().into()
+    }
+}
+
 impl From<ArcUuid7> for FieldValue {
     fn from(value: ArcUuid7) -> Self {
         FieldValue::Binary(
@@ -104,7 +129,13 @@ impl From<&ArcUuid7> for ArcUuid7 {
 
 impl From<&str> for ArcUuid7 {
     fn from(value: &str) -> Self {
-        Self::new(Uuid::parse_str(&value).expect("str is not a valid UUID7")).unwrap()
+        Self::new(Uuid::parse_str(value).expect("str is not a valid UUID7")).unwrap()
+    }
+}
+
+impl From<String> for ArcUuid7 {
+    fn from(value: String) -> Self {
+        value.as_str().into()
     }
 }
 
