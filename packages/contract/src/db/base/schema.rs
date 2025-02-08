@@ -47,8 +47,10 @@ pub enum DatabaseKind {
     Default,
 )]
 pub enum ClientType {
+    #[serde(alias = "read")]
     Read,
     #[default]
+    #[serde(alias = "write")]
     Write,
 }
 
