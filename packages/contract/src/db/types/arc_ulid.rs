@@ -10,7 +10,7 @@ use crate::db::{base::helper::generate_arc_ulid, field_values::FieldValue};
 use super::UlidField;
 
 #[derive(Clone)]
-pub struct ArcUlidField(pub(crate) Arc<str>);
+pub struct ArcUlidField(pub(crate) Arc<String>);
 
 impl<'de> Deserialize<'de> for ArcUlidField {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -45,14 +45,14 @@ impl ArcUlidField {
 }
 
 impl Deref for ArcUlidField {
-    type Target = Arc<str>;
+    type Target = Arc<String>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl AsRef<Arc<str>> for ArcUlidField {
-    fn as_ref(&self) -> &Arc<str> {
+impl AsRef<Arc<String>> for ArcUlidField {
+    fn as_ref(&self) -> &Arc<String> {
         &self.0
     }
 }
@@ -73,7 +73,7 @@ impl From<FieldValue> for ArcUlidField {
     fn from(value: FieldValue) -> Self {
         match value {
             FieldValue::String(v) => Self(v.clone().into()),
-            _ => Self("".into()),
+            _ => Self(Arc::new(String::new())),
         }
     }
 }
@@ -100,7 +100,7 @@ impl From<FieldValue> for Option<ArcUlidField> {
     fn from(value: FieldValue) -> Self {
         match value {
             FieldValue::String(v) => Some(ArcUlidField(v.into())),
-            _ => Some(ArcUlidField("".into())),
+            _ => Some(ArcUlidField(Arc::new(String::new()))),
         }
     }
 }
@@ -126,6 +126,6 @@ impl From<&ArcUlidField> for ArcUlidField {
 impl From<&str> for ArcUlidField {
     fn from(value: &str) -> Self {
         let x = Ulid::from_string(value).unwrap();
-        ArcUlidField(x.to_string().to_ascii_lowercase().as_str().into())
+        ArcUlidField(Arc::new(x.to_string().to_ascii_lowercase()))
     }
 }
