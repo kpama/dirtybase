@@ -16,7 +16,7 @@ pub struct AppContext {
 impl AppContext {
     pub fn make_global() -> Self {
         Self {
-            id: ArcUuid7::from(GLOBAL_APP_CONTEXT_ID),
+            id: ArcUuid7::try_from(GLOBAL_APP_CONTEXT_ID).unwrap(),
             ..Default::default()
         }
     }

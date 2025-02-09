@@ -10,7 +10,7 @@ pub struct TenantContext {
 impl TenantContext {
     pub fn make_global() -> Self {
         Self {
-            id: ArcUuid7::from(GLOBAL_TENANT_CONTEXT_ID),
+            id: ArcUuid7::try_from(GLOBAL_TENANT_CONTEXT_ID).unwrap(),
         }
     }
     pub fn id(&self) -> ArcUuid7 {

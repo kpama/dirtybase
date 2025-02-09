@@ -50,7 +50,7 @@ impl Context {
         busybody::helpers::set_type(Arc::new(UserContext::make_global()));
 
         Self {
-            id: ArcUuid7::from(GLOBAL_CONTEXT_ID),
+            id: ArcUuid7::try_from(GLOBAL_CONTEXT_ID).unwrap(),
             sc: Arc::new(busybody::helpers::make_proxy()),
         }
     }

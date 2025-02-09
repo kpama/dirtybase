@@ -27,18 +27,6 @@ impl ArcUuid7 {
     pub fn to_uuid25_string(&self) -> String {
         self.to_uuid25().to_string()
     }
-
-    pub fn try_from_str(value: &str) -> Option<Self> {
-        if let Ok(u) = Uuid::parse_str(value) {
-            if u.get_version_num() != 7 {
-                tracing::error!("uuid is not version 7: {}", value.to_string());
-                return None;
-            }
-            return Some(u.into());
-        }
-
-        None
-    }
 }
 
 impl Default for ArcUuid7 {
@@ -86,7 +74,7 @@ impl From<FieldValue> for Option<ArcUuid7> {
 
 impl From<Uuid25> for ArcUuid7 {
     fn from(value: Uuid25) -> Self {
-        value.to_hyphenated().to_string().into()
+        value.to_hyphenated().to_string().try_into().unwrap()
     }
 }
 
@@ -127,15 +115,20 @@ impl From<&ArcUuid7> for ArcUuid7 {
     }
 }
 
-impl From<&str> for ArcUuid7 {
-    fn from(value: &str) -> Self {
-        Self::new(Uuid::parse_str(value).expect("str is not a valid UUID7")).unwrap()
+impl TryFrom<&str> for ArcUuid7 {
+    type Error = String;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match Uuid::parse_str(value) {
+            Ok(u) => Self::new(u),
+            Err(e) => Err(e.to_string()),
+        }
     }
 }
 
-impl From<String> for ArcUuid7 {
-    fn from(value: String) -> Self {
-        value.as_str().into()
+impl TryFrom<String> for ArcUuid7 {
+    type Error = String;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        value.as_str().try_into()
     }
 }
 

@@ -15,8 +15,8 @@ impl SessionId {
     }
 
     pub fn from_str(input: &str) -> Option<Self> {
-        match ArcUuid7::try_from_str(input) {
-            Some(v) => Some(Self(v)),
+        match ArcUuid7::try_from(input) {
+            Ok(v) => Some(Self(v)),
             _ => None,
         }
     }

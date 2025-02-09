@@ -10,7 +10,7 @@ pub struct RoleContext {
 impl RoleContext {
     pub fn make_global() -> Self {
         Self {
-            id: ArcUuid7::from(GLOBAL_ROLE_CONTEXT_ID),
+            id: ArcUuid7::try_from(GLOBAL_ROLE_CONTEXT_ID).unwrap(),
         }
     }
 

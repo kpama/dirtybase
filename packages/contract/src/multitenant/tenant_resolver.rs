@@ -77,7 +77,7 @@ pub trait TenantResolverTrait: Send + Sync {
         id_location: TenantIdLocation,
     ) -> Option<ArcUuid7> {
         self.pluck_id_str_from_request(req, id_location)
-            .and_then(|id| ArcUuid7::try_from_str(id.as_str()))
+            .and_then(|id| ArcUuid7::try_from(id.as_str()).ok())
     }
 
     ///  Encode and return the tenant's ID in a format suitable for the web
@@ -90,7 +90,7 @@ pub trait TenantResolverTrait: Send + Sync {
         match Uuid25::from_str(id) {
             Ok(u25) => ArcUuid7::try_from(u25).ok(),
             Err(e) => {
-                if let Some(id) = ArcUuid7::try_from_str(id) {
+                if let Ok(id) = ArcUuid7::try_from(id) {
                     return Some(id);
                 }
 
@@ -211,7 +211,7 @@ mod test {
 
         assert_eq!(
             resolver.id_from_request(&req, crate::multitenant::TenantIdLocation::Subdomain),
-            ArcUuid7::try_from_str(id)
+            ArcUuid7::try_from(id).ok()
         );
     }
 
@@ -244,7 +244,7 @@ mod test {
     #[tokio::test]
     async fn test_decoding_uuid7_str() {
         let id = "0194ddfb-ed23-77af-ba48-cee803fbb0b5";
-        let uuid = ArcUuid7::try_from_str(id).expect("could not decode uuid7 string");
+        let uuid = ArcUuid7::try_from(id).expect("could not decode uuid7 string");
         let resolver = TenantResolver;
 
         assert_eq!(resolver.url_decode_id(id).await.unwrap(), uuid);
@@ -253,7 +253,7 @@ mod test {
     #[tokio::test]
     async fn test_decoding_uuid25_str() {
         let id = "0194ddfb-ed23-77af-ba48-cee803fbb0b5";
-        let uuid = ArcUuid7::try_from_str(id).expect("could not decode uuid7 string");
+        let uuid = ArcUuid7::try_from(id).expect("could not decode uuid7 string");
         let uuid25_str = Uuid25::from_str(id).unwrap().to_string();
 
         let resolver = TenantResolver;
@@ -308,7 +308,7 @@ mod test {
 
         assert_eq!(
             resolver.id_from_request(&req, crate::multitenant::TenantIdLocation::Header),
-            ArcUuid7::try_from_str(id)
+            ArcUuid7::try_from(id).ok()
         );
     }
 
@@ -356,7 +356,7 @@ mod test {
 
         assert_eq!(
             resolver.id_from_request(&req, crate::multitenant::TenantIdLocation::Query),
-            ArcUuid7::try_from_str(id)
+            ArcUuid7::try_from(id).ok()
         );
     }
 }
