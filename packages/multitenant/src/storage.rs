@@ -10,10 +10,4 @@ pub enum TenantStorageDriver {
     Dummy,
     #[serde(alias = "database")]
     Database,
-    #[serde(alias = "file")]
-    File,
-    #[serde(alias = "memory")]
-    Memory,
-    #[serde(alias = "redis")]
-    Redis,
 }

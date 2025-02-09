@@ -174,8 +174,6 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                             // let tenant = manager.by_id(raw_id).await;
                             // tracing::trace!("found tenant record: {}", tenant.is_some());
                         }
-                    } else {
-                        tracing::info!("could not find tenant ID in request");
                     }
                 }
                 // 2. Find the app

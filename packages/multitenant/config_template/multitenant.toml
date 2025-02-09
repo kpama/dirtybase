@@ -3,7 +3,7 @@ enable = true
 # options: domain, subdomain, header, query
 id_location = "subdomain"
 
-# option: database, file, memory, redis
+# option: database, dummy 
 storage = "memory"
 
 # for a custom storage driver use the following

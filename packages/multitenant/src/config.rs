@@ -14,7 +14,7 @@ impl Default for MultitenantConfig {
         Self {
             enable: Default::default(),
             id_location: Default::default(),
-            storage: TenantStorageDriver::Memory,
+            storage: TenantStorageDriver::Dummy,
         }
     }
 }
