@@ -178,7 +178,7 @@ fn walk_and_find_type(p: &TypePath, dirty_attribute: &mut DirtybaseAttributes) {
 pub(crate) fn pluck_names(
     columns_attributes: &HashMap<String, DirtybaseAttributes>,
 ) -> Vec<String> {
-   columns_attributes
+    columns_attributes
         .iter()
         .filter(|c| !c.1.skip_select)
         .filter(|c| !c.1.flatten)

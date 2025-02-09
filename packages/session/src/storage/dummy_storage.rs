@@ -1,9 +1,7 @@
-use crate::session::SessionData;
-
-use super::{SessionId, SessionStorage};
+use dirtybase_contract::session::{SessionData, SessionId, SessionStorage};
 
 #[derive(Default)]
-pub(crate) struct DummyStorage;
+pub struct DummyStorage;
 
 #[async_trait::async_trait]
 impl SessionStorage for DummyStorage {

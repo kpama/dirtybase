@@ -1,6 +1,7 @@
 use clap::{command, Parser, Subcommand};
 
 mod commands;
+mod content;
 mod metadata;
 
 fn main() {

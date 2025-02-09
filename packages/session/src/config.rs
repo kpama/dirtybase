@@ -1,3 +1,5 @@
+use std::mem::transmute;
+
 use dirtybase_contract::{config::DirtyConfig, session::DEFAULT_LIFETIME};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -18,7 +20,7 @@ pub enum SessionStorageDriver {
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct SessionConfig {
-    driver: SessionStorageDriver,
+    storage: SessionStorageDriver,
     lifetime: i64,
     cookie: String,
 }
@@ -26,7 +28,7 @@ pub struct SessionConfig {
 impl Default for SessionConfig {
     fn default() -> Self {
         Self {
-            driver: SessionStorageDriver::Dummy,
+            storage: SessionStorageDriver::Dummy,
             lifetime: DEFAULT_LIFETIME as i64 * 60,
             cookie: "dty_session".to_string().into(),
         }
@@ -34,12 +36,12 @@ impl Default for SessionConfig {
 }
 
 impl SessionConfig {
-    pub fn driver(&self) -> SessionStorageDriver {
-        self.driver.clone()
+    pub fn storage(&self) -> SessionStorageDriver {
+        self.storage.clone()
     }
 
-    pub fn driver_ref(&self) -> &SessionStorageDriver {
-        &self.driver
+    pub fn storage_ref(&self) -> &SessionStorageDriver {
+        &self.storage
     }
 
     pub fn lifetime(&self) -> i64 {
@@ -57,10 +59,18 @@ impl SessionConfig {
 
 impl From<&DirtyConfig> for SessionConfig {
     fn from(base: &DirtyConfig) -> Self {
-        base.optional_file("session.toml", Some("DTY_SESSION"))
+        match base
+            .optional_file("session.toml", Some("DTY_SESSION"))
             .build()
-            .unwrap()
+            .expect("could not build dirtybase configuration for session config")
             .try_deserialize()
-            .unwrap()
+        {
+            Ok(c) => c,
+            Err(e) => {
+                let message = format!("could not build session config: {}", e.to_string());
+                tracing::error!("{}", &message);
+                panic!("{}", message);
+            }
+        }
     }
 }

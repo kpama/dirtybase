@@ -1,9 +1,7 @@
 #![allow(dead_code)]
 
 use dirtybase_db::{
-    base::manager::Manager,
-    connector::sqlite::make_sqlite_in_memory_manager,
-    TableEntityTrait,
+    base::manager::Manager, connector::sqlite::make_sqlite_in_memory_manager, TableEntityTrait,
 };
 use dirtybase_db_macro::DirtyTable;
 

@@ -1,5 +1,3 @@
-
-
 pub trait DomainEvent {
     fn event_type(&self) -> &str;
     fn version(&self) -> &str;

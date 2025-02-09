@@ -1,0 +1,15 @@
+use dirtybase_contract::db::migration::Migration;
+use dirtybase_contract::db::base::manager::Manager;
+
+pub struct struct_name;
+
+#[dirtybase_contract::async_trait]
+impl Migration for struct_name {
+  async fn up(&self, manager: &Manager) {
+     println!("going up: {}", "struct_name");
+  }
+
+  async fn down(&self, manager: &Manager) {
+     println!("going down: {}", "struct_name");
+  }
+}

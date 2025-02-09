@@ -1,9 +1,12 @@
 use dirtybase_contract::{config::DirtyConfig, multitenant::TenantIdLocation, serde};
 
+use crate::storage::TenantStorageDriver;
+
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct MultitenantConfig {
     enable: bool,
     id_location: TenantIdLocation,
+    storage: TenantStorageDriver,
 }
 
 impl Default for MultitenantConfig {
@@ -11,24 +14,9 @@ impl Default for MultitenantConfig {
         Self {
             enable: Default::default(),
             id_location: Default::default(),
+            storage: TenantStorageDriver::Memory,
         }
     }
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub enum TenantStorageDriver {
-    #[serde(alias = "custom")]
-    Custom(String),
-    #[serde(alias = "dummy")]
-    Dummy,
-    #[serde(alias = "database")]
-    Database,
-    #[serde(alias = "file")]
-    File,
-    #[serde(alias = "memory")]
-    Memory,
-    #[serde(alias = "redis")]
-    Redis,
 }
 
 impl MultitenantConfig {

@@ -1,24 +1,9 @@
-use std::process::Command;
+use std::{fmt::format, process::Command};
 
-use crate::metadata::read_package_metadata;
-
-const MIGRATION_STUB: &str = "
-use dirtybase_contract::db::migration::Migration;
-use dirtybase_contract::db::base::manager::Manager;
-
-pub struct struct_name;
-
-#[dirtybase_contract::async_trait]
-impl Migration for struct_name {
-  async fn up(&self, manager: &Manager) {
-     println!(\"This is a test going up\");
-  }
-
-  async fn down(&self, manager: &Manager) {
-     println!(\"This is a test going down\");
-  }
-}
-";
+use crate::{
+    content::{dump_a_stub, make_a_directory, stubs},
+    metadata::read_package_metadata,
+};
 
 pub fn make(package: Option<&String>, name: &str) {
     let path_buf = if let Some(package) = package {
@@ -38,18 +23,17 @@ pub fn make(package: Option<&String>, name: &str) {
         dirtybase_helper::inflector::cases::pascalcase::to_pascal_case(name)
     );
 
-    let built = MIGRATION_STUB.replace("struct_name", &struct_name);
+    let built = stubs()
+        .get("new_migration")
+        .unwrap()
+        .replace("struct_name", &struct_name);
 
     // TODO: Check if migration folder exist
     let migration_dir = path_buf.join("dirtybase_entry").join("migration");
-    if !migration_dir.exists() {
-        _ = std::fs::create_dir_all(migration_dir);
-    }
-    // TODO: Check if migration module exist
+    make_a_directory(&migration_dir);
+
     let mod_path = path_buf.join("dirtybase_entry").join("migration.rs");
-    if !mod_path.exists() {
-        _ = std::fs::write(&mod_path, "");
-    }
+    dump_a_stub("dirtybase_entry/migration.rs", &mod_path);
 
     let path = path_buf
         .join("dirtybase_entry")
@@ -62,17 +46,20 @@ pub fn make(package: Option<&String>, name: &str) {
 
     // FIXME: Use something more robust to generate the rust code
     module = module.replace(
-        "// dty_inject",
-        format!(
-            "Box::new({}::{}),\n // dty_inject",
-            module_name, struct_name
-        )
-        .as_str(),
+        "register_migration![",
+        format!("register_migration![\n{}::{}", module_name, struct_name).as_str(),
     );
 
     _ = std::fs::write(&mod_path, format!("mod {}; \n{}", &module_name, module));
 
     _ = std::fs::write(&path, built);
 
-    _ = Command::new("cargo").arg("fmt").arg("--all").output();
+    if package.is_some() {
+        _ = Command::new(format!("cargo -p {}", package.as_ref().unwrap()))
+            .arg("fmt")
+            .arg("--all")
+            .output();
+    } else {
+        _ = Command::new("cargo").arg("fmt").arg("--all").output();
+    }
 }

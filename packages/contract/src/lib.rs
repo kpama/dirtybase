@@ -20,9 +20,26 @@ pub use extension::ExtensionSetup;
 pub use serde;
 pub use serde_json;
 
+#[macro_export]
+macro_rules! register_migration {
+    () => {
+        None
+    };
+    ($($m:expr),+ $(,)?) => {
+        {
+            let mut v = Vec::new();
+            $(
+                v.push(Box::new($m));
+            )*
+            Some(v)
+        }
+    };
+}
+
 pub mod prelude {
     pub use super::auth::prelude::*;
     pub use super::cli::prelude::*;
+    pub use super::config::*;
     pub use super::extension::ExtensionManager;
     pub use super::extension::ExtensionMigrations;
     pub use super::extension::ExtensionSetup;

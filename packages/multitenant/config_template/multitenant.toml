@@ -1,2 +1,11 @@
 enable = true
-id_location = "subdomain" # options are: domain, subdomain, header, query
+
+# options: domain, subdomain, header, query
+id_location = "subdomain"
+
+# option: database, file, memory, redis
+storage = "memory"
+
+# for a custom storage driver use the following
+# Note: You will need to turn off the above "storage" entry
+# storage.custom=""

@@ -1,9 +1,6 @@
-mod dummy_storage;
-
 use std::{fmt::Display, sync::Arc};
 
 use busybody::async_trait;
-use dummy_storage::DummyStorage;
 
 use crate::db::types::ArcUuid7;
 
@@ -84,12 +81,6 @@ impl SessionStorage for SessionStorageProvider {
 
     async fn gc(&self, lifetime: i64) {
         self.0.gc(lifetime).await;
-    }
-}
-
-impl Default for SessionStorageProvider {
-    fn default() -> Self {
-        Self(Box::new(DummyStorage::default()))
     }
 }
 

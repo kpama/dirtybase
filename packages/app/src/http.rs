@@ -14,7 +14,7 @@ use dirtybase_contract::{
 
 #[cfg(feature = "multitenant")]
 use dirtybase_contract::multitenant::{
-    TenantIdLocation, TenantRepositoryProvider, TenantResolverProvider, TenantResolverTrait,
+    TenantIdLocation, TenantResolverProvider, TenantResolverTrait, TenantStorageProvider,
 };
 
 use named_routes_axum::RouterWrapper;
@@ -164,18 +164,19 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
                 // 1. Find the tenant
                 #[cfg(feature = "multitenant")]
-                if let Some(manager) = context.get::<TenantRepositoryProvider>() {
-                    if let Some(manager) = context.get::<TenantResolverProvider>() {
-                        if let Some(raw_id) =
-                            manager.pluck_id_str_from_request(&req, TenantIdLocation::Subdomain)
-                        {
-                            tracing::error!("current tenant Id: {}", raw_id);
-                        } else {
-                            tracing::error!("current tenant Id is not in the subdomain");
+                if let Some(manager) = context.get::<TenantResolverProvider>() {
+                    if let Some(raw_id) =
+                        manager.pluck_id_str_from_request(&req, TenantIdLocation::Subdomain)
+                    {
+                        tracing::trace!("current tenant Id: {}", &raw_id);
+                        if let Some(manager) = context.get::<TenantStorageProvider>() {
+                            tracing::trace!("validate tenant id and try fetching data");
+                            // let tenant = manager.by_id(raw_id).await;
+                            // tracing::trace!("found tenant record: {}", tenant.is_some());
                         }
+                    } else {
+                        tracing::info!("could not find tenant ID in request");
                     }
-                } else {
-                    tracing::error!("did not get multitenant manager");
                 }
                 // 2. Find the app
                 // 3. Find the role

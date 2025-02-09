@@ -112,8 +112,8 @@ impl Extension {
     }
 
     async fn setup_session_storage(&self, config: &SessionConfig) {
-        println!("current session storage driver: {:?}", config.driver());
-        match config.driver() {
+        println!("current session storage driver: {:?}", config.storage_ref());
+        match config.storage() {
             SessionStorageDriver::Memory => {
                 log::debug!(
                     "current session storage provider: {:?}",
