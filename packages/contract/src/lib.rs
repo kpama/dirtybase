@@ -27,7 +27,7 @@ macro_rules! register_migration {
     };
     ($($m:expr),+ $(,)?) => {
         {
-            let mut v = Vec::<::dirtybase_contract::db::migration::Migration>::new();
+            let mut v = Vec::<Box<dyn ::dirtybase_contract::db::migration::Migration>>::new();
             $(
                 v.push(Box::new($m));
             )*
