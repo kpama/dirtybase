@@ -1,4 +1,4 @@
-use std::{fmt::format, process::Command};
+use std::process::Command;
 
 use crate::{
     content::{dump_a_stub, make_a_directory, stubs},
@@ -28,7 +28,6 @@ pub fn make(package: Option<&String>, name: &str) {
         .unwrap()
         .replace("struct_name", &struct_name);
 
-    // TODO: Check if migration folder exist
     let migration_dir = path_buf.join("dirtybase_entry").join("migration");
     make_a_directory(&migration_dir);
 
@@ -44,7 +43,6 @@ pub fn make(package: Option<&String>, name: &str) {
 
     let mut module = std::fs::read_to_string(&mod_path).unwrap();
 
-    // FIXME: Use something more robust to generate the rust code
     module = module.replace(
         "register_migration![",
         format!("register_migration![\n{}::{}", module_name, struct_name).as_str(),
