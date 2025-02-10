@@ -6,3 +6,5 @@
 data/*
 !/data/README.md
 packages/todo
+private_packages/*
+!private_packages/README.md

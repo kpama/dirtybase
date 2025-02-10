@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["bin/ui", "bin/cli", "packages/*"]
+members = ["bin/ui", "bin/cli", "packages/*", "private_packages/*"]
 
 [workspace.package]
 version = "0.1.0"
