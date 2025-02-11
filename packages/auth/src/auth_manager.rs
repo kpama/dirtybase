@@ -1,5 +1,6 @@
 use crate::AuthConfig;
 
+#[derive(Clone)]
 pub struct AuthManager {
     config: AuthConfig,
 }
