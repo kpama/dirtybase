@@ -91,9 +91,12 @@ impl CliCommandManager {
             None => command.get_matches(),
         };
 
+        let context = Context::default();
         if let Some((name, mut command)) = matches.remove_subcommand() {
             for ext in ExtensionManager::list().read().await.iter() {
-                command = ext.on_cli_command(name.as_str(), command).await;
+                command = ext
+                    .on_cli_command(name.as_str(), command, context.clone())
+                    .await;
             }
 
             for (cmd, handler, order) in self.commands.into_iter() {
@@ -101,7 +104,7 @@ impl CliCommandManager {
                     .middleware_manager
                     .apply(handler, order.unwrap_or_default());
                 if name == cmd.get_name() {
-                    middleware.send((name, command, Context::default())).await;
+                    middleware.send((name, command, context)).await;
                     break;
                 }
             }

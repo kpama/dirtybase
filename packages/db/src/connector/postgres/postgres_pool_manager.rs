@@ -25,7 +25,7 @@ impl ConnectionPoolRegisterTrait for PostgresPoolManagerRegisterer {
     ) -> Result<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>, anyhow::Error> {
         let mut pools: HashMap<ClientType, Box<dyn ConnectionPoolTrait>> = HashMap::new();
         for (client_type, config) in config_set.iter() {
-            if config.kind() == DatabaseKind::Postgres {
+            if config.kind() == DatabaseKind::Postgres && config.enable {
                 match db_connect(config).await {
                     Ok(db_pool) => {
                         pools.insert(

@@ -30,7 +30,7 @@ impl MakePoolManagerCommand {
     }
 
     pub fn set_result(&self, dispatched: &DispatchedQuery, result: PoolManagerCommandResult) {
-        dispatched.set_value::<PoolManagerCommandResult>(result);
+        dispatched.set_value(result);
     }
 
     pub async fn make(config_set: ConfigSet) -> Result<Manager, anyhow::Error> {

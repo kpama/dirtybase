@@ -1,5 +1,5 @@
 pub mod connector;
-mod db_dirtybase_entry;
+mod dirtybase_entry;
 
 use base::{connection::ConnectionPoolRegisterTrait, schema::DatabaseKind};
 use connection_bus::MakePoolManagerCommand;
@@ -8,8 +8,8 @@ use connector::{
     postgres::postgres_pool_manager::PostgresPoolManagerRegisterer,
     sqlite::sqlite_pool_manager::SqlitePoolManagerRegisterer,
 };
-pub use db_dirtybase_entry::*;
 pub use dirtybase_contract::db::*;
+pub use dirtybase_entry::*;
 
 use busstop::DispatchableQuery;
 

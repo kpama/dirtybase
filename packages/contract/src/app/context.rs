@@ -33,7 +33,7 @@ impl Default for Context {
             sc: Arc::new(busybody::helpers::make_proxy()),
         };
 
-        instance.set(ContextMetadata::default());
+        instance.set(Arc::new(ContextMetadata::default()));
         instance
     }
 }
@@ -56,34 +56,35 @@ impl Context {
     }
 
     pub fn set_user(&self, user: UserContext) -> &Self {
-        self.set(user)
+        self.set(Arc::new(user))
     }
 
     pub fn set_role(&self, role: RoleContext) -> &Self {
-        self.set(role)
+        self.set(Arc::new(role))
     }
 
     pub fn set_tenant(&self, tenant: TenantContext) -> &Self {
-        self.set(tenant)
+        self.set(Arc::new(tenant))
     }
 
     pub fn set_app(&self, app: AppContext) -> &Self {
-        self.set(app)
+        self.set(Arc::new(app))
     }
 
     pub fn is_global(&self) -> bool {
         self.id.to_string() == GLOBAL_CONTEXT_ID
     }
 
-    pub fn configure<C>(&self, key: &str)
+    pub fn configure<C>(&self, key: &str) -> Option<C>
     where
         C: DeserializeOwned + Sync + Send + 'static,
     {
-        if let Some(app) = self.get::<AppContext>() {
-            if let Some(config) = app.config_to::<C>(key) {
-                self.set(config);
+        if let Some(tenant) = self.get::<TenantContext>() {
+            if let Some(config) = tenant.config_to::<C>(key) {
+                return Some(config);
             }
         }
+        None
     }
 
     pub fn container(&self) -> Arc<busybody::ServiceContainer> {
@@ -110,12 +111,12 @@ impl Context {
         self.get()
     }
 
-    pub fn set<T: Send + Sync + 'static>(&self, value: T) -> &Self {
-        self.sc.set_type(Arc::new(value));
+    pub fn set<T: Clone + Send + Sync + 'static>(&self, value: T) -> &Self {
+        self.sc.set_type(value);
         self
     }
 
-    pub fn get<T: 'static>(&self) -> Option<Arc<T>> {
+    pub fn get<T: Clone + Send + Sync + 'static>(&self) -> Option<T> {
         self.sc.get_type()
     }
 
@@ -138,7 +139,7 @@ impl Context {
 /// before falling back to the the global context
 #[derive(Debug, Clone)]
 #[must_use]
-pub struct CtxExt<T>(pub Arc<T>);
+pub struct CtxExt<T>(pub T);
 
 impl<T, S> FromRequestParts<S> for CtxExt<T>
 where
@@ -167,7 +168,7 @@ where
 }
 
 impl<T> Deref for CtxExt<T> {
-    type Target = Arc<T>;
+    type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.0
     }

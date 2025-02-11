@@ -66,6 +66,7 @@ pub trait ExtensionSetup: Send + Sync {
     async fn on_web_request(&self, req: Request, context: Context, cookie: &CookieJar) -> Request {
         req
     }
+
     async fn on_web_response(
         &self,
         resp: Response,
@@ -76,7 +77,7 @@ pub trait ExtensionSetup: Send + Sync {
     }
 
     /// Calls for a cli command
-    async fn on_cli_command(&self, cmd: &str, matches: ArgMatches) -> ArgMatches {
+    async fn on_cli_command(&self, cmd: &str, matches: ArgMatches, context: Context) -> ArgMatches {
         matches
     }
 

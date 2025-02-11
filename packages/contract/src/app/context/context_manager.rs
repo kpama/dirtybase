@@ -8,33 +8,30 @@ use tokio::{sync::RwLock, time::sleep};
 
 type ContextCollection<T> = Arc<RwLock<HashMap<String, ContextWrapper<T>>>>;
 
-struct ContextWrapper<T> {
-    context: Arc<T>,
+struct ContextWrapper<T: Clone + Sync + Sync + 'static> {
+    context: T,
     last_ts: AtomicI64,
     idle_duration: i64, // In seconds
 }
 
-impl<T> ContextWrapper<T> {
+impl<T: Clone + Sync + Sync + 'static> ContextWrapper<T> {
     pub fn new(context: T, idle_duration: i64) -> Self {
         Self {
-            context: Arc::new(context),
+            context: context,
             last_ts: AtomicI64::new(std::time::UNIX_EPOCH.elapsed().unwrap().as_secs() as i64),
             idle_duration,
         }
     }
 
-    fn context(&self) -> Arc<T> {
+    fn context(&self) -> T {
         self.last_ts.swap(
             std::time::UNIX_EPOCH.elapsed().unwrap().as_secs() as i64,
             std::sync::atomic::Ordering::Relaxed,
         );
-        Arc::clone(&self.context)
+        self.context.clone()
     }
 
     fn is_expired(&self) -> bool {
-        if Arc::strong_count(&self.context) > 1 {
-            return false;
-        }
         let current_ts = std::time::UNIX_EPOCH.elapsed().unwrap().as_secs() as i64;
 
         current_ts - self.last_ts.load(std::sync::atomic::Ordering::Relaxed) > self.idle_duration
@@ -42,17 +39,17 @@ impl<T> ContextWrapper<T> {
     }
 }
 
-pub struct ContextManager<T> {
+pub struct ContextManager<T: Clone + Send + Sync + 'static> {
     collection: ContextCollection<T>,
 }
 
-impl<T: Send + Sync + 'static> Default for ContextManager<T> {
+impl<T: Clone + Send + Sync + 'static> Default for ContextManager<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: Send + Sync + 'static> ContextManager<T> {
+impl<T: Clone + Send + Sync + 'static> ContextManager<T> {
     pub fn new() -> Self {
         Self {
             collection: ContextCollection::default(),
@@ -64,7 +61,7 @@ impl<T: Send + Sync + 'static> ContextManager<T> {
         name: &str,
         idle_duration: i64, // in seconds
         mut else_callback: F,
-    ) -> Arc<T>
+    ) -> T
     where
         F: FnMut() -> BoxFuture<'static, T>,
     {
@@ -122,11 +119,12 @@ mod test {
             .context("counter", 1, || Box::pin(async { 100 }))
             .await;
 
-        assert_eq!(counter, Arc::new(100));
+        assert_eq!(counter, 100);
     }
 
     #[tokio::test]
     async fn test_context_creation2() {
+        #[derive(Debug, Clone)]
         struct DbConnection {
             url: String,
         }

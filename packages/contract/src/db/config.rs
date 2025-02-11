@@ -7,7 +7,7 @@ use super::base::schema::{ClientType, DatabaseKind};
 pub type ConfigSet = HashMap<ClientType, BaseConfig>;
 pub type ConfigCollection = HashMap<String, ConfigSet>;
 
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct BaseConfig {
     #[serde(default)]
     pub enable: bool,
