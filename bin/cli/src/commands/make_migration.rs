@@ -45,7 +45,7 @@ pub fn make(package: Option<&String>, name: &str) {
 
     module = module.replace(
         "register_migration![",
-        format!("register_migration![\n{}::{}", module_name, struct_name).as_str(),
+        format!("register_migration![\n{}::{},", module_name, struct_name).as_str(),
     );
 
     _ = std::fs::write(&mod_path, format!("mod {}; \n{}", &module_name, module));
