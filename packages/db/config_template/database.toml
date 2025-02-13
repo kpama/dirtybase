@@ -1,4 +1,7 @@
 default = "sqlite"
+# drop the connection after an hour of idleness
+# value is in seconds
+idle_timeout = 3600
 
 [clients]
 
