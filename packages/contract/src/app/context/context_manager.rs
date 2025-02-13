@@ -4,30 +4,27 @@ use std::{
 };
 
 use futures::future::BoxFuture;
-use tokio::{
-    sync::{Mutex, RwLock},
-    time::sleep,
-};
+use tokio::{sync::RwLock, time::sleep};
 
 type ContextCollection<T> = Arc<RwLock<HashMap<String, ContextWrapper<T>>>>;
 
 struct ContextWrapper<T: Clone + Sync + Sync + 'static> {
     context: T,
     last_ts: AtomicI64,
-    idle_duration: i64, // In seconds
-    close_callback: Box<dyn FnMut(T) -> BoxFuture<'static, ()> + Send + Sync>,
+    idle_timeout: i64, // In seconds
+    idle_callback: Box<dyn FnMut(T) -> BoxFuture<'static, ()> + Send + Sync>,
 }
 
 impl<T: Clone + Sync + Sync + 'static> ContextWrapper<T> {
-    pub fn new<F>(context: T, idle_duration: i64, close_callback: F) -> Self
+    pub fn new<F>(context: T, idle_timeout: i64, idle_callback: F) -> Self
     where
         F: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         Self {
-            context: context,
+            context,
             last_ts: AtomicI64::new(std::time::UNIX_EPOCH.elapsed().unwrap().as_secs() as i64),
-            idle_duration,
-            close_callback: Box::new(close_callback),
+            idle_timeout,
+            idle_callback: Box::new(idle_callback),
         }
     }
 
@@ -42,8 +39,8 @@ impl<T: Clone + Sync + Sync + 'static> ContextWrapper<T> {
     fn is_expired(&self) -> bool {
         let current_ts = std::time::UNIX_EPOCH.elapsed().unwrap().as_secs() as i64;
 
-        current_ts - self.last_ts.load(std::sync::atomic::Ordering::Relaxed) > self.idle_duration
-            && self.idle_duration > 0
+        current_ts - self.last_ts.load(std::sync::atomic::Ordering::Relaxed) > self.idle_timeout
+            && self.idle_timeout > 0
     }
 }
 
@@ -64,12 +61,17 @@ impl<T: Clone + Send + Sync + 'static> ContextManager<T> {
         }
     }
 
+    /// Tries to return an instance of `T` or fall back to your callback
+    ///
+    /// idle duration is in seconds
+    /// The idle callback will not be called if idle timeout is less than one.
+    /// This also means, the resource will not be dropped.
     pub async fn context<F, C>(
         &self,
         name: &str,
-        idle_duration: i64, // in seconds
+        idle_timeout: i64, // in seconds
         mut else_callback: F,
-        close_callback: C,
+        idle_callback: C,
     ) -> T
     where
         F: FnMut() -> BoxFuture<'static, T>,
@@ -80,10 +82,10 @@ impl<T: Clone + Send + Sync + 'static> ContextManager<T> {
         if !lock.contains_key(name) {
             lock.insert(
                 name.to_string(),
-                ContextWrapper::new(else_callback().await, idle_duration, close_callback),
+                ContextWrapper::new(else_callback().await, idle_timeout, idle_callback),
             );
 
-            if idle_duration > 0 {
+            if idle_timeout > 0 {
                 let list = Arc::clone(&self.collection);
                 let name2 = name.to_string();
 
@@ -98,7 +100,7 @@ impl<T: Clone + Send + Sync + 'static> ContextManager<T> {
                                 let mut write_lock = list.write().await;
                                 if let Some(mut ctx) = write_lock.remove(&name2) {
                                     let content = ctx.context();
-                                    (ctx.close_callback)(content).await;
+                                    (ctx.idle_callback)(content).await;
                                     drop(ctx);
                                 }
 
@@ -114,21 +116,6 @@ impl<T: Clone + Send + Sync + 'static> ContextManager<T> {
         }
 
         lock.get(name).unwrap().context()
-    }
-
-    pub async fn context_minute<F, C>(
-        &self,
-        name: &str,
-        idle_minutes: i64,
-        else_callback: F,
-        close_callback: C,
-    ) -> T
-    where
-        F: FnMut() -> BoxFuture<'static, T>,
-        C: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
-    {
-        self.context(name, idle_minutes * 60, else_callback, close_callback)
-            .await
     }
 
     pub async fn has_context(&self, name: &str) -> bool {
