@@ -33,7 +33,7 @@ impl UserLoginPayload {
 #[busybody::async_trait]
 impl Injectable for UserLoginPayload {
     async fn inject(container: &busybody::ServiceContainer) -> Self {
-        container.proxy_value().unwrap_or_default()
+        container.proxy_value().await.unwrap_or_default()
     }
 }
 

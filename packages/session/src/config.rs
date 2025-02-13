@@ -1,5 +1,3 @@
-use std::mem::transmute;
-
 use dirtybase_contract::{config::DirtyConfig, session::DEFAULT_LIFETIME};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

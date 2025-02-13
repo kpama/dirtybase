@@ -2,21 +2,21 @@ use std::{collections::HashMap, str::FromStr, sync::Arc, time::Duration};
 
 use crate::{
     base::{
-        connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait},
+        connection::ConnectionPoolTrait,
         schema::{ClientType, DatabaseKind},
     },
-    config::BaseConfig,
+    config::{BaseConfig, ConfigSet},
+    ConnectionPoolRegisterTrait,
 };
 use anyhow::anyhow;
 use async_trait::async_trait;
-use dirtybase_contract::db::config::ConfigSet;
 use sqlx::{
     sqlite::SqliteJournalMode,
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
     Pool, Sqlite,
 };
 
-use super::sqlite_schema_manager::SqliteSchemaManager;
+use super::sqlite_schema_manager::{SqliteSchemaManager, SQLITE_KIND};
 
 pub struct SqlitePoolManagerRegisterer;
 
@@ -28,7 +28,7 @@ impl ConnectionPoolRegisterTrait for SqlitePoolManagerRegisterer {
     ) -> Result<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>, anyhow::Error> {
         let mut pools: HashMap<ClientType, Box<dyn ConnectionPoolTrait>> = HashMap::new();
         for (client_type, config) in config_set.iter() {
-            if config.kind() == DatabaseKind::Sqlite && config.enable {
+            if SQLITE_KIND == config.kind().as_str() && config.enable {
                 match db_connect(config).await {
                     Ok(db_pool) => {
                         pools.insert(
@@ -44,10 +44,7 @@ impl ConnectionPoolRegisterTrait for SqlitePoolManagerRegisterer {
         }
 
         if pools.is_empty() {
-            Err(anyhow!(
-                "could not create any pool manager for kind: {:?}",
-                &DatabaseKind::Sqlite
-            ))
+            Err(anyhow!("could not create any pool manager for sqlite"))
         } else {
             Ok(pools)
         }
@@ -59,13 +56,18 @@ pub struct SqlitePoolManager {
     db_pool: Arc<Pool<Sqlite>>,
 }
 
+#[async_trait]
 impl ConnectionPoolTrait for SqlitePoolManager {
     fn schema_manger(&self) -> Box<dyn crate::base::schema::SchemaManagerTrait + Send + Sync> {
         Box::new(SqliteSchemaManager::new(self.db_pool.clone()))
     }
 
     fn id(&self) -> DatabaseKind {
-        DatabaseKind::Sqlite
+        "sqlite".into()
+    }
+
+    async fn close(&self) {
+        self.db_pool.close().await;
     }
 }
 

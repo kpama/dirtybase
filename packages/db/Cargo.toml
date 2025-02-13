@@ -16,6 +16,7 @@ anyhow = { workspace = true }
 ulid = { workspace = true }
 orsomafo = { workspace = true }
 log = { workspace = true }
+tracing = { workspace = true }
 tokio = { workspace = true, features = ["sync"] }
 tokio-stream = { workspace = true }
 busybody = { workspace = true }

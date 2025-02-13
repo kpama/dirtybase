@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use crate::config::DirtyConfig;
+use dirtybase_contract::config::DirtyConfig;
+
+use crate::connector::sqlite::sqlite_schema_manager::SQLITE_KIND;
 
 use super::base::schema::{ClientType, DatabaseKind};
 
@@ -23,13 +25,13 @@ pub struct BaseConfig {
     pub custom: Option<HashMap<String, String>>,
 }
 
+/// By default the data is sqlite and
+/// the database is in memory
 impl Default for BaseConfig {
-    /// By default the data is sqlite and
-    /// the database is in memory
     fn default() -> Self {
         Self {
             enable: true,
-            kind: DatabaseKind::Sqlite,
+            kind: SQLITE_KIND.into(),
             client_type: ClientType::Write,
             url: "sqlite::memory:".to_string(),
             max: 2,
@@ -45,6 +47,14 @@ impl Default for BaseConfig {
 impl BaseConfig {
     pub fn kind(&self) -> DatabaseKind {
         self.kind.clone()
+    }
+
+    pub fn kind_ref(&self) -> &DatabaseKind {
+        &self.kind
+    }
+
+    pub fn new_set() -> ConfigSet {
+        return Self::set_from(&DirtyConfig::new());
     }
 
     pub fn set_from(dirty_config: &DirtyConfig) -> ConfigSet {

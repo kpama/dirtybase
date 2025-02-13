@@ -2,18 +2,18 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::anyhow;
 use async_trait::async_trait;
-use dirtybase_contract::db::config::ConfigSet;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
 use crate::{
     base::{
-        connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait},
+        connection::ConnectionPoolTrait,
         schema::{ClientType, DatabaseKind, SchemaManagerTrait},
     },
-    config::BaseConfig,
+    config::{BaseConfig, ConfigSet},
+    ConnectionPoolRegisterTrait,
 };
 
-use super::postgres_schema_manager::PostgresSchemaManager;
+use super::postgres_schema_manager::{PostgresSchemaManager, POSTGRES_KIND};
 
 pub struct PostgresPoolManagerRegisterer;
 
@@ -25,7 +25,7 @@ impl ConnectionPoolRegisterTrait for PostgresPoolManagerRegisterer {
     ) -> Result<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>, anyhow::Error> {
         let mut pools: HashMap<ClientType, Box<dyn ConnectionPoolTrait>> = HashMap::new();
         for (client_type, config) in config_set.iter() {
-            if config.kind() == DatabaseKind::Postgres && config.enable {
+            if config.kind_ref().as_str() == POSTGRES_KIND && config.enable {
                 match db_connect(config).await {
                     Ok(db_pool) => {
                         pools.insert(
@@ -40,10 +40,7 @@ impl ConnectionPoolRegisterTrait for PostgresPoolManagerRegisterer {
             }
         }
         if pools.is_empty() {
-            Err(anyhow!(
-                "could not create any pool manager for kind: {:?}",
-                &DatabaseKind::Postgres
-            ))
+            Err(anyhow!("could not create any pool manager for postgresql"))
         } else {
             Ok(pools)
         }
@@ -61,7 +58,11 @@ impl ConnectionPoolTrait for PostgresPoolManager {
         Box::new(PostgresSchemaManager::new(self.db_pool.clone()))
     }
     fn id(&self) -> DatabaseKind {
-        DatabaseKind::Postgres
+        POSTGRES_KIND.into()
+    }
+
+    async fn close(&self) {
+        self.db_pool.close().await;
     }
 }
 

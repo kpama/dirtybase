@@ -1,9 +1,8 @@
 // pub use dirtybase_db::*;
 // pub use dirtybase_db_macro as macros;
 pub mod base;
-pub mod config;
 // pub mod entity;
-pub mod connection_bus;
+// pub mod connection_bus;
 pub mod event;
 pub mod field_values;
 pub mod migration;

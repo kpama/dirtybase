@@ -22,6 +22,7 @@ pub(crate) async fn execute(payload: UserLoginPayload) -> AuthResult {
         .pipeline()
         .await
         .try_deliver_as::<AuthResult>()
+        .await
         .unwrap_or_else(|| AuthenticationErrorStatus::AuthenticationFailed.into())
 }
 
@@ -90,7 +91,10 @@ async fn find_can_user_login_cache_data(
 }
 
 async fn check_if_user_can_login(pipe: PipeContent) -> bool {
-    let result = pipe.container().get_type::<Option<CanLoginCachedData>>();
+    let result = pipe
+        .container()
+        .get_type::<Option<CanLoginCachedData>>()
+        .await;
 
     if let Some(Some(data)) = result {
         if !data.allow {
@@ -137,6 +141,7 @@ async fn try_logging_user_in(
     let user = pipe
         .container()
         .get_type::<Option<DirtybaseUserEntity>>()
+        .await
         .unwrap()
         .unwrap();
     let result = service.log_user_in(user.clone(), &payload.password).await;

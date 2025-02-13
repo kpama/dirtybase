@@ -73,7 +73,7 @@ impl CompanyRepository {
 #[busybody::async_trait]
 impl busybody::Injectable for CompanyRepository {
     async fn inject(c: &busybody::ServiceContainer) -> Self {
-        let app = c.get::<App>().unwrap();
+        let app = c.get::<App>().await.unwrap();
         Self::new(app.schema_manger())
     }
 }

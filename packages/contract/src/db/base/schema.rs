@@ -7,7 +7,10 @@ use crate::db::{
     types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue},
 };
 use async_trait::async_trait;
-use std::fmt::Debug;
+use std::{
+    fmt::{Debug, Display},
+    sync::Arc,
+};
 
 #[derive(
     Debug,
@@ -21,16 +24,36 @@ use std::fmt::Debug;
     serde::Serialize,
     Default,
 )]
-pub enum DatabaseKind {
-    #[serde(rename(deserialize = "mysql"))]
-    Mysql,
-    #[serde(rename(deserialize = "sqlite"))]
-    #[default]
-    Sqlite,
-    #[serde(rename(deserialize = "postgres"))]
-    Postgres,
-    #[serde(rename(deserialize = "custom"))]
-    Custom(String),
+pub struct DatabaseKind(Arc<String>);
+
+impl Display for DatabaseKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl From<&str> for DatabaseKind {
+    fn from(value: &str) -> Self {
+        Self(Arc::new(value.to_string()))
+    }
+}
+
+impl From<DatabaseKind> for String {
+    fn from(value: DatabaseKind) -> Self {
+        String::from(value.0.as_str())
+    }
+}
+
+impl From<&DatabaseKind> for String {
+    fn from(value: &DatabaseKind) -> Self {
+        value.0.as_str().to_string()
+    }
+}
+
+impl DatabaseKind {
+    pub fn as_str(&self) -> &str {
+        &self.0.as_str()
+    }
 }
 
 #[derive(
@@ -52,41 +75,6 @@ pub enum ClientType {
     #[default]
     #[serde(alias = "write")]
     Write,
-}
-
-impl From<&str> for DatabaseKind {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase() {
-            _ if value.starts_with("mysql:")
-                || value.starts_with("mariadb:")
-                || value == "mysql"
-                || value == "mariadb" =>
-            {
-                Self::Mysql
-            }
-            _ if value.starts_with("sqlite:") || value == "sqlite" => Self::Sqlite,
-            _ if value.starts_with("postgres:") || value == "postgres" => Self::Postgres,
-            _ if !value.is_empty() => Self::Custom(value.to_string()),
-            _ => panic!("Unknown database kind: {}", value),
-        }
-    }
-}
-
-impl From<DatabaseKind> for String {
-    fn from(value: DatabaseKind) -> Self {
-        String::from(&value)
-    }
-}
-
-impl From<&DatabaseKind> for String {
-    fn from(value: &DatabaseKind) -> Self {
-        match value {
-            DatabaseKind::Mysql => "mysql".to_string(),
-            DatabaseKind::Sqlite => "sqlite".to_string(),
-            DatabaseKind::Postgres => "postgres".to_string(),
-            DatabaseKind::Custom(name) => name.to_string(),
-        }
-    }
 }
 
 #[async_trait]

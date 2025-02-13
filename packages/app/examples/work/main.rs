@@ -6,15 +6,17 @@ use std::sync::Arc;
 use setup::*;
 
 use dirtybase_contract::db::{
-    config::BaseConfig,
     relations::{
         BelongsTo, BelongsToMany, HasMany, HasManyThrough, HasOne, MorphOneOfMany, MorphOneToMany,
         RelationMany, RelationOne, RelationQueryBuilder,
     },
     TableEntityTrait,
 };
-use dirtybase_db::connector::{
-    mysql::make_mysql_manager, postgres::make_postgres_manager, sqlite::make_sqlite_manager,
+use dirtybase_db::{
+    config::BaseConfig,
+    connector::{
+        mysql::make_mysql_manager, postgres::make_postgres_manager, sqlite::make_sqlite_manager,
+    },
 };
 use models::{
     Address, Company, Customer, Image, Inventory, Invoice, Product, SalesOrder, Warehouse,

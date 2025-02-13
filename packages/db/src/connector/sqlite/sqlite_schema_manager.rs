@@ -19,6 +19,7 @@ use sqlx::{
 use std::{collections::HashMap, sync::Arc};
 
 const LOG_TARGET: &str = "sqlite_db_driver";
+pub const SQLITE_KIND: &str = "sqlite";
 
 pub struct SqliteSchemaManager {
     db_pool: Arc<Pool<Sqlite>>,
@@ -33,7 +34,7 @@ impl SqliteSchemaManager {
 #[async_trait]
 impl RelationalDbTrait for SqliteSchemaManager {
     fn kind(&self) -> DatabaseKind {
-        DatabaseKind::Sqlite
+        SQLITE_KIND.into()
     }
 }
 

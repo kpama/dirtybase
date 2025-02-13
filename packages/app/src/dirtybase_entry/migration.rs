@@ -5,8 +5,7 @@ pub(crate) mod mig_1698982353_create_main_tables;
  * do not manually edit it
  */
 pub(crate) fn setup() -> Vec<Box<dyn dirtybase_contract::db::migration::Migration>> {
-    vec![
-        Box::new(mig_1698982353_create_main_tables::Mig1698982353CreateMainTables),
-        // dty_inject
-    ]
+    vec![Box::new(
+        mig_1698982353_create_main_tables::Mig1698982353CreateMainTables,
+    )]
 }

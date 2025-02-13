@@ -19,6 +19,7 @@ use sqlx::{
 use std::{collections::HashMap, sync::Arc};
 
 const LOG_TARGET: &str = "postgresql_db_driver";
+pub const POSTGRES_KIND: &str = "postgresql";
 
 pub struct PostgresSchemaManager {
     db_pool: Arc<Pool<Postgres>>,
@@ -33,7 +34,7 @@ impl PostgresSchemaManager {
 #[async_trait]
 impl RelationalDbTrait for PostgresSchemaManager {
     fn kind(&self) -> DatabaseKind {
-        DatabaseKind::Postgres
+        POSTGRES_KIND.into()
     }
 }
 

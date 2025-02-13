@@ -24,6 +24,7 @@ use crate::{
 };
 
 const LOG_TARGET: &str = "mysql_db_driver";
+pub const MYSQL_KIND: &str = "mysql";
 
 pub struct MySqlSchemaManager {
     db_pool: Arc<Pool<MySql>>,
@@ -38,7 +39,7 @@ impl MySqlSchemaManager {
 #[async_trait]
 impl RelationalDbTrait for MySqlSchemaManager {
     fn kind(&self) -> DatabaseKind {
-        DatabaseKind::Mysql
+        MYSQL_KIND.into()
     }
 }
 

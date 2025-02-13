@@ -1,7 +1,6 @@
 use std::sync::{atomic::AtomicI64, Arc};
 
 use crate::db::{
-    config::ConfigSet,
     event::SchemeWroteEvent,
     field_values::FieldValue,
     types::{ColumnAndValue, FromColumnAndValue, IntoColumnAndValue},
@@ -29,18 +28,10 @@ impl Manager {
     pub fn new(
         connections: Arc<DatabaseKindPoolCollection>,
         kind: DatabaseKind,
-        config_set: ConfigSet,
+        write_is_sticky: bool,
+        sticky_duration: i64,
+        is_writable: bool,
     ) -> Self {
-        let mut write_is_sticky = false;
-        let mut sticky_duration = 0;
-        let mut is_writable = false;
-
-        if let Some(config) = config_set.get(&super::schema::ClientType::Write) {
-            write_is_sticky = config.sticky.unwrap_or_default();
-            sticky_duration = config.sticky_duration.unwrap_or_default();
-            is_writable = true;
-        }
-
         Self {
             connections,
             kind,
@@ -328,6 +319,18 @@ impl Manager {
 
     pub fn is_writable(&self) -> bool {
         self.is_writable
+    }
+
+    pub async fn close(self) {
+        for (_, collection) in self.connections.iter() {
+            for (_, pool) in collection {
+                pool.close().await;
+            }
+        }
+    }
+
+    pub fn db_kind(&self) -> &DatabaseKind {
+        &self.kind
     }
 
     fn create_schema_manager(&self, for_write: bool) -> Box<dyn SchemaManagerTrait + Send> {

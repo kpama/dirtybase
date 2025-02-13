@@ -20,6 +20,8 @@ pub async fn setup_using(config: &config::CacheConfig) -> cache_manager::CacheMa
     let manager = cache_manager::CacheManager::new(config).await;
 
     busybody::helpers::register_type(manager)
+        .await
         .get_type()
+        .await
         .unwrap()
 }

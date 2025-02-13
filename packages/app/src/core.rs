@@ -20,8 +20,10 @@ use axum::http::request::Parts;
 pub use config::Config;
 pub use config::ConfigBuilder;
 
+use dirtybase_contract::config::DirtyConfig;
 use dirtybase_contract::ExtensionManager;
 use dirtybase_db::base::manager::Manager;
+use dirtybase_db::config::BaseConfig;
 use dirtybase_db::connection_bus::MakePoolManagerCommand;
 use dirtybase_user::entity::user::UserRepository;
 use dirtybase_user::entity::user::UserService;
@@ -42,10 +44,11 @@ impl App {
             config: config.clone(),
         };
 
-        busybody::helpers::service_container().set(instance);
+        busybody::helpers::service_container().set(instance).await;
 
         Ok(busybody::helpers::service_container()
             .get::<Self>()
+            .await
             .unwrap())
     }
 
@@ -86,10 +89,7 @@ impl App {
     pub fn try_schema_manager(&self) -> Result<Manager, anyhow::Error> {
         let config = &self.config;
         match self.default_db_manager.get_or_init(|| {
-            let dirty_config = config.dirty_config().clone();
-            MakePoolManagerCommand::make_sync(dirtybase_contract::db::config::BaseConfig::set_from(
-                &dirty_config,
-            ))
+            MakePoolManagerCommand::make_sync(BaseConfig::set_from(config.dirty_config()))
         }) {
             Ok(manager) => Ok(manager.clone()),
             Err(e) => Err(anyhow!(e.to_string())),
@@ -102,6 +102,14 @@ impl App {
 
     pub fn config(&self) -> Config {
         self.config.clone()
+    }
+
+    pub fn dirty_config(&self) -> DirtyConfig {
+        self.config.dirty_config().clone()
+    }
+
+    pub fn dirty_config_ref(&self) -> &DirtyConfig {
+        self.config.dirty_config()
     }
 
     pub fn config_ref(&self) -> &Config {

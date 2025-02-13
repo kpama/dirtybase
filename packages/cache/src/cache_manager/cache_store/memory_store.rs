@@ -194,11 +194,16 @@ impl CacheStoreTrait for MemoryStore {
 #[busybody::async_trait]
 impl busybody::Injectable for MemoryStore {
     async fn inject(container: &busybody::ServiceContainer) -> Self {
-        if let Some(store) = container.get_type::<Self>() {
+        if let Some(store) = container.get_type::<Self>().await {
             return store;
         } else {
             let store = Self::new();
-            return container.set_type(store).get_type::<Self>().unwrap();
+            return container
+                .set_type(store)
+                .await
+                .get_type::<Self>()
+                .await
+                .unwrap();
         }
     }
 }

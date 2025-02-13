@@ -6,7 +6,7 @@ use crate::core::{
         role_user::RoleUserService,
         sys_admin::SysAdminService,
     },
-    App, Config,
+    App,
 };
 use busybody::Service;
 use dirtybase_user::entity::user::UserEntity;
@@ -23,7 +23,7 @@ pub struct NewSysAdminData {
 #[busybody::async_trait]
 impl busybody::Injectable for NewSysAdminData {
     async fn inject(c: &busybody::ServiceContainer) -> Self {
-        c.proxy_value().unwrap_or_default()
+        c.proxy_value().await.unwrap_or_default()
     }
 }
 
