@@ -187,7 +187,7 @@ impl busybody::Injectable for DirtybaseUserService {
         let app = ci.get::<App>().await.unwrap();
         let cache = provide::<CacheManager>().await.tags(&["dtb_user"]).await;
 
-        let user_service = UserService::new(UserRepository::new(app.schema_manger()));
+        let user_service = UserService::new(UserRepository::new(app.schema_manger().await));
 
         Self::new(repo, cache, user_service)
     }

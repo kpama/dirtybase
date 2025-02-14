@@ -53,14 +53,15 @@ impl BaseConfig {
         &self.kind
     }
 
-    pub fn new_set() -> ConfigSet {
-        return Self::set_from(&DirtyConfig::new());
+    pub async fn new_set() -> ConfigSet {
+        return Self::set_from(&DirtyConfig::new()).await;
     }
 
-    pub fn set_from(dirty_config: &DirtyConfig) -> ConfigSet {
+    pub async fn set_from(dirty_config: &DirtyConfig) -> ConfigSet {
         let config = dirty_config
             .optional_file("database.toml", Some("DTY_DB"))
             .build()
+            .await
             .expect("could not load the database configuration");
 
         let collection = config

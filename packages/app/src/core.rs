@@ -82,22 +82,24 @@ impl App {
         ExtensionManager::extensions(callback).await;
     }
 
-    pub fn schema_manger(&self) -> Manager {
-        self.try_schema_manager().unwrap()
+    pub async fn schema_manger(&self) -> Manager {
+        self.try_schema_manager().await.unwrap()
     }
 
-    pub fn try_schema_manager(&self) -> Result<Manager, anyhow::Error> {
+    pub async fn try_schema_manager(&self) -> Result<Manager, anyhow::Error> {
         let config = &self.config;
-        match self.default_db_manager.get_or_init(|| {
-            MakePoolManagerCommand::make_sync(BaseConfig::set_from(config.dirty_config()))
-        }) {
+        let config_set = BaseConfig::set_from(config.dirty_config()).await;
+        match self
+            .default_db_manager
+            .get_or_init(|| MakePoolManagerCommand::make_sync(config_set))
+        {
             Ok(manager) => Ok(manager.clone()),
             Err(e) => Err(anyhow!(e.to_string())),
         }
     }
 
-    pub fn user_service(&self) -> UserService {
-        UserService::new(UserRepository::new(self.schema_manger()))
+    pub async fn user_service(&self) -> UserService {
+        UserService::new(UserRepository::new(self.schema_manger().await))
     }
 
     pub fn config(&self) -> Config {

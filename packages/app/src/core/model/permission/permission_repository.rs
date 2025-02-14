@@ -114,6 +114,6 @@ impl busybody::Injectable for PermissionRepository {
     async fn inject(ci: &busybody::ServiceContainer) -> Self {
         let app: busybody::Service<App> = ci.get().await.unwrap();
 
-        Self::new(app.schema_manger())
+        Self::new(app.schema_manger().await)
     }
 }

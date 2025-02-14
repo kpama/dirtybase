@@ -15,7 +15,7 @@ pub struct Extension;
 impl dirtybase_contract::ExtensionSetup for Extension {
     async fn setup(&mut self, base: &DirtyConfig) {
         event_handler::setup().await;
-        let config = MultitenantConfig::from(base);
+        let config = MultitenantConfig::from_dirty_config(base);
     }
 
     fn migrations(&self) -> Option<dirtybase_contract::ExtensionMigrations> {

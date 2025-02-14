@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use base64ct::Encoding;
+use dirtybase_contract::config;
 use dirtybase_contract::config::field_to_vec_u8;
 use dirtybase_contract::config::vec_u8_to_field;
 use dirtybase_contract::config::DirtyConfig;
@@ -78,15 +79,9 @@ pub struct Config {
     entry: ConfigEntry,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        let config = dirtybase_contract::config::DirtyConfig::new();
-        Self::new(config)
-    }
-}
-
 impl Config {
-    pub fn new(config: DirtyConfig) -> Self {
+    pub async fn new(config: Option<DirtyConfig>) -> Self {
+        let config = config.unwrap_or_default();
         let builder = config
             .load_optional_file_fn("app.toml", Some("DTY_APP"), |ev| {
                 // env entries where the values are Vec<T>
@@ -99,6 +94,7 @@ impl Config {
                     .with_list_parse_key("web_middleware.dev_route")
             })
             .build()
+            .await
             .unwrap();
 
         Self {
@@ -291,8 +287,8 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn build(self) -> Config {
-        let mut config = Config::default();
+    pub async fn build(self) -> Config {
+        let mut config = Config::new(None).await;
 
         config.entry.name = self.app_name.unwrap_or(config.entry.name);
         config.entry.key = self.key.unwrap_or(config.entry.key);

@@ -66,9 +66,9 @@ impl Extension {
                             || {
                                 let dirty_config = dirty_config.clone();
                                 Box::pin(async move {
-                                    MakePoolManagerCommand::make(BaseConfig::set_from(
-                                        &dirty_config,
-                                    ))
+                                    MakePoolManagerCommand::make(
+                                        BaseConfig::set_from(&dirty_config).await,
+                                    )
                                     .await
                                     .expect("could not create a database manager")
                                 })

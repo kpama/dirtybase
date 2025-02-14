@@ -59,6 +59,7 @@ async fn find_or_create_admin_user(
     let config = app.config();
     let result = app
         .user_service()
+        .await
         .create_admin_user(
             config.admin_username(),
             config.admin_email(),

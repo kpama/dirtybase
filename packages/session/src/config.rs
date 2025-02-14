@@ -53,13 +53,12 @@ impl SessionConfig {
     pub fn cookie(&self) -> String {
         self.cookie.clone()
     }
-}
 
-impl From<&DirtyConfig> for SessionConfig {
-    fn from(base: &DirtyConfig) -> Self {
+    pub async fn from_dirty_config(base: &DirtyConfig) -> Self {
         match base
             .optional_file("session.toml", Some("DTY_SESSION"))
             .build()
+            .await
             .expect("could not build dirtybase configuration for session config")
             .try_deserialize()
         {

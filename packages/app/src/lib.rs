@@ -23,7 +23,7 @@ use contract::cli::CliCommandManager;
 
 /// Setup database application using configs in .env files
 pub async fn setup() -> anyhow::Result<AppService> {
-    let config = core::Config::default();
+    let config = core::Config::new(None).await;
     setup_using(&config).await
 }
 

@@ -26,7 +26,7 @@ impl ExtensionSetup for Extension {
         println!(">> session setup method called");
         // // TODO: Source the storage type for a config
 
-        let config = SessionConfig::from(app_config);
+        let config = SessionConfig::from_dirty_config(app_config).await;
         println!("{:?}", &config);
 
         self.setup_session_storage(&config).await;

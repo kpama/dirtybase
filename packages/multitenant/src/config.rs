@@ -30,14 +30,13 @@ impl MultitenantConfig {
     pub fn id_location_ref(&self) -> &TenantIdLocation {
         &self.id_location
     }
-}
 
-impl From<&DirtyConfig> for MultitenantConfig {
-    fn from(base: &DirtyConfig) -> Self {
+    pub async fn from_dirty_config(base: &DirtyConfig) -> Self {
         match base
             .optional_file("multitenant.toml", Some("DTY_MULTITENANT"))
             .build()
-            .unwrap()
+            .await
+            .expect("could not configure multitenant configuration")
             .try_deserialize()
         {
             Ok(config) => config,

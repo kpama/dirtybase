@@ -12,7 +12,7 @@ pub use cache_manager::CacheManager;
 use dirtybase_contract::config::DirtyConfig;
 
 pub async fn setup(config: &DirtyConfig) -> cache_manager::CacheManager {
-    let cache_config = CacheConfig::new(config);
+    let cache_config = CacheConfig::new(config).await;
     setup_using(&cache_config).await
 }
 

@@ -6,7 +6,7 @@ use dirtybase_contract::config::DirtyConfig;
 #[tokio::main]
 async fn main() {
     let dty_config = DirtyConfig::default();
-    let config = CacheConfig::new(&dty_config);
+    let config = CacheConfig::new(&dty_config).await;
     let manager = CacheManager::new(&config).await;
 
     manager

@@ -101,6 +101,6 @@ impl MigrationRepository {
 impl busybody::Injectable for MigrationRepository {
     async fn inject(c: &busybody::ServiceContainer) -> Self {
         let app = c.get::<App>().await.unwrap();
-        Self::new(app.schema_manger())
+        Self::new(app.schema_manger().await)
     }
 }
