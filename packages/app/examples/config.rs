@@ -7,7 +7,7 @@ use dirtybase_db::{base::schema::ClientType, config::BaseConfig};
 async fn main() -> anyhow::Result<()> {
     pretty_env_logger::init();
     let dty_config = DirtyConfig::new();
-    let config = DbConfigurations::new(&dty_config);
+    let config = DbConfigurations::new(&dty_config).await;
 
     println!("{:#?}", config);
 
@@ -26,10 +26,11 @@ struct DbConfigurations {
 }
 
 impl DbConfigurations {
-    pub fn new(config: &DirtyConfig) -> Self {
+    pub async fn new(config: &DirtyConfig) -> Self {
         let configs = config
             .optional_file("test.toml", Some("DTY_DB"))
             .build()
+            .await
             .unwrap();
 
         dbg!(&configs.get::<HashMap<String, HashMap<ClientType, BaseConfig>>>("clients"));

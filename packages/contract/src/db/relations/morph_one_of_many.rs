@@ -19,9 +19,9 @@ where
     pub fn new(manager: Manager, child_field: &str, child_type_field: &str) -> Self {
         Self::new_with_custom(
             manager,
-            child_field,
+            C::prefix_with_tbl(child_field).as_str(),
             P::table_name(),
-            child_type_field,
+            C::prefix_with_tbl(child_type_field).as_str(),
             C::table_name(),
         )
     }
@@ -52,7 +52,7 @@ where
         P: TableEntityTrait + Send,
         C: TableEntityTrait + Send,
     {
-        let qb = self.buld_query(sort_by, false);
+        let qb = self.build_query(sort_by, false);
         self.relation.manager.execute_query(qb).fetch_one_to().await
     }
 
@@ -64,7 +64,7 @@ where
         P: TableEntityTrait + Send,
         C: TableEntityTrait + Send,
     {
-        let qb = self.buld_query(sort_by, false);
+        let qb = self.build_query(sort_by, false);
         self.relation.manager.execute_query(qb).fetch_one().await
     }
 
@@ -76,7 +76,7 @@ where
         P: TableEntityTrait + Send,
         C: TableEntityTrait + Send,
     {
-        let qb = self.buld_query(sort_by, true);
+        let qb = self.build_query(sort_by, true);
         self.relation.manager.execute_query(qb).fetch_one_to().await
     }
 
@@ -88,11 +88,11 @@ where
         P: TableEntityTrait + Send,
         C: TableEntityTrait + Send,
     {
-        let qb = self.buld_query(sort_by, true);
+        let qb = self.build_query(sort_by, true);
         self.relation.manager.execute_query(qb).fetch_one().await
     }
 
-    fn buld_query(&self, sort_by: Option<&str>, asc: bool) -> QueryBuilder {
+    fn build_query(&self, sort_by: Option<&str>, asc: bool) -> QueryBuilder {
         let mut qb = self.relation.query_builder.clone();
         let sort_by = if let Some(f) = sort_by {
             f.to_string()

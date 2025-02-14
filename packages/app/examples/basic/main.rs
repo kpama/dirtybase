@@ -75,7 +75,7 @@ async fn handle_home(app_ext: AppServiceExtractor) -> impl IntoResponse {
     // 1:  let app = app_ext.inner();
     // 2: let app: AppService = app_ext.into();
     // 3: or this..
-    let manager = app_ext.schema_manger();
+    let manager = app_ext.schema_manger().await;
 
     Html(format!(
         "Hello world!!: {}",

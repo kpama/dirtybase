@@ -32,9 +32,9 @@ where
     pub fn new(manager: Manager, child_field: &str, child_type_field: &str) -> Self {
         Self::new_with_custom(
             manager,
-            child_field,
+            C::prefix_with_tbl(child_field).as_str(),
             P::table_name(),
-            child_type_field,
+            C::prefix_with_tbl(child_type_field).as_str(),
             C::table_name(),
         )
     }

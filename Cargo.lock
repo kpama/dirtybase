@@ -389,6 +389,8 @@ dependencies = [
 [[package]]
 name = "busybody"
 version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "890178c82e23ff6270694d3c055ac7459be826a846b627aae34b096a73c813e1"
 dependencies = [
  "async-trait",
  "futures",

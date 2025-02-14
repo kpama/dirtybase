@@ -829,7 +829,9 @@ impl MySqlSchemaManager {
                 _ = Arguments::add(params, sqlx::types::Text(v));
             }
             FieldValue::Array(v) => {
-                _ = Arguments::add(params, sqlx::types::Json(v));
+                for entry in v {
+                    self.field_value_to_args(&entry, params);
+                }
             }
             FieldValue::Boolean(v) => {
                 _ = Arguments::add(params, v);

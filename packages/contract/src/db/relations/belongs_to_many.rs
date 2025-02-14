@@ -36,10 +36,10 @@ where
     pub fn new(manager: Manager) -> Self {
         Self::new_with_custom(
             manager,
-            C::foreign_id_column().as_ref().unwrap(),
-            P::foreign_id_column().as_ref().unwrap(),
+            PV::prefix_with_tbl(C::foreign_id_column().as_ref().unwrap()).as_str(),
+            PV::prefix_with_tbl(P::foreign_id_column().as_ref().unwrap()).as_str(),
             PV::table_name(),
-            P::id_column().as_ref().unwrap(),
+            P::prefix_with_tbl(P::id_column().as_ref().unwrap()).as_str(),
             P::table_name(),
             Vec::<String>::new(),
         )

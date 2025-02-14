@@ -31,7 +31,11 @@ where
     P: TableEntityTrait,
 {
     pub fn new(manager: Manager) -> Self {
-        Self::new_with_custom(manager, P::id_column().as_ref().unwrap(), P::table_name())
+        Self::new_with_custom(
+            manager,
+            P::prefix_with_tbl(P::id_column().as_ref().unwrap()).as_str(),
+            P::table_name(),
+        )
     }
 
     pub fn new_with_custom(manager: Manager, parent_field: &str, parent_table: &str) -> Self {

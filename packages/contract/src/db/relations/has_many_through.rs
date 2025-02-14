@@ -22,9 +22,9 @@ where
     child_table: String,
     pub(crate) query_builder: QueryBuilder,
     pub(crate) manager: Manager,
-    parent_phatom: PhantomData<P>,
-    pivot_phatom: PhantomData<PV>,
-    child_phatom: PhantomData<C>,
+    parent_phantom: PhantomData<P>,
+    pivot_phantom: PhantomData<PV>,
+    child_phantom: PhantomData<C>,
 }
 
 impl<P, PV, C> HasManyThrough<P, PV, C>
@@ -36,10 +36,10 @@ where
     pub fn new(manager: Manager) -> Self {
         Self::new_with_custom(
             manager,
-            P::foreign_id_column().as_ref().unwrap(),
-            C::foreign_id_column().as_ref().unwrap(),
+            PV::prefix_with_tbl(P::foreign_id_column().as_ref().unwrap()).as_str(),
+            PV::prefix_with_tbl(C::foreign_id_column().as_ref().unwrap()).as_str(),
             PV::table_name(),
-            C::id_column().as_ref().unwrap(),
+            C::prefix_with_tbl(C::id_column().as_ref().unwrap()).as_str(),
             C::table_name(),
         )
     }
@@ -67,9 +67,9 @@ where
                 child_field,
                 child_table,
             ),
-            parent_phatom: PhantomData,
-            pivot_phatom: PhantomData,
-            child_phatom: PhantomData,
+            parent_phantom: PhantomData,
+            pivot_phantom: PhantomData,
+            child_phantom: PhantomData,
         }
     }
 
