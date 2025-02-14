@@ -129,4 +129,3 @@ dirtybase_auth = { path = "./packages/auth" }
 dirtybase_cron = { path = "./packages/cron" }
 dirtybase_encrypt = { path = "./packages/encrypt" }
 dirtybase_multitenant = { path = "./packages/multitenant" }
-busybody = { path = "../busybody" }
