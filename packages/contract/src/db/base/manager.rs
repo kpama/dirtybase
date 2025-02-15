@@ -148,6 +148,11 @@ impl Manager {
         self.insert_multi(table_name, vec![record]).await;
     }
 
+    pub async fn insert_ref<CV: IntoColumnAndValue>(&self, table_name: &str, record: &CV) {
+        self.insert_multi(table_name, vec![record.into_column_value()])
+            .await;
+    }
+
     pub async fn insert_multi<I: IntoColumnAndValue, R: IntoIterator<Item = I>>(
         &self,
         table_name: &str,
