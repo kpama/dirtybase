@@ -1,20 +1,23 @@
 mod models;
 mod setup;
 
-use std::sync::Arc;
+use std::{result, sync::Arc};
 
+use dirtybase_helper::ulid::Ulid;
 use setup::*;
 
 use dirtybase_contract::db::{
-    config::BaseConfig,
     relations::{
         BelongsTo, BelongsToMany, HasMany, HasManyThrough, HasOne, MorphOneOfMany, MorphOneToMany,
         RelationMany, RelationOne, RelationQueryBuilder,
     },
     TableEntityTrait,
 };
-use dirtybase_db::connector::{
-    mysql::make_mysql_manager, postgres::make_postgres_manager, sqlite::make_sqlite_manager,
+use dirtybase_db::{
+    config::BaseConfig,
+    connector::{
+        mysql::make_mysql_manager, postgres::make_postgres_manager, sqlite::make_sqlite_manager,
+    },
 };
 use models::{
     Address, Company, Customer, Image, Inventory, Invoice, Product, SalesOrder, Warehouse,
@@ -58,32 +61,26 @@ async fn main() -> anyhow::Result<()> {
         .select_from::<Company>(|q| {
             q.select_table::<Company>();
             q.select_multiple(Address::table_columns());
-            dbg!("columns: {:?}", Company::table_column_full_names());
-            dbg!("columns: {:?}", Address::table_columns());
-            // q.select_multiple(Company::table_column_full_names());
         })
         .fetch_all_to::<Company>()
         .await;
-
-    if let Ok(Some(row)) = result {
-        if let Some(row) = row.first() {
-            dbg!("{:?}", &row);
-            println!(
-                "blob to string: {}",
-                String::from_utf8(row.logo.clone()).unwrap()
-            );
-        }
-    }
-    return Ok(());
+    let company_count = match result {
+        Ok(Some(c)) => c.len(),
+        _ => 0,
+    };
+    println!("company count: {}", company_count);
 
     // let customer_repo = CustomerRepository::new(manager.clone());
     // let mut builder = customer_repo.builder();
 
     // //--
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let customer = if let Ok(Some(c)) = manager
         .select_from_table(Customer::table_name(), |q| {
-            q.eq(Customer::col_name_for_internal_id(), rng.gen_range(1..=200));
+            q.eq(
+                Customer::col_name_for_internal_id(),
+                rng.random_range(1..=200),
+            );
         })
         .fetch_one_to::<Customer>()
         .await
@@ -93,7 +90,7 @@ async fn main() -> anyhow::Result<()> {
         Customer::default()
     };
 
-    println!("customer returned: {:#?}", &customer);
+    println!("customer returned: {:?}", &customer.id);
 
     // // --- example of has many
     let mut has_many = HasMany::<Customer, SalesOrder>::new(manager.clone());
@@ -105,7 +102,7 @@ async fn main() -> anyhow::Result<()> {
             // --- belongs to example
             let mut belongs_to = BelongsTo::<SalesOrder, Customer>::new(manager.clone());
             belongs_to.parent_key(o.customer_id.clone());
-            println!("customer via sales order: {:#?}", belongs_to.one().await);
+            println!("customer via sales order: {:?}", belongs_to.one().await);
 
             // --- has one example
             let mut has_one = HasOne::<SalesOrder, Invoice>::new(manager.clone());
@@ -113,11 +110,10 @@ async fn main() -> anyhow::Result<()> {
             let invoice = has_one.one().await;
             println!("Sales order {:?} invoice = {:#?}", &o.id, invoice);
         }
-
-        println!("salesorders: {:#?}", list);
     }
 
     // --- belongs to many
+    let mut product_id = "".to_string();
     if let Ok(Some(product_instance)) = manager
         .query_builder::<Product>(Product::table_name())
         .one()
@@ -128,11 +124,12 @@ async fn main() -> anyhow::Result<()> {
         belongs_to_many.constrain_key(product_instance.id.clone());
 
         if let Ok(Some(w)) = belongs_to_many.pivots().await {
-            println!("product inventories: {:#?}", w);
+            println!("product inventories: {:#?}", w.len());
         }
         if let Ok(Some(w)) = belongs_to_many.get().await {
-            println!("product warehouses: {:#?}", w);
+            println!("product warehouses: {:#?}", w.len());
         }
+        product_id = product_instance.id.as_str().to_string();
     }
 
     // --- morph one to one
@@ -142,11 +139,11 @@ async fn main() -> anyhow::Result<()> {
         &Image::col_name_for_imageable_type(),
     );
 
-    morph_one_to_one.constrain_key("01j2jbep2cpg4sk2365veag3gn");
+    morph_one_to_one.constrain_key(product_id.as_str());
 
     match morph_one_to_one.one().await {
-        Err(e) => println!("error: {:?}", e),
-        Ok(Some(i)) => println!("product image: {:#?}", i),
+        Err(e) => println!("product image error: {:?}", e.to_string()),
+        Ok(Some(i)) => println!("product image: {}", i.id),
         _ => (),
     }
 
@@ -156,11 +153,11 @@ async fn main() -> anyhow::Result<()> {
         &Image::col_name_for_imageable_id(),
         &Image::col_name_for_imageable_type(),
     );
-    morph_one_to_many.constrain_key("01j2jbep0sbc7d1m8nz2kk59sj");
+    morph_one_to_many.constrain_key(product_id.as_str());
 
     match morph_one_to_many.get().await {
-        Err(e) => println!("error: {:?}", e),
-        Ok(Some(i)) => println!("product images: {:#?}", i),
+        Err(e) => println!("product images error: {:?}", e),
+        Ok(Some(i)) => println!("product images count: {}", i.len()),
         _ => (),
     }
 
@@ -171,7 +168,7 @@ async fn main() -> anyhow::Result<()> {
         &Image::col_name_for_imageable_type(),
     );
 
-    morph_one_of_many.parent_key("01j2jh7jbtbkva52mcqq16wvzy");
+    morph_one_of_many.parent_key(&product_id);
 
     // -- latest
     println!(
@@ -196,10 +193,10 @@ async fn main() -> anyhow::Result<()> {
         has_many_through.parent_key(warehouse_instance.id.clone());
 
         if let Ok(Some(w)) = has_many_through.pivots().await {
-            println!("warehouse inventories: {:#?}", w);
+            println!("warehouse product inventories: {}", w.len());
         }
         if let Ok(Some(w)) = has_many_through.get().await {
-            println!("warehouse products: {:#?}", w);
+            println!("warehouse products count: {}", w.len());
         }
     }
     // --- ends

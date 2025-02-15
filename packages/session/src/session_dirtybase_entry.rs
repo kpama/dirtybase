@@ -26,7 +26,7 @@ impl ExtensionSetup for Extension {
         println!(">> session setup method called");
         // // TODO: Source the storage type for a config
 
-        let config = SessionConfig::from(app_config);
+        let config = SessionConfig::from_dirty_config(app_config).await;
         println!("{:?}", &config);
 
         self.setup_session_storage(&config).await;
@@ -50,7 +50,7 @@ impl ExtensionSetup for Extension {
         cookie: CookieJar,
         context: Context,
     ) -> (Response, CookieJar) {
-        let result = self.add_session_id_to_cookie(resp, cookie, context);
+        let result = self.add_session_id_to_cookie(resp, cookie, context).await;
 
         result
     }
@@ -67,6 +67,7 @@ impl Extension {
         let session_storage_provider = context
             .container_ref()
             .get_type::<Arc<SessionStorageProvider>>()
+            .await
             .unwrap();
 
         tracing::trace!("request has session id {:?}", request_session_id.is_some());
@@ -83,19 +84,19 @@ impl Extension {
             Session::find_or_new(id, session_storage_provider, self.config.lifetime()).await;
         tracing::trace!("adding session {} to request", session.id().to_string());
 
-        context.set(session.clone());
+        context.set(session.clone()).await;
         req.extensions_mut().insert(session);
 
         req
     }
 
-    fn add_session_id_to_cookie(
+    async fn add_session_id_to_cookie(
         &self,
         resp: Response,
         mut cookie: CookieJar,
         context: Context,
     ) -> (Response, CookieJar) {
-        if let Some(session) = context.get::<Session>() {
+        if let Some(session) = context.get::<Session>().await {
             println!(
                 "context instance still exist: session Id: {:?}",
                 session.id()

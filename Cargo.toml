@@ -48,9 +48,9 @@ sha2 = "0.10"
 quote = "1.0"
 syn = { version = "2.0", features = ["extra-traits"] }
 dotenvy = "0.15"
-busybody = { version = "0.4" }
+busybody = { version = "0.5" }
 orsomafo = { version = "0.5" }
-fama = { version = "0.3" }
+fama = { version = "0.4" }
 busstop = { version = "0.2" }
 redis = { version = "0.28", features = [
 	"tokio-comp",
@@ -61,7 +61,7 @@ redis = { version = "0.28", features = [
 lettre = { version = "0.11.0" }
 config = "0.15"
 deadpool = "0.12"
-deadpool-redis = { version = "0.18" }
+deadpool-redis = { version = "0.19" }
 cron = { version = "0.15" }
 english-to-cron = { version = "0.1" }
 validator = { version = "0.20", features = ["derive"] }

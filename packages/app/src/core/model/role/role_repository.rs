@@ -71,8 +71,8 @@ impl RoleRepository {
 #[busybody::async_trait]
 impl busybody::Injectable for RoleRepository {
     async fn inject(ci: &busybody::ServiceContainer) -> Self {
-        let app = ci.get::<App>().unwrap();
+        let app = ci.get::<App>().await.unwrap();
 
-        Self::new(app.schema_manger())
+        Self::new(app.schema_manger().await)
     }
 }

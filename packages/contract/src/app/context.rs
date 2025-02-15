@@ -33,21 +33,20 @@ impl Default for Context {
             sc: Arc::new(busybody::helpers::make_proxy()),
         };
 
-        instance.set(Arc::new(ContextMetadata::default()));
         instance
     }
 }
 
 impl Context {
-    pub fn make_global() -> Self {
+    pub async fn make_global() -> Self {
         // app
-        busybody::helpers::set_type(Arc::new(AppContext::make_global()));
+        busybody::helpers::set_type(Arc::new(AppContext::make_global())).await;
         // role
-        busybody::helpers::set_type(Arc::new(RoleContext::make_global()));
+        busybody::helpers::set_type(Arc::new(RoleContext::make_global())).await;
         // tenant
-        busybody::helpers::set_type(Arc::new(TenantContext::make_global()));
+        busybody::helpers::set_type(Arc::new(TenantContext::make_global())).await;
         // user
-        busybody::helpers::set_type(Arc::new(UserContext::make_global()));
+        busybody::helpers::set_type(Arc::new(UserContext::make_global())).await;
 
         Self {
             id: ArcUuid7::try_from(GLOBAL_CONTEXT_ID).unwrap(),
@@ -55,31 +54,31 @@ impl Context {
         }
     }
 
-    pub fn set_user(&self, user: UserContext) -> &Self {
-        self.set(Arc::new(user))
+    pub async fn set_user(&self, user: UserContext) -> &Self {
+        self.set(Arc::new(user)).await
     }
 
-    pub fn set_role(&self, role: RoleContext) -> &Self {
-        self.set(Arc::new(role))
+    pub async fn set_role(&self, role: RoleContext) -> &Self {
+        self.set(Arc::new(role)).await
     }
 
-    pub fn set_tenant(&self, tenant: TenantContext) -> &Self {
-        self.set(Arc::new(tenant))
+    pub async fn set_tenant(&self, tenant: TenantContext) -> &Self {
+        self.set(Arc::new(tenant)).await
     }
 
-    pub fn set_app(&self, app: AppContext) -> &Self {
-        self.set(Arc::new(app))
+    pub async fn set_app(&self, app: AppContext) -> &Self {
+        self.set(Arc::new(app)).await
     }
 
     pub fn is_global(&self) -> bool {
         self.id.to_string() == GLOBAL_CONTEXT_ID
     }
 
-    pub fn configure<C>(&self, key: &str) -> Option<C>
+    pub async fn configure<C>(&self, key: &str) -> Option<C>
     where
         C: DeserializeOwned + Sync + Send + 'static,
     {
-        if let Some(tenant) = self.get::<TenantContext>() {
+        if let Some(tenant) = self.get::<TenantContext>().await {
             if let Some(config) = tenant.config_to::<C>(key) {
                 return Some(config);
             }
@@ -95,29 +94,29 @@ impl Context {
         &self.sc
     }
 
-    pub fn user(&self) -> Option<Arc<UserContext>> {
-        self.get()
+    pub async fn user(&self) -> Option<Arc<UserContext>> {
+        self.get().await
     }
 
-    pub fn tenant(&self) -> Option<Arc<TenantContext>> {
-        self.get()
+    pub async fn tenant(&self) -> Option<Arc<TenantContext>> {
+        self.get().await
     }
 
-    pub fn app(&self) -> Option<Arc<AppContext>> {
-        self.get()
+    pub async fn app(&self) -> Option<Arc<AppContext>> {
+        self.get().await
     }
 
-    pub fn role(&self) -> Option<Arc<RoleContext>> {
-        self.get()
+    pub async fn role(&self) -> Option<Arc<RoleContext>> {
+        self.get().await
     }
 
-    pub fn set<T: Clone + Send + Sync + 'static>(&self, value: T) -> &Self {
-        self.sc.set_type(value);
+    pub async fn set<T: Clone + Send + Sync + 'static>(&self, value: T) -> &Self {
+        self.sc.set_type(value).await;
         self
     }
 
-    pub fn get<T: Clone + Send + Sync + 'static>(&self) -> Option<T> {
-        self.sc.get_type()
+    pub async fn get<T: Clone + Send + Sync + 'static>(&self) -> Option<T> {
+        self.sc.get_type().await
     }
 
     pub fn id(&self) -> ArcUuid7 {
@@ -128,8 +127,38 @@ impl Context {
         &self.id
     }
 
-    pub fn metadata(&self) -> Arc<ContextMetadata> {
-        self.get().unwrap()
+    pub async fn metadata(&self) -> Arc<ContextMetadata> {
+        let result = self.get().await;
+        if result.is_none() {
+            return self
+                .set(Arc::new(ContextMetadata::default()))
+                .await
+                .get::<Arc<ContextMetadata>>()
+                .await
+                .unwrap();
+        }
+        result.unwrap()
+    }
+}
+
+#[derive(Clone)]
+#[must_use]
+pub struct RequestContext(pub Context);
+
+impl<S> FromRequestParts<S> for RequestContext
+where
+    S: Send + Sync,
+{
+    type Rejection = String;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        Ok(Self(
+            parts
+                .extensions
+                .get::<Context>()
+                .ok_or_else(|| "Context not yet setup".to_string())
+                .cloned()?,
+        ))
     }
 }
 
@@ -155,7 +184,7 @@ where
             .ok_or_else(|| "Context not yet setup".to_string())
             .cloned()?;
 
-        if let Some(ext) = context.get::<T>() {
+        if let Some(ext) = context.get::<T>().await {
             Ok(Self(ext))
         } else {
             tracing::error!("{} not found in context", std::any::type_name::<T>());

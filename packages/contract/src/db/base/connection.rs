@@ -1,21 +1,12 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::fmt::Debug;
 
-use crate::db::config::ConfigSet;
-
-use super::schema::{ClientType, DatabaseKind, SchemaManagerTrait};
+use super::schema::{DatabaseKind, SchemaManagerTrait};
 use async_trait::async_trait;
-
-#[async_trait]
-pub trait ConnectionPoolRegisterTrait: Send {
-    async fn register(
-        &self,
-        config: &ConfigSet,
-    ) -> Result<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>, anyhow::Error>;
-}
 
 #[async_trait]
 pub trait ConnectionPoolTrait: Debug + Send + Sync {
     /// Calls by the ConnectionManagerCollection
     fn schema_manger(&self) -> Box<dyn SchemaManagerTrait + Send + Sync>;
+    async fn close(&self);
     fn id(&self) -> DatabaseKind;
 }

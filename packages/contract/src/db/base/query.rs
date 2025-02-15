@@ -289,8 +289,6 @@ impl QueryBuilder {
                         .collect::<Vec<String>>(),
                 );
             }
-        } else {
-            println!("bad....");
         }
 
         self

@@ -1,7 +1,7 @@
 use std::{env, path::Path, sync::Arc};
 
 use base64ct::Encoding;
-use config::{builder::DefaultState, Environment};
+use config::{builder::AsyncState, ConfigBuilder, Environment};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::{
@@ -67,14 +67,14 @@ impl DirtyConfig {
         &self.current_env
     }
 
-    pub fn builder(&self) -> config::ConfigBuilder<DefaultState> {
+    pub fn builder(&self) -> config::ConfigBuilder<AsyncState> {
         let env = String::from(self.current_env());
-        config::Config::builder()
+        ConfigBuilder::<AsyncState>::default()
             .set_override(ENVIRONMENT_KEY, env)
             .unwrap()
     }
 
-    pub fn dotenv_prefix(&self, prefix: &str) -> config::ConfigBuilder<DefaultState> {
+    pub fn dotenv_prefix(&self, prefix: &str) -> config::ConfigBuilder<AsyncState> {
         self.builder().add_source(self.build_env(prefix))
     }
 
@@ -82,7 +82,7 @@ impl DirtyConfig {
         &self,
         filename: &str,
         dotenv_prefix: Option<&str>,
-    ) -> config::ConfigBuilder<DefaultState> {
+    ) -> config::ConfigBuilder<AsyncState> {
         self.load_optional_file(filename, dotenv_prefix)
     }
 
@@ -91,7 +91,7 @@ impl DirtyConfig {
         filename: &str,
         dotenv_prefix: Option<&str>,
         mut env_callback: F,
-    ) -> config::ConfigBuilder<DefaultState>
+    ) -> config::ConfigBuilder<AsyncState>
     where
         F: FnMut(Environment) -> Environment,
     {
@@ -119,7 +119,7 @@ impl DirtyConfig {
         &self,
         filename: &str,
         dotenv_prefix: Option<&str>,
-    ) -> config::ConfigBuilder<DefaultState> {
+    ) -> config::ConfigBuilder<AsyncState> {
         self.load_optional_file_fn(filename, dotenv_prefix, |ev| ev)
     }
 
@@ -127,7 +127,7 @@ impl DirtyConfig {
         &self,
         filename: &str,
         dotenv_prefix: Option<&str>,
-    ) -> config::ConfigBuilder<DefaultState> {
+    ) -> config::ConfigBuilder<AsyncState> {
         let path = Path::new(self.config_dir.as_str()).join(filename);
 
         let mut builder = if let Some(real) = path.to_str() {
@@ -149,7 +149,7 @@ impl DirtyConfig {
         &self,
         full_path: &str,
         dotenv_prefix: Option<&str>,
-    ) -> config::ConfigBuilder<DefaultState> {
+    ) -> config::ConfigBuilder<AsyncState> {
         let mut builder = self
             .builder()
             .add_source(config::File::with_name(full_path));
@@ -163,9 +163,9 @@ impl DirtyConfig {
 
     fn append_optional(
         &self,
-        mut builder: config::ConfigBuilder<DefaultState>,
+        mut builder: config::ConfigBuilder<AsyncState>,
         filename: &str,
-    ) -> config::ConfigBuilder<DefaultState> {
+    ) -> config::ConfigBuilder<AsyncState> {
         let env_version = ["_prod.", "_stage.", "_dev."];
         for name in env_version {
             let new_file_name = filename.replacen('.', name, 1);

@@ -9,6 +9,7 @@ async fn main() {
     let config = base_config
         .optional_file("./config_template/cron.toml", Some("DTY_CRON"))
         .build()
+        .await
         .unwrap()
         .try_deserialize::<CronConfig>()
         .unwrap();

@@ -19,6 +19,7 @@ use sqlx::{
 use std::{collections::HashMap, sync::Arc};
 
 const LOG_TARGET: &str = "sqlite_db_driver";
+pub const SQLITE_KIND: &str = "sqlite";
 
 pub struct SqliteSchemaManager {
     db_pool: Arc<Pool<Sqlite>>,
@@ -33,7 +34,7 @@ impl SqliteSchemaManager {
 #[async_trait]
 impl RelationalDbTrait for SqliteSchemaManager {
     fn kind(&self) -> DatabaseKind {
-        DatabaseKind::Sqlite
+        SQLITE_KIND.into()
     }
 }
 
@@ -568,7 +569,6 @@ impl SqliteSchemaManager {
 
         // fields
         if let QueryAction::Query { columns } = query.action() {
-            println!("columns to select: {:?}", &columns);
             if let Some(fields) = columns {
                 sql = format!("{} {}", sql, fields.join(","));
             } else {
@@ -606,8 +606,7 @@ impl SqliteSchemaManager {
             sql = format!("{} {}", sql, limit);
         }
 
-        // offset
-        println!("generated sql: {}", &sql);
+        // TODO: offset
 
         sql
     }
@@ -791,12 +790,6 @@ impl SqliteSchemaManager {
                 }
                 _ => {
                     let value = row.try_get::<String, &str>(col.name());
-                    println!("unknown value: {:?}", value);
-                    dbg!(
-                        "not mapped field: {:#?} => value: {:#?}",
-                        name,
-                        col.type_info().name()
-                    );
                 }
             }
         }
@@ -831,7 +824,9 @@ impl SqliteSchemaManager {
                 _ = Arguments::add(params, sqlx::types::Text(v));
             }
             FieldValue::Array(v) => {
-                _ = Arguments::add(params, sqlx::types::Json::from(v));
+                for entry in v {
+                    self.field_value_to_args(&entry, params);
+                }
             }
             FieldValue::Boolean(v) => {
                 _ = Arguments::add(params, v);

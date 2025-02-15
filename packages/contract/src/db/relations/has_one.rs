@@ -21,7 +21,7 @@ where
     pub fn new(manager: Manager) -> Self {
         Self::new_with_custom(
             manager,
-            P::foreign_id_column().as_ref().unwrap(),
+            C::prefix_with_tbl(P::foreign_id_column().as_ref().unwrap()).as_str(),
             C::table_name(),
         )
     }

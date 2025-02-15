@@ -1,18 +1,18 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
-use dirtybase_contract::db::config::ConfigSet;
 use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     base::{
-        connection::{ConnectionPoolRegisterTrait, ConnectionPoolTrait},
+        connection::ConnectionPoolTrait,
         schema::{ClientType, DatabaseKind, SchemaManagerTrait},
     },
-    config::BaseConfig,
+    config::{BaseConfig, ConfigSet},
+    ConnectionPoolRegisterTrait,
 };
 
-use super::mysql_schema_manager::MySqlSchemaManager;
+use super::mysql_schema_manager::{MySqlSchemaManager, MYSQL_KIND};
 
 pub struct MySqlPoolManagerRegisterer;
 
@@ -24,7 +24,7 @@ impl ConnectionPoolRegisterTrait for MySqlPoolManagerRegisterer {
     ) -> Result<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>, anyhow::Error> {
         let mut pools: HashMap<ClientType, Box<dyn ConnectionPoolTrait>> = HashMap::new();
         for (client_type, config) in config_set.iter() {
-            if config.kind() == DatabaseKind::Mysql && config.enable {
+            if MYSQL_KIND == config.kind_ref().as_str() && config.enable {
                 match db_connect(config).await {
                     Ok(db_pool) => {
                         pools.insert(
@@ -40,10 +40,7 @@ impl ConnectionPoolRegisterTrait for MySqlPoolManagerRegisterer {
         }
 
         if pools.is_empty() {
-            Err(anyhow!(
-                "could not create any pool manager for kind: {:?}",
-                &DatabaseKind::Mysql
-            ))
+            Err(anyhow!("could not create any pool manager for mysql"))
         } else {
             Ok(pools)
         }
@@ -61,7 +58,10 @@ impl ConnectionPoolTrait for MysqlPoolManager {
         Box::new(MySqlSchemaManager::new(self.db_pool.clone()))
     }
     fn id(&self) -> DatabaseKind {
-        DatabaseKind::Mysql
+        MYSQL_KIND.into()
+    }
+    async fn close(&self) {
+        self.db_pool.close().await;
     }
 }
 

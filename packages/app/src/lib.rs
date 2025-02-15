@@ -23,7 +23,7 @@ use contract::cli::CliCommandManager;
 
 /// Setup database application using configs in .env files
 pub async fn setup() -> anyhow::Result<AppService> {
-    let config = core::Config::default();
+    let config = core::Config::new(None).await;
     setup_using(&config).await
 }
 
@@ -38,8 +38,8 @@ pub async fn setup() -> anyhow::Result<AppService> {
 /// ```
 ///
 pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
-    busybody::helpers::register_service(config.clone());
-    busybody::helpers::set_type(Context::make_global());
+    busybody::helpers::register_service(config.dirty_config().clone()).await;
+    busybody::helpers::set_type(Context::make_global().await).await;
 
     let app = core::App::new(config).await?;
 
@@ -88,7 +88,7 @@ where
     I: IntoIterator<Item = T>,
     T: Into<String>,
 {
-    let app_service = if let Some(s) = busybody::helpers::get_type::<AppService>() {
+    let app_service = if let Some(s) = busybody::helpers::get_type::<AppService>().await {
         s
     } else {
         setup().await?

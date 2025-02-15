@@ -1,14 +1,16 @@
 use std::collections::HashMap;
 
-use axum_extra::extract::{CookieJar, Host};
+use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
 use dirtybase_auth::middlewares::{handle_user_login_web_request, UserCredential};
+use dirtybase_contract::app::RequestContext;
 use dirtybase_contract::config::DirtyConfig;
 use dirtybase_contract::{
     app::{Context, ContextManager, CtxExt},
     prelude::*,
     session::Session,
 };
+use dirtybase_db::base::manager::Manager;
 use tracing::Level;
 
 #[tokio::main]
@@ -26,13 +28,14 @@ async fn main() {
     _ = run(app_service).await;
 }
 
+#[derive(Default)]
 struct App;
 
 #[async_trait::async_trait]
 impl ExtensionSetup for App {
     async fn setup(&mut self, _config: &DirtyConfig) {
-        busybody::helpers::register_service(UserProviderService::new(MyOwnUserProvider));
-        busybody::helpers::register_service(ContextManager::<i32>::new());
+        busybody::helpers::register_service(UserProviderService::new(MyOwnUserProvider)).await;
+        busybody::helpers::register_service(ContextManager::<i32>::new()).await;
     }
 
     fn register_cli_middlewares(&self, mut manager: CliMiddlewareManager) -> CliMiddlewareManager {
@@ -77,6 +80,39 @@ impl ExtensionSetup for App {
 
         manager
     }
+
+    async fn on_web_request(&self, req: Request, context: Context, _cookie: &CookieJar) -> Request {
+        let tenant = context.tenant().await.unwrap();
+
+        let id = tenant.id().to_string();
+        context
+            .container()
+            .resolver(move |c| {
+                let id2 = id.clone();
+                Box::pin(async move {
+                    if let Some(m) = c.get::<ContextManager<i32>>().await {
+                        println!(">>>>>>>>>>>>>>>>>>>> tenant id is <<<<< : {:?}", &id2);
+                        // println!("still has context: {}", m.has_context(&id).await);
+                        return m
+                            .context(
+                                &id2,
+                                30,
+                                || {
+                                    Box::pin(async {
+                                        tracing::error!(">>>>>>>>>>>>>>>>>>>>>>>  making new i32");
+                                        40000
+                                    })
+                                },
+                                |_| Box::pin(async {}),
+                            )
+                            .await;
+                    }
+                    3000
+                })
+            })
+            .await;
+        req
+    }
 }
 
 async fn test_cookie_handler(
@@ -89,29 +125,26 @@ async fn test_cookie_handler(
 
 async fn index_request_handler(
     CtxExt(session): CtxExt<Session>,
-    context: Extension<Context>,
-    Host(hostname): Host,
-    req: Request,
+    CtxExt(number): CtxExt<i32>,
+    CtxExt(manager): CtxExt<Manager>,
+    RequestContext(context): RequestContext,
 ) -> impl IntoResponse {
-    context.metadata().add("index handler", true.to_string());
+    context
+        .metadata()
+        .await
+        .add("index handler", true.to_string());
+    let has_company = manager.has_table("companies").await;
 
     log::info!("in index page");
-    if let Some(user) = context.user() {
+    if let Some(user) = context.user().await {
         println!("current user: {:?}", user);
         println!("current user is the global user? {}", user.is_global());
-        let uri = Uri::builder()
-            .scheme("https")
-            .authority("username:password@yahoo.com")
-            .path_and_query("/foo/bar?one=1&two=1")
-            .build()
-            .unwrap();
-        tracing::error!("generated uri: {}", uri);
-        tracing::error!("request uri: {:?}", req.uri().scheme_str());
 
         format!(
-            "Welcome to our secure application. user id {}. host: {}",
+            "Welcome to our secure application. user id {}. i32: {}. has companies: {}",
             user.id(),
-            hostname
+            number,
+            has_company
         )
     } else {
         "Welcome unknown user".to_string()

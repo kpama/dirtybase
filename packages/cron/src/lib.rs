@@ -1,6 +1,6 @@
 pub(crate) mod command_handler;
 pub mod config;
-mod cron_dirtybase_entry;
+mod dirtybase_entry;
 pub mod event;
 mod job;
 mod job_context;
@@ -9,8 +9,8 @@ mod manager;
 use busstop::DispatchableCommand;
 use command_handler::CronJobCommandHandler;
 use config::CronConfig;
-pub use cron_dirtybase_entry::*;
 use dirtybase_contract::config::DirtyConfig;
+pub use dirtybase_entry::*;
 pub use job::*;
 pub use job_context::*;
 pub use manager::*;
@@ -24,7 +24,7 @@ pub async fn start() {
 }
 
 pub async fn setup(base_config: &DirtyConfig) {
-    let config: CronConfig = base_config.into();
+    let config = CronConfig::from_dirty_config(base_config).await;
     setup_using(config).await;
 }
 

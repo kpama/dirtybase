@@ -1,7 +1,9 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use anyhow::anyhow;
 use busstop::{DispatchableQuery, DispatchedQuery, QueryHandler};
+
+use crate::make_manager;
 
 use super::{
     base::{manager::Manager, schema::DatabaseKind},
@@ -25,7 +27,7 @@ impl MakePoolManagerCommand {
         if let Some(config) = self.config_set.values().next() {
             config.kind()
         } else {
-            DatabaseKind::Custom("Unknown Kind".to_string())
+            "unknown".into()
         }
     }
 
@@ -51,7 +53,7 @@ impl MakePoolManagerCommand {
                 Ok(c) => {
                     let mut collection = HashMap::new();
                     collection.insert(kind.clone(), c);
-                    Ok(Manager::new(Arc::new(collection), kind, config_set))
+                    Ok(make_manager(collection, kind, &config_set))
                 }
                 Err(e) => Err(e),
             }

@@ -172,12 +172,17 @@ impl CacheStoreTrait for RedisStore {
 #[busybody::async_trait]
 impl busybody::Injectable for RedisStore {
     async fn inject(container: &busybody::ServiceContainer) -> Self {
-        if let Some(store) = container.get_type::<Self>() {
+        if let Some(store) = container.get_type::<Self>().await {
             return store;
         } else {
             let redis_client = dirtybase_3rd_client::redis::get_client().await.unwrap();
             let store = Self::new(redis_client);
-            return container.set_type(store).get_type::<Self>().unwrap();
+            return container
+                .set_type(store)
+                .await
+                .get_type::<Self>()
+                .await
+                .unwrap();
         }
     }
 }

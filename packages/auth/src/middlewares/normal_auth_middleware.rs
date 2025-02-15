@@ -22,7 +22,7 @@ pub async fn handle_normal_auth_middleware(req: Request, next: Next) -> impl Int
         return return_500_response();
     }
 
-    let manager = context.get::<AuthManager>().unwrap();
+    let manager = context.get::<AuthManager>().await.unwrap();
 
     if !manager.is_enable() {
         tracing::warn!("auth extension is disabled");
@@ -30,7 +30,7 @@ pub async fn handle_normal_auth_middleware(req: Request, next: Next) -> impl Int
     }
 
     // 1. Check if there is an active session
-    if let Some(s) = context.get::<Session>() {
+    if let Some(s) = context.get::<Session>().await {
         session = s;
     } else {
         tracing::error!("session not set on request");

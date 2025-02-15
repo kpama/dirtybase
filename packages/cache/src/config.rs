@@ -6,10 +6,11 @@ pub struct CacheConfig {
 }
 
 impl CacheConfig {
-    pub fn new(config: &DirtyConfig) -> Self {
+    pub async fn new(config: &DirtyConfig) -> Self {
         let mut con: Self = config
             .optional_file("cache.toml", Some("DTY_CACHE"))
             .build()
+            .await
             .unwrap()
             .try_deserialize()
             .unwrap();

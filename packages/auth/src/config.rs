@@ -31,12 +31,11 @@ impl AuthConfig {
     pub fn auth_route(&self) -> Arc<String> {
         self.auth_route.clone()
     }
-}
 
-impl From<&DirtyConfig> for AuthConfig {
-    fn from(base: &DirtyConfig) -> Self {
+    pub async fn from_dirty_config(base: &DirtyConfig) -> Self {
         base.optional_file("auth.toml", Some("DTY_AUTH"))
             .build()
+            .await
             .unwrap()
             .try_deserialize()
             .unwrap()

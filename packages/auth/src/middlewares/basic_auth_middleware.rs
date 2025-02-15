@@ -31,7 +31,7 @@ pub async fn handle_basic_auth_middleware(req: Request, next: Next) -> impl Into
                 if password != hash_password {
                     auth_passed = false;
                 } else if let Some(context) = req.extensions().get::<Context>() {
-                    context.set(UserContext::default()); //FIXME: source the real user using the user provider
+                    context.set(UserContext::default()).await; //FIXME: source the real user using the user provider
                 }
             }
             None => auth_passed = false,

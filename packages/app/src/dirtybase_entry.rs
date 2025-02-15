@@ -19,7 +19,7 @@ impl dirtybase_contract::ExtensionSetup for Extension {
     }
 
     fn migrations(&self) -> Option<dirtybase_contract::ExtensionMigrations> {
-        Some(migration::setup())
+        None
     }
 
     async fn shutdown(&mut self) {

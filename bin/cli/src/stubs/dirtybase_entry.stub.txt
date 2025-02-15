@@ -6,6 +6,7 @@ mod model;
 
 use dirtybase_contract::prelude::*;
 
+#[derive(Default)]
 pub struct Extension;
 
 #[dirtybase_contract::async_trait]

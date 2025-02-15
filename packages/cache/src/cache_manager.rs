@@ -356,15 +356,17 @@ where
 #[busybody::async_trait]
 impl busybody::Injectable for CacheManager {
     async fn inject(container: &busybody::ServiceContainer) -> Self {
-        if let Some(manager) = container.get_type::<CacheManager>() {
+        if let Some(manager) = container.get_type::<CacheManager>().await {
             return manager;
         } else {
-            let config = container.get_type::<CacheConfig>().unwrap();
+            let config = container.get_type::<CacheConfig>().await.unwrap();
             let manager = Self::new(&config).await;
 
             return container
                 .set_type(manager)
+                .await
                 .get_type::<CacheManager>()
+                .await
                 .unwrap();
         }
     }

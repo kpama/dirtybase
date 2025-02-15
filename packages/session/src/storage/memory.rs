@@ -54,7 +54,9 @@ impl MemoryStorage {
             .set_type(Arc::new(SessionStorageProvider::from(
                 MemoryStorage::default(),
             )))
+            .await
             .get_type::<SessionStorageProviderService>()
+            .await
             .unwrap();
 
         provider

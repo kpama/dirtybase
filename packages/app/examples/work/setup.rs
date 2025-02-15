@@ -17,23 +17,8 @@ pub async fn seed_tables(manager: &Manager) {
         return; // database has been seeded
     }
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     println!("Seeding database with mock data");
-
-    let foo = Foo::default();
-    manager.insert(Foo::table_name(), foo).await;
-
-    let result = manager
-        .select_from::<Foo>(|_| {})
-        .fetch_all_to::<Foo>()
-        .await;
-    if let Ok(Some(list)) = result {
-        for rec in list {
-            dbg!(String::from_utf8(rec.data));
-        }
-    }
-
-    panic!(">>>>>>>>>> done <<<<<<<<<<<<<<<");
 
     // company
     let company_type = [CompanyType::A, CompanyType::B, CompanyType::C];
@@ -47,7 +32,7 @@ pub async fn seed_tables(manager: &Manager) {
             name: format!("Company {}", index),
             address: address.clone(),
             json_address: address,
-            company_type: company_type[rng.gen_range(0..=2) as usize].clone(),
+            company_type: company_type[rng.random_range(0..=2) as usize].clone(),
             logo: b"This is a test".to_vec(),
             ..Default::default()
         };
@@ -95,7 +80,7 @@ pub async fn seed_tables(manager: &Manager) {
                 ),
             )
             .await;
-        for image_index in 1..rng.gen_range(1..=4) {
+        for image_index in 1..rng.random_range(1..=4) {
             manager
                 .insert(
                     Image::table_name(),
@@ -124,7 +109,7 @@ pub async fn seed_tables(manager: &Manager) {
                         Inventory {
                             warehouse_id: warehouse.id,
                             product_id: product_id.clone(),
-                            quantity: rng.gen_range(0.0..=6000.0),
+                            quantity: rng.random_range(1.0..=6000.0),
                         },
                     )
                     .await;
@@ -159,7 +144,7 @@ pub async fn seed_tables(manager: &Manager) {
             .await;
 
         // customer sales order, order items and invoice
-        for _ in 1..rng.gen_range(1..=101) {
+        for _ in 1..rng.random_range(1..=101) {
             let order_id = UlidField::new();
             manager
                 .insert(
@@ -179,8 +164,8 @@ pub async fn seed_tables(manager: &Manager) {
                         internal_id: None,
                         id: Default::default(),
                         sales_order_id: order_id.clone(),
-                        total: rng.gen_range(10.0..=10000.0),
-                        paid: rng.gen_range(10.0..=10000.0),
+                        total: rng.random_range(10.0..=10000.0),
+                        paid: rng.random_range(10.0..=10000.0),
                     },
                 )
                 .await;
@@ -188,7 +173,7 @@ pub async fn seed_tables(manager: &Manager) {
             // sales order line item
             let mut items = Vec::new();
             let mut product_lists = Vec::new();
-            let total = rng.gen_range(1..=15);
+            let total = rng.random_range(1..=15);
             let mut index = 1_usize;
             loop {
                 let item_name = format!("Line Item {}", index);
@@ -197,7 +182,7 @@ pub async fn seed_tables(manager: &Manager) {
                         .select_from_table(Product::table_name(), |q| {
                             q.eq(
                                 Product::col_name_for_sku(),
-                                format!("PROD-{}", rng.gen_range(1..=150)),
+                                format!("PROD-{}", rng.random_range(1..=150)),
                             );
                         })
                         .fetch_one_to::<Product>()
@@ -225,7 +210,7 @@ pub async fn seed_tables(manager: &Manager) {
             }
 
             if items.is_empty() {
-                panic!("very bad...");
+                panic!("line item is empty");
             }
             manager.insert_multi(OrderItem::table_name(), items).await;
         }

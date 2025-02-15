@@ -4,7 +4,7 @@ pub async fn handle_jwt_auth_middleware(req: Request, next: Next) -> impl IntoRe
     println!(">>>> jwt auth ran <<<<");
 
     if let Some(context) = req.extensions().get::<Context>() {
-        if let Some(_user) = context.user() {
+        if let Some(_user) = context.user().await {
             // FIXME: Check the the user is actually log in
             return next.run(req).await;
         }

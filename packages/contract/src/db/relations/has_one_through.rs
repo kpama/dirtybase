@@ -20,10 +20,10 @@ where
     pub fn new(manager: Manager) -> Self {
         Self::new_with_custom(
             manager,
-            P::foreign_id_column().as_ref().unwrap(),
-            C::foreign_id_column().as_ref().unwrap(),
+            PV::prefix_with_tbl(P::foreign_id_column().as_ref().unwrap()).as_str(),
+            PV::prefix_with_tbl(C::foreign_id_column().as_ref().unwrap()).as_str(),
             PV::table_name(),
-            C::id_column().as_ref().unwrap(),
+            C::prefix_with_tbl(C::id_column().as_ref().unwrap()).as_str(),
             C::table_name(),
         )
     }

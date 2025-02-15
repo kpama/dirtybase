@@ -36,13 +36,12 @@ impl CronConfig {
         self.jobs.insert(name.to_string(), config);
         self
     }
-}
 
-impl From<&DirtyConfig> for CronConfig {
-    fn from(base: &DirtyConfig) -> Self {
+    pub async fn from_dirty_config(base: &DirtyConfig) -> Self {
         base.optional_file("cron.toml", Some("DTY_CRON"))
             .build()
-            .unwrap()
+            .await
+            .expect("could not create cron configuration")
             .try_deserialize()
             .unwrap()
     }
