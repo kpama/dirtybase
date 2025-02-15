@@ -13,6 +13,8 @@ pub type ConfigCollection = HashMap<String, ConfigSet>;
 pub struct BaseConfig {
     #[serde(default)]
     pub enable: bool,
+    #[serde(default)]
+    pub idle_timeout: i64,
     pub kind: DatabaseKind,
     #[serde(default)]
     pub client_type: ClientType,
@@ -31,6 +33,7 @@ impl Default for BaseConfig {
     fn default() -> Self {
         Self {
             enable: true,
+            idle_timeout: 0,
             kind: SQLITE_KIND.into(),
             client_type: ClientType::Write,
             url: "sqlite::memory:".to_string(),
