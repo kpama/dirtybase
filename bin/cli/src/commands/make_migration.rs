@@ -1,7 +1,7 @@
 use std::process::Command;
 
 use crate::{
-    content::{dump_a_stub, make_a_directory, stubs},
+    content::{dump_a_stub, make_a_directory, read_entry_file, stubs, update_entry_file},
     metadata::read_package_metadata,
 };
 
@@ -33,13 +33,12 @@ pub fn make(package: Option<&String>, name: &str) {
 
     let mod_path = path_buf.join("dirtybase_entry").join("migration.rs");
     dump_a_stub("dirtybase_entry/migration.rs", &mod_path);
+    dump_a_stub("dirtybase_entry.rs", &path_buf);
 
     let path = path_buf
         .join("dirtybase_entry")
         .join("migration")
         .join(format!("{}.rs", module_name));
-
-    println!("new file path: {:?}", path.to_str());
 
     let mut module = std::fs::read_to_string(&mod_path).unwrap();
 
@@ -51,6 +50,13 @@ pub fn make(package: Option<&String>, name: &str) {
     _ = std::fs::write(&mod_path, format!("mod {}; \n{}", &module_name, module));
 
     _ = std::fs::write(&path, built);
+
+    if let Ok(mut entry_content) = read_entry_file(&path_buf) {
+        if !entry_content.contains("mod migration;") {
+            entry_content.insert_str(0, "mod migration;\r\n");
+            _ = update_entry_file(&path_buf, entry_content);
+        }
+    }
 
     if package.is_some() {
         _ = Command::new(format!("cargo -p {}", package.as_ref().unwrap()))

@@ -1,4 +1,6 @@
-use std::{collections::HashMap, path::PathBuf};
+#![allow(unused)]
+
+use std::{collections::HashMap, io, path::PathBuf};
 
 pub(crate) fn directories() -> &'static [&'static str] {
     &[
@@ -93,4 +95,14 @@ pub(crate) fn dump_a_stub(name: &str, path_buf: &PathBuf) {
             _ = std::fs::write(&path_buf, stub);
         }
     }
+}
+
+pub(crate) fn read_entry_file(path_buf: &PathBuf) -> io::Result<String> {
+    let file = path_buf.join("dirtybase_entry.rs");
+    std::fs::read_to_string(&file)
+}
+
+pub(crate) fn update_entry_file(path_buf: &PathBuf, content: String) -> io::Result<()> {
+    let file = path_buf.join("dirtybase_entry.rs");
+    std::fs::write(&file, content)
 }
