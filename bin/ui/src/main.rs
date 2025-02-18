@@ -10,7 +10,7 @@ use dirtybase_app::{
 };
 use include_dir::{include_dir, Dir};
 
-static UI_EMBEDDED_ASSETS: Dir = include_dir!("bin/ui/src/app/dist/spa");
+static UI_EMBEDDED_ASSETS: Dir = include_dir!("bin/ui/embedded/");
 
 async fn home() -> impl IntoResponse {
     if let Some(file) = UI_EMBEDDED_ASSETS.get_file("index.html") {
