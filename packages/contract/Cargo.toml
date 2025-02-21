@@ -19,7 +19,7 @@ simple-middleware = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }
 log = { workspace = true }
-# bcrypt = { workspace = true }
+crypto = { workspace = true }
 tokio = { workspace = true, features = ["sync"] }
 tokio-stream = { workspace = true }
 axum = { workspace = true }

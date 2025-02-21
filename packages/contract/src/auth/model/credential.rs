@@ -29,37 +29,37 @@ impl LoginCredential {
 }
 
 pub struct LoginCredentialBuilder {
-    credentail: LoginCredential,
+    credential: LoginCredential,
 }
 
 impl LoginCredentialBuilder {
     pub fn new() -> Self {
         Self {
-            credentail: Default::default(),
+            credential: Default::default(),
         }
     }
 
     pub fn username(mut self, username: String) -> Self {
-        self.credentail.username = Some(username);
+        self.credential.username = Some(username);
         self
     }
 
     pub fn email(mut self, email: String) -> Self {
-        self.credentail.email = Some(email);
+        self.credential.email = Some(email);
         self
     }
 
     pub fn password(mut self, password: String) -> Self {
-        self.credentail.password = password;
+        self.credential.password = password;
         self
     }
     pub fn remember_me(mut self, remember_me: bool) -> Self {
-        self.credentail.remember_me = remember_me;
+        self.credential.remember_me = remember_me;
         self
     }
 
     pub fn build(self) -> LoginCredential {
-        self.credentail
+        self.credential
     }
 }
 
@@ -82,10 +82,10 @@ mod test {
     pub fn test_builder() {
         let cred = LoginCredentialBuilder::new()
             .username("foo".to_string())
-            .password("johndoe!!".to_string())
+            .password("john-doe!!".to_string())
             .build();
 
-        assert_eq!(cred.password(), "johndoe!!");
+        assert_eq!(cred.password(), "john-doe!!");
         assert_eq!(cred.username.is_some(), true);
         assert_eq!(cred.username.unwrap().as_str(), "foo");
     }

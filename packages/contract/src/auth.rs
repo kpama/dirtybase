@@ -1,3 +1,4 @@
+mod auth_user_status;
 mod model;
 
 pub use model::*;

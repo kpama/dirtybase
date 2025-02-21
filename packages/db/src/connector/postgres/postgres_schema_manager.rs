@@ -12,9 +12,9 @@ use async_trait::async_trait;
 use dirtybase_contract::db::base::index::IndexType;
 use futures::stream::TryStreamExt;
 use sqlx::{
+    Arguments, Column, Pool, Postgres, Row,
     postgres::{PgArguments, PgRow},
     types::chrono,
-    Arguments, Column, Pool, Postgres, Row,
 };
 use std::{collections::HashMap, sync::Arc};
 
@@ -789,8 +789,8 @@ impl PostgresSchemaManager {
                     }
                 }
                 _ => {
-                    dbg!(
-                        "not mapped field: {:#?} => value: {:#?}",
+                    tracing::debug!(
+                        "unsupported field type : {:?} => value: {:#?}",
                         name,
                         col.type_info()
                     );

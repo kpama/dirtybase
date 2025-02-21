@@ -9,7 +9,7 @@ edition = "2024"
 [workspace.dependencies]
 axum = { version = "0.8", features = ["ws", "multipart"] }
 aes-gcm = "0.10.3"
-crypto = { version = "0.5.1", features = ["aead"] }
+crypto = { version = "0.5.1", features = ["aead", "password-hash", "digest"] }
 dashmap = { version = "6" }
 anyhow = "1.0"
 clap = { version = "4", features = ["derive", "unstable-doc"] }

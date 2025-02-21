@@ -3,7 +3,6 @@ mod config;
 pub(crate) mod setup_database;
 
 pub mod command;
-pub mod helper;
 pub mod model;
 
 use std::convert::Infallible;
@@ -16,8 +15,8 @@ use axum::http::request::Parts;
 pub use config::Config;
 pub use config::ConfigBuilder;
 
-use dirtybase_contract::config::DirtyConfig;
 use dirtybase_contract::ExtensionManager;
+use dirtybase_contract::config::DirtyConfig;
 
 pub type AppService = busybody::Service<App>;
 

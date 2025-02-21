@@ -3,9 +3,9 @@ use async_trait::async_trait;
 use dirtybase_contract::db::base::index::IndexType;
 use futures::stream::TryStreamExt;
 use sqlx::{
+    Arguments, Column, MySql, Pool, Row,
     mysql::{MySqlArguments, MySqlRow},
     types::chrono,
-    Arguments, Column, MySql, Pool, Row,
 };
 use std::{collections::HashMap, sync::Arc};
 
@@ -779,8 +779,8 @@ impl MySqlSchemaManager {
                     }
                 }
                 _ => {
-                    dbg!(
-                        "not mapped field: {:#?} => value: {:#?}",
+                    tracing::debug!(
+                        "unsupported field type : {:?} => value: {:#?}",
                         name,
                         col.type_info()
                     );

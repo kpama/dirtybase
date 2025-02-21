@@ -12,9 +12,9 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
 use sqlx::{
+    Arguments, Column, Pool, Row, Sqlite, TypeInfo,
     sqlite::{SqliteArguments, SqliteRow},
     types::chrono,
-    Arguments, Column, Pool, Row, Sqlite, TypeInfo,
 };
 use std::{collections::HashMap, sync::Arc};
 
@@ -127,7 +127,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
 
     async fn fetch_one(
         &self,
-        query_builder: &QueryBuilder, // TODO: Take ownership of the query builder
+        query_builder: &QueryBuilder,
     ) -> Result<Option<ColumnAndValue>, anyhow::Error> {
         let mut params = SqliteArguments::default();
 
@@ -789,7 +789,11 @@ impl SqliteSchemaManager {
                     }
                 }
                 _ => {
-                    let value = row.try_get::<String, &str>(col.name());
+                    tracing::debug!(
+                        "unsupported field type : {:?} => value: {:#?}",
+                        name,
+                        col.type_info()
+                    );
                 }
             }
         }
