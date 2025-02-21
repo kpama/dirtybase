@@ -58,7 +58,7 @@ redis = { version = "0.29", features = [
 	# "tls-native-tls",
 	"cluster-async",
 ] }
-lettre = { version = "0.11.0" }
+lettre = { version = "0.11" }
 config = "0.15"
 deadpool = "0.12"
 deadpool-redis = { version = "0.19" }
