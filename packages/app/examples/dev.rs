@@ -89,9 +89,9 @@ impl ExtensionSetup for App {
                      Form(mut auth_user): Form<AuthUserPayload>| async move {
                         let result = auth_user.validate();
                         auth_user.id = Some(ArcUuid7::default());
-                        manager.insert("auth_users", auth_user).await;
+                        manager.insert_ref("auth_users", &auth_user).await;
                         tracing::error!("validation result: {:#?}", result);
-                        format!("new user id: {}", ArcUuid7::default())
+                        format!("new user id: {}", auth_user.id.unwrap())
                     },
                 )
                 .put_x(
