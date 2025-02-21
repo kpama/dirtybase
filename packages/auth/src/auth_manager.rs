@@ -13,7 +13,7 @@ impl AuthManager {
         self.config.enable()
     }
 
-    pub async fn validate_jwt(&self, jwt: String) -> bool {
+    pub async fn validate_jwt(&self, _jwt: String) -> bool {
         false
     }
 }

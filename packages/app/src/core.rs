@@ -1,19 +1,15 @@
 mod config;
 
 pub(crate) mod setup_database;
-pub(crate) mod setup_defaults;
 
 pub mod command;
 pub mod helper;
 pub mod model;
-pub mod pipeline;
-pub mod token_claim;
 
 use std::convert::Infallible;
 use std::ops::Deref;
 use std::sync::OnceLock;
 
-use anyhow::anyhow;
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 
@@ -22,24 +18,17 @@ pub use config::ConfigBuilder;
 
 use dirtybase_contract::config::DirtyConfig;
 use dirtybase_contract::ExtensionManager;
-use dirtybase_db::base::manager::Manager;
-use dirtybase_db::config::BaseConfig;
-use dirtybase_db::connection_bus::MakePoolManagerCommand;
-use dirtybase_user::entity::user::UserRepository;
-use dirtybase_user::entity::user::UserService;
 
 pub type AppService = busybody::Service<App>;
 
 pub struct App {
     config: Config,
-    default_db_manager: OnceLock<Result<Manager, anyhow::Error>>,
     is_ready: OnceLock<bool>,
 }
 
 impl App {
     pub async fn new(config: &Config) -> anyhow::Result<AppService> {
         let instance = Self {
-            default_db_manager: OnceLock::new(),
             is_ready: OnceLock::new(),
             config: config.clone(),
         };
@@ -80,26 +69,6 @@ impl App {
         callback: impl FnMut(&Box<dyn dirtybase_contract::ExtensionSetup>),
     ) {
         ExtensionManager::extensions(callback).await;
-    }
-
-    pub async fn schema_manger(&self) -> Manager {
-        self.try_schema_manager().await.unwrap()
-    }
-
-    pub async fn try_schema_manager(&self) -> Result<Manager, anyhow::Error> {
-        let config = &self.config;
-        let config_set = BaseConfig::set_from(config.dirty_config()).await;
-        match self
-            .default_db_manager
-            .get_or_init(|| MakePoolManagerCommand::make_sync(config_set))
-        {
-            Ok(manager) => Ok(manager.clone()),
-            Err(e) => Err(anyhow!(e.to_string())),
-        }
-    }
-
-    pub async fn user_service(&self) -> UserService {
-        UserService::new(UserRepository::new(self.schema_manger().await))
     }
 
     pub fn config(&self) -> Config {

@@ -45,15 +45,17 @@ pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
 
     // core extensions
     app.register(dirtybase_session::Extension::default()).await;
+    #[cfg(feature = "auth")]
     app.register(dirtybase_auth::Extension::default()).await;
     app.register(dirtybase_db::Extension::default()).await;
     app.register(dirtybase_entry::Extension::default()).await;
     app.register(dirtybase_cache::Extension::default()).await;
     app.register(dirtybase_cron::Extension::default()).await;
+    #[cfg(feature = "user")]
+    app.register(dirtybase_user::Extension::default()).await;
     #[cfg(feature = "multitenant")]
     app.register(dirtybase_multitenant::Extension::default())
         .await;
-
     Ok(app)
 }
 
@@ -70,11 +72,8 @@ pub async fn run_http(app_service: AppService) -> anyhow::Result<()> {
     }
 }
 
-pub async fn run_cli(
-    app_service: AppService,
-    command: &core::command::Commands,
-) -> anyhow::Result<()> {
-    cli::init(app_service, command).await
+pub async fn run_cli(context: Context, command: &core::command::Commands) -> anyhow::Result<()> {
+    cli::init(context, command).await
 }
 
 pub async fn run(app_service: AppService) -> anyhow::Result<()> {
@@ -134,7 +133,6 @@ pub(crate) async fn make_cli_command_manager(app_service: AppService) -> CliComm
     for ext in lock.iter() {
         manager = ext.register_cli_commands(manager);
     }
-    drop(lock);
     manager
 }
 

@@ -98,7 +98,7 @@ async fn check_if_user_can_login(pipe: PipeContent) -> bool {
 
     if let Some(Some(data)) = result {
         if !data.allow {
-            pipe.store::<AuthResult>(AuthResult::Err(data.error));
+            pipe.store::<AuthResult>(AuthResult::Err(data.error)).await;
             return false;
         }
     }
@@ -123,7 +123,8 @@ async fn find_user(
     {
         Ok(dirty_user) => Some(dirty_user),
         Err(_) => {
-            pipe.store::<AuthResult>(AuthResult::Err(AuthenticationErrorStatus::UserNotFound));
+            pipe.store::<AuthResult>(AuthResult::Err(AuthenticationErrorStatus::UserNotFound))
+                .await;
             None
         }
     }

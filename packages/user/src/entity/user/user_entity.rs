@@ -1,7 +1,7 @@
 use super::UserStatus;
 use dirtybase_contract::db::types::{
-    BooleanField, DateTimeField, InternalIdField, NumberField, OptionalBooleanField,
-    OptionalStringField, TimestampField, UlidField,
+    ArcUuid7, BooleanField, DateTimeField, InternalIdField, NumberField, OptionalBooleanField,
+    OptionalStringField, TimestampField,
 };
 use dirtybase_db_macro::DirtyTable;
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 #[dirty(table = "users", id = "id")]
 pub struct UserEntity {
     pub internal_id: InternalIdField,
-    pub id: UlidField,
+    pub id: ArcUuid7,
     pub username: OptionalStringField,
     pub email: OptionalStringField,
     pub reset_password: OptionalBooleanField,

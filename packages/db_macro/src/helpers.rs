@@ -277,7 +277,7 @@ pub(crate) fn build_from_handlers(
                                     ::dirtybase_contract::db::field_values::FieldValue::from_ref_option_into(field)
                                 }
                             }
-                        } 
+                        }
                         else {
                             quote! {
                                 pub fn #fn_name <'a> (field: Option<&'a ::dirtybase_contract::db::field_values::FieldValue>) -> #returns {

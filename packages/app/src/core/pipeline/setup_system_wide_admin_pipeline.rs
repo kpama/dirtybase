@@ -9,7 +9,6 @@ use crate::core::{
     App,
 };
 use busybody::Service;
-use dirtybase_user::entity::user::UserEntity;
 use fama::PipeContent;
 
 #[derive(Clone, Default)]
@@ -71,20 +70,20 @@ async fn find_or_create_admin_user(
         Ok(Some((created, user))) => {
             if !created {
                 log::info!("System admin already exist");
-                pipe.stop_the_flow();
+                pipe.stop_the_flow().await;
             } else {
                 new_admin_data.user = Some(user);
-                pipe.store(new_admin_data);
+                pipe.store(new_admin_data).await;
                 log::info!("System admin created");
             }
         }
         Ok(None) => {
             log::info!("could not create default user, none returned");
-            pipe.stop_the_flow();
+            pipe.stop_the_flow().await;
         }
         Err(e) => {
             log::info!("could not create default admin user: {:?}", e);
-            pipe.stop_the_flow();
+            pipe.stop_the_flow().await;
         }
     }
 
@@ -102,7 +101,7 @@ async fn add_user_to_system_wide_admin(
             .await
             .is_err()
     {
-        pipe.stop_the_flow();
+        pipe.stop_the_flow().await;
         log::error!("could not add user to system wide admin");
     }
     None
@@ -125,9 +124,9 @@ async fn create_default_company(
             .create(new_company, user.clone(), user.clone())
             .await
         {
-            pipe.container().set_type(company.clone());
+            pipe.container().set_type(company.clone()).await;
             new_admin_data.company = Some(company);
-            pipe.store(new_admin_data);
+            pipe.store(new_admin_data).await;
         }
     }
 

@@ -2,9 +2,7 @@ use anyhow::anyhow;
 use orsomafo::Dispatchable;
 use sha2::{Digest, Sha256};
 
-use dirtybase_contract::db::{
-    base::helper::generate_ulid, event::UserCreatedEvent, types::UlidField,
-};
+use dirtybase_contract::db::{base::helper::generate_ulid, event::UserCreatedEvent};
 
 use super::{hash_password, user_repository::UserRepository, UserEntity};
 
@@ -93,10 +91,6 @@ impl UserService {
         user.password = Some(hash_password(
             &user.password.unwrap_or("changeme!!".to_owned()),
         ));
-
-        if user.id.is_empty() {
-            user.id = UlidField::default();
-        }
 
         let result = self.user_repo.create(user).await;
 

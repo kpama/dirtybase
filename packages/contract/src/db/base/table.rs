@@ -241,6 +241,10 @@ impl TableBlueprint {
         self.char(name, ULID_STRING_LENGTH)
     }
 
+    /// Creates two fields `internal_id` and `id`
+    ///
+    /// `internal_id` is an auto increment numeric value
+    /// `id` is a ULID field
     pub fn id_set(&mut self) {
         self.id(Some(INTERNAL_ID_FIELD));
         self.ulid(ID_FIELD)
@@ -248,6 +252,10 @@ impl TableBlueprint {
             .set_is_nullable(false);
     }
 
+    /// Creates two fields `internal_id` and `id`
+    ///
+    /// `internal_id` is an auto increment numeric value
+    /// `id` is a UUID7 field
     pub fn uuid_id_set(&mut self) {
         self.id(Some(INTERNAL_ID_FIELD));
         self.uuid(ID_FIELD)

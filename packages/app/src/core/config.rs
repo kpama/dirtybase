@@ -1,11 +1,9 @@
 use std::sync::Arc;
 
 use base64ct::Encoding;
-use dirtybase_contract::config;
 use dirtybase_contract::config::field_to_vec_u8;
 use dirtybase_contract::config::vec_u8_to_field;
 use dirtybase_contract::config::DirtyConfig;
-use dirtybase_user::entity::user::hash_password;
 use serde::Deserializer;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -250,7 +248,7 @@ impl ConfigBuilder {
     }
 
     pub fn admin_password(mut self, admin_password: &str) -> Self {
-        self.admin_password = Some(hash_password(admin_password));
+        self.admin_password = Some(admin_password.to_string());
         self
     }
     pub fn web_ip_address(mut self, address: &str) -> Self {

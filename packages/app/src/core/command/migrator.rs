@@ -39,7 +39,7 @@ impl Migrator {
 
     pub async fn up(&self, manager: &Manager) {
         let batch = chrono::Utc::now().timestamp();
-        let repo = self.repo().await;
+        let repo = self.repo(manager).await;
 
         for entry in &self.migrations {
             let name = entry.id();
@@ -57,7 +57,7 @@ impl Migrator {
     }
 
     pub async fn down(&self, manager: &Manager) {
-        let repo = self.repo().await;
+        let repo = self.repo(manager).await;
 
         let collection = repo.get_last_batch().await;
 
@@ -86,15 +86,15 @@ impl Migrator {
     }
 
     pub async fn reset(&self, manager: &Manager) {
-        let _repo = self.repo().await;
+        let _repo = self.repo(manager).await;
         for entry in &self.migrations {
             log::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
             entry.down(manager).await
         }
     }
 
-    async fn repo(&self) -> MigrationRepository {
-        let repo = busybody::helpers::provide::<MigrationRepository>().await;
+    async fn repo(&self, manager: &Manager) -> MigrationRepository {
+        let repo = MigrationRepository::new(manager.clone());
         repo.init().await;
 
         repo

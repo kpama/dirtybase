@@ -25,7 +25,8 @@ impl dirtybase_contract::ExtensionSetup for Extension {
         mut manager: RouterManager,
         _middleware: &WebMiddlewareManager,
     ) -> RouterManager {
-        manager.general(Some(env!("CARGO_PKG_NAME")), |router| {
+        let prefix = format!("/{}", env!("CARGO_PKG_NAME"));
+        manager.general(Some(&prefix), |router| {
              router.get_x("/", || async { "Be awesome" })
         });
 

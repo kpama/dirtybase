@@ -19,7 +19,7 @@ use sqlx::{
 use std::{collections::HashMap, sync::Arc};
 
 const LOG_TARGET: &str = "postgresql_db_driver";
-pub const POSTGRES_KIND: &str = "postgresql";
+pub const POSTGRES_KIND: &str = "postgres";
 
 pub struct PostgresSchemaManager {
     db_pool: Arc<Pool<Postgres>>,

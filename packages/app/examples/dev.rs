@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
+use axum::response::Html;
 use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
-use dirtybase_auth::middlewares::{handle_user_login_web_request, UserCredential};
 use dirtybase_contract::app::RequestContext;
 use dirtybase_contract::config::DirtyConfig;
 use dirtybase_contract::{
@@ -34,7 +32,6 @@ struct App;
 #[async_trait::async_trait]
 impl ExtensionSetup for App {
     async fn setup(&mut self, _config: &DirtyConfig) {
-        busybody::helpers::register_service(UserProviderService::new(MyOwnUserProvider)).await;
         busybody::helpers::register_service(ContextManager::<i32>::new()).await;
     }
 
@@ -59,22 +56,31 @@ impl ExtensionSetup for App {
     ) -> RouterManager {
         manager.general(None, |router| {
             let router = router.get("/", index_request_handler, "index-page");
-            // middleware_manager.apply(router, ["auth::normal"])
-            router
+            middleware_manager.apply(router, ["auth::normal"])
         });
 
         // login
         manager.general(None, |router| {
             router
+                .get_x("/form", || async move {
+                    let form = r#"<form action='/do-login', method='post'>
+                    <label>Username</label><br/>
+                    <input type='text' name='username' placeholer='Username' /> <br/>
+                    <label>Password</label><br/>
+                    <input type='password' name='password' placeholer='Pasword' /> <br/>
+                    <input type='submit' value='Login'/>
+                    </form>"#;
+                    Html(form)
+                })
                 .post(
-                    "/do-login",
-                    |Form(credential): Form<UserCredential>| async move {
-                        println!("credential: {:#?}", credential);
+                    "/do-login", // TODO: CSRF CHECK
+                    |credential: LoginCredential| async move {
+                        println!("credential - username : {:#?}", credential.username());
+                        println!("credential - password: {:#?}", credential.password());
                         "Auth finish"
                     },
                     "do-login",
                 )
-                .post("/do-login2", handle_user_login_web_request, "do-login2") // FIXME: CSRF Token feature...
                 .get("/xx", test_cookie_handler, "xx")
         });
 
@@ -148,33 +154,5 @@ async fn index_request_handler(
         )
     } else {
         "Welcome unknown user".to_string()
-    }
-}
-
-struct MyOwnUserProvider;
-
-#[async_trait::async_trait]
-impl UserProviderTrait for MyOwnUserProvider {
-    async fn by_username(&self, id: &str) -> String {
-        println!("using a custom user serivce provider");
-        let mut dev_users = HashMap::new();
-
-        dev_users.insert("user1", "pwd1");
-        dev_users.insert("user2", "pwd2");
-        dev_users.insert("user3", "pwd3");
-
-        if let Some(st) = dev_users.get(id) {
-            st.to_string()
-        } else {
-            String::new()
-        }
-    }
-
-    async fn by_email(&self, _email: &str) -> String {
-        String::new()
-    }
-
-    async fn by_id(&self, _id: &str) -> String {
-        String::new()
     }
 }

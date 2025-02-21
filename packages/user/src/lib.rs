@@ -1,1 +1,3 @@
-pub mod entity;
+mod dirtybase_entry;
+
+pub use dirtybase_entry::*;

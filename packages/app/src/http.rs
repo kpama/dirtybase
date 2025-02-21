@@ -1,6 +1,5 @@
 mod middleware;
 
-pub mod controllers;
 pub mod http_helper;
 use std::{env, sync::Arc};
 

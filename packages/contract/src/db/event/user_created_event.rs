@@ -1,15 +1,20 @@
-use crate::db::types::UlidField;
+use crate::db::types::ArcUuid7;
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct UserCreatedEvent {
-    id: UlidField,
+    id: ArcUuid7,
 }
 
 impl UserCreatedEvent {
-    pub fn new(id: UlidField) -> Self {
+    pub fn new(id: ArcUuid7) -> Self {
         Self { id }
     }
-    pub fn id(&self) -> UlidField {
+
+    pub fn id_ref(&self) -> &ArcUuid7 {
+        &self.id
+    }
+
+    pub fn id(&self) -> ArcUuid7 {
         self.id.clone()
     }
 }

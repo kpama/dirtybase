@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use dirtybase_contract::config::DirtyConfig;
 
@@ -8,6 +8,17 @@ use super::base::schema::{ClientType, DatabaseKind};
 
 pub type ConfigSet = HashMap<ClientType, BaseConfig>;
 pub type ConfigCollection = HashMap<String, ConfigSet>;
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct DbConfig {
+    #[serde(default)]
+    enable: bool,
+    #[serde(default)]
+    idle_timeout: i64,
+    #[serde(default)]
+    default: Arc<String>,
+    collection: Arc<ConfigCollection>,
+}
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct BaseConfig {

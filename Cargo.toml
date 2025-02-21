@@ -4,7 +4,7 @@ members = ["bin/ui", "bin/cli", "packages/*", "private_packages/*"]
 
 [workspace.package]
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [workspace.dependencies]
 axum = { version = "0.8", features = ["ws", "multipart"] }
@@ -52,7 +52,7 @@ busybody = { version = "0.5" }
 orsomafo = { version = "0.5" }
 fama = { version = "0.4" }
 busstop = { version = "0.2" }
-redis = { version = "0.28", features = [
+redis = { version = "0.29", features = [
 	"tokio-comp",
 	"aio",
 	# "tls-native-tls",
@@ -97,7 +97,7 @@ uuid = { version = "1", features = [
 ] }
 tracing = { version = "0.1", features = ["std"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-tempfile = { version = "3.16.0" }
+tempfile = { version = "3.17" }
 uuid25 = { version = "0.3", features = ["gen", "serde", "uuid"] }
 dirtybase_app = { version = "*" }
 dirtybase_contract = { version = "*" }

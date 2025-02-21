@@ -1,14 +1,14 @@
 use axum_extra::extract::CookieJar;
 use dirtybase_contract::{
-    app::{Context, CtxExt, UserContext},
-    auth::{UserProviderService, UserProviderTrait},
+    app::{Context, CtxExt},
+    auth::LoginCredential,
     http::prelude::*,
     session::Session,
-    ExtensionManager,
+    user::{model::UserRepositoryTrait, UserProviderService},
 };
 use serde::Deserialize;
 
-use crate::{AuthConfig, AuthManager};
+use crate::AuthManager;
 
 pub async fn handle_normal_auth_middleware(req: Request, next: Next) -> impl IntoResponse {
     let context;
@@ -22,11 +22,11 @@ pub async fn handle_normal_auth_middleware(req: Request, next: Next) -> impl Int
         return return_500_response();
     }
 
-    let manager = context.get::<AuthManager>().await.unwrap();
-
-    if !manager.is_enable() {
-        tracing::warn!("auth extension is disabled");
-        return next.run(req).await;
+    if let Some(manager) = context.get::<AuthManager>().await {
+        if !manager.is_enable() {
+            tracing::warn!("auth extension is disabled");
+            return next.run(req).await;
+        }
     }
 
     // 1. Check if there is an active session
@@ -66,16 +66,17 @@ pub async fn handle_user_login_web_request(
     jar: CookieJar,
     CtxExt(user_provider): CtxExt<UserProviderService>,
     Extension(ctx): Extension<Context>,
-    Form(form): Form<UserCredential>,
+    credential: LoginCredential,
 ) -> impl IntoResponse {
-    if !form.username.is_empty() {
-        let username = form.username.clone();
-        let hash_password = user_provider.by_username(&username).await;
-
-        if authenticate_from_request(form, hash_password).await {
-            return "You successfully logged".to_string();
-        }
-    }
+    let user = if credential.username().is_none() {
+        user_provider
+            .find_by_username(credential.username().as_ref().unwrap(), false)
+            .await
+    } else {
+        user_provider
+            .find_by_email(credential.email().as_ref().unwrap(), false)
+            .await
+    };
 
     "Login authentication failed".to_string()
 }
@@ -98,8 +99,6 @@ pub async fn authenticate_from_request(credential: UserCredential, hash_password
 
 #[derive(Debug, Deserialize)]
 pub struct UserCredential {
-    // #[serde(default)]
-    // to: String,
     username: String,
     password: String,
 }

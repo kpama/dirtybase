@@ -13,12 +13,3 @@ impl MigrationService {
         &self.repo
     }
 }
-
-#[busybody::async_trait]
-impl busybody::Injectable for MigrationService {
-    async fn inject(c: &busybody::ServiceContainer) -> Self {
-        let (repo,) = c.inject_all::<(MigrationRepository,)>().await;
-
-        Self::new(repo)
-    }
-}

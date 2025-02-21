@@ -1,7 +1,7 @@
-mod user_provider;
+mod model;
 
-pub use user_provider::*;
+pub use model::*;
 
 pub mod prelude {
-    pub use super::user_provider::*;
+    pub use super::model::*;
 }

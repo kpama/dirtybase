@@ -12,9 +12,9 @@ dirtybase_mail = { workspace = true }
 dirtybase_contract = { workspace = true }
 dirtybase_helper = { workspace = true }
 dirtybase_db_macro = { workspace = true }
-dirtybase_user = { workspace = true }
+dirtybase_user = { workspace = true, optional = true }
 dirtybase_cron = { workspace = true }
-dirtybase_auth = { workspace = true }
+dirtybase_auth = { workspace = true, optional = true }
 dirtybase_session = { workspace = true }
 dirtybase_multitenant = { workspace = true, optional = true }
 simple-middleware = { workspace = true }
@@ -56,8 +56,9 @@ tracing-subscriber = { workspace = true }
 
 
 [features]
+csrf = []
 db = []
 user = ["db"]
-auth = ["user", "db"]
+auth = ["user", "db", "csrf"]
 multitenant = ["dep:dirtybase_multitenant"]
 full = ["auth", "user", "db", "multitenant"]

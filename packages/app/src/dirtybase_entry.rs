@@ -4,10 +4,7 @@ use dirtybase_contract::{
     http::{RouterManager, WebMiddlewareManager},
 };
 
-use crate::http;
-
 mod commands_setup;
-mod migration;
 
 #[derive(Debug, Default)]
 pub struct Extension;
@@ -31,7 +28,7 @@ impl dirtybase_contract::ExtensionSetup for Extension {
         manager: RouterManager,
         _middleware: &WebMiddlewareManager,
     ) -> RouterManager {
-        http::controllers::register(manager)
+        manager
     }
 
     fn register_cli_commands(&self, manager: CliCommandManager) -> CliCommandManager {
