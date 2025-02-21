@@ -48,8 +48,8 @@ impl ColumnAndValueBuilder {
     }
 
     /// Alias to `insert_field`
-    pub fn add_field<V: Into<FieldValue>>(self, key: &str, value: FieldValue) -> Self {
-        self.data.borrow_mut().insert(key.into(), value);
+    pub fn add_field<V: Into<FieldValue>>(self, key: &str, value: V) -> Self {
+        self.data.borrow_mut().insert(key.into(), value.into());
         self
     }
 

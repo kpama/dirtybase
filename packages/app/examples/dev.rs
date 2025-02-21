@@ -9,6 +9,7 @@ use dirtybase_contract::{
     session::Session,
 };
 use dirtybase_db::base::manager::Manager;
+use dirtybase_db::types::{ArcUuid7, IntoColumnAndValue};
 use tracing::Level;
 
 #[tokio::main]
@@ -82,6 +83,23 @@ impl ExtensionSetup for App {
                     "do-login",
                 )
                 .get("/xx", test_cookie_handler, "xx")
+                .post_x(
+                    "/create-user",
+                    |Form(auth_user): Form<AuthUserPayload>| async move {
+                        tracing::error!("creating{:#?}", &auth_user);
+                        tracing::error!("column/value: {:#?}", auth_user.into_column_value());
+                        format!("new user id: {}", ArcUuid7::default())
+                    },
+                )
+                .put_x(
+                    "/update-user/{id}",
+                    |Path(id): Path<ArcUuid7>, Form(mut data): Form<AuthUserPayload>| async move {
+                        data.id = Some(id.clone());
+                        tracing::error!("updating{:#?}", &data);
+                        tracing::error!("column/value: {:#?}", data.into_column_value());
+                        format!("updated user id: {}", &id)
+                    },
+                )
         });
 
         manager
