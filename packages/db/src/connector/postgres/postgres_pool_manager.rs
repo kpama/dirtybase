@@ -2,18 +2,18 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::anyhow;
 use async_trait::async_trait;
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
 
 use crate::{
+    ConnectionPoolRegisterTrait,
     base::{
         connection::ConnectionPoolTrait,
         schema::{ClientType, DatabaseKind, SchemaManagerTrait},
     },
     config::{BaseConfig, ConfigSet},
-    ConnectionPoolRegisterTrait,
 };
 
-use super::postgres_schema_manager::{PostgresSchemaManager, POSTGRES_KIND};
+use super::postgres_schema_manager::{POSTGRES_KIND, PostgresSchemaManager};
 
 pub struct PostgresPoolManagerRegisterer;
 

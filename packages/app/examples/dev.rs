@@ -85,9 +85,12 @@ impl ExtensionSetup for App {
                 .get("/xx", test_cookie_handler, "xx")
                 .post_x(
                     "/create-user",
-                    |Form(auth_user): Form<AuthUserPayload>| async move {
-                        tracing::error!("creating{:#?}", &auth_user);
-                        tracing::error!("column/value: {:#?}", auth_user.into_column_value());
+                    |CtxExt(manager): CtxExt<Manager>,
+                     Form(mut auth_user): Form<AuthUserPayload>| async move {
+                        let result = auth_user.validate();
+                        auth_user.id = Some(ArcUuid7::default());
+                        manager.insert("auth_users", auth_user).await;
+                        tracing::error!("validation result: {:#?}", result);
                         format!("new user id: {}", ArcUuid7::default())
                     },
                 )

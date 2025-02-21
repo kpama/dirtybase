@@ -7,11 +7,11 @@ use dirtybase_helper::ulid::Ulid;
 use setup::*;
 
 use dirtybase_contract::db::{
+    TableEntityTrait,
     relations::{
         BelongsTo, BelongsToMany, HasMany, HasManyThrough, HasOne, MorphOneOfMany, MorphOneToMany,
         RelationMany, RelationOne, RelationQueryBuilder,
     },
-    TableEntityTrait,
 };
 use dirtybase_db::{
     config::BaseConfig,

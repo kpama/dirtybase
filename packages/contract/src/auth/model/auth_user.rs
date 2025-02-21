@@ -7,6 +7,7 @@ use anyhow::anyhow;
 use crypto::aead::rand_core::RngCore;
 use dirtybase_helper::hash::sha256;
 use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 use crate::{
     auth::{auth_user_status::AuthUserStatus, generate_salt},
@@ -24,9 +25,10 @@ use argon2::{
 
 use super::ParseToken;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Validate, Serialize, Deserialize)]
 pub struct AuthUser {
     id: ArcUuid7,
+    #[validate(length(min = 4))]
     username: Arc<String>,
     email_hash: Arc<String>,
     email_verified: BooleanField,
@@ -171,13 +173,16 @@ impl Display for AuthUser {
     }
 }
 
-#[derive(Default, Debug, serde::Deserialize)]
+#[derive(Default, Validate, Debug, serde::Deserialize)]
 pub struct AuthUserPayload {
     #[serde(skip_deserializing)]
     pub id: Option<ArcUuid7>,
+    pub is_sys_admin: Option<bool>,
     #[serde(default)]
+    #[validate(length(min = 4))]
     pub username: Option<String>,
     #[serde(default)]
+    #[validate(email(message = "most be a valid email address"))]
     pub email: Option<String>,
     #[serde(default)]
     pub email_verified: Option<bool>,
@@ -186,6 +191,7 @@ pub struct AuthUserPayload {
     #[serde(default)]
     pub reset_password: Option<bool>,
     #[serde(default)]
+    #[validate(length(min = 8))]
     pub password: Option<String>,
     #[serde(default)]
     pub rotate_salt: bool,
@@ -196,10 +202,10 @@ impl IntoColumnAndValue for AuthUserPayload {
         let mut builder = ColumnAndValueBuilder::new()
             .try_to_insert("id", self.id.as_ref())
             .try_to_insert("username", self.username.as_ref())
-            .try_to_insert("email", self.email.as_ref())
             .try_to_insert("email_verified", self.email_verified)
             .try_to_insert("status", self.status.as_ref())
-            .try_to_insert("reset_password", self.reset_password.as_ref());
+            .try_to_insert("reset_password", self.reset_password.as_ref())
+            .try_to_insert("is_sys_admin", self.is_sys_admin.as_ref());
 
         if let Some(password) = self.password.as_ref() {
             builder = builder.add_field("password", AuthUser::hash_password(&password));

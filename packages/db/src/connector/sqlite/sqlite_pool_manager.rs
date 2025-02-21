@@ -1,22 +1,22 @@
 use std::{collections::HashMap, str::FromStr, sync::Arc, time::Duration};
 
 use crate::{
+    ConnectionPoolRegisterTrait,
     base::{
         connection::ConnectionPoolTrait,
         schema::{ClientType, DatabaseKind},
     },
     config::{BaseConfig, ConfigSet},
-    ConnectionPoolRegisterTrait,
 };
 use anyhow::anyhow;
 use async_trait::async_trait;
 use sqlx::{
+    Pool, Sqlite,
     sqlite::SqliteJournalMode,
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
-    Pool, Sqlite,
 };
 
-use super::sqlite_schema_manager::{SqliteSchemaManager, SQLITE_KIND};
+use super::sqlite_schema_manager::{SQLITE_KIND, SqliteSchemaManager};
 
 pub struct SqlitePoolManagerRegisterer;
 

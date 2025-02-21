@@ -1,4 +1,4 @@
-use dirtybase_contract::{cli::CliCommandManager, ExtensionSetup};
+use dirtybase_contract::{ExtensionSetup, cli::CliCommandManager};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

@@ -129,7 +129,7 @@ impl TableBlueprint {
 
     pub fn string(&mut self, name: &'static str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
-            column.set_type(ColumnType::String(255));
+            column.set_type(ColumnType::String(256));
         })
     }
 

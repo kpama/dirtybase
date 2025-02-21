@@ -1,9 +1,9 @@
 use dirtybase_contract::{
+    ExtensionSetup,
     app::{Context, ContextManager},
     config::DirtyConfig,
     db::base::manager::Manager,
-    prelude::{axum_extra::extract::CookieJar, ArgMatches, Request},
-    ExtensionSetup,
+    prelude::{ArgMatches, Request, axum_extra::extract::CookieJar},
 };
 
 use crate::{config::BaseConfig, connection_bus::MakePoolManagerCommand};

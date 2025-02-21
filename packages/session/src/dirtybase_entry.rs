@@ -1,19 +1,19 @@
 use std::sync::Arc;
 
 use dirtybase_contract::{
+    ExtensionSetup,
     app::Context,
     async_trait,
     axum::response::Response,
     config::DirtyConfig,
     prelude::{
-        axum_extra::extract::{cookie::Cookie, CookieJar},
         Request,
+        axum_extra::extract::{CookieJar, cookie::Cookie},
     },
     session::{Session, SessionId, SessionStorage, SessionStorageProvider},
-    ExtensionSetup,
 };
 
-use crate::{storage::MemoryStorage, SessionConfig, SessionStorageDriver};
+use crate::{SessionConfig, SessionStorageDriver, storage::MemoryStorage};
 
 #[derive(Default)]
 pub struct Extension {

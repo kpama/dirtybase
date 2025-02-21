@@ -1,12 +1,15 @@
+mod migration;
 use std::sync::Arc;
 
-use dirtybase_contract::{config::DirtyConfig, http::WebMiddlewareManager, ExtensionSetup};
+use dirtybase_contract::{
+    ExtensionMigrations, ExtensionSetup, config::DirtyConfig, http::WebMiddlewareManager,
+};
 
 use crate::{
+    AuthConfig, AuthManager,
     middlewares::{
         handle_basic_auth_middleware, handle_jwt_auth_middleware, handle_normal_auth_middleware,
     },
-    AuthConfig, AuthManager,
 };
 
 #[derive(Debug, Default)]
@@ -18,6 +21,10 @@ impl ExtensionSetup for Extension {
         let config = AuthConfig::from_dirty_config(base_config).await;
 
         busybody::helpers::register_type(Arc::new(AuthManager::new(config))).await;
+    }
+
+    fn migrations(&self) -> Option<ExtensionMigrations> {
+        migration::setup()
     }
 
     fn register_web_middlewares(&self, mut manager: WebMiddlewareManager) -> WebMiddlewareManager {

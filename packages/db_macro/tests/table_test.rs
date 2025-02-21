@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use dirtybase_db::{field_values::FieldValue, types::FromColumnAndValue, TableEntityTrait};
+use dirtybase_db::{TableEntityTrait, field_values::FieldValue, types::FromColumnAndValue};
 use dirtybase_db_macro::DirtyTable;
 use std::collections::HashMap;
 

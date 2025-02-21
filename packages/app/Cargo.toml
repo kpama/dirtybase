@@ -19,6 +19,7 @@ dirtybase_session = { workspace = true }
 dirtybase_multitenant = { workspace = true, optional = true }
 simple-middleware = { workspace = true }
 anyhow = { workspace = true }
+validator = { workspace = true }
 clap = { workspace = true }
 hex = { workspace = true }
 base64ct = { workspace = true }

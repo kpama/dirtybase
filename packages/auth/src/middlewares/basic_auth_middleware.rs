@@ -1,7 +1,7 @@
 use dirtybase_contract::{
     app::{Context, UserContext},
     http::prelude::*,
-    user::{model::UserRepositoryTrait, UserProviderService},
+    user::{UserProviderService, model::UserRepositoryTrait},
 };
 
 pub async fn handle_basic_auth_middleware(req: Request, next: Next) -> impl IntoResponse {

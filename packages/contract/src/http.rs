@@ -22,4 +22,5 @@ pub mod prelude {
     pub use axum_extra;
     pub use axum_extra::headers::authorization::*;
     pub use axum_extra::headers::Header;
+    pub use validator::Validate;
 }

@@ -1,4 +1,4 @@
-use dirtybase_contract::{config::DirtyConfig, ExtensionSetup};
+use dirtybase_contract::{ExtensionSetup, config::DirtyConfig};
 
 #[derive(Debug, Default)]
 pub struct Extension;

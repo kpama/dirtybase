@@ -4,9 +4,10 @@ use mysql_pool_manager::MySqlPoolManagerRegisterer;
 use mysql_schema_manager::MYSQL_KIND;
 
 use crate::{
+    ConnectionPoolRegisterTrait,
     base::{manager::Manager, schema::DatabaseKind},
     config::{BaseConfig, ConfigSet},
-    make_manager, ConnectionPoolRegisterTrait,
+    make_manager,
 };
 
 pub mod mysql_pool_manager;

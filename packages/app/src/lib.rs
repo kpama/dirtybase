@@ -12,7 +12,7 @@ pub use busybody;
 pub use clap;
 pub use dirtybase_contract as contract;
 pub use dirtybase_contract::config;
-use dirtybase_contract::{app::Context, cli::CliMiddlewareManager, ExtensionManager};
+use dirtybase_contract::{ExtensionManager, app::Context, cli::CliMiddlewareManager};
 pub use dirtybase_db as db;
 pub use dirtybase_db_macro as db_macro;
 pub use dirtybase_helper as helper;

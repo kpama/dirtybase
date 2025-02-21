@@ -1,4 +1,4 @@
-use crate::{email::Envelope, AdapterTrait};
+use crate::{AdapterTrait, email::Envelope};
 
 pub struct DummyAdapter;
 

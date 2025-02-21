@@ -13,8 +13,8 @@ use super::model::{
 };
 
 use dirtybase_contract::db::{
-    base::manager::Manager,
     TableEntityTrait, //  entity::user::setup_users_table, entity::user::UserEntity,
+    base::manager::Manager,
 };
 // use dirtybase_user::entity::user::{setup_users_table, UserEntity};
 

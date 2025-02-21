@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use base64ct::Encoding;
+use dirtybase_contract::config::DirtyConfig;
 use dirtybase_contract::config::field_to_vec_u8;
 use dirtybase_contract::config::vec_u8_to_field;
-use dirtybase_contract::config::DirtyConfig;
 use serde::Deserializer;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]

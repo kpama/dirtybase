@@ -4,9 +4,10 @@ use postgres_pool_manager::PostgresPoolManagerRegisterer;
 use postgres_schema_manager::POSTGRES_KIND;
 
 use crate::{
+    ConnectionPoolRegisterTrait,
     base::{manager::Manager, schema::DatabaseKind},
     config::{BaseConfig, ConfigSet},
-    make_manager, ConnectionPoolRegisterTrait,
+    make_manager,
 };
 
 pub mod postgres_pool_manager;

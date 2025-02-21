@@ -1,14 +1,14 @@
-use busybody::{helpers::provide, Service};
+use busybody::{Service, helpers::provide};
 use dirtybase_app::{
     axum::{
         extract::Path,
-        http::{header::CONTENT_TYPE, HeaderValue, Response},
+        http::{HeaderValue, Response, header::CONTENT_TYPE},
         response::IntoResponse,
     },
-    contract::{http::prelude::*, ExtensionSetup},
+    contract::{ExtensionSetup, http::prelude::*},
     core::App,
 };
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 
 static UI_EMBEDDED_ASSETS: Dir = include_dir!("bin/ui/embedded/");
 

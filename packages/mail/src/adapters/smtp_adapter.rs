@@ -1,10 +1,10 @@
 use lettre::{
+    Message, SmtpTransport, Transport,
     message::header::ContentType,
     transport::smtp::{authentication::Credentials, client::Tls},
-    Message, SmtpTransport, Transport,
 };
 
-use crate::{email::Envelope, AdapterTrait};
+use crate::{AdapterTrait, email::Envelope};
 
 pub struct SmtpAdapter;
 

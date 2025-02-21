@@ -4,7 +4,7 @@ use dirtybase_contract::{
     auth::LoginCredential,
     http::prelude::*,
     session::Session,
-    user::{model::UserRepositoryTrait, UserProviderService},
+    user::{UserProviderService, model::UserRepositoryTrait},
 };
 use serde::Deserialize;
 

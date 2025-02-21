@@ -7,8 +7,8 @@ pub mod config;
 pub mod model;
 
 pub use cache_dirtybase_entry::*;
-pub use cache_manager::cache_entry::CacheEntry;
 pub use cache_manager::CacheManager;
+pub use cache_manager::cache_entry::CacheEntry;
 use dirtybase_contract::config::DirtyConfig;
 
 pub async fn setup(config: &DirtyConfig) -> cache_manager::CacheManager {

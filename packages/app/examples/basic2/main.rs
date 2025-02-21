@@ -1,7 +1,7 @@
 use axum::{extract::Path, response::Html, routing::get};
 use dirtybase_contract::{
-    http::{RouterManager, WebMiddlewareManager},
     ExtensionSetup,
+    http::{RouterManager, WebMiddlewareManager},
 };
 use named_routes_axum::helpers::get_path_with;
 use tower_service::Service;

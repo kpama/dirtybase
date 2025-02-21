@@ -1,18 +1,18 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
-use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
+use sqlx::{MySql, Pool, mysql::MySqlPoolOptions};
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
+    ConnectionPoolRegisterTrait,
     base::{
         connection::ConnectionPoolTrait,
         schema::{ClientType, DatabaseKind, SchemaManagerTrait},
     },
     config::{BaseConfig, ConfigSet},
-    ConnectionPoolRegisterTrait,
 };
 
-use super::mysql_schema_manager::{MySqlSchemaManager, MYSQL_KIND};
+use super::mysql_schema_manager::{MYSQL_KIND, MySqlSchemaManager};
 
 pub struct MySqlPoolManagerRegisterer;
 

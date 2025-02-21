@@ -8,7 +8,7 @@ use futures::future::BoxFuture;
 use orsomafo::Dispatchable;
 use tokio::time::Instant;
 
-use crate::{event::CronJobState, JobContext};
+use crate::{JobContext, event::CronJobState};
 
 type JobHandler = Box<dyn FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync>;
 

@@ -1,6 +1,6 @@
 use dirtybase_contract::db::{
-    types::{ArcUlidField, NumberField, StringField, UlidField},
     TableEntityTrait,
+    types::{ArcUlidField, NumberField, StringField, UlidField},
 };
 use dirtybase_db::{
     field_values::FieldValue,

@@ -3,11 +3,11 @@ use dirtybase_db::base::manager::Manager;
 use tokio_util::sync::CancellationToken;
 
 use crate::core::{
-    command::{
-        migrator::{MigrateAction, Migrator},
-        Commands,
-    },
     AppService,
+    command::{
+        Commands,
+        migrator::{MigrateAction, Migrator},
+    },
 };
 
 pub async fn init(context: Context, command: &Commands) -> anyhow::Result<()> {

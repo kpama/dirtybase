@@ -3,8 +3,8 @@ use clap::{ArgMatches, Subcommand};
 use dirtybase_contract::ExtensionMigrations;
 use dirtybase_db::base::manager::Manager;
 
-use crate::core::model::migration::MigrationRepository;
 use crate::core::AppService;
+use crate::core::model::migration::MigrationRepository;
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum MigrateAction {

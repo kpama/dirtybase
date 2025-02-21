@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 
-use dirtybase_db::base::manager::Manager;
 use dirtybase_db::TableEntityTrait;
+use dirtybase_db::base::manager::Manager;
 
 use crate::core::setup_database::setup_migration_table;
 

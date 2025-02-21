@@ -6,9 +6,9 @@ use busstop::{DispatchableQuery, DispatchedQuery, QueryHandler};
 use crate::make_manager;
 
 use super::{
+    PoolManagerSet,
     base::{manager::Manager, schema::DatabaseKind},
     config::ConfigSet,
-    PoolManagerSet,
 };
 
 pub type PoolManagerCommandResult = Result<PoolManagerSet, anyhow::Error>;

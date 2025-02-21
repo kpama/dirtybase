@@ -12,6 +12,7 @@ async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 orsomafo = { workspace = true }
+validator = { workspace = true }
 busstop = { workspace = true }
 busybody = { workspace = true }
 ulid = { workspace = true }
