@@ -258,7 +258,11 @@ impl TableBlueprint {
     /// `id` is a UUID7 field
     pub fn uuid_id_set(&mut self) {
         self.id(Some(INTERNAL_ID_FIELD));
-        self.uuid(ID_FIELD)
+        self.uuid_as_id(None);
+    }
+
+    pub fn uuid_as_id(&mut self, name: Option<&'static str>) {
+        self.uuid(name.unwrap_or(ID_FIELD))
             .set_is_unique(true)
             .set_is_nullable(false);
     }

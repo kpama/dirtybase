@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 dirtybase_db_macro = { workspace = true }
+dirtybase_db = { workspace = true }
 dirtybase_contract = { workspace = true }
 busybody = { workspace = true }
 serde = { workspace = true }

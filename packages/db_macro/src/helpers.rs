@@ -1,6 +1,6 @@
 use crate::{attribute_type::DirtybaseAttributes, relationship::process_relation_attribute};
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote, ToTokens};
+use quote::{ToTokens, format_ident, quote};
 use std::collections::HashMap;
 use syn::{Data, DeriveInput, GenericArgument, Meta, MetaList, PathArguments, TypePath};
 

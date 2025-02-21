@@ -1099,6 +1099,7 @@ dependencies = [
  "bcrypt",
  "busybody",
  "dirtybase_contract",
+ "dirtybase_db",
  "dirtybase_db_macro",
  "futures",
  "log",

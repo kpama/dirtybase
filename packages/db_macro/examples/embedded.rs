@@ -1,4 +1,6 @@
-use dirtybase_db::{connector::sqlite::make_sqlite_in_memory_manager, types::IntoColumnAndValue};
+use dirtybase_db::{
+    TableEntityTrait, connector::sqlite::make_sqlite_in_memory_manager, types::IntoColumnAndValue,
+};
 use dirtybase_db_macro::DirtyTable;
 
 #[tokio::main]
@@ -15,7 +17,10 @@ async fn main() {
     let x = p.into_column_value();
 
     let manager = make_sqlite_in_memory_manager().await;
-    dbg!("{:#?}", x);
+    println!("{:#?}", x);
+    println!("columns: {:#?}", Parent::table_columns());
+
+    // println!(Parent::child_column_name_for_child_field());
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
