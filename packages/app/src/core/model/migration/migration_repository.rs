@@ -68,7 +68,8 @@ impl MigrationRepository {
     }
 
     pub async fn delete_batch(&self, batch: i64) {
-        self.manager()
+        _ = self
+            .manager()
             .delete(MigrationEntity::table_name(), |q| {
                 q.eq(MigrationEntity::col_name_for_batch(), batch);
             })
@@ -85,7 +86,7 @@ impl MigrationRepository {
         kv.insert("name".to_owned(), name.to_string().into());
         kv.insert("batch".to_owned(), batch.to_string().into());
 
-        self.manager.insert(MigrationEntity::table_name(), kv).await;
+        _ = self.manager.insert(MigrationEntity::table_name(), kv).await;
 
         self.find_by_name(name).await
     }

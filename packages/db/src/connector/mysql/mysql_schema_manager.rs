@@ -94,8 +94,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
     async fn drop_table(&self, name: &str) -> bool {
         if self.has_table(name).await {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
-            self.do_execute(query).await;
-            return true;
+            return self.do_execute(query).await.is_ok();
         }
 
         false
@@ -105,7 +104,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         self.do_apply(table).await
     }
 
-    async fn execute(&self, query: QueryBuilder) {
+    async fn execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
         self.do_execute(query).await
     }
 
@@ -208,7 +207,7 @@ impl MySqlSchemaManager {
         }
     }
 
-    async fn do_execute(&self, query: QueryBuilder) {
+    async fn do_execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
         let mut params = MySqlArguments::default();
 
         let mut sql;
@@ -307,9 +306,11 @@ impl MySqlSchemaManager {
         match result {
             Ok(r) => {
                 log::debug!("{} result: {:#?}", query.action(), r);
+                Ok(())
             }
             Err(e) => {
                 log::error!("{} failed: {}", query.action(), e);
+                Err(anyhow!(e))
             }
         }
     }

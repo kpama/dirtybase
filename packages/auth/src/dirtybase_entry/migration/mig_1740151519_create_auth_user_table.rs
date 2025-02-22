@@ -2,13 +2,15 @@ use dirtybase_contract::auth::AuthUserStatus;
 use dirtybase_contract::db::base::manager::Manager;
 use dirtybase_contract::db::migration::Migration;
 
+use crate::AUTH_USER_TABLE;
+
 pub struct Mig1740151519CreateAuthUserTable;
 
 #[dirtybase_contract::async_trait]
 impl Migration for Mig1740151519CreateAuthUserTable {
     async fn up(&self, manager: &Manager) {
         manager
-            .create_table_schema("auth_users", |table| {
+            .create_table_schema(AUTH_USER_TABLE, |table| {
                 table.uuid_id_set();
                 table.string("username").set_is_unique(true);
                 table.string("email_hash").set_is_unique(true);
@@ -28,6 +30,6 @@ impl Migration for Mig1740151519CreateAuthUserTable {
     }
 
     async fn down(&self, manager: &Manager) {
-        manager.drop_table("auth_users").await;
+        manager.drop_table(AUTH_USER_TABLE).await;
     }
 }

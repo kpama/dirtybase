@@ -102,6 +102,12 @@ impl From<Arc<str>> for FieldValue {
     }
 }
 
+impl From<Arc<String>> for FieldValue {
+    fn from(value: Arc<String>) -> Self {
+        Self::String(value.as_ref().to_string())
+    }
+}
+
 impl From<serde_json::Number> for FieldValue {
     fn from(value: serde_json::Number) -> Self {
         if value.is_f64() {

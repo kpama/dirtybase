@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::anyhow;
 use crypto::aead::rand_core::RngCore;
-use dirtybase_helper::hash::sha256;
+use dirtybase_helper::{hash::sha256, time::current_datetime};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -13,7 +13,10 @@ use crate::{
     auth::{auth_user_status::AuthUserStatus, generate_salt},
     db::{
         base::helper::generate_ulid,
-        types::{ArcUuid7, BooleanField, IntegerField, IntoColumnAndValue, OptionalDateTimeField},
+        types::{
+            ArcUuid7, BooleanField, FromColumnAndValue, IntegerField, IntoColumnAndValue,
+            OptionalDateTimeField,
+        },
         ColumnAndValueBuilder,
     },
 };
@@ -91,33 +94,37 @@ impl AuthUser {
         self.username.clone()
     }
 
-    pub fn set_username(&mut self, username: &str) {
-        self.username = username.to_string().into()
+    pub fn username_ref(&self) -> &str {
+        return self.username.as_ref();
     }
 
     pub fn email_hash(&self) -> Arc<String> {
         self.email_hash.clone()
     }
-
-    pub fn set_email(&mut self, email: &str) {
-        self.email_hash = sha256::hash_str(email).into();
+    pub fn email_hash_ref(&self) -> &str {
+        self.email_hash.as_ref()
     }
 
     pub fn reset_password(&self) -> bool {
         self.reset_password
     }
 
-    pub fn set_reset_password(&mut self, reset: bool) {
-        self.reset_password = reset;
-    }
-
-    pub fn set_password(&mut self, password: &str) -> anyhow::Result<()> {
-        self.password = Self::hash_password(password)?.into();
-        Ok(())
-    }
-
     pub fn verify_password(&self, raw_password: &str) -> bool {
         Self::check_password(raw_password, &self.password)
+    }
+
+    pub fn touch_updated_at(&mut self) {
+        self.updated_at = Some(current_datetime());
+    }
+
+    pub fn touch_created_at(&mut self) {
+        self.created_at = Some(current_datetime());
+    }
+    pub fn touch_deleted_at(&mut self) {
+        self.deleted_at = Some(current_datetime());
+    }
+    pub fn clear_deleted_at(&mut self) {
+        self.deleted_at = None;
     }
 
     pub fn generate_token(&self) -> String {
@@ -134,6 +141,53 @@ impl AuthUser {
 
     pub fn rotate_salt(&mut self) {
         self.salt = SaltString::generate(&mut OsRng).to_string().into();
+    }
+
+    pub fn update(&mut self, payload: AuthUserPayload) {
+        let mut cv = payload.into_column_value();
+
+        if let Some(v) = cv.remove("id") {
+            self.id = v.into();
+        }
+
+        if let Some(v) = cv.remove("username") {
+            self.username = v.into();
+        }
+
+        if let Some(v) = cv.remove("email_verified") {
+            self.email_verified = v.into();
+        }
+
+        if let Some(v) = cv.remove("status") {
+            self.status = v.into();
+        }
+
+        if let Some(v) = cv.remove("reset_password") {
+            self.reset_password = v.into();
+        }
+
+        if let Some(v) = cv.remove("is_sys_admin") {
+            self.is_sys_admin = v.into();
+        }
+
+        if let Some(v) = cv.remove("password") {
+            self.password = v.into();
+        }
+
+        if let Some(v) = cv.remove("email_hash") {
+            self.email_hash = v.into();
+        }
+
+        if let Some(v) = cv.remove("salt") {
+            self.salt = v.into();
+        }
+        if let Some(v) = cv.remove("deleted_at") {
+            self.deleted_at = v.into();
+        }
+
+        if !cv.is_empty() {
+            panic!("not handling all of the auth payload when transforming to `auth user`");
+        }
     }
 
     pub(crate) fn hash_password(raw_password: &str) -> anyhow::Result<String> {
@@ -173,6 +227,68 @@ impl Display for AuthUser {
     }
 }
 
+impl FromColumnAndValue for AuthUser {
+    fn from_column_value(mut cv: crate::db::types::ColumnAndValue) -> Self {
+        let mut user = Self::default();
+
+        if let Some(v) = cv.remove("id") {
+            user.id = v.into();
+        }
+
+        if let Some(v) = cv.remove("username") {
+            user.username = v.into();
+        }
+
+        if let Some(v) = cv.remove("email_hash") {
+            user.email_hash = v.into();
+        }
+        if let Some(v) = cv.remove("email_verified") {
+            user.email_verified = v.into();
+        }
+
+        if let Some(v) = cv.remove("status") {
+            user.status = v.into();
+        }
+
+        if let Some(v) = cv.remove("reset_password") {
+            user.reset_password = v.into();
+        }
+
+        if let Some(v) = cv.remove("password") {
+            user.password = v.into();
+        }
+        if let Some(v) = cv.remove("salt") {
+            user.salt = v.into();
+        }
+
+        if let Some(v) = cv.remove("login_attempt") {
+            user.login_attempt = v.into();
+        }
+
+        if let Some(v) = cv.remove("is_sys_admin") {
+            user.is_sys_admin = v.into();
+        }
+        if let Some(v) = cv.remove("last_login_at") {
+            user.last_login_at = v.into();
+        }
+
+        if let Some(v) = cv.remove("created_at") {
+            user.created_at = v.into();
+        }
+        if let Some(v) = cv.remove("updated_at") {
+            user.updated_at = v.into();
+        }
+        if let Some(v) = cv.remove("deleted_at") {
+            user.deleted_at = v.into();
+        }
+
+        if !cv.is_empty() {
+            panic!("not handling all of column value entries");
+        }
+
+        user
+    }
+}
 #[derive(Default, Validate, Debug, serde::Deserialize)]
 pub struct AuthUserPayload {
     #[serde(skip_deserializing)]
@@ -195,6 +311,10 @@ pub struct AuthUserPayload {
     pub password: Option<String>,
     #[serde(default)]
     pub rotate_salt: bool,
+    #[serde(default)]
+    pub soft_delete: bool,
+    #[serde(default)]
+    pub restore: bool,
 }
 
 impl IntoColumnAndValue for AuthUserPayload {
@@ -218,6 +338,22 @@ impl IntoColumnAndValue for AuthUserPayload {
             builder = builder.add_field("salt", generate_salt());
         }
 
+        if self.soft_delete {
+            builder = builder.add_field("deleted_at", current_datetime());
+        }
+
+        if self.restore {
+            builder = builder.add_field("deleted_at", ());
+        }
+
         builder.build()
+    }
+}
+
+impl From<AuthUserPayload> for AuthUser {
+    fn from(payload: AuthUserPayload) -> Self {
+        let mut user = Self::default();
+        user.update(payload);
+        user
     }
 }

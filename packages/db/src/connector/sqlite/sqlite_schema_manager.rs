@@ -80,8 +80,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
     async fn drop_table(&self, name: &str) -> bool {
         if self.has_table(name).await {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
-            self.execute(query).await;
-            return true;
+            return self.execute(query).await.is_ok();
         }
         false
     }
@@ -90,7 +89,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         self.do_apply(table).await
     }
 
-    async fn execute(&self, query: QueryBuilder) {
+    async fn execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
         self.do_execute(query).await
     }
 
@@ -223,7 +222,7 @@ impl SqliteSchemaManager {
         }
     }
 
-    async fn do_execute(&self, query: QueryBuilder) {
+    async fn do_execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
         let mut params = SqliteArguments::default();
 
         let mut sql;
@@ -318,10 +317,11 @@ impl SqliteSchemaManager {
         match result {
             Ok(r) => {
                 log::debug!("{} result: {:#?}", query.action(), r);
+                Ok(())
             }
             Err(e) => {
-                dbg!(&e, &sql);
-                log::debug!("{} failed: {}", query.action(), e);
+                log::error!("{} failed: {}", query.action(), e);
+                Err(anyhow!(e))
             }
         }
     }

@@ -12,6 +12,7 @@ use super::{
     schema::{DatabaseKind, SchemaManagerTrait, SchemaWrapper},
     table::TableBlueprint,
 };
+use anyhow::Result;
 use orsomafo::Dispatchable;
 
 #[derive(Clone)]
@@ -143,27 +144,30 @@ impl Manager {
         self.dispatch_written_event();
     }
 
-    // TODO: Return a result ...
-    pub async fn insert<CV: IntoColumnAndValue>(&self, table_name: &str, record: CV) {
-        self.insert_multi(table_name, vec![record]).await;
+    pub async fn insert<CV: IntoColumnAndValue>(&self, table_name: &str, record: CV) -> Result<()> {
+        self.insert_multi(table_name, vec![record]).await
     }
 
-    pub async fn insert_ref<CV: IntoColumnAndValue>(&self, table_name: &str, record: &CV) {
+    pub async fn insert_ref<CV: IntoColumnAndValue>(
+        &self,
+        table_name: &str,
+        record: &CV,
+    ) -> Result<()> {
         self.insert_multi(table_name, vec![record.into_column_value()])
-            .await;
+            .await
     }
 
     pub async fn insert_multi<I: IntoColumnAndValue, R: IntoIterator<Item = I>>(
         &self,
         table_name: &str,
         rows: R,
-    ) {
+    ) -> Result<()> {
         self.create_insert_query(table_name, rows, false).await
     }
 
     /// Insert a row gracefully ignore insert creates duplicate
-    pub async fn soft_insert<I: IntoColumnAndValue>(&self, table_name: &str, row: I) {
-        self.create_insert_query(table_name, vec![row], true).await;
+    pub async fn soft_insert<I: IntoColumnAndValue>(&self, table_name: &str, row: I) -> Result<()> {
+        self.create_insert_query(table_name, vec![row], true).await
     }
 
     /// Insert rows gracefully ignore insert duplicates
@@ -171,35 +175,43 @@ impl Manager {
         &self,
         table_name: &str,
         rows: R,
-    ) {
+    ) -> Result<()> {
         self.create_insert_query(table_name, rows, true).await
     }
 
-    // TODO: Return a result ...
     pub async fn update<R: IntoColumnAndValue>(
         &self,
         table_name: &str,
         row: R,
         callback: impl FnOnce(&mut QueryBuilder),
-    ) {
+    ) -> Result<()> {
         let mut query = QueryBuilder::new(
             table_name,
             super::query::QueryAction::Update(row.into_column_value()),
         );
         callback(&mut query);
-        self.write_schema_manager().execute(query).await;
+        self.write_schema_manager().execute(query).await?;
         self.dispatch_written_event();
+        Ok(())
     }
 
-    // TODO: Return a resut.....
-    pub async fn delete(&self, table_name: &str, callback: impl FnOnce(&mut QueryBuilder)) {
+    pub async fn delete(
+        &self,
+        table_name: &str,
+        callback: impl FnOnce(&mut QueryBuilder),
+    ) -> Result<()> {
         let mut query = QueryBuilder::new(table_name, super::query::QueryAction::Delete);
         callback(&mut query);
-        self.write_schema_manager().execute(query).await;
+        self.write_schema_manager().execute(query).await?;
         self.dispatch_written_event();
+        Ok(())
     }
 
-    pub async fn transaction(&self, _table_name: &str, _callback: impl FnOnce(&mut QueryBuilder)) {
+    pub async fn transaction(
+        &self,
+        _table_name: &str,
+        _callback: impl FnOnce(&mut QueryBuilder),
+    ) -> Result<()> {
         todo!()
     }
 
@@ -212,21 +224,26 @@ impl Manager {
         self.write_schema_manager().drop_table(table_name).await
     }
 
-    pub async fn rename_table(&self, old: &str, new: &str) {
-        self.write_schema_manager().rename_table(old, new).await;
+    pub async fn rename_table(&self, old: &str, new: &str) -> Result<()> {
+        self.write_schema_manager().rename_table(old, new).await?;
         self.dispatch_written_event();
+        Ok(())
     }
 
-    pub async fn drop_column(&self, table: &str, column: &str) {
-        self.write_schema_manager().drop_column(table, column).await;
+    pub async fn drop_column(&self, table: &str, column: &str) -> Result<()> {
+        self.write_schema_manager()
+            .drop_column(table, column)
+            .await?;
         self.dispatch_written_event();
+        Ok(())
     }
 
-    pub async fn rename_column(&self, table: &str, old: &str, new: &str) {
+    pub async fn rename_column(&self, table: &str, old: &str, new: &str) -> Result<()> {
         self.write_schema_manager()
             .rename_column(table, old, new)
-            .await;
+            .await?;
         self.dispatch_written_event();
+        Ok(())
     }
 
     pub fn read_schema_manager(&self) -> Box<dyn SchemaManagerTrait + Send> {
@@ -242,7 +259,7 @@ impl Manager {
         table_name: &str,
         rows: R,
         do_soft_insert: bool,
-    ) {
+    ) -> Result<()> {
         let query = QueryBuilder::new(
             table_name,
             super::query::QueryAction::Create {
@@ -251,8 +268,9 @@ impl Manager {
             },
         );
 
-        self.write_schema_manager().execute(query).await;
+        self.write_schema_manager().execute(query).await?;
         self.dispatch_written_event();
+        Ok(())
     }
 
     pub async fn raw_insert<V: Into<FieldValue>>(

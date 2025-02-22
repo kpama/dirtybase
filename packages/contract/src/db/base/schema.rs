@@ -6,6 +6,7 @@ use crate::db::{
     field_values::FieldValue,
     types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue},
 };
+use anyhow::Result;
 use async_trait::async_trait;
 use std::{
     fmt::{Debug, Display},
@@ -90,7 +91,7 @@ pub trait SchemaManagerTrait: Send + Sync {
     // commit schema changes
     async fn apply(&self, table: TableBlueprint);
 
-    async fn execute(&self, query_builder: QueryBuilder);
+    async fn execute(&self, query_builder: QueryBuilder) -> Result<()>;
 
     async fn fetch_all(
         &self,
@@ -150,7 +151,7 @@ pub trait SchemaManagerTrait: Send + Sync {
 
     async fn drop_table(&self, name: &str) -> bool;
 
-    async fn rename_table(&self, old: &str, new: &str) {
+    async fn rename_table(&self, old: &str, new: &str) -> Result<()> {
         self.execute(QueryBuilder::new(
             old,
             QueryAction::RenameTable(new.to_string()),
@@ -158,7 +159,7 @@ pub trait SchemaManagerTrait: Send + Sync {
         .await
     }
 
-    async fn drop_column(&self, table: &str, column: &str) {
+    async fn drop_column(&self, table: &str, column: &str) -> Result<()> {
         self.execute(QueryBuilder::new(
             table,
             QueryAction::DropColumn(column.to_string()),
@@ -166,7 +167,7 @@ pub trait SchemaManagerTrait: Send + Sync {
         .await
     }
 
-    async fn rename_column(&self, table: &str, old: &str, new: &str) {
+    async fn rename_column(&self, table: &str, old: &str, new: &str) -> Result<()> {
         self.execute(QueryBuilder::new(
             table,
             QueryAction::RenameColumn {
