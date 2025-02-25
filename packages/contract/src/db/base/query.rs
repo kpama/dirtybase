@@ -17,7 +17,7 @@ use super::{
     table::DELETED_AT_FIELD,
     where_join_operators::WhereJoinOperator,
 };
-use std::{collections::HashMap, fmt::Display, marker::PhantomData};
+use std::{fmt::Display, marker::PhantomData};
 
 #[derive(Debug)]
 pub enum WhereJoin {
@@ -34,7 +34,7 @@ pub enum QueryAction {
         rows: Vec<ColumnAndValue>,
         do_soft_insert: bool,
     },
-    Update(HashMap<String, FieldValue>),
+    Update(ColumnAndValue),
     Delete,
     DropTable,
     RenameTable(String),
