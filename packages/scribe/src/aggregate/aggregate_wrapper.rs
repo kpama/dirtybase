@@ -2,7 +2,8 @@ use crate::DispatchedDomainEvent;
 
 use super::Aggregate;
 
+#[async_trait::async_trait]
 pub trait AggregateTrait {
-    fn apply(&mut self, event: DispatchedDomainEvent);
+    async fn apply(&mut self, event: DispatchedDomainEvent);
     fn aggregate(&self) -> &Aggregate;
 }
