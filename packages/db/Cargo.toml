@@ -6,7 +6,7 @@ edition = { workspace = true }
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dirtybase_contract = { workspace = true }
+dirtybase_contract = { path = "../contract", version = "*"}
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }

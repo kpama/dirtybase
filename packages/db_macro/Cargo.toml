@@ -9,7 +9,7 @@ edition = { workspace = true }
 proc-macro = true
 
 [dependencies]
-dirtybase_contract = { workspace = true }
+dirtybase_contract = { path = "../contract", version = "*" }
 busybody = { workspace = true }
 quote = { workspace = true }
 syn = { workspace = true }
@@ -20,5 +20,5 @@ Inflector = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
+dirtybase_db = { path = "../db", version = "*" }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
-dirtybase_db = { workspace = true }

@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+dirtybase_contract = { path = "../contract", version = "*" }
 cron = { workspace = true }
 chrono = { workspace = true }
 tokio = { workspace = true }
@@ -14,7 +15,6 @@ english-to-cron = { workspace = true }
 orsomafo = { workspace = true }
 serde = { workspace = true }
 tracing = { workspace = true }
-dirtybase_contract = { workspace = true }
 
 [dev-dependencies]
 tracing-subscriber = { workspace = true }

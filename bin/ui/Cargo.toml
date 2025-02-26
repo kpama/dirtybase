@@ -6,8 +6,8 @@ edition = { workspace = true }
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+dirtybase_app = { path = "../../packages/app", version = "*" }
 include_dir = { version = "0.7.3" }
-dirtybase_app = { workspace = true }
 log = { workspace = true }
 pretty_env_logger = { workspace = true }
 busybody = { workspace = true }

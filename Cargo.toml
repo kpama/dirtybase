@@ -115,18 +115,3 @@ dirtybase_3rd_client = { version = "*" }
 dirtybase_session = { version = "*" }
 dirtybase_multitenant = { version = "*" }
 
-[patch.crates-io]
-dirtybase_contract = { path = "./packages/contract" }
-dirtybase_session = { path = "./packages/session" }
-dirtybase_db_macro = { path = "./packages/db_macro" }
-dirtybase_3rd_client = { path = "./packages/3rd_client" }
-dirtybase_app = { path = "./packages/app" }
-dirtybase_helper = { path = "./packages/helper" }
-dirtybase_db = { path = "./packages/db" }
-dirtybase_cache = { path = "./packages/cache" }
-dirtybase_mail = { path = "./packages/mail" }
-dirtybase_user = { path = "./packages/user" }
-dirtybase_auth = { path = "./packages/auth" }
-dirtybase_cron = { path = "./packages/cron" }
-dirtybase_encrypt = { path = "./packages/encrypt" }
-dirtybase_multitenant = { path = "./packages/multitenant" }
