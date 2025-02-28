@@ -32,7 +32,7 @@ impl Default for AuthConfig {
 }
 
 impl AuthConfig {
-    pub fn enable(&self) -> bool {
+    pub fn is_enabled(&self) -> bool {
         self.enable
     }
 
@@ -46,6 +46,10 @@ impl AuthConfig {
 
     pub fn storage(&self) -> AuthUserStorageDriver {
         self.storage.clone()
+    }
+
+    pub fn storage_ref(&self) -> &AuthUserStorageDriver {
+        &self.storage
     }
 
     pub async fn from_dirty_config(base: &DirtyConfig) -> Self {

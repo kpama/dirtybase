@@ -25,6 +25,9 @@ pub struct Manager {
     last_write_ts: Arc<AtomicI64>,
 }
 
+// TODO: add: first or create
+// TODO: add: update or create
+
 impl Manager {
     pub fn new(
         connections: Arc<DatabaseKindPoolCollection>,
@@ -344,7 +347,7 @@ impl Manager {
         self.is_writable
     }
 
-    pub async fn close(self) {
+    pub async fn close(&self) {
         for (_, collection) in self.connections.iter() {
             for (_, pool) in collection {
                 pool.close().await;

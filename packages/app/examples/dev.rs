@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::response::Html;
 use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
@@ -134,7 +136,7 @@ impl ExtensionSetup for App {
                             )
                             .await;
                     }
-                    3000
+                    Arc::new(3000)
                 })
             })
             .await;

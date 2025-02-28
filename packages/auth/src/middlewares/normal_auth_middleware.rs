@@ -1,14 +1,12 @@
 use axum_extra::extract::CookieJar;
 use dirtybase_contract::{
     app::{Context, CtxExt},
-    auth::LoginCredential,
+    auth::{LoginCredential, StorageResolverPipeline},
     http::prelude::*,
     session::Session,
     user::{UserProviderService, model::UserRepositoryTrait},
 };
 use serde::Deserialize;
-
-use crate::AuthManager;
 
 pub async fn handle_normal_auth_middleware(req: Request, next: Next) -> impl IntoResponse {
     let context;
@@ -22,12 +20,10 @@ pub async fn handle_normal_auth_middleware(req: Request, next: Next) -> impl Int
         return return_500_response();
     }
 
-    if let Some(manager) = context.get::<AuthManager>().await {
-        if !manager.is_enable() {
-            tracing::warn!("auth extension is disabled");
-            return next.run(req).await;
-        }
-    }
+    let storage = StorageResolverPipeline::new(context.clone())
+        .get_provider()
+        .await;
+    tracing::error!("do we have auth user storage: {}", storage.is_some());
 
     // 1. Check if there is an active session
     if let Some(s) = context.get::<Session>().await {

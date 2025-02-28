@@ -18,11 +18,10 @@ pub use user_context::*;
 
 use crate::db::types::ArcUuid7;
 
-pub const GLOBAL_CONTEXT_ID: &str = "0194d467-2006-75f0-9fe7-575ec6e00b79";
-
 #[derive(Clone)]
 pub struct Context {
     id: ArcUuid7,
+    is_global: bool,
     sc: Arc<busybody::ServiceContainer>,
 }
 
@@ -30,6 +29,7 @@ impl Default for Context {
     fn default() -> Self {
         let instance = Self {
             id: ArcUuid7::default(),
+            is_global: false,
             sc: Arc::new(busybody::helpers::make_proxy()),
         };
 
@@ -49,7 +49,8 @@ impl Context {
         busybody::helpers::set_type(Arc::new(UserContext::make_global())).await;
 
         Self {
-            id: ArcUuid7::try_from(GLOBAL_CONTEXT_ID).unwrap(),
+            id: ArcUuid7::default(),
+            is_global: true,
             sc: Arc::new(busybody::helpers::make_proxy()),
         }
     }
@@ -71,7 +72,7 @@ impl Context {
     }
 
     pub fn is_global(&self) -> bool {
-        self.id.to_string() == GLOBAL_CONTEXT_ID
+        self.is_global
     }
 
     pub async fn configure<C>(&self, key: &str) -> Option<C>

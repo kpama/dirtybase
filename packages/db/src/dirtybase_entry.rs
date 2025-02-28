@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use dirtybase_contract::{
     ExtensionSetup,
     app::{Context, ContextManager},
@@ -79,7 +81,7 @@ impl Extension {
                                     manager.db_kind().as_str(),
                                     seconds
                                 );
-                                Box::pin(async {
+                                Box::pin(async move {
                                     manager.close().await;
                                 })
                             },

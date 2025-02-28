@@ -1,45 +1,44 @@
 mod migration;
-use std::sync::Arc;
 
 use dirtybase_contract::{
     ExtensionMigrations, ExtensionSetup, config::DirtyConfig, http::WebMiddlewareManager,
 };
 
 use crate::{
-    AuthConfig, AuthManager,
-    middlewares::{
-        handle_basic_auth_middleware, handle_jwt_auth_middleware, handle_normal_auth_middleware,
-    },
+    AuthConfig, middlewares::setup_middlewares, register_storages, setup_context_managers,
 };
 
 #[derive(Debug, Default)]
-pub struct Extension;
+pub struct Extension {
+    is_enable: bool,
+}
 
 #[dirtybase_contract::async_trait]
 impl ExtensionSetup for Extension {
     async fn setup(&mut self, base_config: &DirtyConfig) {
-        let config = AuthConfig::from_dirty_config(base_config).await;
+        let global_config = AuthConfig::from_dirty_config(base_config).await;
+        self.is_enable = global_config.is_enabled();
 
-        busybody::helpers::register_type(Arc::new(AuthManager::new(config))).await;
+        self.global_container().set_type(global_config).await;
+
+        if !self.is_enable {
+            tracing::debug!("Auth is not enabled");
+            return;
+        }
+
+        register_storages().await;
+        setup_context_managers().await;
     }
 
     fn migrations(&self) -> Option<ExtensionMigrations> {
         migration::setup()
     }
 
-    fn register_web_middlewares(&self, mut manager: WebMiddlewareManager) -> WebMiddlewareManager {
-        manager
-            .register("auth::basic", |router| {
-                router.middleware(handle_basic_auth_middleware)
-            })
-            .register("auth::jwt", |router| {
-                router.middleware(handle_jwt_auth_middleware)
-            })
-            .register("auth::normal", |router| {
-                println!("registering the normal auth middleware");
-                router.middleware(handle_normal_auth_middleware)
-            });
+    fn register_web_middlewares(&self, manager: WebMiddlewareManager) -> WebMiddlewareManager {
+        if !self.is_enable {
+            return manager;
+        }
 
-        manager
+        setup_middlewares(manager)
     }
 }

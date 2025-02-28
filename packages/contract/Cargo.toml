@@ -15,6 +15,7 @@ orsomafo = { workspace = true }
 validator = { workspace = true }
 busstop = { workspace = true }
 busybody = { workspace = true }
+fama = { workspace = true }
 ulid = { workspace = true }
 simple-middleware = { workspace = true }
 anyhow = { workspace = true }
@@ -29,7 +30,6 @@ axum-extra = { workspace = true }
 named_routes_axum = { workspace = true }
 futures = { workspace = true }
 futures-util = { workspace = true }
-# sha2 = { workspace = true }
 Inflector = { workspace = true }
 hex = { workspace = true }
 tracing = { workspace = true }

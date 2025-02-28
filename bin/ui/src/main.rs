@@ -1,4 +1,4 @@
-use busybody::{Service, helpers::provide};
+use busybody::{Service, helpers::get_type};
 use dirtybase_app::{
     axum::{
         extract::Path,
@@ -14,7 +14,7 @@ static UI_EMBEDDED_ASSETS: Dir = include_dir!("bin/ui/embedded/");
 
 async fn home() -> impl IntoResponse {
     if let Some(file) = UI_EMBEDDED_ASSETS.get_file("index.html") {
-        let config = provide::<Service<App>>().await.config();
+        let config = get_type::<Service<App>>().await.unwrap().config();
         Response::builder()
             .body(
                 file.contents_utf8()

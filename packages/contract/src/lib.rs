@@ -17,6 +17,7 @@ pub use busybody;
 pub use extension::ExtensionManager;
 pub use extension::ExtensionMigrations;
 pub use extension::ExtensionSetup;
+pub use fama;
 pub use serde;
 pub use serde_json;
 
@@ -46,4 +47,8 @@ pub mod prelude {
     pub use super::http::prelude::*;
 
     pub use async_trait::async_trait;
+    pub use busybody;
+    pub use busybody::Resolver;
+    pub use fama::PipelineBuilderTrait;
+    pub use fama::PipelineTrait;
 }
