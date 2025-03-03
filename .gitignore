@@ -8,3 +8,4 @@ data/*
 packages/todo
 private_packages/*
 !private_packages/README.md
+.DS_Store
