@@ -6,7 +6,7 @@ use crate::{
         connection::ConnectionPoolTrait,
         schema::{ClientType, DatabaseKind},
     },
-    config::{BaseConfig, ConfigSet},
+    config::{ConfigSet, ConnectionConfig},
 };
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -71,7 +71,7 @@ impl ConnectionPoolTrait for SqlitePoolManager {
     }
 }
 
-pub async fn db_connect(config: &BaseConfig) -> anyhow::Result<Pool<Sqlite>> {
+pub async fn db_connect(config: &ConnectionConfig) -> anyhow::Result<Pool<Sqlite>> {
     let mut option = SqliteConnectOptions::from_str(&config.url)
         .unwrap()
         .foreign_keys(true)

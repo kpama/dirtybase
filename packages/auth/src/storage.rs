@@ -21,7 +21,7 @@ pub(crate) async fn register_storages() {
                            c: PipeContent| {
                         let config = c.container().get_type::<AuthConfig>().await.unwrap();
 
-                        tracing::warn!(" we got call to when resolving auth user stoarge");
+                        tracing::warn!(" we got call to when resolving auth user storage");
                         tracing::warn!("storage already exist?: {}", p.has_provider());
                         tracing::warn!("context id: {}", p.context_ref().id_ref());
                         tracing::warn!("config: {:#?}", &config);

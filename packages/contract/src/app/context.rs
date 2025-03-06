@@ -79,8 +79,8 @@ impl Context {
     where
         C: DeserializeOwned + Sync + Send + 'static,
     {
-        if let Some(tenant) = self.get::<TenantContext>().await {
-            if let Some(config) = tenant.config_to::<C>(key) {
+        if let Some(app) = self.get::<AppContext>().await {
+            if let Some(config) = app.config_to::<C>(key) {
                 return Some(config);
             }
         }

@@ -14,7 +14,7 @@ use dirtybase_contract::db::{
     },
 };
 use dirtybase_db::{
-    config::BaseConfig,
+    config::ConnectionConfig,
     connector::{
         mysql::make_mysql_manager, postgres::make_postgres_manager, sqlite::make_sqlite_manager,
     },
@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
     pretty_env_logger::init();
 
     // sqlite
-    let base_config = BaseConfig {
+    let base_config = ConnectionConfig {
         url: "packages/app/examples/work/data/database.db".to_string(),
         ..Default::default()
     };

@@ -1,5 +1,6 @@
 use super::AuthUserStorageProvider;
 
+#[derive(Clone)]
 pub struct AuthService(AuthUserStorageProvider);
 
 impl AuthService {

@@ -6,7 +6,7 @@ use crate::connector::sqlite::sqlite_schema_manager::SQLITE_KIND;
 
 use super::base::schema::{ClientType, DatabaseKind};
 
-pub type ConfigSet = HashMap<ClientType, BaseConfig>;
+pub type ConfigSet = HashMap<ClientType, ConnectionConfig>;
 pub type ConfigCollection = HashMap<String, ConfigSet>;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -21,7 +21,7 @@ pub struct DbConfig {
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-pub struct BaseConfig {
+pub struct ConnectionConfig {
     #[serde(default)]
     pub enable: bool,
     pub kind: DatabaseKind,
@@ -38,7 +38,7 @@ pub struct BaseConfig {
 
 /// By default the data is sqlite and
 /// the database is in memory
-impl Default for BaseConfig {
+impl Default for ConnectionConfig {
     fn default() -> Self {
         Self {
             enable: true,
@@ -55,7 +55,7 @@ impl Default for BaseConfig {
     }
 }
 
-impl BaseConfig {
+impl ConnectionConfig {
     pub fn kind(&self) -> DatabaseKind {
         self.kind.clone()
     }

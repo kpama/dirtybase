@@ -8,27 +8,27 @@ use tokio::{sync::RwLock, time::sleep};
 
 type ContextCollection<T> = Arc<RwLock<HashMap<String, ContextWrapper<T>>>>;
 
-struct ContextWrapper<T: Sync + Sync + 'static> {
-    context: Arc<T>,
+struct ContextWrapper<T: Clone + Sync + Sync + 'static> {
+    context: T,
     last_ts: AtomicI64,
     idle_timeout: i64, // In seconds
-    idle_callback: Box<dyn FnMut(Arc<T>) -> BoxFuture<'static, ()> + Send + Sync>,
+    idle_callback: Box<dyn FnMut(T) -> BoxFuture<'static, ()> + Send + Sync>,
 }
 
-impl<T: Sync + Sync + 'static> ContextWrapper<T> {
+impl<T: Clone + Sync + Sync + 'static> ContextWrapper<T> {
     pub fn new<F>(context: T, idle_timeout: i64, idle_callback: F) -> Self
     where
-        F: FnMut(Arc<T>) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        F: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         Self {
-            context: Arc::new(context),
+            context,
             last_ts: AtomicI64::new(std::time::UNIX_EPOCH.elapsed().unwrap().as_secs() as i64),
             idle_timeout,
             idle_callback: Box::new(idle_callback),
         }
     }
 
-    fn context(&self) -> Arc<T> {
+    fn context(&self) -> T {
         self.last_ts.swap(
             std::time::UNIX_EPOCH.elapsed().unwrap().as_secs() as i64,
             std::sync::atomic::Ordering::Relaxed,
@@ -41,21 +41,20 @@ impl<T: Sync + Sync + 'static> ContextWrapper<T> {
 
         current_ts - self.last_ts.load(std::sync::atomic::Ordering::Relaxed) > self.idle_timeout
             && self.idle_timeout > 0
-            && Arc::strong_count(&self.context) == 1
     }
 }
 
-pub struct ContextManager<T: Send + Sync + 'static> {
+pub struct ContextManager<T: Clone + Send + Sync + 'static> {
     collection: ContextCollection<T>,
 }
 
-impl<T: Send + Sync + 'static> Default for ContextManager<T> {
+impl<T: Clone + Send + Sync + 'static> Default for ContextManager<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: Send + Sync + 'static> ContextManager<T> {
+impl<T: Clone + Send + Sync + 'static> ContextManager<T> {
     pub fn new() -> Self {
         Self {
             collection: ContextCollection::default(),
@@ -73,10 +72,10 @@ impl<T: Send + Sync + 'static> ContextManager<T> {
         idle_timeout: i64, // in seconds
         mut else_callback: F,
         idle_callback: C,
-    ) -> Arc<T>
+    ) -> T
     where
         F: FnMut() -> BoxFuture<'static, T>,
-        C: FnMut(Arc<T>) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        C: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         let mut lock = self.collection.write().await;
 
@@ -142,7 +141,7 @@ mod test {
             )
             .await;
 
-        assert_eq!(*counter, 100);
+        assert_eq!(counter, 100);
     }
 
     #[tokio::test]

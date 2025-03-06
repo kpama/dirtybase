@@ -5,6 +5,7 @@ use std::{env, sync::Arc};
 
 use axum::Router;
 use axum_extra::extract::CookieJar;
+use busybody::ServiceContainer;
 use dirtybase_contract::{
     ExtensionManager,
     app::Context,

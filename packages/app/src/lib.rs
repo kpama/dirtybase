@@ -156,11 +156,11 @@ pub(crate) async fn shutdown_signal() {
 
     tokio::select! {
         _ = ctrl_c => {
-            let app_service: AppService = busybody::helpers::provide().await;
+            let app_service: AppService = busybody::helpers::get_type().await.expect("could not get app service");
             app_service.shutdown().await;
         },
         _ = terminate => {
-            let app_service: AppService = busybody::helpers::provide().await;
+            let app_service: AppService = busybody::helpers::get_type().await.expect("could not get app service");
             app_service.shutdown().await;
         },
     }

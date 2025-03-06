@@ -10,7 +10,7 @@ use crate::{
         connection::ConnectionPoolTrait,
         schema::{ClientType, DatabaseKind, SchemaManagerTrait},
     },
-    config::{BaseConfig, ConfigSet},
+    config::{ConfigSet, ConnectionConfig},
 };
 
 use super::postgres_schema_manager::{POSTGRES_KIND, PostgresSchemaManager};
@@ -66,7 +66,7 @@ impl ConnectionPoolTrait for PostgresPoolManager {
     }
 }
 
-pub async fn db_connect(config: &BaseConfig) -> anyhow::Result<Pool<Postgres>> {
+pub async fn db_connect(config: &ConnectionConfig) -> anyhow::Result<Pool<Postgres>> {
     match PgPoolOptions::new()
         .max_connections(config.max)
         .connect(&config.url)

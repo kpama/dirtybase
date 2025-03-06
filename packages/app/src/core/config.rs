@@ -161,6 +161,7 @@ impl Config {
     pub fn web_enable_general_routes(&self) -> bool {
         self.entry.web_enable_general_routes
     }
+
     pub fn web_enable_dev_routes(&self) -> bool {
         self.entry.web_enable_dev_routes
     }

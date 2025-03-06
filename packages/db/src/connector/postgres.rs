@@ -6,7 +6,7 @@ use postgres_schema_manager::POSTGRES_KIND;
 use crate::{
     ConnectionPoolRegisterTrait,
     base::{manager::Manager, schema::DatabaseKind},
-    config::{BaseConfig, ConfigSet},
+    config::{ConfigSet, ConnectionConfig},
     make_manager,
 };
 
@@ -14,7 +14,7 @@ pub mod postgres_pool_manager;
 pub mod postgres_schema_manager;
 
 /// Create a new manager using the configuration provided
-pub async fn make_postgres_manager(base: BaseConfig) -> Manager {
+pub async fn make_postgres_manager(base: ConnectionConfig) -> Manager {
     let mut config_set = ConfigSet::new();
     let kind: DatabaseKind = POSTGRES_KIND.into();
     config_set.insert(base.client_type, base);

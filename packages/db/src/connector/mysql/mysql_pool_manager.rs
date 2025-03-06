@@ -9,7 +9,7 @@ use crate::{
         connection::ConnectionPoolTrait,
         schema::{ClientType, DatabaseKind, SchemaManagerTrait},
     },
-    config::{BaseConfig, ConfigSet},
+    config::{ConfigSet, ConnectionConfig},
 };
 
 use super::mysql_schema_manager::{MYSQL_KIND, MySqlSchemaManager};
@@ -65,7 +65,7 @@ impl ConnectionPoolTrait for MysqlPoolManager {
     }
 }
 
-pub async fn db_connect(config: &BaseConfig) -> anyhow::Result<Pool<MySql>> {
+pub async fn db_connect(config: &ConnectionConfig) -> anyhow::Result<Pool<MySql>> {
     match MySqlPoolOptions::new()
         .max_connections(config.max)
         .connect(&config.url)

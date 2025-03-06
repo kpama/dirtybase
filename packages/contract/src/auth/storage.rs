@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::{ops::Deref, sync::Arc};
 
 use crate::db::types::ArcUuid7;
 
@@ -13,21 +13,22 @@ pub trait AuthUserStorage: Send + Sync {
     async fn delete(&self, id: ArcUuid7) -> Result<(), anyhow::Error>;
 }
 
-pub struct AuthUserStorageProvider(Box<dyn AuthUserStorage>);
+#[derive(Clone)]
+pub struct AuthUserStorageProvider(Arc<Box<dyn AuthUserStorage>>);
 
 impl AuthUserStorageProvider {
     pub fn new<T>(inner: T) -> Self
     where
         T: AuthUserStorage + 'static,
     {
-        Self(Box::new(inner))
+        Self(Arc::new(Box::new(inner)))
     }
 
     pub fn from<S>(storage: S) -> Self
     where
         S: AuthUserStorage + 'static,
     {
-        Self(Box::new(storage))
+        Self(Arc::new(Box::new(storage)))
     }
 }
 

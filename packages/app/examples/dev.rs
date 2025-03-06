@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::response::Html;
 use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
@@ -59,7 +57,8 @@ impl ExtensionSetup for App {
     ) -> RouterManager {
         manager.general(None, |router| {
             let router = router.get("/", index_request_handler, "index-page");
-            middleware_manager.apply(router, ["auth::normal"])
+            //middleware_manager.apply(router, ["auth::normal"])
+            router
         });
 
         // login
@@ -136,7 +135,7 @@ impl ExtensionSetup for App {
                             )
                             .await;
                     }
-                    Arc::new(3000)
+                    3000
                 })
             })
             .await;
@@ -164,7 +163,8 @@ async fn index_request_handler(
         .add("index handler", true.to_string());
     let has_company = manager.has_table("companies").await;
 
-    log::info!("in index page");
+    log::error!("Current Database kind: {}", manager.db_kind());
+
     if let Some(user) = context.user().await {
         println!("current user: {:?}", user);
         println!("current user is the global user? {}", user.is_global());
