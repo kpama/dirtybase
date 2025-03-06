@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use dirtybase_contract::{
     ExtensionSetup,
     app::{Context, ContextManager},
@@ -8,7 +6,10 @@ use dirtybase_contract::{
     prelude::{ArgMatches, Request, axum_extra::extract::CookieJar},
 };
 
-use crate::{config::ConnectionConfig, connection_bus::MakePoolManagerCommand};
+use crate::{
+    config::{ConnectionConfig, DbConfig},
+    connection_bus::MakePoolManagerCommand,
+};
 
 #[derive(Debug, Default)]
 pub struct Extension;
@@ -41,22 +42,19 @@ impl ExtensionSetup for Extension {
 impl Extension {
     async fn setup_context_connection(&self, context: &Context) {
         let app = context.app().await;
+
         let tenant = context.tenant().await;
         let ctx = context.clone();
-        let dirty_config = ctx.container().get::<DirtyConfig>().await.unwrap();
+        let dirty_config = ctx.get::<DirtyConfig>().await.unwrap();
 
         context
             .container()
             .resolver(move |container| {
-                let app = app.clone().unwrap_or_default();
+                let ctx = ctx.clone();
                 let tenant = tenant.clone().unwrap_or_default();
                 let dirty_config = dirty_config.clone();
 
                 Box::pin(async move {
-                    let config = app
-                        .clone()
-                        .config_to::<ConnectionConfig>("database")
-                        .unwrap_or_else(|| ConnectionConfig::default());
                     let id = tenant.id().to_string();
                     let seconds = if tenant.is_global() { 15 } else { 5 };
 
@@ -69,7 +67,14 @@ impl Extension {
                             seconds,
                             || {
                                 let dirty_config = dirty_config.clone();
+                                let ctx = ctx.clone();
                                 Box::pin(async move {
+                                    let config_result =
+                                        ctx.get_config::<DbConfig>("database").await;
+                                    tracing::error!(
+                                        "::::: context db config  :::: {:?}",
+                                        config_result
+                                    );
                                     MakePoolManagerCommand::make(
                                         ConnectionConfig::set_from(&dirty_config).await,
                                     )

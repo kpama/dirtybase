@@ -183,6 +183,12 @@ impl DirtyConfig {
     }
 }
 
+#[async_trait::async_trait]
+pub trait TrayFromDirtyConfig {
+    type Returns;
+    async fn from_config(config: &DirtyConfig) -> Result<Self::Returns, anyhow::Error>;
+}
+
 /// A deserializer function that will return Vev<String>
 ///
 /// Use this function on an attribute where the raw value is a string

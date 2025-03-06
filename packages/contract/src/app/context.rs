@@ -1,5 +1,6 @@
 use std::{ops::Deref, sync::Arc};
 
+use anyhow::anyhow;
 use axum::{extract::FromRequestParts, http::request::Parts};
 use serde::de::DeserializeOwned;
 
@@ -9,7 +10,10 @@ mod context_metadata;
 mod role_context;
 mod user_context;
 
-use crate::multitenant::*;
+use crate::{
+    config::{DirtyConfig, TrayFromDirtyConfig},
+    multitenant::*,
+};
 pub use app_context::*;
 pub use context_manager::*;
 pub use context_metadata::*;
@@ -75,16 +79,22 @@ impl Context {
         self.is_global
     }
 
-    pub async fn configure<C>(&self, key: &str) -> Option<C>
+    pub async fn get_config<C>(&self, key: &str) -> Result<C, anyhow::Error>
     where
-        C: DeserializeOwned + Sync + Send + 'static,
+        C: DeserializeOwned + TrayFromDirtyConfig<Returns = C>,
     {
         if let Some(app) = self.get::<AppContext>().await {
-            if let Some(config) = app.config_to::<C>(key) {
-                return Some(config);
+            if let Some(str_value) = app.config_string(key).await {
+                return serde_json::from_str(&str_value).map_err(|e| anyhow!("{}", e));
             }
         }
-        None
+
+        if let Some(dirty_config) = self.get::<DirtyConfig>().await {
+            return C::from_config(&dirty_config).await;
+        }
+        // return C::try_from(self.get::<App>())
+
+        Err(anyhow!("could not resolve configuration"))
     }
 
     pub fn container(&self) -> Arc<busybody::ServiceContainer> {

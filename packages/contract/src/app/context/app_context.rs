@@ -29,19 +29,7 @@ impl AppContext {
     }
 
     /// Returns a JSON representation of the configuration
-    pub fn config_string(&self, key: &str) -> Option<String> {
+    pub async fn config_string(&self, key: &str) -> Option<String> {
         self.config_store.get(key).cloned()
-    }
-
-    /// Tries to parse the JSON to the specified type
-    pub fn config_to<T>(&self, key: &str) -> Option<T>
-    where
-        T: DeserializeOwned,
-    {
-        if let Some(s) = self.config_string(key) {
-            serde_json::from_str(&s).ok()
-        } else {
-            None
-        }
     }
 }

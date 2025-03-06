@@ -38,7 +38,7 @@ pub async fn setup() -> anyhow::Result<AppService> {
 /// ```
 ///
 pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
-    busybody::helpers::register_service(config.dirty_config().clone()).await;
+    busybody::helpers::set_type(config.dirty_config().clone()).await;
     busybody::helpers::set_type(Context::make_global().await).await;
 
     let app = core::App::new(config).await?;

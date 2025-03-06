@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
-use dirtybase_contract::config::DirtyConfig;
+use anyhow::anyhow;
+use dirtybase_contract::config::{DirtyConfig, TrayFromDirtyConfig};
 
 use crate::connector::sqlite::sqlite_schema_manager::SQLITE_KIND;
 
@@ -17,7 +18,21 @@ pub struct DbConfig {
     idle_timeout: i64,
     #[serde(default)]
     default: Arc<String>,
+    #[serde(alias = "clients")]
     collection: Arc<ConfigCollection>,
+}
+
+#[async_trait::async_trait]
+impl TrayFromDirtyConfig for DbConfig {
+    type Returns = Self;
+    async fn from_config(config: &DirtyConfig) -> Result<Self::Returns, anyhow::Error> {
+        config
+            .optional_file("database.toml", Some("DTY_DB"))
+            .build()
+            .await?
+            .try_deserialize::<Self>()
+            .map_err(|e| anyhow!(e.to_string()))
+    }
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
