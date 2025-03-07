@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use anyhow::anyhow;
-use dirtybase_contract::config::{DirtyConfig, TrayFromDirtyConfig};
+use dirtybase_contract::config::{DirtyConfig, TryFromDirtyConfig};
 
 use crate::connector::sqlite::sqlite_schema_manager::SQLITE_KIND;
 
@@ -23,7 +23,7 @@ pub struct DbConfig {
 }
 
 #[async_trait::async_trait]
-impl TrayFromDirtyConfig for DbConfig {
+impl TryFromDirtyConfig for DbConfig {
     type Returns = Self;
     async fn from_config(config: &DirtyConfig) -> Result<Self::Returns, anyhow::Error> {
         config
@@ -32,6 +32,28 @@ impl TrayFromDirtyConfig for DbConfig {
             .await?
             .try_deserialize::<Self>()
             .map_err(|e| anyhow!(e.to_string()))
+    }
+}
+
+impl DbConfig {
+    pub fn is_enable(&self) -> bool {
+        self.enable
+    }
+
+    pub fn idle_timeout(&self) -> i64 {
+        self.idle_timeout
+    }
+
+    pub fn default_set(&self) -> Option<ConfigSet> {
+        if self.default.is_empty() || !self.enable {
+            return None;
+        }
+
+        self.collection.get(self.default.as_str()).cloned()
+    }
+
+    pub fn get_set(&self, name: &str) -> Option<ConfigSet> {
+        self.collection.get(name).cloned()
     }
 }
 

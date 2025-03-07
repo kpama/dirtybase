@@ -26,6 +26,14 @@ pub const CONFIG_DIR_KEY: &str = "DTY_APP_CONFIG_DIR";
 pub(crate) const LOADED_FLAG_KEY: &str = "DTY_ENV_LOADED";
 pub(crate) const LOADED_FLAG_VALUE: &str = "DTY_YES";
 
+pub type ConfigResult<C> = Result<C, anyhow::Error>;
+
+#[async_trait::async_trait]
+pub trait TryFromDirtyConfig {
+    type Returns;
+    async fn from_config(config: &DirtyConfig) -> ConfigResult<Self::Returns>;
+}
+
 fn load_dot_env<P: AsRef<Path>>(mut dir: Option<P>) {
     if env::var(LOADED_FLAG_KEY).is_ok() {
         return;

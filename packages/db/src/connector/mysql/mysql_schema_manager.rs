@@ -760,12 +760,9 @@ impl MySqlSchemaManager {
                     }
                 }
                 "VARBINARY" | "BINARY" | "BLOB" | "BYTEA" => {
-                    let v = row.try_get::<String, &str>(col.name());
+                    let v = row.try_get::<Vec<u8>, &str>(col.name());
                     if let Ok(v) = v {
-                        this_row.insert(
-                            col.name().to_string(),
-                            FieldValue::Binary(hex::decode(v).unwrap()),
-                        );
+                        this_row.insert(col.name().to_string(), FieldValue::Binary(v));
                     } else {
                         this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
                     }

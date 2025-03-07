@@ -16,6 +16,7 @@ pub use config::Config;
 pub use config::ConfigBuilder;
 
 use dirtybase_contract::ExtensionManager;
+use dirtybase_contract::app::Context;
 use dirtybase_contract::config::DirtyConfig;
 
 pub type AppService = busybody::Service<App>;
@@ -48,19 +49,22 @@ impl App {
         self
     }
 
+    pub async fn global_context(&self) -> Context {
+        busybody::helpers::get_type::<Context>().await.unwrap()
+    }
     pub async fn init(&self) {
         if self.is_ready.get().is_some() {
             return;
         }
 
-        ExtensionManager::setup_boot_run(self.config().dirty_config()).await;
+        ExtensionManager::setup_boot_run(&self.global_context().await).await;
 
         _ = self.is_ready.set(true)
     }
 
     pub async fn shutdown(&self) {
         log::info!("Shutting down");
-        ExtensionManager::shutdown().await;
+        ExtensionManager::shutdown(&self.global_context().await).await;
     }
 
     pub async fn extensions(
@@ -115,6 +119,8 @@ where
     type Rejection = Infallible;
 
     async fn from_request_parts(_parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        Ok(AppServiceExtractor(busybody::helpers::provide().await))
+        Ok(AppServiceExtractor(
+            busybody::helpers::get_service().await.unwrap(),
+        ))
     }
 }

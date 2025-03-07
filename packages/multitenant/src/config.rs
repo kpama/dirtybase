@@ -1,4 +1,9 @@
-use dirtybase_contract::{config::DirtyConfig, multitenant::TenantIdLocation, serde};
+use dirtybase_contract::{
+    async_trait,
+    config::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
+    multitenant::TenantIdLocation,
+    serde,
+};
 
 use crate::storage::TenantStorageDriver;
 
@@ -19,6 +24,23 @@ impl Default for MultitenantConfig {
     }
 }
 
+#[async_trait]
+impl TryFromDirtyConfig for MultitenantConfig {
+    type Returns = Self;
+    async fn from_config(config: &DirtyConfig) -> ConfigResult<Self::Returns> {
+        match config
+            .optional_file("multitenant.toml", Some("DTY_MULTITENANT"))
+            .build()
+            .await
+            .expect("could not configure multitenant configuration")
+            .try_deserialize()
+        {
+            Ok(config) => Ok(config),
+            Err(_) => Ok(Self::default()),
+        }
+    }
+}
+
 impl MultitenantConfig {
     pub fn is_enabled(&self) -> bool {
         self.enable
@@ -32,15 +54,6 @@ impl MultitenantConfig {
     }
 
     pub async fn from_dirty_config(base: &DirtyConfig) -> Self {
-        match base
-            .optional_file("multitenant.toml", Some("DTY_MULTITENANT"))
-            .build()
-            .await
-            .expect("could not configure multitenant configuration")
-            .try_deserialize()
-        {
-            Ok(config) => config,
-            Err(_) => Self::default(),
-        }
+        Self::from_config(base).await.unwrap()
     }
 }

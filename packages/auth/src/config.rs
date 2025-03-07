@@ -1,21 +1,14 @@
 use std::sync::Arc;
 
-use dirtybase_contract::config::DirtyConfig;
+use busybody::async_trait;
+use dirtybase_contract::config::{ConfigResult, DirtyConfig, TryFromDirtyConfig};
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub enum AuthUserStorageDriver {
-    #[serde(alias = "custom")]
-    Custom(String),
-    #[serde(alias = "database")]
-    Database,
-    #[serde(alias = "memory")]
-    Memory,
-}
-
+pub const MEMORY_STORAGE: &'static str = "memory";
+pub const DATABASE_STORAGE: &'static str = "database";
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct AuthConfig {
     enable: bool,
-    storage: AuthUserStorageDriver,
+    storage: Arc<String>,
     signin_form_route: Arc<String>,
     auth_route: Arc<String>,
 }
@@ -24,10 +17,26 @@ impl Default for AuthConfig {
     fn default() -> Self {
         Self {
             enable: false,
-            storage: AuthUserStorageDriver::Memory,
+            storage: "memory".to_string().into(),
             signin_form_route: Arc::new(String::from("auth:signin-form")),
             auth_route: Arc::new(String::from("auth::do-signin")),
         }
+    }
+}
+
+#[async_trait]
+impl TryFromDirtyConfig for AuthConfig {
+    type Returns = Self;
+
+    async fn from_config(base: &DirtyConfig) -> ConfigResult<Self::Returns> {
+        let mut config = base
+            .optional_file("auth.toml", Some("DTY_AUTH"))
+            .build()
+            .await?
+            .try_deserialize::<Self>()?;
+        config.storage = config.storage.to_lowercase().trim().to_string().into();
+
+        Ok(config)
     }
 }
 
@@ -44,20 +53,15 @@ impl AuthConfig {
         self.auth_route.clone()
     }
 
-    pub fn storage(&self) -> AuthUserStorageDriver {
+    pub fn storage(&self) -> Arc<String> {
         self.storage.clone()
     }
 
-    pub fn storage_ref(&self) -> &AuthUserStorageDriver {
+    pub fn storage_ref(&self) -> &Arc<String> {
         &self.storage
     }
 
-    pub async fn from_dirty_config(base: &DirtyConfig) -> Self {
-        base.optional_file("auth.toml", Some("DTY_AUTH"))
-            .build()
-            .await
-            .unwrap()
-            .try_deserialize()
-            .unwrap()
+    pub async fn from_dirty_config(config: &DirtyConfig) -> Self {
+        Self::from_config(config).await.unwrap()
     }
 }

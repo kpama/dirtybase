@@ -1,3 +1,4 @@
+enable = true
 default = "sqlite"
 # drop the connection after an hour of idleness
 # value is in seconds

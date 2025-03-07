@@ -11,7 +11,7 @@ impl Migration for Mig1740151519CreateAuthUserTable {
     async fn up(&self, manager: &Manager) {
         manager
             .create_table_schema(AUTH_USER_TABLE, |table| {
-                table.uuid_id_set();
+                table.uuid_as_id(None);
                 table.string("username").set_is_unique(true);
                 table.string("email_hash").set_is_unique(true);
                 table.string("password").set_is_nullable(true);

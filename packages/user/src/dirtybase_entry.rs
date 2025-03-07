@@ -11,11 +11,11 @@ pub struct Extension;
 
 #[dirtybase_contract::async_trait]
 impl dirtybase_contract::ExtensionSetup for Extension {
-    async fn setup(&mut self, _config: &DirtyConfig) {
+    async fn setup(&mut self, _context: &Context) {
         event_handler::setup().await;
     }
 
-    fn migrations(&self) -> Option<dirtybase_contract::ExtensionMigrations> {
+    fn migrations(&self, _context: &Context) -> Option<dirtybase_contract::ExtensionMigrations> {
         migration::setup()
     }
 }

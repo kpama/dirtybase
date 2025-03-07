@@ -22,11 +22,14 @@ pub struct Extension {
 
 #[async_trait]
 impl ExtensionSetup for Extension {
-    async fn setup(&mut self, app_config: &DirtyConfig) {
+    async fn setup(&mut self, global_context: &Context) {
         println!(">> session setup method called");
         // // TODO: Source the storage type for a config
 
-        let config = SessionConfig::from_dirty_config(app_config).await;
+        let config = global_context
+            .get_config::<SessionConfig>("dirtybase::session")
+            .await
+            .unwrap();
         println!("{:?}", &config);
 
         self.setup_session_storage(&config).await;

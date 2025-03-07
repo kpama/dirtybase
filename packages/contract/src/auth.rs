@@ -14,4 +14,6 @@ pub use storage_resolver_pipeline::*;
 
 pub mod prelude {
     pub use super::model::*;
+    pub use super::storage::*;
+    pub use super::storage_resolver_pipeline::*;
 }

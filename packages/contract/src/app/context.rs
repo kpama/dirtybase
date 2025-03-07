@@ -11,7 +11,7 @@ mod role_context;
 mod user_context;
 
 use crate::{
-    config::{DirtyConfig, TrayFromDirtyConfig},
+    config::{DirtyConfig, TryFromDirtyConfig},
     multitenant::*,
 };
 pub use app_context::*;
@@ -55,7 +55,7 @@ impl Context {
         Self {
             id: ArcUuid7::default(),
             is_global: true,
-            sc: Arc::new(busybody::helpers::make_proxy()),
+            sc: busybody::helpers::service_container(),
         }
     }
 
@@ -81,7 +81,7 @@ impl Context {
 
     pub async fn get_config<C>(&self, key: &str) -> Result<C, anyhow::Error>
     where
-        C: DeserializeOwned + TrayFromDirtyConfig<Returns = C>,
+        C: DeserializeOwned + TryFromDirtyConfig<Returns = C>,
     {
         if let Some(app) = self.get::<AppContext>().await {
             if let Some(str_value) = app.config_string(key).await {
@@ -92,7 +92,6 @@ impl Context {
         if let Some(dirty_config) = self.get::<DirtyConfig>().await {
             return C::from_config(&dirty_config).await;
         }
-        // return C::try_from(self.get::<App>())
 
         Err(anyhow!("could not resolve configuration"))
     }
@@ -127,7 +126,13 @@ impl Context {
     }
 
     pub async fn get<T: Clone + Send + Sync + 'static>(&self) -> Option<T> {
-        self.sc.get_type().await
+        let result = self.sc.get_type().await;
+
+        if result.is_some() {
+            return result;
+        }
+
+        ContextResourceManager::try_get(&self).await
     }
 
     pub fn id(&self) -> ArcUuid7 {

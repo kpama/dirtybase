@@ -37,10 +37,7 @@ impl StorageResolverPipeline {
     }
 
     pub async fn get_provider(self) -> Option<Arc<AuthUserStorageProvider>> {
-        let x = self.pipeline().await.deliver().await;
-
-        x.provider
-        // .expect("no auth user storage provider found")
+        self.pipeline().await.deliver().await.provider
     }
 }
 

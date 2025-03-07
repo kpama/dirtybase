@@ -100,18 +100,3 @@ tracing = { version = "0.1", features = ["std"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tempfile = { version = "3.17" }
 uuid25 = { version = "0.3", features = ["gen", "serde", "uuid"] }
-dirtybase_app = { version = "*" }
-dirtybase_contract = { version = "*" }
-dirtybase_db = { version = "*" }
-dirtybase_encrypt = { version = "*" }
-dirtybase_helper = { version = "*" }
-dirtybase_cache = { version = "*" }
-dirtybase_mail = { version = "*" }
-dirtybase_db_macro = { version = "*" }
-dirtybase_user = { version = "*" }
-dirtybase_auth = { version = "*" }
-dirtybase_cron = { version = "*" }
-dirtybase_3rd_client = { version = "*" }
-dirtybase_session = { version = "*" }
-dirtybase_multitenant = { version = "*" }
-

@@ -27,26 +27,26 @@ pub trait ExtensionSetup: Send + Sync {
     /// Setup the extension
     ///
     /// First method that will be called.
-    async fn setup(&mut self, config: &DirtyConfig) {
+    async fn setup(&mut self, global_context: &Context) {
         // --
     }
 
     /// boot
     ///
     /// Second method that will be called.
-    async fn boot(&mut self) {
+    async fn boot(&mut self, global_context: &Context) {
         // --
     }
 
     /// Run
     ///
     /// Third method that will be called.
-    async fn run(&mut self) {
+    async fn run(&mut self, global_context: &Context) {
         // --
     }
 
     /// Shutdown when the application is shutting down
-    async fn shutdown(&mut self) {
+    async fn shutdown(&mut self, global_context: &Context) {
         log::debug!("shutting down extension: {}", self.id());
         // logic to run when the server is shutting down
     }
@@ -96,7 +96,7 @@ pub trait ExtensionSetup: Send + Sync {
         manager
     }
 
-    fn migrations(&self) -> Option<ExtensionMigrations> {
+    fn migrations(&self, context: &Context) -> Option<ExtensionMigrations> {
         None
     }
 
@@ -138,14 +138,14 @@ impl ExtensionManager {
         }
     }
 
-    pub async fn setup_boot_run(config: &DirtyConfig) {
+    pub async fn setup_boot_run(context: &Context) {
         Self::init();
         // setup
         if let Some(list) = EXTENSION_COLLECTION.get() {
             let mut w_lock = list.write().await;
             for ext in w_lock.iter_mut() {
                 tracing::trace!("setup: {}", ext.id());
-                ext.setup(config).await;
+                ext.setup(context).await;
             }
         }
 
@@ -153,7 +153,7 @@ impl ExtensionManager {
         if let Some(list) = EXTENSION_COLLECTION.get() {
             let mut w_lock = list.write().await;
             for ext in w_lock.iter_mut() {
-                ext.boot().await;
+                ext.boot(context).await;
             }
         }
 
@@ -161,16 +161,16 @@ impl ExtensionManager {
         if let Some(list) = EXTENSION_COLLECTION.get() {
             let mut w_lock = list.write().await;
             for ext in w_lock.iter_mut() {
-                ext.run().await;
+                ext.run(context).await;
             }
         }
     }
 
-    pub async fn shutdown() {
+    pub async fn shutdown(context: &Context) {
         if let Some(list) = EXTENSION_COLLECTION.get() {
             let mut w_lock = list.write().await;
             for ext in w_lock.iter_mut() {
-                ext.shutdown().await;
+                ext.shutdown(context).await;
             }
         }
     }

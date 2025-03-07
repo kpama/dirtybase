@@ -2,9 +2,8 @@ use axum::response::Html;
 use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
 use dirtybase_contract::app::RequestContext;
-use dirtybase_contract::config::DirtyConfig;
 use dirtybase_contract::{
-    app::{Context, ContextManager, CtxExt},
+    app::{Context, ContextResourceManager, CtxExt},
     prelude::*,
     session::Session,
 };
@@ -15,7 +14,7 @@ use tracing::Level;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_max_level(Level::TRACE)
+        .with_max_level(Level::DEBUG)
         .try_init()
         .expect("could not setup tracing");
 
@@ -23,7 +22,6 @@ async fn main() {
 
     app_service.register(App).await;
 
-    // _ = dirtybase_app::run_command(["serve"]).await;
     _ = run(app_service).await;
 }
 
@@ -32,8 +30,18 @@ struct App;
 
 #[async_trait::async_trait]
 impl ExtensionSetup for App {
-    async fn setup(&mut self, _config: &DirtyConfig) {
-        busybody::helpers::register_service(ContextManager::<i32>::new()).await;
+    async fn setup(&mut self, _context: &Context) {
+        busybody::helpers::register_service(ContextResourceManager::<i32>::new(
+            |_| Box::pin(async { ("global points".to_string(), 50) }),
+            |_| {
+                Box::pin(async {
+                    tracing::error!(">>>>>>>>>>>>>>>>>>>>>>>  making new i32");
+                    40000
+                })
+            },
+            |_| Box::pin(async {}),
+        ))
+        .await;
     }
 
     fn register_cli_middlewares(&self, mut manager: CliMiddlewareManager) -> CliMiddlewareManager {
@@ -57,8 +65,7 @@ impl ExtensionSetup for App {
     ) -> RouterManager {
         manager.general(None, |router| {
             let router = router.get("/", index_request_handler, "index-page");
-            //middleware_manager.apply(router, ["auth::normal"])
-            router
+            middleware_manager.apply(router, ["auth::normal"])
         });
 
         // login
@@ -113,32 +120,6 @@ impl ExtensionSetup for App {
         let tenant = context.tenant().await.unwrap();
 
         let id = tenant.id().to_string();
-        context
-            .container()
-            .resolver(move |c| {
-                let id2 = id.clone();
-                Box::pin(async move {
-                    if let Some(m) = c.get::<ContextManager<i32>>().await {
-                        println!(">>>>>>>>>>>>>>>>>>>> tenant id is <<<<< : {:?}", &id2);
-                        // println!("still has context: {}", m.has_context(&id).await);
-                        return m
-                            .context(
-                                &id2,
-                                30,
-                                || {
-                                    Box::pin(async {
-                                        tracing::error!(">>>>>>>>>>>>>>>>>>>>>>>  making new i32");
-                                        40000
-                                    })
-                                },
-                                |_| Box::pin(async {}),
-                            )
-                            .await;
-                    }
-                    3000
-                })
-            })
-            .await;
         req
     }
 }

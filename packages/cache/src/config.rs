@@ -1,4 +1,4 @@
-use dirtybase_contract::config::DirtyConfig;
+use dirtybase_contract::config::{ConfigResult, DirtyConfig, TryFromDirtyConfig};
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct CacheConfig {
@@ -7,19 +7,7 @@ pub struct CacheConfig {
 
 impl CacheConfig {
     pub async fn new(config: &DirtyConfig) -> Self {
-        let mut con: Self = config
-            .optional_file("cache.toml", Some("DTY_CACHE"))
-            .build()
-            .await
-            .unwrap()
-            .try_deserialize()
-            .unwrap();
-
-        if con.cache_store.is_none() {
-            con.cache_store = Some("memory".to_string());
-        }
-
-        con
+        Self::from_config(config).await.unwrap()
     }
 
     pub fn cache_store(&self) -> &String {
@@ -27,9 +15,20 @@ impl CacheConfig {
     }
 }
 
-// #[busybody::async_trait]
-// impl busybody::Injectable for CacheConfig {
-//     async fn inject(_container: &busybody::ServiceContainer) -> Self {
-//         Self::default()
-//     }
-// }
+#[async_trait::async_trait]
+impl TryFromDirtyConfig for CacheConfig {
+    type Returns = Self;
+    async fn from_config(config: &DirtyConfig) -> ConfigResult<Self::Returns> {
+        let mut con: Self = config
+            .optional_file("cache.toml", Some("DTY_CACHE"))
+            .build()
+            .await?
+            .try_deserialize()?;
+
+        if con.cache_store.is_none() {
+            con.cache_store = Some("memory".to_string());
+        }
+
+        Ok(con)
+    }
+}

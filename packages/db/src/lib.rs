@@ -2,6 +2,7 @@ pub mod config;
 pub mod connection_bus;
 pub mod connector;
 mod dirtybase_entry;
+mod resource_manager;
 
 use std::{collections::HashMap, sync::Arc};
 

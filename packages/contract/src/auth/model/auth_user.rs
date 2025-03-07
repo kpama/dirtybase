@@ -283,7 +283,7 @@ impl FromColumnAndValue for AuthUser {
         }
 
         if !cv.is_empty() {
-            panic!("not handling all of column value entries");
+            tracing::error!("not handling all of column value entries: {:?}", cv);
         }
 
         user

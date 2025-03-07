@@ -27,8 +27,9 @@ const LOG_TARGET: &str = "migrator";
 impl Migrator {
     pub async fn from_app(app: &AppService) -> Self {
         let mut migrations = Vec::new();
+        let context = app.global_context().await;
         app.extensions(|ext| {
-            if let Some(m) = ext.migrations() {
+            if let Some(m) = ext.migrations(&context) {
                 migrations.extend(m);
             }
         })

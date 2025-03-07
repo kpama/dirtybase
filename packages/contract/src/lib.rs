@@ -38,6 +38,7 @@ macro_rules! register_migration {
 }
 
 pub mod prelude {
+    pub use super::app::*;
     pub use super::auth::prelude::*;
     pub use super::cli::prelude::*;
     pub use super::config::*;

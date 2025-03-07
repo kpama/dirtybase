@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use base64ct::Encoding;
+use dirtybase_contract::config::ConfigResult;
 use dirtybase_contract::config::DirtyConfig;
+use dirtybase_contract::config::TryFromDirtyConfig;
 use dirtybase_contract::config::field_to_vec_u8;
 use dirtybase_contract::config::vec_u8_to_field;
 use serde::Deserializer;
@@ -80,6 +82,12 @@ pub struct Config {
 impl Config {
     pub async fn new(config: Option<DirtyConfig>) -> Self {
         let config = config.unwrap_or_default();
+        Self::try_from_config(&config)
+            .await
+            .expect("Could not find application configuration. You need at least a .env file")
+    }
+
+    pub async fn try_from_config(config: &DirtyConfig) -> ConfigResult<Self> {
         let builder = config
             .load_optional_file_fn("app.toml", Some("DTY_APP"), |ev| {
                 // env entries where the values are Vec<T>
@@ -92,15 +100,12 @@ impl Config {
                     .with_list_parse_key("web_middleware.dev_route")
             })
             .build()
-            .await
-            .unwrap();
+            .await?;
 
-        Self {
-            dirty_config: config,
-            entry: builder
-                .try_deserialize()
-                .expect("Could not find application configuration. You need at least a .env file"),
-        }
+        Ok(Self {
+            dirty_config: config.clone(),
+            entry: builder.try_deserialize()?,
+        })
     }
 
     pub fn middleware(&self) -> &MiddlewareConfig {
@@ -343,4 +348,13 @@ where
             })
             .collect::<Vec<Vec<u8>>>(),
     )))
+}
+
+#[async_trait::async_trait]
+impl TryFromDirtyConfig for Config {
+    type Returns = Self;
+
+    async fn from_config(config: &DirtyConfig) -> ConfigResult<Self::Returns> {
+        Self::try_from_config(config).await
+    }
 }
