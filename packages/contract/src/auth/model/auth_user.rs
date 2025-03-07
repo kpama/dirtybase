@@ -282,6 +282,9 @@ impl FromColumnAndValue for AuthUser {
             user.deleted_at = v.into();
         }
 
+        // remove database specific field
+        cv.remove("internal_id");
+
         if !cv.is_empty() {
             tracing::error!("not handling all of column value entries: {:?}", cv);
         }
