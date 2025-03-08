@@ -12,7 +12,7 @@ impl Migration for Mig0000000000CreateUserTable {
     async fn up(&self, manager: &Manager) {
         manager
             .create_table_schema(UserEntity::table_name(), |table| {
-                table.uuid_id_set();
+                table.uuid_as_id(None);
                 table.string("username").set_is_unique(true);
                 table.string("email").set_is_unique(true);
                 table.string("password").set_is_nullable(true);
