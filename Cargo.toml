@@ -100,3 +100,4 @@ tracing = { version = "0.1", features = ["std"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tempfile = { version = "3.17" }
 uuid25 = { version = "0.3", features = ["gen", "serde", "uuid"] }
+snowflaker = { version = "0.3", features = ["dynamic"] }
