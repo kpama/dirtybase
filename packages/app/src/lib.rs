@@ -51,8 +51,6 @@ pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
     app.register(dirtybase_entry::Extension::default()).await;
     app.register(dirtybase_cache::Extension::default()).await;
     app.register(dirtybase_cron::Extension::default()).await;
-    #[cfg(feature = "user")]
-    app.register(dirtybase_user::Extension::default()).await;
     #[cfg(feature = "multitenant")]
     app.register(dirtybase_multitenant::Extension::default())
         .await;

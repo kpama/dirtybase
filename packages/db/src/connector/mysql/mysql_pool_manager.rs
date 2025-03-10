@@ -78,7 +78,7 @@ pub async fn db_connect(config: &ConnectionConfig) -> anyhow::Result<Pool<MySql>
         }
         Err(e) => {
             // TODO: Use i18n
-            log::error!("could not connect to mysql/mariadb: {:?}", e);
+            log::error!("could not connect to mysql: {:?}", e);
             Err(anyhow!(e))
         }
     }

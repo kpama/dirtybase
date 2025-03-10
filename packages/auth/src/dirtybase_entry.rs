@@ -22,15 +22,16 @@ impl ExtensionSetup for Extension {
             .get_config::<AuthConfig>("dirtybase::auth")
             .await
             .unwrap();
+
         self.is_enable = global_config.is_enabled();
         self.is_db_storage = global_config.storage_ref().as_str() == DATABASE_STORAGE;
-
-        self.global_container().set_type(global_config).await;
 
         if !self.is_enable {
             tracing::debug!("Auth is not enabled");
             return;
         }
+
+        self.global_container().set_type(global_config).await;
 
         register_storages().await;
         setup_context_managers().await;
@@ -40,7 +41,8 @@ impl ExtensionSetup for Extension {
         if !self.is_enable {
             return None;
         }
-        if (self.is_db_storage) {
+
+        if self.is_db_storage {
             return migration::setup();
         }
 

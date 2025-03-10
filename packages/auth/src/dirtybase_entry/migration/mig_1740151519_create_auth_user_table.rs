@@ -11,9 +11,8 @@ impl Migration for Mig1740151519CreateAuthUserTable {
     async fn up(&self, manager: &Manager) {
         manager
             .create_table_schema(AUTH_USER_TABLE, |table| {
-                table.uuid_id_set();
+                table.uuid_as_id(None);
                 table.string("username").set_is_unique(true);
-                table.string("email_hash").set_is_unique(true);
                 table.string("password").set_is_nullable(true);
                 table.boolean("reset_password").set_default_from(false); // A flag that indicates a password change is required
                 table
@@ -23,6 +22,7 @@ impl Migration for Mig1740151519CreateAuthUserTable {
                 table.sized_string("salt", 100).set_is_nullable(false);
                 table.number("login_attempt").set_default_from(0);
                 table.datetime("last_login_at").set_is_nullable(true);
+                table.string("email_hash").set_is_unique(true);
                 table.timestamps();
                 table.soft_deletable();
             })

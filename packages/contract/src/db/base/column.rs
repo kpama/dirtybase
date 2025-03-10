@@ -7,6 +7,7 @@ pub struct ColumnBlueprint {
     pub column_type: ColumnType,
     pub default: Option<ColumnDefault>,
     pub is_unique: bool,
+    pub is_primary: bool,
     pub is_nullable: Option<bool>,
     pub relationship: Option<ForeignKey>,
     pub check: Option<String>,
@@ -75,11 +76,12 @@ pub enum ColumnType {
 impl ColumnBlueprint {
     pub fn new(name: &str, column_type: ColumnType) -> Self {
         Self {
-            name: name.to_owned(),
+            name: name.to_string(),
             column_type,
             default: None,
             after: None,
             is_unique: false,
+            is_primary: false,
             is_nullable: Some(false),
             relationship: None,
             check: None,
@@ -157,6 +159,11 @@ impl ColumnBlueprint {
 
     pub fn set_is_unique(&mut self, unique: bool) -> &mut Self {
         self.is_unique = unique;
+        self
+    }
+
+    pub fn set_as_primary(&mut self) -> &mut Self {
+        self.is_primary = true;
         self
     }
 

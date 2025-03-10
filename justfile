@@ -5,8 +5,6 @@ generate-end:
   echo "\n\n" >> .env.defaults
   cat packages/auth/config_template/auth.env.defaults >>  .env.defaults
   echo "\n\n" >> .env.defaults
-  cat packages/auth/config_template/auth.env.defaults >>  .env.defaults
-  echo "\n\n" >> .env.defaults
   cat packages/cache/config_template/cache.env.defaults >>  .env.defaults
   echo "\n\n" >> .env.defaults
   cat packages/cron/config_template/cron.env.defaults >>  .env.defaults

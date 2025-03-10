@@ -357,6 +357,47 @@ impl MySqlSchemaManager {
             query = format!("{} ({})", query, columns.join(","));
         }
 
+        // create/update indexes
+        if let Some(indexes) = &table.indexes {
+            for entry in indexes {
+                let sql;
+                match entry {
+                    IndexType::Index(index) | IndexType::Primary(index) => {
+                        if index.delete_index() {
+                            sql = format!("DROP INDEX {}", index.name());
+                        } else {
+                            sql = format!(
+                                "CREATE INDEX IF NOT EXISTS {} ON {} ({})",
+                                index.name(),
+                                &table.name,
+                                index.concat_columns()
+                            );
+                        }
+                    }
+                    IndexType::Unique(index) => {
+                        if index.delete_index() {
+                            sql = format!("DROP INDEX {}", index.name());
+                        } else {
+                            sql = format!(
+                                "ADD UNIQUE INDEX {} ({})",
+                                index.name(),
+                                index.concat_columns()
+                            );
+                        }
+                    }
+                }
+
+                let index_result = sqlx::query(&sql).execute(self.db_pool.as_ref()).await;
+                match index_result {
+                    Ok(_) => log::info!("table index created"),
+                    Err(e) => {
+                        log::error!("mysql: {}", &sql);
+                        log::error!("could not create table index: {}", e.to_string())
+                    }
+                }
+            }
+        }
+
         query = format!("{} ENGINE='InnoDB';", query);
 
         let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
@@ -381,48 +422,6 @@ impl MySqlSchemaManager {
                     name = table.name.clone();
                 }
                 log::error!("Could not {} table {}: {}", action, name, e);
-            }
-        }
-
-        // create/update indexes
-        if let Some(indexes) = &table.indexes {
-            for entry in indexes {
-                let sql;
-                match entry {
-                    IndexType::Index(index) | IndexType::Primary(index) => {
-                        if index.delete_index() {
-                            sql = format!("DROP INDEX IF EXISTS {}.{}", &table.name, index.name());
-                        } else {
-                            sql = format!(
-                                "CREATE INDEX IF NOT EXISTS {} ON {} ({})",
-                                index.name(),
-                                &table.name,
-                                index.concat_columns()
-                            );
-                        }
-                    }
-                    IndexType::Unique(index) => {
-                        if index.delete_index() {
-                            sql = format!("DROP INDEX IF EXISTS {}.{}", &table.name, index.name());
-                        } else {
-                            sql = format!(
-                                "CREATE UNIQUE INDEX IF NOT EXISTS {} ON {} ({})",
-                                index.name(),
-                                &table.name,
-                                index.concat_columns()
-                            );
-                        }
-                    }
-                }
-
-                let index_result = sqlx::query(&sql).execute(self.db_pool.as_ref()).await;
-                match index_result {
-                    Ok(_) => log::info!("table index created"),
-                    Err(e) => {
-                        log::error!("mysql: {}", &sql);
-                        log::error!("could not create table index: {}", e.to_string())
-                    }
-                }
             }
         }
     }
@@ -451,7 +450,7 @@ impl MySqlSchemaManager {
                 the_type.push_str(q.as_str());
             }
             ColumnType::Text => the_type.push_str("longtext"),
-            ColumnType::Uuid => the_type.push_str("uuid"),
+            ColumnType::Uuid => the_type.push_str("BINARY(16)"),
             ColumnType::Enum(ref opt) => {
                 let c = format!(
                     "ENUM({})",
@@ -478,6 +477,11 @@ impl MySqlSchemaManager {
             the_type.push_str(" UNIQUE");
         }
 
+        // primary key
+        if column.is_primary {
+            the_type.push_str(" PRIMARY KEY");
+        }
+
         // column default
         if let Some(default) = &column.default {
             the_type.push_str(" DEFAULT ");
@@ -487,7 +491,7 @@ impl MySqlSchemaManager {
                 ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
                 ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
-                ColumnDefault::Uuid => the_type.push_str("SYS_GUID()"),
+                ColumnDefault::Uuid => (), // Seems to be not suportted the_type.push_str("SYS_GUID()"),
                 ColumnDefault::Ulid => (),
                 ColumnDefault::UpdatedAt => {
                     the_type.push_str("current_timestamp() ON UPDATE CURRENT_TIMESTAMP")

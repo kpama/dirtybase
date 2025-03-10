@@ -478,6 +478,11 @@ impl MariadbSchemaManager {
             the_type.push_str(" UNIQUE");
         }
 
+        // primary key
+        if column.is_primary {
+            the_type.push_str(" PRIMARY KEY");
+        }
+
         // column default
         if let Some(default) = &column.default {
             the_type.push_str(" DEFAULT ");
@@ -487,7 +492,7 @@ impl MariadbSchemaManager {
                 ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
                 ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
-                ColumnDefault::Uuid => the_type.push_str("SYS_GUID()"),
+                ColumnDefault::Uuid => the_type.push_str("UUID_v7()"),
                 ColumnDefault::Ulid => (),
                 ColumnDefault::UpdatedAt => {
                     the_type.push_str("current_timestamp() ON UPDATE CURRENT_TIMESTAMP")

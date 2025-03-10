@@ -12,7 +12,6 @@ dirtybase_mail = { path = "../mail", version = "*"}
 dirtybase_contract = { path = "../contract", version = "*" }
 dirtybase_helper = { path = "../helper", version = "*" }
 dirtybase_db_macro = { path = "../db_macro", version = "*" }
-dirtybase_user = { path = "../user", version = "*",  optional = true }
 dirtybase_cron = { path = "../cron", version = "*" }
 dirtybase_auth = { path = "../auth", version = "*", optional = true }
 dirtybase_session = { path="../session", version = "*"}
@@ -60,7 +59,6 @@ tracing-subscriber = { workspace = true }
 [features]
 csrf = []
 db = []
-user = ["db"]
-auth = ["user", "db", "csrf"]
+auth = ["db", "csrf"]
 multitenant = ["dep:dirtybase_multitenant"]
-full = ["auth", "user", "db", "multitenant"]
+full = ["auth", "db", "multitenant"]

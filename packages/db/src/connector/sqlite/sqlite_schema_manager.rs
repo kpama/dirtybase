@@ -505,6 +505,11 @@ impl SqliteSchemaManager {
             the_type.push_str(" UNIQUE");
         }
 
+        // primary key
+        if column.is_primary {
+            foreign.push(format!("PRIMARY KEY('{}')", &column.name));
+        }
+
         // column default
         if let Some(default) = &column.default {
             the_type.push_str(" DEFAULT ");
@@ -514,7 +519,7 @@ impl SqliteSchemaManager {
                 ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
                 ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
-                ColumnDefault::Uuid => the_type.push_str("GUID()"),
+                ColumnDefault::Uuid => (), // the_type.push_str("GUID()"),
                 ColumnDefault::Ulid => (),
                 ColumnDefault::UpdatedAt => the_type.push_str("CURRENT_TIMESTAMP"),
                 ColumnDefault::Zero => the_type.push('0'),

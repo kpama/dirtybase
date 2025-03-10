@@ -54,9 +54,6 @@ struct ConfigEntry {
     key: Arc<Vec<u8>>,
     #[serde(deserialize_with = "field_previous_keys")]
     previous_keys: Option<Arc<Vec<Vec<u8>>>>,
-    sys_admin_username: String,
-    sys_admin_email: String,
-    sys_admin_password: String,
     web_port: u16,
     web_ip_address: String,
     web_enable_api_routes: bool,
@@ -132,17 +129,6 @@ impl Config {
         &self.entry.previous_keys
     }
 
-    pub fn admin_username(&self) -> &str {
-        self.entry.sys_admin_username.as_str()
-    }
-
-    pub fn admin_email(&self) -> &str {
-        self.entry.sys_admin_email.as_str()
-    }
-    pub fn admin_password(&self) -> &str {
-        self.entry.sys_admin_password.as_str()
-    }
-
     pub fn web_port(&self) -> u16 {
         self.entry.web_port
     }
@@ -205,9 +191,6 @@ pub struct ConfigBuilder {
     app_name: Option<String>,
     key: Option<Arc<Vec<u8>>>,
     previous_keys: Option<Arc<Vec<Vec<u8>>>>,
-    admin_username: Option<String>,
-    admin_email: Option<String>,
-    admin_password: Option<String>,
     web_port: Option<u16>,
     web_ip_address: Option<String>,
     web_enable_api_routes: Option<bool>,
@@ -243,20 +226,6 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn admin_username(mut self, admin_user: &str) -> Self {
-        self.admin_username = Some(admin_user.into());
-        self
-    }
-
-    pub fn admin_email(mut self, admin_email: &str) -> Self {
-        self.admin_email = Some(admin_email.into());
-        self
-    }
-
-    pub fn admin_password(mut self, admin_password: &str) -> Self {
-        self.admin_password = Some(admin_password.to_string());
-        self
-    }
     pub fn web_ip_address(mut self, address: &str) -> Self {
         self.web_ip_address = Some(address.into());
         self
@@ -296,13 +265,6 @@ impl ConfigBuilder {
 
         config.entry.name = self.app_name.unwrap_or(config.entry.name);
         config.entry.key = self.key.unwrap_or(config.entry.key);
-        config.entry.sys_admin_username = self
-            .admin_username
-            .unwrap_or(config.entry.sys_admin_username);
-        config.entry.sys_admin_email = self.admin_email.unwrap_or(config.entry.sys_admin_email);
-        config.entry.sys_admin_password = self
-            .admin_password
-            .unwrap_or(config.entry.sys_admin_password);
         config.entry.web_ip_address = self.web_ip_address.unwrap_or(config.entry.web_ip_address);
         config.entry.web_port = self.web_port.unwrap_or(config.entry.web_port);
         config.entry.web_enable_api_routes = self

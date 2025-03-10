@@ -61,12 +61,6 @@ impl MakePoolManagerCommand {
             Err(anyhow!("error"))
         }
     }
-
-    pub fn make_sync(config_set: ConfigSet) -> Result<Manager, anyhow::Error> {
-        tokio::task::block_in_place(move || {
-            tokio::runtime::Handle::current().block_on(async move { Self::make(config_set).await })
-        })
-    }
 }
 
 #[busstop::async_trait]

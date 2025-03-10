@@ -913,7 +913,6 @@ dependencies = [
  "dirtybase_mail",
  "dirtybase_multitenant",
  "dirtybase_session",
- "dirtybase_user",
  "dotenvy",
  "fama",
  "futures",
