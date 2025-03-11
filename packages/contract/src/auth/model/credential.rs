@@ -80,10 +80,13 @@ mod test {
 
     #[test]
     pub fn test_builder() {
-        let cred = LoginCredentialBuilder::new()
+        let mut builder = LoginCredentialBuilder::new();
+
+        builder
             .username("foo".to_string())
-            .password("john-doe!!".to_string())
-            .build();
+            .password("john-doe!!".to_string());
+
+        let cred = builder.build();
 
         assert_eq!(cred.password(), "john-doe!!");
         assert_eq!(cred.username.is_some(), true);
