@@ -39,21 +39,21 @@ impl LoginCredentialBuilder {
         }
     }
 
-    pub fn username(mut self, username: String) -> Self {
+    pub fn username(&mut self, username: String) -> &mut Self {
         self.credential.username = Some(username);
         self
     }
 
-    pub fn email(mut self, email: String) -> Self {
+    pub fn email(&mut self, email: String) -> &mut Self {
         self.credential.email = Some(email);
         self
     }
 
-    pub fn password(mut self, password: String) -> Self {
+    pub fn password(&mut self, password: String) -> &mut Self {
         self.credential.password = password;
         self
     }
-    pub fn remember_me(mut self, remember_me: bool) -> Self {
+    pub fn remember_me(&mut self, remember_me: bool) -> &mut Self {
         self.credential.remember_me = remember_me;
         self
     }
