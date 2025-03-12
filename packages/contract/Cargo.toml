@@ -25,6 +25,7 @@ crypto = { workspace = true }
 argon2 = { workspace = true }
 tokio = { workspace = true, features = ["sync"] }
 tokio-stream = { workspace = true }
+tokio-util = { workspace = true, features = ["full"] }
 axum = { workspace = true }
 axum-extra = { workspace = true }
 named_routes_axum = { workspace = true }

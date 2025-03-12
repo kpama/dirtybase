@@ -1,7 +1,6 @@
 use dirtybase_contract::{
     app::Context,
     cli::CliCommandManager,
-    config::DirtyConfig,
     http::{RouterManager, WebMiddlewareManager},
 };
 
@@ -16,7 +15,7 @@ impl dirtybase_contract::ExtensionSetup for Extension {
         // event_handler::setup().await;
     }
 
-    fn migrations(&self, context: &Context) -> Option<dirtybase_contract::ExtensionMigrations> {
+    fn migrations(&self, _context: &Context) -> Option<dirtybase_contract::ExtensionMigrations> {
         None
     }
 

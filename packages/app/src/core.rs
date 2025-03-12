@@ -1,13 +1,10 @@
 mod config;
 
-pub(crate) mod setup_database;
-
 pub mod command;
 pub mod model;
 
 use std::convert::Infallible;
 use std::ops::Deref;
-use std::sync::OnceLock;
 
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
@@ -23,13 +20,11 @@ pub type AppService = busybody::Service<App>;
 
 pub struct App {
     config: Config,
-    is_ready: OnceLock<bool>,
 }
 
 impl App {
     pub async fn new(config: &Config) -> anyhow::Result<AppService> {
         let instance = Self {
-            is_ready: OnceLock::new(),
             config: config.clone(),
         };
 
@@ -50,16 +45,10 @@ impl App {
     }
 
     pub async fn global_context(&self) -> Context {
-        busybody::helpers::get_type::<Context>().await.unwrap()
+        dirtybase_contract::app::global_context().await
     }
     pub async fn init(&self) {
-        if self.is_ready.get().is_some() {
-            return;
-        }
-
         ExtensionManager::setup_boot_run(&self.global_context().await).await;
-
-        _ = self.is_ready.set(true)
     }
 
     pub async fn shutdown(&self) {

@@ -19,6 +19,7 @@ use crate::{
 
 pub(crate) static EXTENSION_COLLECTION: OnceLock<RwLock<Vec<Box<dyn ExtensionSetup>>>> =
     OnceLock::new();
+pub(crate) static EXTENSIONS_READY: OnceLock<bool> = OnceLock::new();
 
 pub type ExtensionMigrations = Vec<Box<dyn super::db::migration::Migration>>;
 
@@ -139,6 +140,10 @@ impl ExtensionManager {
     }
 
     pub async fn setup_boot_run(context: &Context) {
+        if EXTENSIONS_READY.get().is_some() {
+            return;
+        }
+
         Self::init();
         // setup
         if let Some(list) = EXTENSION_COLLECTION.get() {
@@ -164,6 +169,8 @@ impl ExtensionManager {
                 ext.run(context).await;
             }
         }
+
+        _ = EXTENSIONS_READY.set(true);
     }
 
     pub async fn shutdown(context: &Context) {

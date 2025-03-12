@@ -1,34 +1,32 @@
-use clap::{ArgMatches, Subcommand};
+// use clap::{ArgMatches, Subcommand};
 
-use dirtybase_contract::ExtensionMigrations;
-use dirtybase_db::base::manager::Manager;
+use dirtybase_contract::{
+    ExtensionManager, ExtensionMigrations, cli::clap, db::base::manager::Manager,
+    prelude::ArgMatches,
+};
 
-use crate::core::AppService;
-use crate::core::model::migration::MigrationRepository;
+use crate::model::migration::MigrationRepository;
 
-#[derive(Subcommand, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub enum MigrateAction {
-    /// Migrate up
-    Up,
-    /// Migrate down
-    Down,
-    /// Resets and migrate all up
-    Refresh,
-    /// Migrate all down
-    Reset,
+    Up = 0,
+    Down = 1,
+    Refresh = 2,
+    Reset = 3,
+    Unknown = 4,
 }
 
 pub struct Migrator {
     migrations: ExtensionMigrations,
 }
 
-const LOG_TARGET: &str = "migrator";
+const LOG_TARGET: &str = "db::migrator";
 
 impl Migrator {
-    pub async fn from_app(app: &AppService) -> Self {
+    pub async fn new() -> Self {
         let mut migrations = Vec::new();
-        let context = app.global_context().await;
-        app.extensions(|ext| {
+        let context = dirtybase_contract::app::global_context().await;
+        ExtensionManager::extensions(|ext| {
             if let Some(m) = ext.migrations(&context) {
                 migrations.extend(m);
             }
@@ -45,14 +43,14 @@ impl Migrator {
         for entry in &self.migrations {
             let name = entry.id();
             if !repo.exist(&name).await {
-                log::debug!(target: LOG_TARGET, "migrating {} up", entry.id());
+                tracing::debug!(target: LOG_TARGET, "migrating {} up", entry.id());
                 entry.up(manager).await;
 
                 if let Err(e) = repo.create(&name, batch).await {
-                    log::error!(target: LOG_TARGET,"could not create migration entry: {:?}", e);
+                    tracing::error!(target: LOG_TARGET,"could not create migration entry: {:?}", e);
                 }
             } else {
-                log::debug!(target: LOG_TARGET, "migration already exist: {:?}", &name);
+                tracing::debug!(target: LOG_TARGET, "migration already exist: {:?}", &name);
             }
         }
     }
@@ -65,7 +63,7 @@ impl Migrator {
         for name in collection.keys() {
             for entry in &self.migrations {
                 if entry.id() == *name {
-                    log::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
+                    tracing::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
                     entry.down(manager).await;
                 }
             }
@@ -79,7 +77,7 @@ impl Migrator {
     pub async fn refresh(&self, manager: &Manager) {
         // Migrate everything down
         for entry in &self.migrations {
-            log::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
+            tracing::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
             entry.down(manager).await
         }
 
@@ -89,7 +87,7 @@ impl Migrator {
     pub async fn reset(&self, manager: &Manager) {
         let _repo = self.repo(manager).await;
         for entry in &self.migrations {
-            log::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
+            tracing::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
             entry.down(manager).await
         }
     }
@@ -109,7 +107,10 @@ impl From<(String, ArgMatches)> for MigrateAction {
             "down" => MigrateAction::Down,
             "refresh" => MigrateAction::Refresh,
             "reset" => MigrateAction::Reset,
-            v => panic!("{} is not a migration action", v),
+            v => {
+                tracing::error!("{} is not a migration action", v);
+                MigrateAction::Unknown
+            }
         }
     }
 }
