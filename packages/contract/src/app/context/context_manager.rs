@@ -83,6 +83,41 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
         }
     }
 
+    pub async fn register<S, F, C>(setup_fn: S, resolver_fn: F, drop_fn: C)
+    where
+        S: FnMut(Context) -> BoxFuture<'static, (String, i64)> + Send + Sync + 'static,
+        F: FnMut(Context) -> BoxFuture<'static, T> + Send + Sync + 'static,
+        C: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+    {
+        let instance = Self::new(setup_fn, resolver_fn, drop_fn);
+
+        busybody::helpers::service_container().set(instance).await;
+    }
+
+    /// Register a resource that will only last for a scope request/command
+    pub async fn scoped<S, R>(mut setup_fn: S, resolver_fn: R)
+    where
+        S: FnMut(Context) -> BoxFuture<'static, String> + Send + Sync + 'static,
+        R: FnMut(Context) -> BoxFuture<'static, T> + Send + Sync + 'static,
+    {
+        Self::register(
+            move |c| {
+                let result = setup_fn(c);
+                Box::pin(async {
+                    let name = result.await;
+                    (name, -1)
+                })
+            },
+            resolver_fn,
+            |_| {
+                Box::pin(async {
+                    // we never reach here
+                })
+            },
+        )
+        .await;
+    }
+
     pub async fn try_get(context: &Context) -> Option<T> {
         if let Some(manager) = context.container().get::<Self>().await {
             let mut setup_fn_lock = manager.setup_fn.write().await;
