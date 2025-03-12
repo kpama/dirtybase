@@ -1,10 +1,9 @@
-use busybody::ServiceContainer;
 use dirtybase_contract::{app::ContextResourceManager, db::base::manager::Manager};
 
 use crate::{config::DbConfig, connection_bus::MakePoolManagerCommand};
 
-pub(crate) async fn register_resource_manager(sc: &ServiceContainer) {
-    sc.set(ContextResourceManager::<Manager>::new(
+pub(crate) async fn register_resource_manager() {
+    ContextResourceManager::<Manager>::register(
         |context| {
             Box::pin(async move {
                 let config = context.get_config::<DbConfig>("database").await.unwrap();
@@ -35,6 +34,6 @@ pub(crate) async fn register_resource_manager(sc: &ServiceContainer) {
                 manager.close().await;
             })
         },
-    ))
+    )
     .await;
 }

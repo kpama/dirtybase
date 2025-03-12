@@ -9,6 +9,6 @@ pub struct Extension;
 impl ExtensionSetup for Extension {
     async fn setup(&mut self, _context: &Context) {
         super::setup_handlers().await;
-        register_resource_manager(&self.global_container()).await;
+        register_resource_manager().await;
     }
 }
