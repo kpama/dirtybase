@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use futures::future::BoxFuture;
 
-use crate::{config::CronConfig, CronJob, JobContext};
+use crate::{CronJob, JobContext, config::CronConfig};
 
 pub struct JobManager {
     jobs: HashMap<

@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use base64ct::Encoding;
-use dirtybase_contract::config;
+use dirtybase_contract::config::ConfigResult;
+use dirtybase_contract::config::DirtyConfig;
+use dirtybase_contract::config::TryFromDirtyConfig;
 use dirtybase_contract::config::field_to_vec_u8;
 use dirtybase_contract::config::vec_u8_to_field;
-use dirtybase_contract::config::DirtyConfig;
-use dirtybase_user::entity::user::hash_password;
 use serde::Deserializer;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -54,9 +54,6 @@ struct ConfigEntry {
     key: Arc<Vec<u8>>,
     #[serde(deserialize_with = "field_previous_keys")]
     previous_keys: Option<Arc<Vec<Vec<u8>>>>,
-    sys_admin_username: String,
-    sys_admin_email: String,
-    sys_admin_password: String,
     web_port: u16,
     web_ip_address: String,
     web_enable_api_routes: bool,
@@ -82,6 +79,12 @@ pub struct Config {
 impl Config {
     pub async fn new(config: Option<DirtyConfig>) -> Self {
         let config = config.unwrap_or_default();
+        Self::try_from_config(&config)
+            .await
+            .expect("Could not find application configuration. You need at least a .env file")
+    }
+
+    pub async fn try_from_config(config: &DirtyConfig) -> ConfigResult<Self> {
         let builder = config
             .load_optional_file_fn("app.toml", Some("DTY_APP"), |ev| {
                 // env entries where the values are Vec<T>
@@ -94,15 +97,12 @@ impl Config {
                     .with_list_parse_key("web_middleware.dev_route")
             })
             .build()
-            .await
-            .unwrap();
+            .await?;
 
-        Self {
-            dirty_config: config,
-            entry: builder
-                .try_deserialize()
-                .expect("Could not find application configuration. You need at least a .env file"),
-        }
+        Ok(Self {
+            dirty_config: config.clone(),
+            entry: builder.try_deserialize()?,
+        })
     }
 
     pub fn middleware(&self) -> &MiddlewareConfig {
@@ -129,17 +129,6 @@ impl Config {
         &self.entry.previous_keys
     }
 
-    pub fn admin_username(&self) -> &str {
-        self.entry.sys_admin_username.as_str()
-    }
-
-    pub fn admin_email(&self) -> &str {
-        self.entry.sys_admin_email.as_str()
-    }
-    pub fn admin_password(&self) -> &str {
-        self.entry.sys_admin_password.as_str()
-    }
-
     pub fn web_port(&self) -> u16 {
         self.entry.web_port
     }
@@ -163,6 +152,7 @@ impl Config {
     pub fn web_enable_general_routes(&self) -> bool {
         self.entry.web_enable_general_routes
     }
+
     pub fn web_enable_dev_routes(&self) -> bool {
         self.entry.web_enable_dev_routes
     }
@@ -201,9 +191,6 @@ pub struct ConfigBuilder {
     app_name: Option<String>,
     key: Option<Arc<Vec<u8>>>,
     previous_keys: Option<Arc<Vec<Vec<u8>>>>,
-    admin_username: Option<String>,
-    admin_email: Option<String>,
-    admin_password: Option<String>,
     web_port: Option<u16>,
     web_ip_address: Option<String>,
     web_enable_api_routes: Option<bool>,
@@ -239,20 +226,6 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn admin_username(mut self, admin_user: &str) -> Self {
-        self.admin_username = Some(admin_user.into());
-        self
-    }
-
-    pub fn admin_email(mut self, admin_email: &str) -> Self {
-        self.admin_email = Some(admin_email.into());
-        self
-    }
-
-    pub fn admin_password(mut self, admin_password: &str) -> Self {
-        self.admin_password = Some(hash_password(admin_password));
-        self
-    }
     pub fn web_ip_address(mut self, address: &str) -> Self {
         self.web_ip_address = Some(address.into());
         self
@@ -292,13 +265,6 @@ impl ConfigBuilder {
 
         config.entry.name = self.app_name.unwrap_or(config.entry.name);
         config.entry.key = self.key.unwrap_or(config.entry.key);
-        config.entry.sys_admin_username = self
-            .admin_username
-            .unwrap_or(config.entry.sys_admin_username);
-        config.entry.sys_admin_email = self.admin_email.unwrap_or(config.entry.sys_admin_email);
-        config.entry.sys_admin_password = self
-            .admin_password
-            .unwrap_or(config.entry.sys_admin_password);
         config.entry.web_ip_address = self.web_ip_address.unwrap_or(config.entry.web_ip_address);
         config.entry.web_port = self.web_port.unwrap_or(config.entry.web_port);
         config.entry.web_enable_api_routes = self
@@ -344,4 +310,13 @@ where
             })
             .collect::<Vec<Vec<u8>>>(),
     )))
+}
+
+#[async_trait::async_trait]
+impl TryFromDirtyConfig for Config {
+    type Returns = Self;
+
+    async fn from_config(config: &DirtyConfig) -> ConfigResult<Self::Returns> {
+        Self::try_from_config(config).await
+    }
 }

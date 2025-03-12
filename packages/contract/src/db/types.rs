@@ -1,14 +1,16 @@
 use chrono::{DateTime, Utc};
 
 use super::field_values::FieldValue;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 mod arc_ulid;
 mod arc_uuid;
+mod snowflake;
 mod ulid;
 
 pub use arc_ulid::*;
 pub use arc_uuid::*;
+pub use snowflake::*;
 pub use ulid::*;
 pub type ColumnAndValue = HashMap<String, FieldValue>;
 
@@ -27,6 +29,7 @@ pub type FloatField = f64;
 pub type OptionalFloatField = Option<f64>;
 pub type StringField = String;
 pub type OptionalStringField = Option<String>;
+pub type OptionalArcStringField = Option<Arc<String>>;
 // pub type UlidField = String;
 pub type OptionalUlidField = Option<UlidField>;
 // pub type ArcUlidField = ArcUlid;

@@ -34,6 +34,12 @@ impl From<i64> for FieldValue {
     }
 }
 
+impl From<&bool> for FieldValue {
+    fn from(value: &bool) -> Self {
+        value.clone().into()
+    }
+}
+
 impl From<&str> for FieldValue {
     fn from(value: &str) -> Self {
         Self::String(value.to_owned())
@@ -93,6 +99,12 @@ impl From<u64> for FieldValue {
 impl From<Arc<str>> for FieldValue {
     fn from(value: Arc<str>) -> Self {
         Self::String(String::from(value.as_ref()))
+    }
+}
+
+impl From<Arc<String>> for FieldValue {
+    fn from(value: Arc<String>) -> Self {
+        Self::String(value.as_ref().to_string())
     }
 }
 

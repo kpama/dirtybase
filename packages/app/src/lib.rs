@@ -12,7 +12,7 @@ pub use busybody;
 pub use clap;
 pub use dirtybase_contract as contract;
 pub use dirtybase_contract::config;
-use dirtybase_contract::{app::Context, cli::CliMiddlewareManager, ExtensionManager};
+use dirtybase_contract::{ExtensionManager, app::Context, cli::CliMiddlewareManager};
 pub use dirtybase_db as db;
 pub use dirtybase_db_macro as db_macro;
 pub use dirtybase_helper as helper;
@@ -38,13 +38,14 @@ pub async fn setup() -> anyhow::Result<AppService> {
 /// ```
 ///
 pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
-    busybody::helpers::register_service(config.dirty_config().clone()).await;
+    busybody::helpers::set_type(config.dirty_config().clone()).await;
     busybody::helpers::set_type(Context::make_global().await).await;
 
     let app = core::App::new(config).await?;
 
     // core extensions
     app.register(dirtybase_session::Extension::default()).await;
+    #[cfg(feature = "auth")]
     app.register(dirtybase_auth::Extension::default()).await;
     app.register(dirtybase_db::Extension::default()).await;
     app.register(dirtybase_entry::Extension::default()).await;
@@ -53,7 +54,6 @@ pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
     #[cfg(feature = "multitenant")]
     app.register(dirtybase_multitenant::Extension::default())
         .await;
-
     Ok(app)
 }
 
@@ -70,11 +70,8 @@ pub async fn run_http(app_service: AppService) -> anyhow::Result<()> {
     }
 }
 
-pub async fn run_cli(
-    app_service: AppService,
-    command: &core::command::Commands,
-) -> anyhow::Result<()> {
-    cli::init(app_service, command).await
+pub async fn run_cli(context: Context, command: &core::command::Commands) -> anyhow::Result<()> {
+    cli::init(context, command).await
 }
 
 pub async fn run(app_service: AppService) -> anyhow::Result<()> {
@@ -134,7 +131,6 @@ pub(crate) async fn make_cli_command_manager(app_service: AppService) -> CliComm
     for ext in lock.iter() {
         manager = ext.register_cli_commands(manager);
     }
-    drop(lock);
     manager
 }
 
@@ -158,11 +154,11 @@ pub(crate) async fn shutdown_signal() {
 
     tokio::select! {
         _ = ctrl_c => {
-            let app_service: AppService = busybody::helpers::provide().await;
+            let app_service: AppService = busybody::helpers::get_type().await.expect("could not get app service");
             app_service.shutdown().await;
         },
         _ = terminate => {
-            let app_service: AppService = busybody::helpers::provide().await;
+            let app_service: AppService = busybody::helpers::get_type().await.expect("could not get app service");
             app_service.shutdown().await;
         },
     }

@@ -1,14 +1,20 @@
+use dirtybase_contract::app::Context;
+use dirtybase_db::base::manager::Manager;
 use tokio_util::sync::CancellationToken;
 
 use crate::core::{
-    command::{
-        migrator::{MigrateAction, Migrator},
-        Commands,
-    },
     AppService,
+    command::{
+        Commands,
+        migrator::{MigrateAction, Migrator},
+    },
 };
 
-pub async fn init(app: AppService, command: &Commands) -> anyhow::Result<()> {
+pub async fn init(context: Context, command: &Commands) -> anyhow::Result<()> {
+    let app = context
+        .get::<AppService>()
+        .await
+        .expect("could not find the app service in the context");
     app.init().await;
 
     let token = CancellationToken::new();
@@ -28,13 +34,17 @@ pub async fn init(app: AppService, command: &Commands) -> anyhow::Result<()> {
         // Run only CLI tools
         match the_command {
             Commands::Migrate { action } => {
+                let schema_manager = context
+                    .get::<Manager>()
+                    .await
+                    .expect("could not get schema manager");
                 let migrator = Migrator::from_app(&app).await;
                 log::debug!("executing migration: {:?}", &action);
                 match action {
-                    MigrateAction::Up => migrator.up(&app.schema_manger().await).await,
-                    MigrateAction::Down => migrator.down(&app.schema_manger().await).await,
-                    MigrateAction::Refresh => migrator.refresh(&app.schema_manger().await).await,
-                    MigrateAction::Reset => migrator.reset(&app.schema_manger().await).await,
+                    MigrateAction::Up => migrator.up(&schema_manager).await,
+                    MigrateAction::Down => migrator.down(&schema_manager).await,
+                    MigrateAction::Refresh => migrator.refresh(&schema_manager).await,
+                    MigrateAction::Reset => migrator.reset(&schema_manager).await,
                 }
                 token.cancel();
             }

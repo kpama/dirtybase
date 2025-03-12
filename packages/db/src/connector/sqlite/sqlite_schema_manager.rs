@@ -12,9 +12,9 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use futures::stream::TryStreamExt;
 use sqlx::{
+    Arguments, Column, Pool, Row, Sqlite, TypeInfo,
     sqlite::{SqliteArguments, SqliteRow},
     types::chrono,
-    Arguments, Column, Pool, Row, Sqlite, TypeInfo,
 };
 use std::{collections::HashMap, sync::Arc};
 
@@ -80,8 +80,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
     async fn drop_table(&self, name: &str) -> bool {
         if self.has_table(name).await {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
-            self.execute(query).await;
-            return true;
+            return self.execute(query).await.is_ok();
         }
         false
     }
@@ -90,7 +89,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         self.do_apply(table).await
     }
 
-    async fn execute(&self, query: QueryBuilder) {
+    async fn execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
         self.do_execute(query).await
     }
 
@@ -127,7 +126,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
 
     async fn fetch_one(
         &self,
-        query_builder: &QueryBuilder, // TODO: Take ownership of the query builder
+        query_builder: &QueryBuilder,
     ) -> Result<Option<ColumnAndValue>, anyhow::Error> {
         let mut params = SqliteArguments::default();
 
@@ -223,7 +222,7 @@ impl SqliteSchemaManager {
         }
     }
 
-    async fn do_execute(&self, query: QueryBuilder) {
+    async fn do_execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
         let mut params = SqliteArguments::default();
 
         let mut sql;
@@ -318,10 +317,11 @@ impl SqliteSchemaManager {
         match result {
             Ok(r) => {
                 log::debug!("{} result: {:#?}", query.action(), r);
+                Ok(())
             }
             Err(e) => {
-                dbg!(&e, &sql);
-                log::debug!("{} failed: {}", query.action(), e);
+                log::error!("{} failed: {}", query.action(), e);
+                Err(anyhow!(e))
             }
         }
     }
@@ -473,7 +473,7 @@ impl SqliteSchemaManager {
                 the_type.push_str(q.as_str());
             }
             ColumnType::Text => the_type.push_str("TEXT"),
-            ColumnType::Uuid => the_type.push_str("uuid"),
+            ColumnType::Uuid => the_type.push_str("BLOB"),
             ColumnType::Enum(ref opt) => {
                 if column.check.is_none() {
                     let list = opt
@@ -505,6 +505,11 @@ impl SqliteSchemaManager {
             the_type.push_str(" UNIQUE");
         }
 
+        // primary key
+        if column.is_primary {
+            foreign.push(format!("PRIMARY KEY('{}')", &column.name));
+        }
+
         // column default
         if let Some(default) = &column.default {
             the_type.push_str(" DEFAULT ");
@@ -514,7 +519,7 @@ impl SqliteSchemaManager {
                 ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
                 ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
-                ColumnDefault::Uuid => the_type.push_str("GUID()"),
+                ColumnDefault::Uuid => (), // the_type.push_str("GUID()"),
                 ColumnDefault::Ulid => (),
                 ColumnDefault::UpdatedAt => the_type.push_str("CURRENT_TIMESTAMP"),
                 ColumnDefault::Zero => the_type.push('0'),
@@ -769,12 +774,9 @@ impl SqliteSchemaManager {
                     }
                 }
                 "VARBINARY" | "BINARY" | "BLOB" | "BYTEA" => {
-                    let v = row.try_get::<String, &str>(col.name());
+                    let v = row.try_get::<Vec<u8>, &str>(col.name());
                     if let Ok(v) = v {
-                        this_row.insert(
-                            col.name().to_string(),
-                            FieldValue::Binary(hex::decode(v).unwrap()),
-                        );
+                        this_row.insert(col.name().to_string(), FieldValue::Binary(v));
                     } else {
                         this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
                     }
@@ -789,7 +791,11 @@ impl SqliteSchemaManager {
                     }
                 }
                 _ => {
-                    let value = row.try_get::<String, &str>(col.name());
+                    tracing::debug!(
+                        "unsupported field type : {:?} => value: {:#?}",
+                        name,
+                        col.type_info()
+                    );
                 }
             }
         }

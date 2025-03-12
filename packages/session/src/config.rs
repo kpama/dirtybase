@@ -1,4 +1,8 @@
-use dirtybase_contract::{config::DirtyConfig, session::DEFAULT_LIFETIME};
+use anyhow::anyhow;
+use dirtybase_contract::{
+    config::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
+    session::DEFAULT_LIFETIME,
+};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum SessionStorageDriver {
@@ -33,6 +37,26 @@ impl Default for SessionConfig {
     }
 }
 
+#[async_trait::async_trait]
+impl TryFromDirtyConfig for SessionConfig {
+    type Returns = Self;
+    async fn from_config(config: &DirtyConfig) -> ConfigResult<Self::Returns> {
+        match config
+            .optional_file("session.toml", Some("DTY_SESSION"))
+            .build()
+            .await?
+            .try_deserialize()
+        {
+            Ok(c) => Ok(c),
+            Err(e) => {
+                let message = format!("could not build session config: {}", e.to_string());
+                tracing::error!("{}", &message);
+                Err(anyhow!(e))
+            }
+        }
+    }
+}
+
 impl SessionConfig {
     pub fn storage(&self) -> SessionStorageDriver {
         self.storage.clone()
@@ -54,20 +78,7 @@ impl SessionConfig {
         self.cookie.clone()
     }
 
-    pub async fn from_dirty_config(base: &DirtyConfig) -> Self {
-        match base
-            .optional_file("session.toml", Some("DTY_SESSION"))
-            .build()
-            .await
-            .expect("could not build dirtybase configuration for session config")
-            .try_deserialize()
-        {
-            Ok(c) => c,
-            Err(e) => {
-                let message = format!("could not build session config: {}", e.to_string());
-                tracing::error!("{}", &message);
-                panic!("{}", message);
-            }
-        }
+    pub async fn from_dirty_config(config: &DirtyConfig) -> Self {
+        Self::from_config(config).await.unwrap()
     }
 }

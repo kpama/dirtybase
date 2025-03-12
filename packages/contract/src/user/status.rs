@@ -3,7 +3,7 @@ use std::fmt::Display;
 
 use crate::db::field_values::FieldValue;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum UserStatus {
     #[serde(rename = "active")]
     Active,
@@ -15,6 +15,8 @@ pub enum UserStatus {
     Suspended,
     #[serde(rename = "unknown")]
     Unknown,
+    #[serde(rename = "custom")]
+    Custom(String),
 }
 
 pub const USER_STATUS_ACTIVE: &str = "active";
@@ -67,6 +69,7 @@ impl Display for UserStatus {
             UserStatus::Inactive => write!(f, "{}", USER_STATUS_INACTIVE),
             UserStatus::Suspended => write!(f, "{}", USER_STATUS_SUSPENDED),
             UserStatus::Unknown => write!(f, "{}", USER_STATUS_UNKNOWN),
+            UserStatus::Custom(c) => write!(f, "{}", c),
         }
     }
 }

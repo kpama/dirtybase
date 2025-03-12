@@ -9,7 +9,7 @@ mod manager;
 use busstop::DispatchableCommand;
 use command_handler::CronJobCommandHandler;
 use config::CronConfig;
-use dirtybase_contract::config::DirtyConfig;
+use dirtybase_contract::{app::Context, config::DirtyConfig};
 pub use dirtybase_entry::*;
 pub use job::*;
 pub use job_context::*;
@@ -23,8 +23,11 @@ pub async fn start() {
     CronJob::command_handler::<CronJobCommandHandler>().await;
 }
 
-pub async fn setup(base_config: &DirtyConfig) {
-    let config = CronConfig::from_dirty_config(base_config).await;
+pub async fn setup(context: &Context) {
+    let config = context
+        .get_config::<CronConfig>("dirtybase::cron")
+        .await
+        .expect("could not get cron configuration");
     setup_using(config).await;
 }
 

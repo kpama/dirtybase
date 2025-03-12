@@ -12,14 +12,14 @@ use async_trait::async_trait;
 use dirtybase_contract::db::base::index::IndexType;
 use futures::stream::TryStreamExt;
 use sqlx::{
+    Arguments, Column, Pool, Postgres, Row,
     postgres::{PgArguments, PgRow},
     types::chrono,
-    Arguments, Column, Pool, Postgres, Row,
 };
 use std::{collections::HashMap, sync::Arc};
 
 const LOG_TARGET: &str = "postgresql_db_driver";
-pub const POSTGRES_KIND: &str = "postgresql";
+pub const POSTGRES_KIND: &str = "postgres";
 
 pub struct PostgresSchemaManager {
     db_pool: Arc<Pool<Postgres>>,
@@ -86,8 +86,7 @@ impl SchemaManagerTrait for PostgresSchemaManager {
     async fn drop_table(&self, name: &str) -> bool {
         if self.has_table(name).await {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
-            self.execute(query).await;
-            return true;
+            return self.execute(query).await.is_ok();
         }
         false
     }
@@ -96,7 +95,7 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         self.do_apply(table).await
     }
 
-    async fn execute(&self, query: QueryBuilder) {
+    async fn execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
         self.do_execute(query).await
     }
 
@@ -200,7 +199,7 @@ impl PostgresSchemaManager {
         }
     }
 
-    async fn do_execute(&self, query: QueryBuilder) {
+    async fn do_execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
         let mut params = PgArguments::default();
 
         let mut sql;
@@ -299,9 +298,11 @@ impl PostgresSchemaManager {
         match result {
             Ok(r) => {
                 log::debug!("{} result: {:#?}", query.action(), r);
+                Ok(())
             }
             Err(e) => {
                 log::error!("{} failed: {}", query.action(), e);
+                Err(anyhow!(e))
             }
         }
     }
@@ -789,8 +790,8 @@ impl PostgresSchemaManager {
                     }
                 }
                 _ => {
-                    dbg!(
-                        "not mapped field: {:#?} => value: {:#?}",
+                    tracing::debug!(
+                        "unsupported field type : {:?} => value: {:#?}",
                         name,
                         col.type_info()
                     );

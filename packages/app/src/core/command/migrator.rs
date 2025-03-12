@@ -3,8 +3,8 @@ use clap::{ArgMatches, Subcommand};
 use dirtybase_contract::ExtensionMigrations;
 use dirtybase_db::base::manager::Manager;
 
-use crate::core::model::migration::MigrationRepository;
 use crate::core::AppService;
+use crate::core::model::migration::MigrationRepository;
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum MigrateAction {
@@ -27,8 +27,9 @@ const LOG_TARGET: &str = "migrator";
 impl Migrator {
     pub async fn from_app(app: &AppService) -> Self {
         let mut migrations = Vec::new();
+        let context = app.global_context().await;
         app.extensions(|ext| {
-            if let Some(m) = ext.migrations() {
+            if let Some(m) = ext.migrations(&context) {
                 migrations.extend(m);
             }
         })
@@ -39,7 +40,7 @@ impl Migrator {
 
     pub async fn up(&self, manager: &Manager) {
         let batch = chrono::Utc::now().timestamp();
-        let repo = self.repo().await;
+        let repo = self.repo(manager).await;
 
         for entry in &self.migrations {
             let name = entry.id();
@@ -57,7 +58,7 @@ impl Migrator {
     }
 
     pub async fn down(&self, manager: &Manager) {
-        let repo = self.repo().await;
+        let repo = self.repo(manager).await;
 
         let collection = repo.get_last_batch().await;
 
@@ -86,15 +87,15 @@ impl Migrator {
     }
 
     pub async fn reset(&self, manager: &Manager) {
-        let _repo = self.repo().await;
+        let _repo = self.repo(manager).await;
         for entry in &self.migrations {
             log::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
             entry.down(manager).await
         }
     }
 
-    async fn repo(&self) -> MigrationRepository {
-        let repo = busybody::helpers::provide::<MigrationRepository>().await;
+    async fn repo(&self, manager: &Manager) -> MigrationRepository {
+        let repo = MigrationRepository::new(manager.clone());
         repo.init().await;
 
         repo

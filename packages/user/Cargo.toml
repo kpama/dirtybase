@@ -4,8 +4,9 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-dirtybase_db_macro = { workspace = true }
-dirtybase_contract = { workspace = true }
+dirtybase_db_macro = { path = "../db_macro", version = "*" }
+dirtybase_db = { path = "../db", version = "*" }
+dirtybase_contract = { path = "../contract", version = "*" }
 busybody = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -16,3 +17,4 @@ log = { workspace = true }
 bcrypt = { workspace = true }
 tokio = { workspace = true }
 futures = { workspace = true }
+tracing = { workspace = true }

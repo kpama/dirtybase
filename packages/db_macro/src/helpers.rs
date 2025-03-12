@@ -1,6 +1,6 @@
 use crate::{attribute_type::DirtybaseAttributes, relationship::process_relation_attribute};
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote, ToTokens};
+use quote::{ToTokens, format_ident, quote};
 use std::collections::HashMap;
 use syn::{Data, DeriveInput, GenericArgument, Meta, MetaList, PathArguments, TypePath};
 
@@ -277,7 +277,7 @@ pub(crate) fn build_from_handlers(
                                     ::dirtybase_contract::db::field_values::FieldValue::from_ref_option_into(field)
                                 }
                             }
-                        } 
+                        }
                         else {
                             quote! {
                                 pub fn #fn_name <'a> (field: Option<&'a ::dirtybase_contract::db::field_values::FieldValue>) -> #returns {

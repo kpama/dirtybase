@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use aes_gcm::{AeadCore, Aes256Gcm, Key, KeyInit};
 use base64ct::Encoding;
-use crypto::aead::{self, generic_array::GenericArray, Aead, OsRng};
+use crypto::aead::{self, Aead, OsRng, generic_array::GenericArray};
 
 pub struct Encrypter {
     key: Arc<Vec<u8>>,
@@ -20,6 +20,7 @@ impl Encrypter {
     pub fn encrypt_str(&self, data: &str) -> aead::Result<Vec<u8>> {
         self.encrypt(data.into())
     }
+
     pub fn encrypt(&self, data: Vec<u8>) -> aead::Result<Vec<u8>> {
         let aes256gcm = Aes256GcmEncrypter {
             key: self.key.clone(),

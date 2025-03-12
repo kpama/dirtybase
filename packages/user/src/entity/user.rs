@@ -23,7 +23,7 @@ pub fn verify_password(raw: &str, hash: &str) -> bool {
 pub async fn setup_users_table(manager: &Manager) {
     manager
         .create_table_schema(UserEntity::table_name(), |table| {
-            table.id_set();
+            table.uuid_id_set();
             table
                 .string(UserEntity::col_name_for_username())
                 .set_is_unique(true);

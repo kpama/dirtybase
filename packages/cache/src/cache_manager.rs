@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::future::Future;
 use std::sync::Arc;
 
-use dirtybase_helper::time::{now, Time};
+use dirtybase_helper::time::{Time, now};
 
 pub mod cache_entry;
 pub mod cache_store;

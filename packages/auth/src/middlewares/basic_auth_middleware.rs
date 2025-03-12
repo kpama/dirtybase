@@ -1,12 +1,13 @@
 use dirtybase_contract::{
     app::{Context, UserContext},
-    auth::{UserProviderService, UserProviderTrait},
     http::prelude::*,
+    user::{UserProviderService, model::UserRepositoryTrait},
 };
 
 pub async fn handle_basic_auth_middleware(req: Request, next: Next) -> impl IntoResponse {
     log::debug!(">>>> Basic auth ran <<<<<");
-    let user_provider = busybody::helpers::service::<UserProviderService>().await;
+    let context = req.extensions().get::<Context>().unwrap();
+    let user_provider = context.get::<UserProviderService>().await.unwrap();
 
     let mut auth_passed = req.headers().get("authorization").is_some();
     if let Some(header) = req.headers().get("authorization") {
@@ -25,14 +26,14 @@ pub async fn handle_basic_auth_middleware(req: Request, next: Next) -> impl Into
                 // let is_valid =  auth_provider.user_by_username(username, password);
 
                 // check the username and password
-                let hash_password = user_provider.by_username(username).await;
-                println!("user with id ({}): {}", &username, &hash_password);
+                let hash_password = user_provider.find_by_username(username, false).await;
+                println!("user with id ({}): {}", &username, &hash_password.is_ok());
 
-                if password != hash_password {
-                    auth_passed = false;
-                } else if let Some(context) = req.extensions().get::<Context>() {
-                    context.set(UserContext::default()).await; //FIXME: source the real user using the user provider
-                }
+                // if password != hash_password {
+                //     auth_passed = false;
+                // } else if let Some(context) = req.extensions().get::<Context>() {
+                //     context.set(UserContext::default()).await; //FIXME: source the real user using the user provider
+                // }
             }
             None => auth_passed = false,
         }

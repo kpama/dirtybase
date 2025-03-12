@@ -4,21 +4,25 @@ use sqlite_pool_manager::SqlitePoolManagerRegisterer;
 use sqlite_schema_manager::SQLITE_KIND;
 
 use crate::{
+    ConnectionPoolRegisterTrait,
     base::{manager::Manager, schema::DatabaseKind},
-    config::{BaseConfig, ConfigSet},
-    make_manager, ConnectionPoolRegisterTrait,
+    config::{ConfigSet, ConnectionConfig},
+    make_manager,
 };
 
 pub mod sqlite_pool_manager;
 pub mod sqlite_schema_manager;
 
 /// Create a new manager using the configuration provided
-pub async fn make_sqlite_manager(base: BaseConfig) -> Manager {
+pub async fn make_sqlite_manager(base: ConnectionConfig) -> Manager {
     let mut config_set = ConfigSet::new();
-    let kind: DatabaseKind = SQLITE_KIND.into();
 
     config_set.insert(base.client_type, base);
+    make_sqlite_manager_from_set(config_set).await
+}
 
+pub async fn make_sqlite_manager_from_set(config_set: ConfigSet) -> Manager {
+    let kind: DatabaseKind = SQLITE_KIND.into();
     let pools = SqlitePoolManagerRegisterer
         .register(&config_set)
         .await
@@ -30,7 +34,7 @@ pub async fn make_sqlite_manager(base: BaseConfig) -> Manager {
 }
 
 pub async fn make_sqlite_in_memory_manager() -> Manager {
-    let config_set = BaseConfig::in_memory_set();
+    let config_set = ConnectionConfig::in_memory_set();
     let kind: DatabaseKind = SQLITE_KIND.into();
 
     let pools = SqlitePoolManagerRegisterer

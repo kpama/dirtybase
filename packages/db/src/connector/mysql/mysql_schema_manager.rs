@@ -3,9 +3,9 @@ use async_trait::async_trait;
 use dirtybase_contract::db::base::index::IndexType;
 use futures::stream::TryStreamExt;
 use sqlx::{
+    Arguments, Column, MySql, Pool, Row,
     mysql::{MySqlArguments, MySqlRow},
     types::chrono,
-    Arguments, Column, MySql, Pool, Row,
 };
 use std::{collections::HashMap, sync::Arc};
 
@@ -94,8 +94,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
     async fn drop_table(&self, name: &str) -> bool {
         if self.has_table(name).await {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
-            self.do_execute(query).await;
-            return true;
+            return self.do_execute(query).await.is_ok();
         }
 
         false
@@ -105,7 +104,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         self.do_apply(table).await
     }
 
-    async fn execute(&self, query: QueryBuilder) {
+    async fn execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
         self.do_execute(query).await
     }
 
@@ -208,7 +207,7 @@ impl MySqlSchemaManager {
         }
     }
 
-    async fn do_execute(&self, query: QueryBuilder) {
+    async fn do_execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
         let mut params = MySqlArguments::default();
 
         let mut sql;
@@ -307,9 +306,11 @@ impl MySqlSchemaManager {
         match result {
             Ok(r) => {
                 log::debug!("{} result: {:#?}", query.action(), r);
+                Ok(())
             }
             Err(e) => {
                 log::error!("{} failed: {}", query.action(), e);
+                Err(anyhow!(e))
             }
         }
     }
@@ -356,6 +357,47 @@ impl MySqlSchemaManager {
             query = format!("{} ({})", query, columns.join(","));
         }
 
+        // create/update indexes
+        if let Some(indexes) = &table.indexes {
+            for entry in indexes {
+                let sql;
+                match entry {
+                    IndexType::Index(index) | IndexType::Primary(index) => {
+                        if index.delete_index() {
+                            sql = format!("DROP INDEX {}", index.name());
+                        } else {
+                            sql = format!(
+                                "CREATE INDEX IF NOT EXISTS {} ON {} ({})",
+                                index.name(),
+                                &table.name,
+                                index.concat_columns()
+                            );
+                        }
+                    }
+                    IndexType::Unique(index) => {
+                        if index.delete_index() {
+                            sql = format!("DROP INDEX {}", index.name());
+                        } else {
+                            sql = format!(
+                                "ADD UNIQUE INDEX {} ({})",
+                                index.name(),
+                                index.concat_columns()
+                            );
+                        }
+                    }
+                }
+
+                let index_result = sqlx::query(&sql).execute(self.db_pool.as_ref()).await;
+                match index_result {
+                    Ok(_) => log::info!("table index created"),
+                    Err(e) => {
+                        log::error!("mysql: {}", &sql);
+                        log::error!("could not create table index: {}", e.to_string())
+                    }
+                }
+            }
+        }
+
         query = format!("{} ENGINE='InnoDB';", query);
 
         let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
@@ -380,48 +422,6 @@ impl MySqlSchemaManager {
                     name = table.name.clone();
                 }
                 log::error!("Could not {} table {}: {}", action, name, e);
-            }
-        }
-
-        // create/update indexes
-        if let Some(indexes) = &table.indexes {
-            for entry in indexes {
-                let sql;
-                match entry {
-                    IndexType::Index(index) | IndexType::Primary(index) => {
-                        if index.delete_index() {
-                            sql = format!("DROP INDEX IF EXISTS {}.{}", &table.name, index.name());
-                        } else {
-                            sql = format!(
-                                "CREATE INDEX IF NOT EXISTS {} ON {} ({})",
-                                index.name(),
-                                &table.name,
-                                index.concat_columns()
-                            );
-                        }
-                    }
-                    IndexType::Unique(index) => {
-                        if index.delete_index() {
-                            sql = format!("DROP INDEX IF EXISTS {}.{}", &table.name, index.name());
-                        } else {
-                            sql = format!(
-                                "CREATE UNIQUE INDEX IF NOT EXISTS {} ON {} ({})",
-                                index.name(),
-                                &table.name,
-                                index.concat_columns()
-                            );
-                        }
-                    }
-                }
-
-                let index_result = sqlx::query(&sql).execute(self.db_pool.as_ref()).await;
-                match index_result {
-                    Ok(_) => log::info!("table index created"),
-                    Err(e) => {
-                        log::error!("mysql: {}", &sql);
-                        log::error!("could not create table index: {}", e.to_string())
-                    }
-                }
             }
         }
     }
@@ -450,7 +450,7 @@ impl MySqlSchemaManager {
                 the_type.push_str(q.as_str());
             }
             ColumnType::Text => the_type.push_str("longtext"),
-            ColumnType::Uuid => the_type.push_str("uuid"),
+            ColumnType::Uuid => the_type.push_str("BINARY(16)"),
             ColumnType::Enum(ref opt) => {
                 let c = format!(
                     "ENUM({})",
@@ -477,6 +477,11 @@ impl MySqlSchemaManager {
             the_type.push_str(" UNIQUE");
         }
 
+        // primary key
+        if column.is_primary {
+            the_type.push_str(" PRIMARY KEY");
+        }
+
         // column default
         if let Some(default) = &column.default {
             the_type.push_str(" DEFAULT ");
@@ -486,7 +491,7 @@ impl MySqlSchemaManager {
                 ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
                 ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
-                ColumnDefault::Uuid => the_type.push_str("SYS_GUID()"),
+                ColumnDefault::Uuid => (), // Seems to be not suportted the_type.push_str("SYS_GUID()"),
                 ColumnDefault::Ulid => (),
                 ColumnDefault::UpdatedAt => {
                     the_type.push_str("current_timestamp() ON UPDATE CURRENT_TIMESTAMP")
@@ -759,12 +764,9 @@ impl MySqlSchemaManager {
                     }
                 }
                 "VARBINARY" | "BINARY" | "BLOB" | "BYTEA" => {
-                    let v = row.try_get::<String, &str>(col.name());
+                    let v = row.try_get::<Vec<u8>, &str>(col.name());
                     if let Ok(v) = v {
-                        this_row.insert(
-                            col.name().to_string(),
-                            FieldValue::Binary(hex::decode(v).unwrap()),
-                        );
+                        this_row.insert(col.name().to_string(), FieldValue::Binary(v));
                     } else {
                         this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
                     }
@@ -779,8 +781,8 @@ impl MySqlSchemaManager {
                     }
                 }
                 _ => {
-                    dbg!(
-                        "not mapped field: {:#?} => value: {:#?}",
+                    tracing::debug!(
+                        "unsupported field type : {:?} => value: {:#?}",
                         name,
                         col.type_info()
                     );

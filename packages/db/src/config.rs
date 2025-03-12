@@ -1,16 +1,64 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
-use dirtybase_contract::config::DirtyConfig;
+use anyhow::anyhow;
+use dirtybase_contract::config::{DirtyConfig, TryFromDirtyConfig};
 
 use crate::connector::sqlite::sqlite_schema_manager::SQLITE_KIND;
 
 use super::base::schema::{ClientType, DatabaseKind};
 
-pub type ConfigSet = HashMap<ClientType, BaseConfig>;
+pub type ConfigSet = HashMap<ClientType, ConnectionConfig>;
 pub type ConfigCollection = HashMap<String, ConfigSet>;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-pub struct BaseConfig {
+pub struct DbConfig {
+    #[serde(default)]
+    enable: bool,
+    #[serde(default)]
+    idle_timeout: i64,
+    #[serde(default)]
+    default: Arc<String>,
+    #[serde(alias = "clients")]
+    collection: Arc<ConfigCollection>,
+}
+
+#[async_trait::async_trait]
+impl TryFromDirtyConfig for DbConfig {
+    type Returns = Self;
+    async fn from_config(config: &DirtyConfig) -> Result<Self::Returns, anyhow::Error> {
+        config
+            .optional_file("database.toml", Some("DTY_DB"))
+            .build()
+            .await?
+            .try_deserialize::<Self>()
+            .map_err(|e| anyhow!(e.to_string()))
+    }
+}
+
+impl DbConfig {
+    pub fn is_enable(&self) -> bool {
+        self.enable
+    }
+
+    pub fn idle_timeout(&self) -> i64 {
+        self.idle_timeout
+    }
+
+    pub fn default_set(&self) -> Option<ConfigSet> {
+        if self.default.is_empty() || !self.enable {
+            return None;
+        }
+
+        self.collection.get(self.default.as_str()).cloned()
+    }
+
+    pub fn get_set(&self, name: &str) -> Option<ConfigSet> {
+        self.collection.get(name).cloned()
+    }
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct ConnectionConfig {
     #[serde(default)]
     pub enable: bool,
     pub kind: DatabaseKind,
@@ -27,7 +75,7 @@ pub struct BaseConfig {
 
 /// By default the data is sqlite and
 /// the database is in memory
-impl Default for BaseConfig {
+impl Default for ConnectionConfig {
     fn default() -> Self {
         Self {
             enable: true,
@@ -44,7 +92,7 @@ impl Default for BaseConfig {
     }
 }
 
-impl BaseConfig {
+impl ConnectionConfig {
     pub fn kind(&self) -> DatabaseKind {
         self.kind.clone()
     }

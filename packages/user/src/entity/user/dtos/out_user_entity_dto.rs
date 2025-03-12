@@ -1,4 +1,4 @@
-use dirtybase_contract::db::types::{DateTimeField, UlidField};
+use dirtybase_contract::db::types::{ArcUuid7, DateTimeField};
 use dirtybase_db_macro::DirtyTable;
 use serde::Serialize;
 
@@ -6,7 +6,7 @@ use crate::entity::user::{UserEntity, UserStatus};
 
 #[derive(Debug, Clone, Serialize, Default, DirtyTable)]
 pub struct OutUserEntityDto {
-    pub id: UlidField,
+    pub id: ArcUuid7,
     pub username: String,
     pub status: UserStatus,
     pub reset_password: bool,

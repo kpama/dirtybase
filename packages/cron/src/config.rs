@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use dirtybase_contract::config::DirtyConfig;
+use busstop::async_trait;
+use dirtybase_contract::config::{ConfigResult, DirtyConfig, TryFromDirtyConfig};
 use english_to_cron::str_cron_syntax;
 
 use crate::JobId;
@@ -36,14 +37,18 @@ impl CronConfig {
         self.jobs.insert(name.to_string(), config);
         self
     }
+}
 
-    pub async fn from_dirty_config(base: &DirtyConfig) -> Self {
-        base.optional_file("cron.toml", Some("DTY_CRON"))
+#[async_trait]
+impl TryFromDirtyConfig for CronConfig {
+    type Returns = Self;
+    async fn from_config(config: &DirtyConfig) -> ConfigResult<Self::Returns> {
+        Ok(config
+            .optional_file("cron.toml", Some("DTY_CRON"))
             .build()
             .await
             .expect("could not create cron configuration")
-            .try_deserialize()
-            .unwrap()
+            .try_deserialize::<Self>()?)
     }
 }
 

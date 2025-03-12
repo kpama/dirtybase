@@ -1,5 +1,6 @@
 use std::{ops::Deref, sync::Arc};
 
+use anyhow::anyhow;
 use axum::{extract::FromRequestParts, http::request::Parts};
 use serde::de::DeserializeOwned;
 
@@ -9,7 +10,10 @@ mod context_metadata;
 mod role_context;
 mod user_context;
 
-use crate::multitenant::*;
+use crate::{
+    config::{DirtyConfig, TryFromDirtyConfig},
+    multitenant::*,
+};
 pub use app_context::*;
 pub use context_manager::*;
 pub use context_metadata::*;
@@ -18,11 +22,10 @@ pub use user_context::*;
 
 use crate::db::types::ArcUuid7;
 
-pub const GLOBAL_CONTEXT_ID: &str = "0194d467-2006-75f0-9fe7-575ec6e00b79";
-
 #[derive(Clone)]
 pub struct Context {
     id: ArcUuid7,
+    is_global: bool,
     sc: Arc<busybody::ServiceContainer>,
 }
 
@@ -30,6 +33,7 @@ impl Default for Context {
     fn default() -> Self {
         let instance = Self {
             id: ArcUuid7::default(),
+            is_global: false,
             sc: Arc::new(busybody::helpers::make_proxy()),
         };
 
@@ -49,8 +53,9 @@ impl Context {
         busybody::helpers::set_type(Arc::new(UserContext::make_global())).await;
 
         Self {
-            id: ArcUuid7::try_from(GLOBAL_CONTEXT_ID).unwrap(),
-            sc: Arc::new(busybody::helpers::make_proxy()),
+            id: ArcUuid7::default(),
+            is_global: true,
+            sc: busybody::helpers::service_container(),
         }
     }
 
@@ -71,19 +76,24 @@ impl Context {
     }
 
     pub fn is_global(&self) -> bool {
-        self.id.to_string() == GLOBAL_CONTEXT_ID
+        self.is_global
     }
 
-    pub async fn configure<C>(&self, key: &str) -> Option<C>
+    pub async fn get_config<C>(&self, key: &str) -> Result<C, anyhow::Error>
     where
-        C: DeserializeOwned + Sync + Send + 'static,
+        C: DeserializeOwned + TryFromDirtyConfig<Returns = C>,
     {
-        if let Some(tenant) = self.get::<TenantContext>().await {
-            if let Some(config) = tenant.config_to::<C>(key) {
-                return Some(config);
+        if let Some(app) = self.get::<AppContext>().await {
+            if let Some(str_value) = app.config_string(key).await {
+                return serde_json::from_str(&str_value).map_err(|e| anyhow!("{}", e));
             }
         }
-        None
+
+        if let Some(dirty_config) = self.get::<DirtyConfig>().await {
+            return C::from_config(&dirty_config).await;
+        }
+
+        Err(anyhow!("could not resolve configuration"))
     }
 
     pub fn container(&self) -> Arc<busybody::ServiceContainer> {
@@ -116,7 +126,13 @@ impl Context {
     }
 
     pub async fn get<T: Clone + Send + Sync + 'static>(&self) -> Option<T> {
-        self.sc.get_type().await
+        let result = self.sc.get_type().await;
+
+        if result.is_some() {
+            return result;
+        }
+
+        ContextResourceManager::try_get(&self).await
     }
 
     pub fn id(&self) -> ArcUuid7 {

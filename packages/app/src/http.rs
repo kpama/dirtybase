@@ -1,15 +1,15 @@
 mod middleware;
 
-pub mod controllers;
 pub mod http_helper;
 use std::{env, sync::Arc};
 
 use axum::Router;
 use axum_extra::extract::CookieJar;
+use busybody::ServiceContainer;
 use dirtybase_contract::{
+    ExtensionManager,
     app::Context,
     http::{RouteCollection, RouteType, RouterManager, WebMiddlewareManager},
-    ExtensionManager,
 };
 
 #[cfg(feature = "multitenant")]
@@ -18,7 +18,7 @@ use dirtybase_contract::multitenant::{
 };
 
 use named_routes_axum::RouterWrapper;
-use tracing::{field, Instrument};
+use tracing::{Instrument, field};
 
 use crate::{core::AppService, shutdown_signal};
 

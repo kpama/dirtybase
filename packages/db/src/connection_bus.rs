@@ -6,9 +6,9 @@ use busstop::{DispatchableQuery, DispatchedQuery, QueryHandler};
 use crate::make_manager;
 
 use super::{
+    PoolManagerSet,
     base::{manager::Manager, schema::DatabaseKind},
     config::ConfigSet,
-    PoolManagerSet,
 };
 
 pub type PoolManagerCommandResult = Result<PoolManagerSet, anyhow::Error>;
@@ -60,12 +60,6 @@ impl MakePoolManagerCommand {
         } else {
             Err(anyhow!("error"))
         }
-    }
-
-    pub fn make_sync(config_set: ConfigSet) -> Result<Manager, anyhow::Error> {
-        tokio::task::block_in_place(move || {
-            tokio::runtime::Handle::current().block_on(async move { Self::make(config_set).await })
-        })
     }
 }
 

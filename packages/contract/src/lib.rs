@@ -17,6 +17,7 @@ pub use busybody;
 pub use extension::ExtensionManager;
 pub use extension::ExtensionMigrations;
 pub use extension::ExtensionSetup;
+pub use fama;
 pub use serde;
 pub use serde_json;
 
@@ -37,6 +38,7 @@ macro_rules! register_migration {
 }
 
 pub mod prelude {
+    pub use super::app::*;
     pub use super::auth::prelude::*;
     pub use super::cli::prelude::*;
     pub use super::config::*;
@@ -46,4 +48,8 @@ pub mod prelude {
     pub use super::http::prelude::*;
 
     pub use async_trait::async_trait;
+    pub use busybody;
+    pub use busybody::Resolver;
+    pub use fama::PipelineBuilderTrait;
+    pub use fama::PipelineTrait;
 }

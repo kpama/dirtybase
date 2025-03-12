@@ -1,7 +1,9 @@
 pub mod config;
 pub mod connection_bus;
 pub mod connector;
+
 mod dirtybase_entry;
+mod resource_manager;
 
 use std::{collections::HashMap, sync::Arc};
 
@@ -9,6 +11,9 @@ use base::schema::DatabaseKind;
 use config::ConfigSet;
 use connection_bus::MakePoolManagerCommand;
 use connector::{
+    mariadb::{
+        mariadb_pool_manager::MariadbPoolManagerRegisterer, mariadb_schema_manager::MARIADB_KIND,
+    },
     mysql::{mysql_pool_manager::MySqlPoolManagerRegisterer, mysql_schema_manager::MYSQL_KIND},
     postgres::{
         postgres_pool_manager::PostgresPoolManagerRegisterer,
@@ -70,6 +75,12 @@ pub async fn setup_handlers() {
                     MYSQL_KIND => {
                         let mysql_pool_registerer = MySqlPoolManagerRegisterer;
                         let r = mysql_pool_registerer.register(query.config_set_ref()).await;
+                        query.set_result(&dispatched, r);
+                        return dispatched;
+                    }
+                    MARIADB_KIND => {
+                        let mariadb_pool_manager = MariadbPoolManagerRegisterer;
+                        let r = mariadb_pool_manager.register(query.config_set_ref()).await;
                         query.set_result(&dispatched, r);
                         return dispatched;
                     }

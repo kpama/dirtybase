@@ -1,3 +1,10 @@
 enable = true
+
+storage = "memory"            #options: memory, database
+
+# for a custom storage using the following.
+# Note: you need to comment out the entry `storage =....`
+# storage.custom = 
+
 signin_form_route = "auth:signin-form"
 auth_route = "auth::do-signin"

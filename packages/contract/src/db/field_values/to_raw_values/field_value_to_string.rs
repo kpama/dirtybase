@@ -20,6 +20,15 @@ impl From<FieldValue> for Arc<str> {
     }
 }
 
+impl From<FieldValue> for Arc<String> {
+    fn from(value: FieldValue) -> Self {
+        match value {
+            FieldValue::String(v) => v.into(),
+            _ => "".to_string().into(),
+        }
+    }
+}
+
 impl From<&FieldValue> for String {
     fn from(value: &FieldValue) -> Self {
         match value {
@@ -38,6 +47,15 @@ impl From<&FieldValue> for Arc<str> {
     }
 }
 
+impl From<&FieldValue> for Arc<String> {
+    fn from(value: &FieldValue) -> Self {
+        match value {
+            FieldValue::String(v) => v.clone().into(),
+            _ => "".to_string().into(),
+        }
+    }
+}
+
 impl From<FieldValue> for Option<String> {
     fn from(value: FieldValue) -> Self {
         if FieldValue::NotSet == value {
@@ -52,7 +70,16 @@ impl From<FieldValue> for Option<Arc<str>> {
     fn from(value: FieldValue) -> Self {
         match value {
             FieldValue::String(v) => Some(v.into()),
-            _ => Some("".into()),
+            _ => None,
+        }
+    }
+}
+
+impl From<FieldValue> for Option<Arc<String>> {
+    fn from(value: FieldValue) -> Self {
+        match value {
+            FieldValue::String(v) => Some(v.into()),
+            _ => None,
         }
     }
 }

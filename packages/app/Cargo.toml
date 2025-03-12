@@ -6,19 +6,19 @@ edition.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dirtybase_db = { workspace = true }
-dirtybase_cache = { workspace = true }
-dirtybase_mail = { workspace = true }
-dirtybase_contract = { workspace = true }
-dirtybase_helper = { workspace = true }
-dirtybase_db_macro = { workspace = true }
-dirtybase_user = { workspace = true }
-dirtybase_cron = { workspace = true }
-dirtybase_auth = { workspace = true }
-dirtybase_session = { workspace = true }
-dirtybase_multitenant = { workspace = true, optional = true }
+dirtybase_db = { path = "../db", version = "*"}
+dirtybase_cache = { path = "../cache", version = "*" }
+dirtybase_mail = { path = "../mail", version = "*"}
+dirtybase_contract = { path = "../contract", version = "*" }
+dirtybase_helper = { path = "../helper", version = "*" }
+dirtybase_db_macro = { path = "../db_macro", version = "*" }
+dirtybase_cron = { path = "../cron", version = "*" }
+dirtybase_auth = { path = "../auth", version = "*", optional = true }
+dirtybase_session = { path="../session", version = "*"}
+dirtybase_multitenant = { path = "../multitenant", version = "*", optional = true }
 simple-middleware = { workspace = true }
 anyhow = { workspace = true }
+validator = { workspace = true }
 clap = { workspace = true }
 hex = { workspace = true }
 base64ct = { workspace = true }
@@ -31,6 +31,7 @@ pretty_env_logger = { workspace = true }
 log = { workspace = true }
 # actix-files = { workspace = true }
 bcrypt = { workspace = true }
+argon2 = { workspace = true }
 rand = { workspace = true }
 futures = { workspace = true }
 futures-util = { workspace = true }
@@ -56,8 +57,8 @@ tracing-subscriber = { workspace = true }
 
 
 [features]
+csrf = []
 db = []
-user = ["db"]
-auth = ["user", "db"]
+auth = ["db", "csrf"]
 multitenant = ["dep:dirtybase_multitenant"]
-full = ["auth", "user", "db", "multitenant"]
+full = ["auth", "db", "multitenant"]

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use dirtybase_cache::{config::CacheConfig, CacheManager};
+use dirtybase_cache::{CacheManager, config::CacheConfig};
 use dirtybase_contract::config::DirtyConfig;
 
 #[tokio::main]

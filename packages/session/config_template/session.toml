@@ -3,7 +3,8 @@ storage = "memory" # options: dummy, database, file, memory, redis
 
 # use the follow entry for a customer driver
 # note: you will need to comment out the entry above
-# driver.custom = ""
+#
+# storage.custom = ""
 
 # lifetime is in minutes
 lifetime = 60

@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
 use dirtybase_contract::config::DirtyConfig;
-use dirtybase_db::{base::schema::ClientType, config::BaseConfig};
+use dirtybase_db::{base::schema::ClientType, config::ConnectionConfig};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     pretty_env_logger::init();
+
     let dty_config = DirtyConfig::new();
     let config = DbConfigurations::new(&dty_config).await;
 
@@ -22,7 +23,7 @@ struct Conf {
 
 #[derive(Debug, serde::Deserialize)]
 struct DbConfigurations {
-    clients: HashMap<String, BaseConfig>,
+    clients: HashMap<String, ConnectionConfig>,
 }
 
 impl DbConfigurations {
@@ -33,7 +34,7 @@ impl DbConfigurations {
             .await
             .unwrap();
 
-        dbg!(&configs.get::<HashMap<String, HashMap<ClientType, BaseConfig>>>("clients"));
+        dbg!(&configs.get::<HashMap<String, HashMap<ClientType, ConnectionConfig>>>("clients"));
 
         // dbg!(&configs);
         Self {

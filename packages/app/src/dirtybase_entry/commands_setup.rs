@@ -27,7 +27,7 @@ pub(crate) fn register(mut manager: CliCommandManager) -> CliCommandManager {
     manager.register(migrate, |name, matches, context| {
         Box::pin(async move {
             let commands: Commands = Commands::from((name, matches));
-            if let Err(e) = run_cli(context.container_ref().provide().await, &commands).await {
+            if let Err(e) = run_cli(context, &commands).await {
                 log::error!("{}", e)
             }
         })
@@ -44,7 +44,7 @@ pub(crate) fn register(mut manager: CliCommandManager) -> CliCommandManager {
     manager.register(queue, |name, matches, context| {
         Box::pin(async move {
             let commands: Commands = Commands::from((name, matches));
-            if let Err(e) = run_cli(context.container_ref().provide().await, &commands).await {
+            if let Err(e) = run_cli(context, &commands).await {
                 log::error!("{}", e)
             }
         })
@@ -61,7 +61,7 @@ pub(crate) fn register(mut manager: CliCommandManager) -> CliCommandManager {
     manager.register(queue, |name, matches, context| {
         Box::pin(async move {
             let commands: Commands = Commands::from((name, matches));
-            if let Err(e) = run_cli(context.container_ref().provide().await, &commands).await {
+            if let Err(e) = run_cli(context, &commands).await {
                 log::error!("{}", e)
             }
         })

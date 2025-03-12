@@ -1,10 +1,9 @@
 use std::collections::{BTreeMap, HashMap};
 
-use dirtybase_db::base::manager::Manager;
 use dirtybase_db::TableEntityTrait;
+use dirtybase_db::base::manager::Manager;
 
 use crate::core::setup_database::setup_migration_table;
-use crate::core::App;
 
 use super::MigrationEntity;
 
@@ -26,11 +25,6 @@ impl MigrationRepository {
     }
 
     pub async fn exist(&self, name: &str) -> bool {
-        // if let Ok(Some(_)) = self.find_by_name(name).await {
-        //     true
-        // } else {
-        //     false
-        // }
         matches!(self.find_by_name(name).await, Ok(Some(_)))
     }
 
@@ -74,7 +68,8 @@ impl MigrationRepository {
     }
 
     pub async fn delete_batch(&self, batch: i64) {
-        self.manager()
+        _ = self
+            .manager()
             .delete(MigrationEntity::table_name(), |q| {
                 q.eq(MigrationEntity::col_name_for_batch(), batch);
             })
@@ -91,16 +86,8 @@ impl MigrationRepository {
         kv.insert("name".to_owned(), name.to_string().into());
         kv.insert("batch".to_owned(), batch.to_string().into());
 
-        self.manager.insert(MigrationEntity::table_name(), kv).await;
+        _ = self.manager.insert(MigrationEntity::table_name(), kv).await;
 
         self.find_by_name(name).await
-    }
-}
-
-#[busybody::async_trait]
-impl busybody::Injectable for MigrationRepository {
-    async fn inject(c: &busybody::ServiceContainer) -> Self {
-        let app = c.get::<App>().await.unwrap();
-        Self::new(app.schema_manger().await)
     }
 }

@@ -21,7 +21,11 @@ impl UserContext {
     }
 
     pub fn status(&self) -> UserStatus {
-        self.status
+        self.status.clone()
+    }
+
+    pub fn status_ref(&self) -> &UserStatus {
+        &self.status
     }
 
     pub fn is_global(&self) -> bool {

@@ -6,34 +6,31 @@ use std::{
 use futures::future::BoxFuture;
 use tokio::{sync::RwLock, time::sleep};
 
-type ContextCollection<T> = Arc<RwLock<HashMap<String, ContextWrapper<T>>>>;
+use super::Context;
 
-struct ContextWrapper<T: Clone + Sync + Sync + 'static> {
-    context: T,
+type ContextCollection<T> = Arc<RwLock<HashMap<String, ResourceWrapper<T>>>>;
+
+struct ResourceWrapper<T: Clone + Sync + Sync + 'static> {
+    resource: T,
     last_ts: AtomicI64,
     idle_timeout: i64, // In seconds
-    idle_callback: Box<dyn FnMut(T) -> BoxFuture<'static, ()> + Send + Sync>,
 }
 
-impl<T: Clone + Sync + Sync + 'static> ContextWrapper<T> {
-    pub fn new<F>(context: T, idle_timeout: i64, idle_callback: F) -> Self
-    where
-        F: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
-    {
+impl<T: Clone + Sync + Sync + 'static> ResourceWrapper<T> {
+    pub fn new(resource: T, idle_timeout: i64) -> Self {
         Self {
-            context,
+            resource,
             last_ts: AtomicI64::new(std::time::UNIX_EPOCH.elapsed().unwrap().as_secs() as i64),
             idle_timeout,
-            idle_callback: Box::new(idle_callback),
         }
     }
 
-    fn context(&self) -> T {
+    fn resource(&self) -> T {
         self.last_ts.swap(
             std::time::UNIX_EPOCH.elapsed().unwrap().as_secs() as i64,
             std::sync::atomic::Ordering::Relaxed,
         );
-        self.context.clone()
+        self.resource.clone()
     }
 
     fn is_expired(&self) -> bool {
@@ -44,63 +41,102 @@ impl<T: Clone + Sync + Sync + 'static> ContextWrapper<T> {
     }
 }
 
-pub struct ContextManager<T: Clone + Send + Sync + 'static> {
+pub struct ContextResourceManager<T: Clone + Send + Sync + 'static> {
+    setup_fn: RwLock<Box<dyn FnMut(Context) -> BoxFuture<'static, (String, i64)> + Send + Sync>>,
+    resolver_fn: RwLock<Box<dyn FnMut(Context) -> BoxFuture<'static, T> + Send + Sync>>,
+    drop_fn: Arc<RwLock<Box<dyn FnMut(T) -> BoxFuture<'static, ()> + Send + Sync>>>,
     collection: ContextCollection<T>,
 }
 
-impl<T: Clone + Send + Sync + 'static> Default for ContextManager<T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<T: Clone + Send + Sync + 'static> ContextManager<T> {
-    pub fn new() -> Self {
+impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
+    /// Creates an instance of the ContextResourceManager
+    ///
+    /// This struct manages the life circle of a resource based on the
+    /// current context.
+    ///
+    /// This method takes three closures
+    ///  1. Setup: a closure that implements `FnMut(Context) -> BoxFuture<(String, i64)>`
+    ///            The return type of this closure must be a tuple with two elements.
+    ///            - Index 0: A string used to identify this specific instance of the resource.
+    ///            - Index 1: where 0 means the resource will bre for the entire application life,
+    ///                       less than 0 means the the fallback closure will be called each time an instance
+    ///                       is required and value above zero means the resource will be dropped after being
+    ///                       idle for this length of time.
+    ///
+    ///  2. Resolver: a closure the implements `FnMut(Context) -> BoxFuture<T>` where `T` is an
+    ///               instance of the resource.
+    ///
+    ///  3. Drop: a closure that implements `FnMut(T) -> BoxFuture<()>` where T is the instance
+    ///     that has been dropped ie. remove from he collection of instances
+    ///
+    pub fn new<S, F, C>(setup_fn: S, resolver_fn: F, drop_fn: C) -> Self
+    where
+        S: FnMut(Context) -> BoxFuture<'static, (String, i64)> + Send + Sync + 'static,
+        F: FnMut(Context) -> BoxFuture<'static, T> + Send + Sync + 'static,
+        C: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+    {
         Self {
+            setup_fn: RwLock::new(Box::new(setup_fn)),
+            resolver_fn: RwLock::new(Box::new(resolver_fn)),
+            drop_fn: Arc::new(RwLock::new(Box::new(drop_fn))),
             collection: ContextCollection::default(),
         }
     }
 
-    /// Tries to return an instance of `T` or fall back to your callback
-    ///
-    /// idle duration is in seconds
-    /// The idle callback will not be called if idle timeout is less than one.
-    /// This also means, the resource will not be dropped.
-    pub async fn context<F, C>(
+    pub async fn try_get(context: &Context) -> Option<T> {
+        if let Some(manager) = context.container().get::<Self>().await {
+            let mut setup_fn_lock = manager.setup_fn.write().await;
+            let (name, idle_timeout) = (setup_fn_lock)(context.clone()).await;
+
+            return Some(
+                manager
+                    .get_resource(context.clone(), &name, idle_timeout)
+                    .await,
+            );
+        }
+
+        None
+    }
+
+    async fn get_resource(
         &self,
+        context: Context,
         name: &str,
         idle_timeout: i64, // in seconds
-        mut else_callback: F,
-        idle_callback: C,
-    ) -> T
-    where
-        F: FnMut() -> BoxFuture<'static, T>,
-        C: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
-    {
+    ) -> T {
         let mut lock = self.collection.write().await;
 
         if !lock.contains_key(name) {
+            let mut resolver_lock = self.resolver_fn.write().await;
+            let resource = (resolver_lock)(context).await;
+
+            if idle_timeout < 0 {
+                return resource;
+            }
+
             lock.insert(
                 name.to_string(),
-                ContextWrapper::new(else_callback().await, idle_timeout, idle_callback),
+                ResourceWrapper::new(resource, idle_timeout),
             );
 
             if idle_timeout > 0 {
                 let list = Arc::clone(&self.collection);
                 let name2 = name.to_string();
+                let clean_up_fn = self.drop_fn.clone();
 
                 tokio::spawn(async move {
                     loop {
-                        sleep(std::time::Duration::from_secs(2)).await;
+                        sleep(std::time::Duration::from_secs(idle_timeout as u64)).await;
                         let read_lock = list.read().await;
 
                         if read_lock.contains_key(&name2) {
                             if read_lock.get(&name2).unwrap().is_expired() {
                                 drop(read_lock);
                                 let mut write_lock = list.write().await;
-                                if let Some(mut ctx) = write_lock.remove(&name2) {
-                                    let content = ctx.context();
-                                    (ctx.idle_callback)(content).await;
+                                if let Some(ctx) = write_lock.remove(&name2) {
+                                    let resource = ctx.resource();
+                                    let mut clean_fn_lock = clean_up_fn.write().await;
+                                    (clean_fn_lock)(resource).await;
                                     drop(ctx);
                                 }
 
@@ -115,10 +151,10 @@ impl<T: Clone + Send + Sync + 'static> ContextManager<T> {
             }
         }
 
-        lock.get(name).unwrap().context()
+        lock.get(name).unwrap().resource()
     }
 
-    pub async fn has_context(&self, name: &str) -> bool {
+    pub async fn has_resource(&self, name: &str) -> bool {
         let lock = self.collection.read().await;
         lock.contains_key(name)
     }
@@ -130,16 +166,13 @@ mod test {
 
     #[tokio::test]
     async fn test_context_creation() {
-        let manager = ContextManager::new();
+        let manager = ContextResourceManager::new(
+            |_| Box::pin(async { ("global".to_owned(), 20) }),
+            |_| Box::pin(async { 100 }),
+            |_| Box::pin(async {}),
+        );
 
-        let counter = manager
-            .context(
-                "counter",
-                1,
-                || Box::pin(async { 100 }),
-                |_| Box::pin(async {}),
-            )
-            .await;
+        let counter = manager.get_resource(Context::default(), "counter", 1).await;
 
         assert_eq!(counter, 100);
     }
@@ -150,22 +183,22 @@ mod test {
         struct DbConnection {
             url: String,
         }
-        let manager = ContextManager::new();
+
         let url_string = "connection_sting";
+        let manager = ContextResourceManager::new(
+            |_| Box::pin(async { ("global".to_owned(), 20) }),
+            move |_| {
+                Box::pin({
+                    async move {
+                        let url = url_string.to_string();
+                        DbConnection { url }
+                    }
+                })
+            },
+            |_| Box::pin(async {}),
+        );
         let connection = manager
-            .context(
-                "db_connection",
-                1,
-                || {
-                    Box::pin({
-                        async move {
-                            let url = url_string.to_string();
-                            DbConnection { url }
-                        }
-                    })
-                },
-                |_| Box::pin(async {}),
-            )
+            .get_resource(Context::default(), "db_connection", 1)
             .await;
 
         assert_eq!(&connection.url, url_string);
@@ -173,34 +206,28 @@ mod test {
 
     #[tokio::test]
     async fn test_idle_time_expired() {
-        let manager = ContextManager::new();
+        let manager = ContextResourceManager::new(
+            |_| Box::pin(async { ("global".to_string(), 100) }),
+            |_| Box::pin(async { 100 }),
+            |_| Box::pin(async {}),
+        );
 
-        _ = manager
-            .context(
-                "counter",
-                3,
-                || Box::pin(async { 100 }),
-                |_| Box::pin(async {}),
-            )
-            .await;
+        _ = manager.get_resource(Context::default(), "counter", 3).await;
 
         sleep(std::time::Duration::from_secs(6)).await;
-        assert!(!(manager.has_context("counter").await));
+        assert!(!(manager.has_resource("counter").await));
     }
 
     #[tokio::test]
     async fn test_idle_time_not_expired() {
-        let manager = ContextManager::new();
+        let manager = ContextResourceManager::new(
+            |_| Box::pin(async { ("global".to_owned(), 20) }),
+            |_| Box::pin(async { 100 }),
+            |_| Box::pin(async {}),
+        );
 
-        _ = manager
-            .context(
-                "counter",
-                3,
-                || Box::pin(async { 100 }),
-                |_| Box::pin(async {}),
-            )
-            .await;
+        _ = manager.get_resource(Context::default(), "counter", 3).await;
 
-        assert!(manager.has_context("counter").await);
+        assert!(manager.has_resource("counter").await);
     }
 }

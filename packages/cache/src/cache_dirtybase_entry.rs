@@ -1,11 +1,11 @@
-use dirtybase_contract::{config::DirtyConfig, ExtensionSetup};
+use dirtybase_contract::{ExtensionSetup, app::Context};
 
 #[derive(Debug, Default)]
 pub struct Extension;
 
 #[dirtybase_contract::async_trait]
 impl ExtensionSetup for Extension {
-    async fn setup(&mut self, config: &DirtyConfig) {
-        super::setup(config).await;
+    async fn setup(&mut self, context: &Context) {
+        super::setup(context).await;
     }
 }

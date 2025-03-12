@@ -1,18 +1,18 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
-use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
+use sqlx::{MySql, Pool, mysql::MySqlPoolOptions};
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
+    ConnectionPoolRegisterTrait,
     base::{
         connection::ConnectionPoolTrait,
         schema::{ClientType, DatabaseKind, SchemaManagerTrait},
     },
-    config::{BaseConfig, ConfigSet},
-    ConnectionPoolRegisterTrait,
+    config::{ConfigSet, ConnectionConfig},
 };
 
-use super::mysql_schema_manager::{MySqlSchemaManager, MYSQL_KIND};
+use super::mysql_schema_manager::{MYSQL_KIND, MySqlSchemaManager};
 
 pub struct MySqlPoolManagerRegisterer;
 
@@ -65,7 +65,7 @@ impl ConnectionPoolTrait for MysqlPoolManager {
     }
 }
 
-pub async fn db_connect(config: &BaseConfig) -> anyhow::Result<Pool<MySql>> {
+pub async fn db_connect(config: &ConnectionConfig) -> anyhow::Result<Pool<MySql>> {
     match MySqlPoolOptions::new()
         .max_connections(config.max)
         .connect(&config.url)
@@ -78,7 +78,7 @@ pub async fn db_connect(config: &BaseConfig) -> anyhow::Result<Pool<MySql>> {
         }
         Err(e) => {
             // TODO: Use i18n
-            log::error!("could not connect to mysql/mariadb: {:?}", e);
+            log::error!("could not connect to mysql: {:?}", e);
             Err(anyhow!(e))
         }
     }

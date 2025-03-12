@@ -1,4 +1,5 @@
+pub mod model;
 pub mod status;
-mod user;
+mod user_provider;
 
-pub use user::*;
+pub use user_provider::*;

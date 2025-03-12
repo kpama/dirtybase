@@ -12,11 +12,11 @@ pub struct Extension;
 #[dirtybase_contract::async_trait]
 impl dirtybase_contract::ExtensionSetup for Extension {
     
-    async fn setup(&mut self, _config: &DirtyConfig) {
+    async fn setup(&mut self, _global_context: &Context) {
         event_handler::setup().await;
     }
 
-    fn migrations(&self) -> Option<dirtybase_contract::ExtensionMigrations> {
+    fn migrations(&self, _global_context: &Context) -> Option<dirtybase_contract::ExtensionMigrations> {
         migration::setup()
     }
 
@@ -25,7 +25,8 @@ impl dirtybase_contract::ExtensionSetup for Extension {
         mut manager: RouterManager,
         _middleware: &WebMiddlewareManager,
     ) -> RouterManager {
-        manager.general(Some(env!("CARGO_PKG_NAME")), |router| {
+        let prefix = format!("/{}", env!("CARGO_PKG_NAME"));
+        manager.general(Some(&prefix), |router| {
              router.get_x("/", || async { "Be awesome" })
         });
 

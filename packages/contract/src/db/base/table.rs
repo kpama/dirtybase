@@ -54,7 +54,7 @@ impl TableBlueprint {
 
     pub fn column(
         &mut self,
-        name: &'static str,
+        name: &str,
         callback: impl FnOnce(&mut ColumnBlueprint),
     ) -> &mut ColumnBlueprint {
         let mut column = ColumnBlueprint::new(name, ColumnType::String(255));
@@ -65,55 +65,55 @@ impl TableBlueprint {
         self.columns.last_mut().unwrap()
     }
 
-    pub fn boolean(&mut self, name: &'static str) -> &mut ColumnBlueprint {
+    pub fn boolean(&mut self, name: &str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::Boolean);
         })
     }
 
-    pub fn char(&mut self, name: &'static str, length: usize) -> &mut ColumnBlueprint {
+    pub fn char(&mut self, name: &str, length: usize) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::Char(length));
         })
     }
 
-    pub fn datetime(&mut self, name: &'static str) -> &mut ColumnBlueprint {
+    pub fn datetime(&mut self, name: &str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::Datetime);
         })
     }
 
-    pub fn timestamp(&mut self, name: &'static str) -> &mut ColumnBlueprint {
+    pub fn timestamp(&mut self, name: &str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::Timestamp);
         })
     }
 
-    pub fn float(&mut self, name: &'static str) -> &mut ColumnBlueprint {
+    pub fn float(&mut self, name: &str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::Float);
         })
     }
 
-    pub fn integer(&mut self, name: &'static str) -> &mut ColumnBlueprint {
+    pub fn integer(&mut self, name: &str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::Integer);
         })
     }
 
-    pub fn json(&mut self, name: &'static str) -> &mut ColumnBlueprint {
+    pub fn json(&mut self, name: &str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::Json);
         })
     }
 
-    pub fn number(&mut self, name: &'static str) -> &mut ColumnBlueprint {
+    pub fn number(&mut self, name: &str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::Number);
         })
     }
 
-    pub fn enum_<T>(&mut self, name: &'static str, options: &[T]) -> &mut ColumnBlueprint
+    pub fn enum_<T>(&mut self, name: &str, options: &[T]) -> &mut ColumnBlueprint
     where
         T: ToString,
     {
@@ -127,31 +127,31 @@ impl TableBlueprint {
         })
     }
 
-    pub fn string(&mut self, name: &'static str) -> &mut ColumnBlueprint {
+    pub fn string(&mut self, name: &str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
-            column.set_type(ColumnType::String(255));
+            column.set_type(ColumnType::String(256));
         })
     }
 
-    pub fn sized_string(&mut self, name: &'static str, length: usize) -> &mut ColumnBlueprint {
+    pub fn sized_string(&mut self, name: &str, length: usize) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::String(length));
         })
     }
 
-    pub fn text(&mut self, name: &'static str) -> &mut ColumnBlueprint {
+    pub fn text(&mut self, name: &str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::Text);
         })
     }
 
-    pub fn binary(&mut self, name: &'static str) -> &mut ColumnBlueprint {
+    pub fn binary(&mut self, name: &str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::Binary);
         })
     }
 
-    pub fn uuid(&mut self, name: &'static str) -> &mut ColumnBlueprint {
+    pub fn uuid(&mut self, name: &str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::Uuid);
         })
@@ -237,10 +237,14 @@ impl TableBlueprint {
         })
     }
 
-    pub fn ulid(&mut self, name: &'static str) -> &mut ColumnBlueprint {
+    pub fn ulid(&mut self, name: &str) -> &mut ColumnBlueprint {
         self.char(name, ULID_STRING_LENGTH)
     }
 
+    /// Creates two fields `internal_id` and `id`
+    ///
+    /// `internal_id` is an auto increment numeric value
+    /// `id` is a ULID field
     pub fn id_set(&mut self) {
         self.id(Some(INTERNAL_ID_FIELD));
         self.ulid(ID_FIELD)
@@ -248,14 +252,32 @@ impl TableBlueprint {
             .set_is_nullable(false);
     }
 
-    pub fn uuid_id_set(&mut self) {
-        self.id(Some(INTERNAL_ID_FIELD));
-        self.uuid(ID_FIELD)
+    pub fn ulid_as_id(&mut self, name: Option<&str>) {
+        let name = name.unwrap_or(ID_FIELD).to_string();
+        self.ulid(name.as_str())
             .set_is_unique(true)
-            .set_is_nullable(false);
+            .set_is_nullable(false)
+            .set_as_primary();
     }
 
-    pub fn id(&mut self, name: Option<&'static str>) -> &mut ColumnBlueprint {
+    /// Creates two fields `internal_id` and `id`
+    ///
+    /// `internal_id` is an auto increment numeric value
+    /// `id` is a UUID7 field
+    pub fn uuid_id_set(&mut self) {
+        self.id(Some(INTERNAL_ID_FIELD));
+        self.uuid_as_id(None);
+    }
+
+    pub fn uuid_as_id(&mut self, name: Option<&str>) {
+        let name = name.unwrap_or(ID_FIELD);
+        self.uuid(name)
+            .set_is_unique(true)
+            .set_is_nullable(false)
+            .set_as_primary();
+    }
+
+    pub fn id(&mut self, name: Option<&str>) -> &mut ColumnBlueprint {
         self.column(name.unwrap_or(ID_FIELD), |column| {
             column.set_type(ColumnType::AutoIncrementId);
         })

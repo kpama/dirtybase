@@ -1,22 +1,20 @@
-use std::collections::HashMap;
-
+use axum::response::Html;
 use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
-use dirtybase_auth::middlewares::{handle_user_login_web_request, UserCredential};
 use dirtybase_contract::app::RequestContext;
-use dirtybase_contract::config::DirtyConfig;
 use dirtybase_contract::{
-    app::{Context, ContextManager, CtxExt},
+    app::{Context, ContextResourceManager, CtxExt},
     prelude::*,
     session::Session,
 };
 use dirtybase_db::base::manager::Manager;
+use dirtybase_db::types::{ArcUuid7, IntoColumnAndValue};
 use tracing::Level;
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_max_level(Level::TRACE)
+        .with_max_level(Level::DEBUG)
         .try_init()
         .expect("could not setup tracing");
 
@@ -24,7 +22,6 @@ async fn main() {
 
     app_service.register(App).await;
 
-    // _ = dirtybase_app::run_command(["serve"]).await;
     _ = run(app_service).await;
 }
 
@@ -33,9 +30,18 @@ struct App;
 
 #[async_trait::async_trait]
 impl ExtensionSetup for App {
-    async fn setup(&mut self, _config: &DirtyConfig) {
-        busybody::helpers::register_service(UserProviderService::new(MyOwnUserProvider)).await;
-        busybody::helpers::register_service(ContextManager::<i32>::new()).await;
+    async fn setup(&mut self, _context: &Context) {
+        busybody::helpers::register_service(ContextResourceManager::<i32>::new(
+            |_| Box::pin(async { ("global points".to_string(), 50) }),
+            |_| {
+                Box::pin(async {
+                    tracing::error!(">>>>>>>>>>>>>>>>>>>>>>>  making new i32");
+                    40000
+                })
+            },
+            |_| Box::pin(async {}),
+        ))
+        .await;
     }
 
     fn register_cli_middlewares(&self, mut manager: CliMiddlewareManager) -> CliMiddlewareManager {
@@ -59,23 +65,52 @@ impl ExtensionSetup for App {
     ) -> RouterManager {
         manager.general(None, |router| {
             let router = router.get("/", index_request_handler, "index-page");
-            // middleware_manager.apply(router, ["auth::normal"])
-            router
+            middleware_manager.apply(router, ["auth::normal"])
         });
 
         // login
         manager.general(None, |router| {
             router
+                .get_x("/form", || async move {
+                    let form = r#"<form action='/do-login', method='post'>
+                    <label>Username</label><br/>
+                    <input type='text' name='username' placeholer='Username' /> <br/>
+                    <label>Password</label><br/>
+                    <input type='password' name='password' placeholer='Pasword' /> <br/>
+                    <input type='submit' value='Login'/>
+                    </form>"#;
+                    Html(form)
+                })
                 .post(
-                    "/do-login",
-                    |Form(credential): Form<UserCredential>| async move {
-                        println!("credential: {:#?}", credential);
+                    "/do-login", // TODO: CSRF CHECK
+                    |credential: LoginCredential| async move {
+                        println!("credential - username : {:#?}", credential.username());
+                        println!("credential - password: {:#?}", credential.password());
                         "Auth finish"
                     },
                     "do-login",
                 )
-                .post("/do-login2", handle_user_login_web_request, "do-login2") // FIXME: CSRF Token feature...
                 .get("/xx", test_cookie_handler, "xx")
+                .post_x(
+                    "/create-user",
+                    |CtxExt(manager): CtxExt<Manager>,
+                     Form(mut auth_user): Form<AuthUserPayload>| async move {
+                        let result = auth_user.validate();
+                        auth_user.id = Some(ArcUuid7::default());
+                        _ = manager.insert_ref("auth_users", &auth_user).await;
+                        tracing::error!("validation result: {:#?}", result);
+                        format!("new user id: {}", auth_user.id.unwrap())
+                    },
+                )
+                .put_x(
+                    "/update-user/{id}",
+                    |Path(id): Path<ArcUuid7>, Form(mut data): Form<AuthUserPayload>| async move {
+                        data.id = Some(id.clone());
+                        tracing::error!("updating{:#?}", &data);
+                        tracing::error!("column/value: {:#?}", data.into_column_value());
+                        format!("updated user id: {}", &id)
+                    },
+                )
         });
 
         manager
@@ -85,32 +120,6 @@ impl ExtensionSetup for App {
         let tenant = context.tenant().await.unwrap();
 
         let id = tenant.id().to_string();
-        context
-            .container()
-            .resolver(move |c| {
-                let id2 = id.clone();
-                Box::pin(async move {
-                    if let Some(m) = c.get::<ContextManager<i32>>().await {
-                        println!(">>>>>>>>>>>>>>>>>>>> tenant id is <<<<< : {:?}", &id2);
-                        // println!("still has context: {}", m.has_context(&id).await);
-                        return m
-                            .context(
-                                &id2,
-                                30,
-                                || {
-                                    Box::pin(async {
-                                        tracing::error!(">>>>>>>>>>>>>>>>>>>>>>>  making new i32");
-                                        40000
-                                    })
-                                },
-                                |_| Box::pin(async {}),
-                            )
-                            .await;
-                    }
-                    3000
-                })
-            })
-            .await;
         req
     }
 }
@@ -135,7 +144,8 @@ async fn index_request_handler(
         .add("index handler", true.to_string());
     let has_company = manager.has_table("companies").await;
 
-    log::info!("in index page");
+    log::error!("Current Database kind: {}", manager.db_kind());
+
     if let Some(user) = context.user().await {
         println!("current user: {:?}", user);
         println!("current user is the global user? {}", user.is_global());
@@ -148,33 +158,5 @@ async fn index_request_handler(
         )
     } else {
         "Welcome unknown user".to_string()
-    }
-}
-
-struct MyOwnUserProvider;
-
-#[async_trait::async_trait]
-impl UserProviderTrait for MyOwnUserProvider {
-    async fn by_username(&self, id: &str) -> String {
-        println!("using a custom user serivce provider");
-        let mut dev_users = HashMap::new();
-
-        dev_users.insert("user1", "pwd1");
-        dev_users.insert("user2", "pwd2");
-        dev_users.insert("user3", "pwd3");
-
-        if let Some(st) = dev_users.get(id) {
-            st.to_string()
-        } else {
-            String::new()
-        }
-    }
-
-    async fn by_email(&self, _email: &str) -> String {
-        String::new()
-    }
-
-    async fn by_id(&self, _id: &str) -> String {
-        String::new()
     }
 }

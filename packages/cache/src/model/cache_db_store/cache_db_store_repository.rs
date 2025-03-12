@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use dirtybase_contract::db::base::manager::Manager;
 use dirtybase_contract::db::base::query::QueryBuilder;
-use dirtybase_contract::db::{field_values::FieldValue, TableEntityTrait};
+use dirtybase_contract::db::{TableEntityTrait, field_values::FieldValue};
 use dirtybase_helper::time::now;
 
 use super::{CacheDbPivotEntity, CacheDbStoreEntity, CacheDbTagStoreEntity};
@@ -87,14 +87,19 @@ impl CacheDbStoreRepository {
         let result = self.get(key, true).await;
         if result.is_some() {
             let payload = self.build_payload(key, data, expiration);
-            self.manager
+            if self
+                .manager
                 .update(CacheDbStoreEntity::table_name(), payload, |query| {
                     query.eq(
                         CacheDbStoreEntity::prefix_with_tbl(CacheDbStoreEntity::col_name_for_key()),
                         key,
                     );
                 })
-                .await;
+                .await
+                .is_err()
+            {
+                return false;
+            }
             self.tag_key(tags, key).await;
             return true;
         }
@@ -112,9 +117,14 @@ impl CacheDbStoreRepository {
 
         if !result {
             let payload = self.build_payload(key, data, expiration);
-            self.manager
+            if self
+                .manager
                 .insert(CacheDbStoreEntity::table_name(), payload)
-                .await;
+                .await
+                .is_err()
+            {
+                return false;
+            }
             self.tag_key(tags, key).await;
             return true;
         }
@@ -127,13 +137,14 @@ impl CacheDbStoreRepository {
             .delete(CacheDbStoreEntity::table_name(), |query| {
                 query.eq(CacheDbStoreEntity::col_name_for_key(), key);
             })
-            .await;
-        true
+            .await
+            .is_ok()
     }
 
     pub async fn delete_all(&self, tags: Option<&[String]>) -> bool {
         if tags.is_some() {
-            self.manager
+            if self
+                .manager
                 .delete(CacheDbStoreEntity::table_name(), |query| {
                     query
                         .left_join_table::<CacheDbPivotEntity, CacheDbStoreEntity>(
@@ -147,7 +158,11 @@ impl CacheDbStoreRepository {
                             tags,
                         );
                 })
-                .await;
+                .await
+                .is_err()
+            {
+                return false;
+            }
 
             self.delete_tags(tags).await;
 
@@ -158,7 +173,8 @@ impl CacheDbStoreRepository {
     }
 
     pub async fn delete_expired(&self) {
-        self.manager
+        _ = self
+            .manager
             .delete(CacheDbStoreEntity::table_name(), |query| {
                 query.gt_or_eq(
                     CacheDbStoreEntity::col_name_for_expiration(),
@@ -207,17 +223,19 @@ impl CacheDbStoreRepository {
                 })
                 .collect();
 
-            self.manager
+            return self
+                .manager
                 .soft_insert_multi(CacheDbTagStoreEntity::table_name(), rows)
-                .await;
-            return true;
+                .await
+                .is_ok();
         }
 
         false
     }
 
     async fn delete_tags(&self, tags: Option<&[String]>) {
-        self.manager
+        _ = self
+            .manager
             .delete(CacheDbTagStoreEntity::table_name(), |query| {
                 query.is_in(CacheDbTagStoreEntity::col_name_for_tag(), tags);
             })
@@ -246,10 +264,11 @@ impl CacheDbStoreRepository {
                 })
                 .collect::<Vec<HashMap<String, FieldValue>>>();
 
-            self.manager
+            return self
+                .manager
                 .soft_insert_multi(CacheDbPivotEntity::table_name(), rows)
-                .await; // TODO: LOG Errors
-            return true;
+                .await
+                .is_ok();
         }
 
         false

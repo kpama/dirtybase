@@ -1,20 +1,20 @@
-use busybody::{helpers::provide, Service};
+use busybody::{Service, helpers::get_type};
 use dirtybase_app::{
     axum::{
         extract::Path,
-        http::{header::CONTENT_TYPE, HeaderValue, Response},
+        http::{HeaderValue, Response, header::CONTENT_TYPE},
         response::IntoResponse,
     },
-    contract::{http::prelude::*, ExtensionSetup},
+    contract::{ExtensionSetup, http::prelude::*},
     core::App,
 };
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 
-static UI_EMBEDDED_ASSETS: Dir = include_dir!("bin/ui/src/app/dist/spa");
+static UI_EMBEDDED_ASSETS: Dir = include_dir!("bin/ui/embedded/");
 
 async fn home() -> impl IntoResponse {
     if let Some(file) = UI_EMBEDDED_ASSETS.get_file("index.html") {
-        let config = provide::<Service<App>>().await.config();
+        let config = get_type::<Service<App>>().await.unwrap().config();
         Response::builder()
             .body(
                 file.contents_utf8()

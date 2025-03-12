@@ -4,6 +4,6 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-dirtybase_contract = { workspace = true }
+dirtybase_contract = { path = "../contract", version = "*" }
 serde = { workspace = true }
 tracing = { workspace = true }

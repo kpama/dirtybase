@@ -90,6 +90,10 @@ pub fn now() -> Time {
     Time::now()
 }
 
+pub fn current_datetime() -> DateTime<Utc> {
+    Utc::now()
+}
+
 pub fn now_ts() -> i64 {
     now().timestamp()
 }

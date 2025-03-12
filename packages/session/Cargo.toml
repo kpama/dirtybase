@@ -4,10 +4,10 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-dirtybase_db_macro = { workspace = true }
-dirtybase_contract = { workspace = true }
-dirtybase_helper = { workspace = true }
-dirtybase_cron = { workspace = true }
+dirtybase_db_macro = { path = "../db_macro", version = "*" }
+dirtybase_contract = { path = "../contract", version = "*" }
+dirtybase_helper = { path = "../helper", version = "*" }
+dirtybase_cron = { path = "../cron", version = "*" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }

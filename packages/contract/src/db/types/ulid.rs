@@ -79,7 +79,7 @@ impl From<FieldValue> for Option<UlidField> {
     fn from(value: FieldValue) -> Self {
         match value {
             FieldValue::String(v) => Some(UlidField(v)),
-            _ => Some(UlidField("".to_string())),
+            _ => None,
         }
     }
 }
