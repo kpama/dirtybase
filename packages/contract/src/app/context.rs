@@ -107,19 +107,19 @@ impl Context {
         &self.sc
     }
 
-    pub async fn user(&self) -> Option<Arc<UserContext>> {
+    pub async fn user(&self) -> Option<UserContext> {
         self.get().await
     }
 
-    pub async fn tenant(&self) -> Option<Arc<TenantContext>> {
+    pub async fn tenant(&self) -> Option<TenantContext> {
         self.get().await
     }
 
-    pub async fn app(&self) -> Option<Arc<AppContext>> {
+    pub async fn app(&self) -> Option<AppContext> {
         self.get().await
     }
 
-    pub async fn role(&self) -> Option<Arc<RoleContext>> {
+    pub async fn role(&self) -> Option<RoleContext> {
         self.get().await
     }
 
