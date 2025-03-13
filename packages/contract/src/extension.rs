@@ -139,6 +139,10 @@ impl ExtensionManager {
         }
     }
 
+    pub async fn is_ready() -> bool {
+        EXTENSIONS_READY.get().is_some()
+    }
+
     pub async fn setup_boot_run(context: &Context) {
         if EXTENSIONS_READY.get().is_some() {
             return;
