@@ -7,7 +7,12 @@ pub(crate) async fn register_resource_manager() {
         |context| {
             Box::pin(async move {
                 let config = context.get_config::<DbConfig>("database").await.unwrap();
-                let name = context.tenant().await.unwrap().id().to_string();
+                let name = context
+                    .tenant()
+                    .await
+                    .expect("could not get tenant")
+                    .id()
+                    .to_string();
                 let timeout = config.idle_timeout();
                 context.set(config).await;
                 (name, timeout)
