@@ -41,9 +41,11 @@ impl<T: Clone + Sync + Sync + 'static> ResourceWrapper<T> {
     }
 }
 
+#[derive(Clone)]
 pub struct ContextResourceManager<T: Clone + Send + Sync + 'static> {
-    setup_fn: RwLock<Box<dyn FnMut(Context) -> BoxFuture<'static, (String, i64)> + Send + Sync>>,
-    resolver_fn: RwLock<Box<dyn FnMut(Context) -> BoxFuture<'static, T> + Send + Sync>>,
+    setup_fn:
+        Arc<RwLock<Box<dyn FnMut(Context) -> BoxFuture<'static, (String, i64)> + Send + Sync>>>,
+    resolver_fn: Arc<RwLock<Box<dyn FnMut(Context) -> BoxFuture<'static, T> + Send + Sync>>>,
     drop_fn: Arc<RwLock<Box<dyn FnMut(T) -> BoxFuture<'static, ()> + Send + Sync>>>,
     collection: ContextCollection<T>,
 }
@@ -69,18 +71,20 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
     ///  3. Drop: a closure that implements `FnMut(T) -> BoxFuture<()>` where T is the instance
     ///     that has been dropped ie. remove from he collection of instances
     ///
-    pub fn new<S, F, C>(setup_fn: S, resolver_fn: F, drop_fn: C) -> Self
+    pub async fn new<S, F, C>(setup_fn: S, resolver_fn: F, drop_fn: C) -> Self
     where
         S: FnMut(Context) -> BoxFuture<'static, (String, i64)> + Send + Sync + 'static,
         F: FnMut(Context) -> BoxFuture<'static, T> + Send + Sync + 'static,
         C: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
-        Self {
-            setup_fn: RwLock::new(Box::new(setup_fn)),
-            resolver_fn: RwLock::new(Box::new(resolver_fn)),
+        let instance = Self {
+            setup_fn: Arc::new(RwLock::new(Box::new(setup_fn))),
+            resolver_fn: Arc::new(RwLock::new(Box::new(resolver_fn))),
             drop_fn: Arc::new(RwLock::new(Box::new(drop_fn))),
             collection: ContextCollection::default(),
-        }
+        };
+
+        instance.handle_shutdown_signal().await
     }
 
     pub async fn register<S, F, C>(setup_fn: S, resolver_fn: F, drop_fn: C)
@@ -89,7 +93,7 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
         F: FnMut(Context) -> BoxFuture<'static, T> + Send + Sync + 'static,
         C: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
-        let instance = Self::new(setup_fn, resolver_fn, drop_fn);
+        let instance = Self::new(setup_fn, resolver_fn, drop_fn).await;
 
         busybody::helpers::service_container().set(instance).await;
     }
@@ -145,7 +149,7 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
             let mut resolver_lock = self.resolver_fn.write().await;
             let resource = (resolver_lock)(context).await;
 
-            if idle_timeout < 0 {
+            if idle_timeout > 0 {
                 return resource;
             }
 
@@ -193,6 +197,58 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
         let lock = self.collection.read().await;
         lock.contains_key(name)
     }
+
+    async fn drop_all(&self) {
+        tracing::trace!(
+            "shutting down resource context manager: {}",
+            self.name_of_t()
+        );
+        let list = Arc::clone(&self.collection);
+        let clean_up_fn = self.drop_fn.clone();
+        let mut write_lock = list.write().await;
+        for (_, wrapper) in write_lock.drain().into_iter() {
+            let mut clean_fn_lock = clean_up_fn.write().await;
+            (clean_fn_lock)(wrapper.resource()).await;
+        }
+    }
+
+    fn name_of_t(&self) -> &'static str {
+        std::any::type_name::<T>()
+    }
+
+    async fn handle_shutdown_signal(self) -> Self {
+        let this_manager = self.clone();
+
+        tokio::spawn(async move {
+            let ctrl_c = async {
+                tokio::signal::ctrl_c()
+                    .await
+                    .expect("failed to install Ctrl+C handler");
+            };
+
+            #[cfg(unix)]
+            let terminate = async {
+                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                    .expect("failed to install signal handler")
+                    .recv()
+                    .await;
+            };
+
+            #[cfg(not(unix))]
+            let terminate = std::future::pending::<()>();
+
+            tokio::select! {
+                _ = ctrl_c => {
+                    this_manager.drop_all().await;
+                },
+                _ = terminate => {
+                    this_manager.drop_all().await;
+                },
+            }
+        });
+
+        self
+    }
 }
 
 #[cfg(test)]
@@ -205,7 +261,8 @@ mod test {
             |_| Box::pin(async { ("global".to_owned(), 20) }),
             |_| Box::pin(async { 100 }),
             |_| Box::pin(async {}),
-        );
+        )
+        .await;
 
         let counter = manager.get_resource(Context::default(), "counter", 1).await;
 
@@ -231,7 +288,8 @@ mod test {
                 })
             },
             |_| Box::pin(async {}),
-        );
+        )
+        .await;
         let connection = manager
             .get_resource(Context::default(), "db_connection", 1)
             .await;
@@ -245,7 +303,8 @@ mod test {
             |_| Box::pin(async { ("global".to_string(), 100) }),
             |_| Box::pin(async { 100 }),
             |_| Box::pin(async {}),
-        );
+        )
+        .await;
 
         _ = manager.get_resource(Context::default(), "counter", 3).await;
 
@@ -259,7 +318,8 @@ mod test {
             |_| Box::pin(async { ("global".to_owned(), 20) }),
             |_| Box::pin(async { 100 }),
             |_| Box::pin(async {}),
-        );
+        )
+        .await;
 
         _ = manager.get_resource(Context::default(), "counter", 3).await;
 
