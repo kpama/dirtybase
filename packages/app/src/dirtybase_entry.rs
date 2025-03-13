@@ -1,5 +1,4 @@
 use dirtybase_contract::{
-    app::Context,
     cli::CliCommandManager,
     http::{RouterManager, WebMiddlewareManager},
 };
@@ -11,18 +10,6 @@ pub struct Extension;
 
 #[dirtybase_contract::async_trait]
 impl dirtybase_contract::ExtensionSetup for Extension {
-    async fn setup(&mut self, _context: &Context) {
-        // event_handler::setup().await;
-    }
-
-    fn migrations(&self, _context: &Context) -> Option<dirtybase_contract::ExtensionMigrations> {
-        None
-    }
-
-    async fn shutdown(&mut self, _context: &Context) {
-        log::info!("--- main application is shutting down -- ");
-    }
-
     fn register_routes(
         &self,
         manager: RouterManager,
