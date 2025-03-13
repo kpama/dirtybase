@@ -1,5 +1,8 @@
 /target
 .env
+.env.prod
+.env.stage
+.env.dev
 /public/*
 !/public/index.html
 /data/*
