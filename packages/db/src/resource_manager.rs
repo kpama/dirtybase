@@ -31,10 +31,7 @@ pub(crate) async fn register_resource_manager() {
             })
         },
         move |manager| {
-            tracing::debug!(
-                "closing {} pool, it has been idle for a while",
-                manager.db_kind().as_str(),
-            );
+            tracing::debug!("closing {} pool", manager.db_kind().as_str(),);
             Box::pin(async move {
                 manager.close().await;
             })
