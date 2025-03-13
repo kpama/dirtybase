@@ -1,14 +1,18 @@
-use busybody::ServiceContainer;
 use dirtybase_contract::{app::ContextResourceManager, db::base::manager::Manager};
 
 use crate::{config::DbConfig, connection_bus::MakePoolManagerCommand};
 
-pub(crate) async fn register_resource_manager(sc: &ServiceContainer) {
-    sc.set(ContextResourceManager::<Manager>::new(
+pub(crate) async fn register_resource_manager() {
+    ContextResourceManager::<Manager>::register(
         |context| {
             Box::pin(async move {
                 let config = context.get_config::<DbConfig>("database").await.unwrap();
-                let name = context.tenant().await.unwrap().id().to_string();
+                let name = context
+                    .tenant()
+                    .await
+                    .expect("could not get tenant")
+                    .id()
+                    .to_string();
                 let timeout = config.idle_timeout();
                 context.set(config).await;
                 (name, timeout)
@@ -27,14 +31,11 @@ pub(crate) async fn register_resource_manager(sc: &ServiceContainer) {
             })
         },
         move |manager| {
-            tracing::debug!(
-                "closing {} pool, it has been idle for a while",
-                manager.db_kind().as_str(),
-            );
+            tracing::debug!("closing {} pool", manager.db_kind().as_str(),);
             Box::pin(async move {
                 manager.close().await;
             })
         },
-    ))
+    )
     .await;
 }

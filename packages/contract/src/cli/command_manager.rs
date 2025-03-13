@@ -4,6 +4,7 @@ use futures::future::BoxFuture;
 use crate::{app::Context, ExtensionManager};
 
 use super::CliMiddlewareManager;
+use tokio_util::sync::CancellationToken;
 
 pub struct CliCommandManager {
     commands: Vec<(
@@ -73,6 +74,19 @@ impl CliCommandManager {
         I: IntoIterator<Item = T>,
         T: Into<String>,
     {
+        let context = Context::default();
+        let token = CancellationToken::new();
+        let cloned_token = token.clone();
+        let cloned_context = context.clone();
+
+        let handler = tokio::spawn(async move {
+            tokio::select! {
+                _ = cloned_token.cancelled() => {
+                    ExtensionManager::shutdown(&cloned_context).await;
+                }
+            }
+        });
+
         let mut command = command!()
             .propagate_version(true)
             .subcommand_required(true)
@@ -91,23 +105,27 @@ impl CliCommandManager {
             None => command.get_matches(),
         };
 
-        let context = Context::default();
-        if let Some((name, mut command)) = matches.remove_subcommand() {
-            for ext in ExtensionManager::list().read().await.iter() {
-                command = ext
-                    .on_cli_command(name.as_str(), command, context.clone())
-                    .await;
-            }
+        tokio::spawn(async move {
+            if let Some((name, mut command)) = matches.remove_subcommand() {
+                for ext in ExtensionManager::list().read().await.iter() {
+                    command = ext
+                        .on_cli_command(name.as_str(), command, context.clone())
+                        .await;
+                }
 
-            for (cmd, handler, order) in self.commands.into_iter() {
-                let middleware = self
-                    .middleware_manager
-                    .apply(handler, order.unwrap_or_default());
-                if name == cmd.get_name() {
-                    middleware.send((name, command, context)).await;
-                    break;
+                for (cmd, handler, order) in self.commands.into_iter() {
+                    let middleware = self
+                        .middleware_manager
+                        .apply(handler, order.unwrap_or_default());
+                    if name == cmd.get_name() {
+                        middleware.send((name, command, context.clone())).await;
+                        token.cancel();
+                        break;
+                    }
                 }
             }
-        }
+        });
+
+        _ = handler.await;
     }
 }

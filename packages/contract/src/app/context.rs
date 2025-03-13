@@ -44,19 +44,22 @@ impl Default for Context {
 impl Context {
     pub async fn make_global() -> Self {
         // app
-        busybody::helpers::set_type(Arc::new(AppContext::make_global())).await;
+        busybody::helpers::set_type(AppContext::make_global()).await;
         // role
-        busybody::helpers::set_type(Arc::new(RoleContext::make_global())).await;
+        busybody::helpers::set_type(RoleContext::make_global()).await;
         // tenant
-        busybody::helpers::set_type(Arc::new(TenantContext::make_global())).await;
+        busybody::helpers::set_type(TenantContext::make_global()).await;
         // user
-        busybody::helpers::set_type(Arc::new(UserContext::make_global())).await;
+        busybody::helpers::set_type(UserContext::make_global()).await;
 
-        Self {
+        let instance = Self {
             id: ArcUuid7::default(),
             is_global: true,
             sc: busybody::helpers::service_container(),
-        }
+        };
+
+        busybody::helpers::set_type(instance.clone()).await;
+        instance
     }
 
     pub async fn set_user(&self, user: UserContext) -> &Self {
@@ -104,19 +107,19 @@ impl Context {
         &self.sc
     }
 
-    pub async fn user(&self) -> Option<Arc<UserContext>> {
+    pub async fn user(&self) -> Option<UserContext> {
         self.get().await
     }
 
-    pub async fn tenant(&self) -> Option<Arc<TenantContext>> {
+    pub async fn tenant(&self) -> Option<TenantContext> {
         self.get().await
     }
 
-    pub async fn app(&self) -> Option<Arc<AppContext>> {
+    pub async fn app(&self) -> Option<AppContext> {
         self.get().await
     }
 
-    pub async fn role(&self) -> Option<Arc<RoleContext>> {
+    pub async fn role(&self) -> Option<RoleContext> {
         self.get().await
     }
 

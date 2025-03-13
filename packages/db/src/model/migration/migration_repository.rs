@@ -1,11 +1,7 @@
+use dirtybase_contract::db::base::manager::Manager;
 use std::collections::{BTreeMap, HashMap};
 
-use dirtybase_db::TableEntityTrait;
-use dirtybase_db::base::manager::Manager;
-
-use crate::core::setup_database::setup_migration_table;
-
-use super::MigrationEntity;
+use super::{BATCH_COLUMN, MigrationEntity, NAME_COLUMN, TABLE_NAME};
 
 pub struct MigrationRepository {
     manager: Manager,
@@ -21,7 +17,21 @@ impl MigrationRepository {
     }
 
     pub async fn init(&self) {
-        setup_migration_table(&self.manager).await;
+        self.manager
+            .create_table_schema(TABLE_NAME, |table| {
+                // id
+                table.id(Some("id"));
+
+                // migration name
+                table.text(NAME_COLUMN);
+
+                // batch
+                table.integer(BATCH_COLUMN);
+
+                // created at
+                table.created_at();
+            })
+            .await;
     }
 
     pub async fn exist(&self, name: &str) -> bool {
@@ -30,8 +40,8 @@ impl MigrationRepository {
 
     pub async fn find_by_name(&self, name: &str) -> Result<Option<MigrationEntity>, anyhow::Error> {
         self.manager
-            .select_from_table(MigrationEntity::table_name(), |query| {
-                query.eq(MigrationEntity::col_name_for_name(), name);
+            .select_from_table(TABLE_NAME, |query| {
+                query.eq(NAME_COLUMN, name);
             })
             .fetch_one_to()
             .await
@@ -40,8 +50,8 @@ impl MigrationRepository {
     pub async fn get_last_batch(&self) -> BTreeMap<String, MigrationEntity> {
         if let Ok(Some(last)) = self
             .manager
-            .select_from_table(MigrationEntity::table_name(), |q| {
-                q.desc(MigrationEntity::col_name_for_batch());
+            .select_from_table(TABLE_NAME, |q| {
+                q.desc(BATCH_COLUMN);
             })
             .fetch_one_to::<MigrationEntity>()
             .await
@@ -50,9 +60,8 @@ impl MigrationRepository {
 
             if let Ok(Some(collection)) = self
                 .manager
-                .select_from_table(MigrationEntity::table_name(), |q| {
-                    q.eq(MigrationEntity::col_name_for_batch(), last.batch)
-                        .desc(MigrationEntity::col_name_for_created_at());
+                .select_from_table(TABLE_NAME, |q| {
+                    q.eq(BATCH_COLUMN, last.batch).desc("created_at");
                 })
                 .fetch_all_to::<MigrationEntity>()
                 .await
@@ -70,8 +79,8 @@ impl MigrationRepository {
     pub async fn delete_batch(&self, batch: i64) {
         _ = self
             .manager()
-            .delete(MigrationEntity::table_name(), |q| {
-                q.eq(MigrationEntity::col_name_for_batch(), batch);
+            .delete(TABLE_NAME, |q| {
+                q.eq(BATCH_COLUMN, batch);
             })
             .await;
     }
@@ -86,7 +95,7 @@ impl MigrationRepository {
         kv.insert("name".to_owned(), name.to_string().into());
         kv.insert("batch".to_owned(), batch.to_string().into());
 
-        _ = self.manager.insert(MigrationEntity::table_name(), kv).await;
+        _ = self.manager.insert(TABLE_NAME, kv).await;
 
         self.find_by_name(name).await
     }

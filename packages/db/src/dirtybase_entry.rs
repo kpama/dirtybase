@@ -1,6 +1,6 @@
-use dirtybase_contract::{ExtensionSetup, app::Context};
+use dirtybase_contract::{ExtensionSetup, app::Context, cli::CliCommandManager, prelude::Command};
 
-use crate::resource_manager::register_resource_manager;
+use crate::{command::setup_commands, resource_manager::register_resource_manager};
 
 #[derive(Debug, Default)]
 pub struct Extension;
@@ -9,6 +9,10 @@ pub struct Extension;
 impl ExtensionSetup for Extension {
     async fn setup(&mut self, _context: &Context) {
         super::setup_handlers().await;
-        register_resource_manager(&self.global_container()).await;
+        register_resource_manager().await;
+    }
+
+    fn register_cli_commands(&self, manager: CliCommandManager) -> CliCommandManager {
+        setup_commands(manager)
     }
 }
