@@ -251,6 +251,12 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
     }
 }
 
+impl<T: Clone + Send + Sync + 'static> Drop for ContextResourceManager<T> {
+    fn drop(&mut self) {
+        futures::executor::block_on(self.drop_all());
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
