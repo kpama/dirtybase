@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use dirtybase_contract::auth::AuthUserStatus;
 use dirtybase_contract::db::base::manager::Manager;
 use dirtybase_contract::db::migration::Migration;
@@ -8,7 +9,7 @@ pub struct Mig1740151519CreateAuthUserTable;
 
 #[dirtybase_contract::async_trait]
 impl Migration for Mig1740151519CreateAuthUserTable {
-    async fn up(&self, manager: &Manager) {
+    async fn up(&self, manager: &Manager) -> Result<(), anyhow::Error> {
         manager
             .create_table_schema(AUTH_USER_TABLE, |table| {
                 table.uuid_as_id(None);
@@ -26,10 +27,13 @@ impl Migration for Mig1740151519CreateAuthUserTable {
                 table.timestamps();
                 table.soft_deletable();
             })
-            .await;
+            .await
     }
 
-    async fn down(&self, manager: &Manager) {
-        manager.drop_table(AUTH_USER_TABLE).await;
+    async fn down(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+        if manager.drop_table(AUTH_USER_TABLE).await {
+            return Ok(());
+        }
+        Err(anyhow!("could not drop: {}", AUTH_USER_TABLE))
     }
 }

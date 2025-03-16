@@ -1,5 +1,6 @@
 // use clap::{ArgMatches, Subcommand};
 
+use anyhow::Ok;
 use dirtybase_contract::{
     ExtensionManager, ExtensionMigrations, cli::clap, db::base::manager::Manager,
     prelude::ArgMatches,
@@ -36,7 +37,7 @@ impl Migrator {
         Self { migrations }
     }
 
-    pub async fn up(&self, manager: &Manager) {
+    pub async fn up(&self, manager: &Manager) -> Result<(), anyhow::Error> {
         let batch = chrono::Utc::now().timestamp();
         let repo = self.repo(manager).await;
 
@@ -44,7 +45,10 @@ impl Migrator {
             let name = entry.id();
             if !repo.exist(&name).await {
                 tracing::debug!(target: LOG_TARGET, "migrating {} up", entry.id());
-                entry.up(manager).await;
+                let result = entry.up(manager).await;
+                if result.is_err() {
+                    return result;
+                }
 
                 if let Err(e) = repo.create(&name, batch).await {
                     tracing::error!(target: LOG_TARGET,"could not create migration entry: {:?}", e);
@@ -53,9 +57,11 @@ impl Migrator {
                 tracing::debug!(target: LOG_TARGET, "migration already exist: {:?}", &name);
             }
         }
+
+        Ok(())
     }
 
-    pub async fn down(&self, manager: &Manager) {
+    pub async fn down(&self, manager: &Manager) -> Result<(), anyhow::Error> {
         let repo = self.repo(manager).await;
 
         let collection = repo.get_last_batch().await;
@@ -64,7 +70,10 @@ impl Migrator {
             for entry in &self.migrations {
                 if entry.id() == *name {
                     tracing::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
-                    entry.down(manager).await;
+                    let result = entry.down(manager).await;
+                    if result.is_err() {
+                        return result;
+                    }
                 }
             }
         }
@@ -72,24 +81,32 @@ impl Migrator {
         if let Some((_, entry)) = collection.iter().next() {
             repo.delete_batch(entry.batch).await;
         }
+        Ok(())
     }
 
-    pub async fn refresh(&self, manager: &Manager) {
+    pub async fn refresh(&self, manager: &Manager) -> Result<(), anyhow::Error> {
         // Migrate everything down
         for entry in &self.migrations {
             tracing::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
-            entry.down(manager).await
+            let result = entry.down(manager).await;
+            if result.is_err() {
+                return result;
+            }
         }
 
         self.up(manager).await
     }
 
-    pub async fn reset(&self, manager: &Manager) {
+    pub async fn reset(&self, manager: &Manager) -> Result<(), anyhow::Error> {
         let _repo = self.repo(manager).await;
         for entry in &self.migrations {
             tracing::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
-            entry.down(manager).await
+            let result = entry.down(manager).await;
+            if result.is_err() {
+                return result;
+            }
         }
+        Ok(())
     }
 
     async fn repo(&self, manager: &Manager) -> MigrationRepository {

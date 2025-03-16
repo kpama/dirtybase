@@ -56,7 +56,7 @@ impl MigrationRepository {
             .fetch_one_to::<MigrationEntity>()
             .await
         {
-            dbg!("{}", &last);
+            tracing::debug!("last migration {:?}", &last);
 
             if let Ok(Some(collection)) = self
                 .manager
@@ -93,7 +93,7 @@ impl MigrationRepository {
         let mut kv = HashMap::new();
 
         kv.insert("name".to_owned(), name.to_string().into());
-        kv.insert("batch".to_owned(), batch.to_string().into());
+        kv.insert("batch".to_owned(), batch.into());
 
         _ = self.manager.insert(TABLE_NAME, kv).await;
 

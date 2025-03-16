@@ -7,6 +7,7 @@ edition = { workspace = true }
 
 [dependencies]
 dirtybase_contract = { path = "../contract", version = "*"}
+dirtybase_helper = { path = "../helper", version = "*"}
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }

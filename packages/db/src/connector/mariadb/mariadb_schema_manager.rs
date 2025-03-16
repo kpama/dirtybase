@@ -451,7 +451,7 @@ impl MariadbSchemaManager {
                 the_type.push_str(q.as_str());
             }
             ColumnType::Text => the_type.push_str("longtext"),
-            ColumnType::Uuid => the_type.push_str("uuid"),
+            ColumnType::Uuid => the_type.push_str("UUID"),
             ColumnType::Enum(ref opt) => {
                 let c = format!(
                     "ENUM({})",
@@ -645,7 +645,6 @@ impl MariadbSchemaManager {
 
     fn row_to_column_value(&self, row: &MySqlRow) -> ColumnAndValue {
         let mut this_row = HashMap::new();
-
         for col in row.columns() {
             let name = col.name().to_string();
             match col.type_info().to_string().as_str() {
@@ -767,6 +766,7 @@ impl MariadbSchemaManager {
                 "VARBINARY" | "BINARY" | "BLOB" | "BYTEA" => {
                     let v = row.try_get::<Vec<u8>, &str>(col.name());
                     if let Ok(v) = v {
+                        println!("binary length: {:?}", v.len());
                         this_row.insert(col.name().to_string(), FieldValue::Binary(v));
                     } else {
                         this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
@@ -793,18 +793,6 @@ impl MariadbSchemaManager {
         this_row
     }
 
-    // fn field_value_to_string(&self, field: &FieldValue) -> String {
-    //     match field {
-    //         FieldValue::DateTime(dt) => {
-    //             format!("{}", dt.format("%F %T"))
-    //         }
-    //         FieldValue::Timestamp(dt) => {
-    //             format!("{}", dt.format("%F %T"))
-    //         }
-    //         _ => field.to_string(),
-    //     }
-    // }
-
     fn field_value_to_args(&self, field: &FieldValue, params: &mut MySqlArguments) {
         match field {
             FieldValue::DateTime(dt) => {
@@ -817,6 +805,9 @@ impl MariadbSchemaManager {
                 _ = Arguments::add(params, d); //format!("{}", d.format("%F")));
             }
             FieldValue::Binary(d) => {
+                _ = Arguments::add(params, d);
+            }
+            FieldValue::Uuid(d) => {
                 _ = Arguments::add(params, d);
             }
             FieldValue::Object(d) => {
@@ -841,7 +832,6 @@ impl MariadbSchemaManager {
             }
             FieldValue::Time(t) => {
                 _ = Arguments::add(params, t);
-                // format!("{}", t.format("%T"))
             }
             FieldValue::U64(v) => {
                 let v = *v as i64;

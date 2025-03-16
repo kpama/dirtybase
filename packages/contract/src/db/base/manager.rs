@@ -102,7 +102,7 @@ impl Manager {
         &self,
         name: &str,
         callback: impl FnOnce(&mut TableBlueprint),
-    ) {
+    ) -> Result<(), anyhow::Error> {
         if !self.has_table(name).await {
             let mut table = self.write_schema_manager().fetch_table_for_update(name);
             table.set_is_new(true);
@@ -111,6 +111,7 @@ impl Manager {
             self.write_schema_manager().apply(table).await;
             self.dispatch_written_event();
         }
+        Ok(())
     }
 
     // Get an existing table for updating

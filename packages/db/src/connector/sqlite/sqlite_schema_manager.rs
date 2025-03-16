@@ -817,6 +817,10 @@ impl SqliteSchemaManager {
             FieldValue::Binary(d) => {
                 _ = Arguments::add(params, d);
             }
+
+            FieldValue::Uuid(d) => {
+                _ = Arguments::add(params, d);
+            }
             FieldValue::Object(d) => {
                 _ = Arguments::add(params, sqlx::types::Json(d));
             }

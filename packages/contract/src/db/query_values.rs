@@ -31,6 +31,7 @@ impl QueryValue {
                 FieldValue::Object(_) => (),
                 FieldValue::NotSet => (),
                 FieldValue::Binary(_) => (),
+                FieldValue::Uuid(_) => (),
                 FieldValue::U64(_) => params.push(self.field_to_param(field)),
                 FieldValue::I64(_) => params.push(self.field_to_param(field)),
                 FieldValue::F64(_) => params.push(self.field_to_param(field)),

@@ -8,9 +8,7 @@ pub(crate) fn register(mut manager: CliCommandManager) -> CliCommandManager {
     manager.register(serve, |_name, _c, context| {
         Box::pin(async move {
             let ci = context.container();
-            if let Err(e) = run_http(ci.get_type().await.unwrap()).await {
-                log::error!("{}", e)
-            }
+            run_http(ci.get_type().await.unwrap()).await
         })
     });
 

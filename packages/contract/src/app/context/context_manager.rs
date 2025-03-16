@@ -84,7 +84,10 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
             collection: ContextCollection::default(),
         };
 
-        instance.handle_shutdown_signal().await
+        // FIXME: look into a deadlock situation happening when we drop the instace of this struct
+        // instance.handle_shutdown_signal().await
+
+        instance
     }
 
     pub async fn register<S, F, C>(setup_fn: S, resolver_fn: F, drop_fn: C)
@@ -218,6 +221,8 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
 
     async fn handle_shutdown_signal(self) -> Self {
         let this_manager = self.clone();
+        // FIXME: use something else other than block_on
+        //        block_on does not work for db over tcp connection
 
         tokio::spawn(async move {
             let ctrl_c = async {
@@ -239,10 +244,12 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
 
             tokio::select! {
                 _ = ctrl_c => {
-                    this_manager.drop_all().await;
+                    tracing::error!("shutting down due to ctr+c");
+                    // this_manager.drop_all().await;
                 },
                 _ = terminate => {
-                    this_manager.drop_all().await;
+                    tracing::error!("shutting down for other reason");
+                    // this_manager.drop_all().await;
                 },
             }
         });
@@ -253,7 +260,10 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
 
 impl<T: Clone + Send + Sync + 'static> Drop for ContextResourceManager<T> {
     fn drop(&mut self) {
-        futures::executor::block_on(self.drop_all());
+        // FIXME: use something else other than block_on
+        //        block_on does not work for db over tcp connection
+
+        // futures::executor::block_on(self.drop_all());
     }
 }
 

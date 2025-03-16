@@ -10,7 +10,11 @@ pub struct CliCommandManager {
     commands: Vec<(
         clap::Command,
         Box<
-            dyn FnMut(String, clap::ArgMatches, Context) -> BoxFuture<'static, ()>
+            dyn FnMut(
+                    String,
+                    clap::ArgMatches,
+                    Context,
+                ) -> BoxFuture<'static, Result<(), anyhow::Error>>
                 + Send
                 + Sync
                 + 'static,
@@ -36,7 +40,11 @@ impl CliCommandManager {
 
     pub fn register<H>(&mut self, command: clap::Command, handler: H) -> &mut Self
     where
-        H: FnMut(String, clap::ArgMatches, Context) -> BoxFuture<'static, ()>
+        H: FnMut(
+                String,
+                clap::ArgMatches,
+                Context,
+            ) -> BoxFuture<'static, Result<(), anyhow::Error>>
             + Send
             + Sync
             + 'static,
@@ -53,7 +61,11 @@ impl CliCommandManager {
         order: impl IntoIterator<Item = I>,
     ) -> &mut Self
     where
-        H: FnMut(String, clap::ArgMatches, Context) -> BoxFuture<'static, ()>
+        H: FnMut(
+                String,
+                clap::ArgMatches,
+                Context,
+            ) -> BoxFuture<'static, Result<(), anyhow::Error>>
             + Send
             + Sync
             + 'static,
@@ -116,9 +128,10 @@ impl CliCommandManager {
                 for (cmd, handler, order) in self.commands.into_iter() {
                     let middleware = self
                         .middleware_manager
-                        .apply(handler, order.unwrap_or_default());
+                        .apply(handler, order.unwrap_or_default())
+                        .await;
                     if name == cmd.get_name() {
-                        middleware.send((name, command, context.clone())).await;
+                        _ = middleware.send((name, command, context.clone())).await;
                         token.cancel();
                         break;
                     }

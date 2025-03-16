@@ -36,14 +36,18 @@ impl CliMiddlewareManager {
         self
     }
 
-    pub fn apply<I, H>(
+    pub async fn apply<I, H>(
         &mut self,
         mut handler: H,
         order: impl IntoIterator<Item = I>,
     ) -> Manager<(String, clap::ArgMatches, Context), ()>
     where
         I: Into<String>,
-        H: FnMut(String, clap::ArgMatches, Context) -> BoxFuture<'static, ()>
+        H: FnMut(
+                String,
+                clap::ArgMatches,
+                Context,
+            ) -> BoxFuture<'static, Result<(), anyhow::Error>>
             + Send
             + Sync
             + 'static,
@@ -56,7 +60,8 @@ impl CliMiddlewareManager {
                         result.await;
                     })
                 },
-            );
+            )
+            .await;
 
         for n in order.into_iter() {
             let key = n.into();

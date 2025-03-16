@@ -25,6 +25,7 @@ impl ExtensionSetup for MyApp {
                         .remove_one("name")
                         .unwrap_or_else(|| "Unknown".to_string());
                     println!("Hello {} !!!", &name);
+                    Ok(())
                 })
             },
         );

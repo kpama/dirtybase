@@ -1,4 +1,5 @@
 mod migrator;
+use anyhow::anyhow;
 use dirtybase_contract::{
     cli::{
         CliCommandManager,
@@ -46,15 +47,20 @@ pub(crate) fn setup_commands(mut manager: CliCommandManager) -> CliCommandManage
                     let migrator = Migrator::new().await;
                     if let Some(db_manager) = context.get::<Manager>().await {
                         match action {
-                            MigrateAction::Up => migrator.up(&db_manager).await,
-                            MigrateAction::Down => migrator.down(&db_manager).await,
-                            MigrateAction::Reset => migrator.reset(&db_manager).await,
-                            MigrateAction::Refresh => migrator.refresh(&db_manager).await,
-                            MigrateAction::Unknown => eprintln!("unknown action"),
+                            MigrateAction::Up => return migrator.up(&db_manager).await,
+                            MigrateAction::Down => return migrator.down(&db_manager).await,
+                            MigrateAction::Reset => return migrator.reset(&db_manager).await,
+                            MigrateAction::Refresh => return migrator.refresh(&db_manager).await,
+                            MigrateAction::Unknown => {
+                                eprintln!("unknown action");
+                                tracing::error!("could not get database manager");
+                                return Err(anyhow!("unknown action"));
+                            }
                         }
                     } else {
                         eprintln!("could not get database manager");
-                        tracing::error!("could not get database manager")
+                        tracing::error!("could not get database manager");
+                        return Err(anyhow!("could not get database manager"));
                     }
                 }
             }

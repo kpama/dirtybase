@@ -1,6 +1,7 @@
 use std::{
     fmt::{Debug, Display},
     ops::Deref,
+    str::FromStr,
     sync::Arc,
 };
 
@@ -80,14 +81,7 @@ impl From<Uuid25> for ArcUuid7 {
 
 impl From<ArcUuid7> for FieldValue {
     fn from(value: ArcUuid7) -> Self {
-        FieldValue::Binary(
-            value
-                .0
-                .as_bytes()
-                .iter()
-                .map(|v| v.clone())
-                .collect::<Vec<u8>>(),
-        )
+        FieldValue::Uuid(*value.0)
     }
 }
 
@@ -153,7 +147,18 @@ impl Serialize for ArcUuid7 {
 
 fn field_value_to_arc_uuid7(value: FieldValue) -> Result<ArcUuid7, String> {
     match value {
-        FieldValue::Binary(bytes) => Ok(ArcUuid7(Arc::new(Uuid::from_slice(&bytes).unwrap()))),
+        FieldValue::Uuid(uuid) => Ok(uuid.into()),
+        FieldValue::Binary(bytes) => {
+            if bytes.len() > 16 {
+                if let Ok(st) = String::from_utf8(bytes) {
+                    Ok(ArcUuid7(Arc::new(Uuid::from_str(&st).unwrap())))
+                } else {
+                    Err("string is not a valid uuid7".to_string())
+                }
+            } else {
+                Ok(ArcUuid7(Arc::new(Uuid::from_slice(&bytes).unwrap())))
+            }
+        }
         FieldValue::String(v) => Ok(ArcUuid7(Arc::new(Uuid::parse_str(&v).unwrap()))),
         _ => {
             tracing::error!("could not parsed field value to uuid7");

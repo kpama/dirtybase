@@ -1,5 +1,5 @@
 use dirtybase_contract::db::types::{
-    DateTimeField, FromColumnAndValue, IntegerField, InternalIdField, StringField,
+    FromColumnAndValue, IntegerField, InternalIdField, OptionalDateTimeField, StringField,
 };
 
 pub(crate) const TABLE_NAME: &str = "migrations";
@@ -10,10 +10,10 @@ pub(crate) const CREATED_AT_COLUMN: &str = "created_at";
 #[derive(Debug, Default, Clone)]
 // #[dirty(table = "core_migration", id = "id")]
 pub struct MigrationEntity {
-    id: InternalIdField,
+    pub(crate) id: InternalIdField,
     pub(crate) name: StringField,
     pub(crate) batch: IntegerField,
-    pub(crate) created_at: DateTimeField,
+    pub(crate) created_at: OptionalDateTimeField,
 }
 
 impl FromColumnAndValue for MigrationEntity {
@@ -22,7 +22,7 @@ impl FromColumnAndValue for MigrationEntity {
             id: cv.get("id").unwrap().into(),
             name: cv.get(NAME_COLUMN).unwrap().into(),
             batch: cv.get(BATCH_COLUMN).unwrap().into(),
-            created_at: cv.get("created_at").unwrap().into(),
+            created_at: cv.get(CREATED_AT_COLUMN).unwrap().into(),
         }
     }
 }

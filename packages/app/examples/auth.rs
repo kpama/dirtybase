@@ -1,12 +1,11 @@
 use dirtybase_app::setup;
 use dirtybase_contract::{auth::StorageResolverPipeline, prelude::*};
-use dirtybase_db::{base::manager::Manager, types::ArcUuid7};
 use tracing::Level;
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_max_level(Level::DEBUG)
+        .with_max_level(Level::ERROR)
         .try_init()
         .expect("could not setup tracing");
 
@@ -19,11 +18,17 @@ async fn main() {
         .await
         .unwrap();
 
-    let mut payload = AuthUserPayload::default();
-    payload.username = Some("admin".to_string());
-    payload.email = Some("example@yahoo.com".to_string());
-    payload.rotate_salt = true;
-    let x = storage.store(payload).await;
+    if let Ok(Some(existing)) = storage.find_by_username("admin").await {
+        println!("user already exist: {:?}", existing);
+    } else {
+        let mut payload = AuthUserPayload::default();
+        payload.username = Some("admin".to_string());
+        payload.email = Some("example@yahoo.com".to_string());
+        payload.rotate_salt = true;
+        if let Ok(x) = storage.store(payload).await {
+            println!("x: {:?}", x);
+        }
+    }
 
     println!(">>>>>>>>>> completed <<<<<<<<<<<<<");
 }

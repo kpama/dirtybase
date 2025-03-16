@@ -9,7 +9,7 @@ pub struct Mig0000000000CreateUserTable;
 
 #[dirtybase_contract::async_trait]
 impl Migration for Mig0000000000CreateUserTable {
-    async fn up(&self, manager: &Manager) {
+    async fn up(&self, manager: &Manager) -> Result<(), anyhow::Error> {
         manager
             .create_table_schema(UserEntity::table_name(), |table| {
                 table.uuid_as_id(None);
@@ -26,9 +26,11 @@ impl Migration for Mig0000000000CreateUserTable {
                 table.soft_deletable();
             })
             .await;
+        Ok(())
     }
 
-    async fn down(&self, manager: &Manager) {
+    async fn down(&self, manager: &Manager) -> Result<(), anyhow::Error> {
         manager.drop_table(UserEntity::table_name()).await;
+        Ok(())
     }
 }

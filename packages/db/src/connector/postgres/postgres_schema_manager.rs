@@ -425,10 +425,9 @@ impl PostgresSchemaManager {
         // column type
         match column.column_type {
             ColumnType::AutoIncrementId => the_type.push_str("BIGSERIAL PRIMARY KEY"),
-            ColumnType::Boolean => the_type.push_str("tinyint(1)"),
+            ColumnType::Boolean => the_type.push_str("boolean"),
             ColumnType::Char(_) => the_type.push_str("varchar"),
-            ColumnType::Datetime => the_type.push_str("datetime"),
-            ColumnType::Timestamp => the_type.push_str("timestamptz"),
+            ColumnType::Timestamp | ColumnType::Datetime => the_type.push_str("timestamptz"),
             ColumnType::Integer => the_type.push_str("bigint"),
             ColumnType::Json => the_type.push_str("jsonb"),
             ColumnType::Number | ColumnType::Float => the_type.push_str("double precision"),
@@ -437,8 +436,8 @@ impl PostgresSchemaManager {
                 let q = format!("varchar({})", length);
                 the_type.push_str(q.as_str());
             }
-            ColumnType::Text => the_type.push_str("longtext"),
-            ColumnType::Uuid => the_type.push_str("uuid"),
+            ColumnType::Text => the_type.push_str("TEXT"),
+            ColumnType::Uuid => the_type.push_str("UUID"),
             ColumnType::Enum(ref opt) => {
                 if column.check.is_none() {
                     let list = opt
@@ -623,10 +622,10 @@ impl PostgresSchemaManager {
                 };
 
                 let mut placeholder = Vec::new();
-                placeholder.resize(length, "?");
+                placeholder.resize(length, format!("${}", params.len()));
                 placeholder.join(",")
             } else {
-                "?".to_owned()
+                format!("${}", params.len())
             };
 
         condition
@@ -740,7 +739,7 @@ impl PostgresSchemaManager {
                         this_row.insert(name, FieldValue::Null);
                     }
                 }
-                "TIMESTAMP" => {
+                "TIMESTAMP" | "TIMESTAMPTZ" => {
                     let v = row.try_get::<chrono::DateTime<chrono::Utc>, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, FieldValue::Timestamp(v));
@@ -813,6 +812,9 @@ impl PostgresSchemaManager {
                 _ = Arguments::add(params, d); //format!("{}", d.format("%F")));
             }
             FieldValue::Binary(d) => {
+                _ = Arguments::add(params, d);
+            }
+            FieldValue::Uuid(d) => {
                 _ = Arguments::add(params, d);
             }
             FieldValue::Object(d) => {

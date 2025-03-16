@@ -89,6 +89,7 @@ pub trait SchemaManagerTrait: Send + Sync {
     fn fetch_table_for_update(&self, name: &str) -> TableBlueprint;
 
     // commit schema changes
+    // FIXME: should return a Result<(), anyhow::Error>
     async fn apply(&self, table: TableBlueprint);
 
     async fn execute(&self, query_builder: QueryBuilder) -> Result<()>;

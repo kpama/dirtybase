@@ -1,3 +1,4 @@
+use dirtybase_helper::uuid::Uuid;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display};
 
@@ -22,6 +23,7 @@ pub enum FieldValue {
     Object(HashMap<String, FieldValue>),
     Array(Vec<FieldValue>),
     Binary(Vec<u8>),
+    Uuid(Uuid),
     DateTime(chrono::DateTime<chrono::Utc>),
     Timestamp(chrono::DateTime<chrono::Utc>),
     Date(chrono::NaiveDate),
@@ -87,6 +89,9 @@ impl Display for FieldValue {
             Self::Object(v) => f.write_str(&serde_json::to_string(v).unwrap()),
             Self::Binary(data) => {
                 write!(f, "{}", hex::encode(data))
+            }
+            Self::Uuid(data) => {
+                write!(f, "{}", data)
             }
             Self::Array(v) => {
                 let mut data = "".to_owned();
