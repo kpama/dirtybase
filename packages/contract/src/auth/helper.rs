@@ -5,7 +5,7 @@ use crate::db::types::ArcUuid7;
 
 use super::ParseToken;
 
-pub fn generate_user_token(salt: &str, auth_user_id: ArcUuid7) -> String {
+pub fn generate_user_token(salt: &str, auth_user_id: &ArcUuid7) -> String {
     ParseToken::generate_token(salt, auth_user_id)
 }
 

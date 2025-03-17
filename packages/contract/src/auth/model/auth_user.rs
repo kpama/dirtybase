@@ -30,11 +30,10 @@ use super::ParseToken;
 
 #[derive(Clone, Validate, Serialize, Deserialize)]
 pub struct AuthUser {
-    id: ArcUuid7,
+    id: Option<ArcUuid7>,
     #[validate(length(min = 4))]
     username: Arc<String>,
     email_hash: Arc<String>,
-    email_verified: BooleanField,
     status: AuthUserStatus,
     reset_password: BooleanField,
     #[serde(skip_deserializing, skip_serializing)]
@@ -42,7 +41,7 @@ pub struct AuthUser {
     #[serde(skip_deserializing, skip_serializing)]
     salt: Arc<String>,
     login_attempt: IntegerField,
-    is_sys_admin: BooleanField,
+    varified_at: OptionalDateTimeField,
     #[serde(skip_deserializing)]
     last_login_at: OptionalDateTimeField,
     #[serde(skip_deserializing)]
@@ -56,24 +55,22 @@ pub struct AuthUser {
 impl Default for AuthUser {
     fn default() -> Self {
         let username = generate_ulid();
-        let mut bytes = [0u8, 32];
-        crypto::common::rand_core::OsRng.fill_bytes(&mut bytes);
+        let mut password_bytes = [0u8, 32];
         let salt = SaltString::generate(&mut OsRng).to_string();
-        crypto::common::rand_core::OsRng.fill_bytes(&mut bytes);
-        let password = dirtybase_helper::hash::sha256::hash_bytes(&bytes);
+        crypto::common::rand_core::OsRng.fill_bytes(&mut password_bytes);
+        let password = SaltString::encode_b64(&password_bytes).unwrap().to_string();
         let email_hash = dirtybase_helper::hash::sha256::hash_str(&username);
         Self {
-            id: ArcUuid7::default(),
+            id: None,
             username: username.into(),
             email_hash: email_hash.into(),
             salt: salt.into(),
             password: password.into(),
             reset_password: true,
-            email_verified: false,
             status: AuthUserStatus::Pending,
             login_attempt: 0,
-            is_sys_admin: false,
             last_login_at: None,
+            varified_at: None,
             created_at: None,
             updated_at: None,
             deleted_at: None,
@@ -86,7 +83,7 @@ impl AuthUser {
         Self::default()
     }
 
-    pub fn id(&self) -> ArcUuid7 {
+    pub fn id(&self) -> Option<ArcUuid7> {
         self.id.clone()
     }
 
@@ -127,8 +124,15 @@ impl AuthUser {
         self.deleted_at = None;
     }
 
-    pub fn generate_token(&self) -> String {
-        ParseToken::generate_token(&self.salt, self.id())
+    pub fn generate_token(&self) -> Option<String> {
+        if self.id.is_none() {
+            None
+        } else {
+            Some(ParseToken::generate_token(
+                &self.salt,
+                &self.id().as_ref().unwrap(),
+            ))
+        }
     }
 
     pub fn validate_token(&self, token: &str) -> bool {
@@ -154,20 +158,12 @@ impl AuthUser {
             self.username = v.into();
         }
 
-        if let Some(v) = cv.remove("email_verified") {
-            self.email_verified = v.into();
-        }
-
         if let Some(v) = cv.remove("status") {
             self.status = v.into();
         }
 
         if let Some(v) = cv.remove("reset_password") {
             self.reset_password = v.into();
-        }
-
-        if let Some(v) = cv.remove("is_sys_admin") {
-            self.is_sys_admin = v.into();
         }
 
         if let Some(v) = cv.remove("password") {
@@ -181,6 +177,11 @@ impl AuthUser {
         if let Some(v) = cv.remove("salt") {
             self.salt = v.into();
         }
+
+        if let Some(v) = cv.remove("verified_at") {
+            self.varified_at = v.into();
+        }
+
         if let Some(v) = cv.remove("deleted_at") {
             self.deleted_at = v.into();
         }
@@ -223,7 +224,12 @@ impl Debug for AuthUser {
 
 impl Display for AuthUser {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.id.to_string())
+        let id = if self.id.is_some() {
+            self.id.as_ref().unwrap().to_string()
+        } else {
+            format!("-- guest user--")
+        };
+        write!(f, "{}", id)
     }
 }
 
@@ -242,8 +248,8 @@ impl FromColumnAndValue for AuthUser {
         if let Some(v) = cv.remove("email_hash") {
             user.email_hash = v.into();
         }
-        if let Some(v) = cv.remove("email_verified") {
-            user.email_verified = v.into();
+        if let Some(v) = cv.remove("varified_at") {
+            user.varified_at = v.into();
         }
 
         if let Some(v) = cv.remove("status") {
@@ -265,9 +271,6 @@ impl FromColumnAndValue for AuthUser {
             user.login_attempt = v.into();
         }
 
-        if let Some(v) = cv.remove("is_sys_admin") {
-            user.is_sys_admin = v.into();
-        }
         if let Some(v) = cv.remove("last_login_at") {
             user.last_login_at = v.into();
         }
@@ -296,7 +299,6 @@ impl FromColumnAndValue for AuthUser {
 pub struct AuthUserPayload {
     #[serde(skip_deserializing)]
     pub id: Option<ArcUuid7>,
-    pub is_sys_admin: Option<bool>,
     #[serde(default)]
     #[validate(length(min = 4))]
     pub username: Option<String>,
@@ -327,8 +329,7 @@ impl IntoColumnAndValue for AuthUserPayload {
             .try_to_insert("username", self.username.as_ref())
             .try_to_insert("email_verified", self.email_verified)
             .try_to_insert("status", self.status.as_ref())
-            .try_to_insert("reset_password", self.reset_password.as_ref())
-            .try_to_insert("is_sys_admin", self.is_sys_admin.as_ref());
+            .try_to_insert("reset_password", self.reset_password.as_ref());
 
         if let Some(password) = self.password.as_ref() {
             builder = builder.add_field("password", AuthUser::hash_password(&password));

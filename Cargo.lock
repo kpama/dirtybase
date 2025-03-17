@@ -1181,26 +1181,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dirtybase_user"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bcrypt",
- "busybody",
- "dirtybase_contract",
- "dirtybase_db",
- "dirtybase_db_macro",
- "futures",
- "log 0.4.26",
- "orsomafo",
- "serde",
- "serde_json",
- "sha2",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "displaydoc"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"

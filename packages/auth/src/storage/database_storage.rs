@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use busybody::async_trait;
 use dirtybase_contract::{
     auth::{AuthUser, AuthUserPayload, AuthUserStorage},
-    db::{base::manager::Manager, field_values::FieldValue, types::ArcUuid7},
+    db::{base::manager::Manager, types::ArcUuid7},
 };
 
 use crate::AUTH_USER_TABLE;

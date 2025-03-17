@@ -34,17 +34,17 @@ impl ParseToken {
         self.hash == sha256::hash_str(&salt)
     }
 
-    pub fn generate_token(salt: &str, auth_user_id: ArcUuid7) -> String {
+    pub fn generate_token(salt: &str, auth_user_id: &ArcUuid7) -> String {
         let base = SaltString::generate(&mut OsRng).to_string();
         let uuid_25 = auth_user_id.to_uuid25();
         let salt = format!("{}{}{}", &base, salt, auth_user_id);
-        format!("{}.{}.{}", &base, sha256::hash_str(&salt), uuid_25)
+        format!("{}|{}|{}", &base, sha256::hash_str(&salt), uuid_25)
     }
 }
 
 impl Display for ParseToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}.{}.xxxxxxxxxxx", &self.base, &self.hash)
+        write!(f, "{}|{}|xxxxxxxxxxx", &self.base, &self.hash)
     }
 }
 impl Debug for ParseToken {
@@ -57,7 +57,7 @@ impl TryFrom<String> for ParseToken {
     type Error = anyhow::Error;
 
     fn try_from(token: String) -> Result<Self, Self::Error> {
-        let parts = token.split('.').map(String::from).collect::<Vec<String>>();
+        let parts = token.split('|').map(String::from).collect::<Vec<String>>();
 
         if parts.len() != 3 {
             return Err(anyhow!("wrong token parts"));

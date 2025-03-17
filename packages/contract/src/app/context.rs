@@ -7,7 +7,6 @@ use serde::de::DeserializeOwned;
 mod app_context;
 mod context_manager;
 mod context_metadata;
-mod role_context;
 mod user_context;
 
 use crate::{
@@ -17,7 +16,6 @@ use crate::{
 pub use app_context::*;
 pub use context_manager::*;
 pub use context_metadata::*;
-pub use role_context::*;
 pub use user_context::*;
 
 use crate::db::types::ArcUuid7;
@@ -45,12 +43,8 @@ impl Context {
     pub async fn make_global() -> Self {
         // app
         busybody::helpers::set_type(AppContext::make_global()).await;
-        // role
-        busybody::helpers::set_type(RoleContext::make_global()).await;
         // tenant
         busybody::helpers::set_type(TenantContext::make_global()).await;
-        // user
-        busybody::helpers::set_type(UserContext::make_global()).await;
 
         let instance = Self {
             id: ArcUuid7::default(),
@@ -64,10 +58,6 @@ impl Context {
 
     pub async fn set_user(&self, user: UserContext) -> &Self {
         self.set(Arc::new(user)).await
-    }
-
-    pub async fn set_role(&self, role: RoleContext) -> &Self {
-        self.set(Arc::new(role)).await
     }
 
     pub async fn set_tenant(&self, tenant: TenantContext) -> &Self {
@@ -116,10 +106,6 @@ impl Context {
     }
 
     pub async fn app(&self) -> Option<AppContext> {
-        self.get().await
-    }
-
-    pub async fn role(&self) -> Option<RoleContext> {
         self.get().await
     }
 

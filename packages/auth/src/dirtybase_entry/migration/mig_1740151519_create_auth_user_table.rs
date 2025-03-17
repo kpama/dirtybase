@@ -19,7 +19,6 @@ impl Migration for Mig1740151519CreateAuthUserTable {
                 table
                     .string("status")
                     .set_default_from(AuthUserStatus::Pending);
-                table.boolean("is_sys_admin").set_default_from(false); // A flag that indicates if this user is an admin
                 table.sized_string("salt", 100).set_is_nullable(false);
                 table.number("login_attempt").set_default_from(0);
                 table.datetime("last_login_at").set_is_nullable(true);
