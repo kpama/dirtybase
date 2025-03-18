@@ -1,0 +1,30 @@
+use controllers::{
+    handle_get_auth_token, handle_login_request, handle_register_request, login_form_handler,
+    register_form_handler,
+};
+use dirtybase_contract::http::{RouterManager, WebMiddlewareManager};
+
+pub(crate) mod controllers;
+
+pub(crate) fn register_routes(
+    mut manager: RouterManager,
+    _middleware_manager: &WebMiddlewareManager,
+) -> RouterManager {
+    manager.general(Some("/auth"), |router| {
+        router
+            .get("/login-form", login_form_handler, "auth::signin-form")
+            .post("/do-login", handle_login_request, "auth::do-signin")
+            .post("/my-token", handle_get_auth_token, "auth:get-token")
+            .get(
+                "/register-form",
+                register_form_handler,
+                "auth:register-form",
+            )
+            .post(
+                "/do-registration",
+                handle_register_request,
+                "auth:do-register-form",
+            )
+    });
+    manager
+}

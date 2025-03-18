@@ -1,3 +1,7 @@
+use std::fmt::Debug;
+
+use axum::{response::IntoResponse, Json};
+
 #[derive(Debug, serde::Serialize)]
 pub struct ApiResponse<D: serde::Serialize = ()> {
     data: Option<D>,
@@ -31,6 +35,40 @@ impl<D: serde::Serialize> ApiResponse<D> {
             ..Self::default()
         }
     }
+
+    pub fn set_data(&mut self, data: D) {
+        self.data = Some(data);
+        self.error = None;
+    }
+
+    pub fn set_error<E: Into<ApiError>>(&mut self, error: E) {
+        self.error = Some(error.into());
+        self.data = None;
+    }
+
+    pub fn has_data(&self) -> bool {
+        self.data.is_some()
+    }
+
+    pub fn has_error(&self) -> bool {
+        self.error.is_some()
+    }
+}
+
+impl<D: serde::Serialize + Debug, E: Debug> From<Result<D, E>> for ApiResponse<D> {
+    fn from(value: Result<D, E>) -> Self {
+        if value.is_ok() {
+            Self::success(value.unwrap())
+        } else {
+            Self::error(format!("{:?}", value.unwrap_err()))
+        }
+    }
+}
+
+impl<D: serde::Serialize> From<Option<D>> for ApiResponse<D> {
+    fn from(data: Option<D>) -> Self {
+        Self::new(data, None)
+    }
 }
 
 #[derive(Debug, Default, serde::Serialize)]
@@ -63,5 +101,17 @@ impl From<String> for ApiError {
 impl From<&str> for ApiError {
     fn from(value: &str) -> Self {
         value.to_owned().into()
+    }
+}
+
+impl From<anyhow::Error> for ApiError {
+    fn from(value: anyhow::Error) -> Self {
+        value.to_string().into()
+    }
+}
+
+impl<D: serde::Serialize> IntoResponse for ApiResponse<D> {
+    fn into_response(self) -> axum::response::Response {
+        Json(self).into_response()
     }
 }

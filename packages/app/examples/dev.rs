@@ -68,6 +68,11 @@ impl ExtensionSetup for App {
             middleware_manager.apply(router, ["auth::jwt"])
         });
 
+        manager.api(None, |router| {
+            let router = router.get_x("/hello", || async { "Hello from api" });
+            router
+        });
+
         // login
         manager.general(None, |router| {
             router

@@ -5,7 +5,7 @@ pub use clap;
 pub use cli_middleware_manager::*;
 pub use command_manager::*;
 
-use crate::{app::Context, ExtensionManager};
+use crate::ExtensionManager;
 
 pub mod prelude {
     pub use super::cli_middleware_manager::*;
