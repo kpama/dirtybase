@@ -65,7 +65,7 @@ impl ExtensionSetup for App {
     ) -> RouterManager {
         manager.general(None, |router| {
             let router = router.get("/", index_request_handler, "index-page");
-            middleware_manager.apply(router, ["auth::normal"])
+            middleware_manager.apply(router, ["auth::jwt"])
         });
 
         // login
@@ -132,31 +132,6 @@ async fn test_cookie_handler(
     session.id().to_string()
 }
 
-async fn index_request_handler(
-    CtxExt(session): CtxExt<Session>,
-    CtxExt(number): CtxExt<i32>,
-    CtxExt(manager): CtxExt<Manager>,
-    RequestContext(context): RequestContext,
-) -> impl IntoResponse {
-    context
-        .metadata()
-        .await
-        .add("index handler", true.to_string());
-    let has_company = manager.has_table("companies").await;
-
-    log::error!("Current Database kind: {}", manager.db_kind());
-
-    if let Some(user) = context.user().await {
-        println!("current user: {:?}", user);
-        println!("current user is the global user? {}", user.is_global());
-
-        format!(
-            "Welcome to our secure application. user id {}. i32: {}. has companies: {}",
-            user.id(),
-            number,
-            has_company
-        )
-    } else {
-        "Welcome unknown user".to_string()
-    }
+async fn index_request_handler() -> impl IntoResponse {
+    "Index page"
 }

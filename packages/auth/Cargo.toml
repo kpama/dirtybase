@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 dirtybase_db_macro = { path = "../db_macro", version = "*" }
 dirtybase_contract = { path = "../contract", version = "*" }
+dirtybase_helper= { path = "../helper", version = "*" }
 dirtybase_session = { path = "../session", version = "*" }
 serde = { workspace = true }
 serde_json = { workspace = true }

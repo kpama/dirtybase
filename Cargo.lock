@@ -950,6 +950,7 @@ dependencies = [
  "busybody",
  "dirtybase_contract",
  "dirtybase_db_macro",
+ "dirtybase_helper",
  "dirtybase_session",
  "futures",
  "jsonwebtoken",

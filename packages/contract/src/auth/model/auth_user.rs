@@ -41,7 +41,7 @@ pub struct AuthUser {
     #[serde(skip_deserializing, skip_serializing)]
     salt: Arc<String>,
     login_attempt: IntegerField,
-    varified_at: OptionalDateTimeField,
+    verified_at: OptionalDateTimeField,
     #[serde(skip_deserializing)]
     last_login_at: OptionalDateTimeField,
     #[serde(skip_deserializing)]
@@ -70,7 +70,7 @@ impl Default for AuthUser {
             status: AuthUserStatus::Pending,
             login_attempt: 0,
             last_login_at: None,
-            varified_at: None,
+            verified_at: None,
             created_at: None,
             updated_at: None,
             deleted_at: None,
@@ -179,7 +179,7 @@ impl AuthUser {
         }
 
         if let Some(v) = cv.remove("verified_at") {
-            self.varified_at = v.into();
+            self.verified_at = v.into();
         }
 
         if let Some(v) = cv.remove("deleted_at") {
@@ -248,8 +248,8 @@ impl FromColumnAndValue for AuthUser {
         if let Some(v) = cv.remove("email_hash") {
             user.email_hash = v.into();
         }
-        if let Some(v) = cv.remove("varified_at") {
-            user.varified_at = v.into();
+        if let Some(v) = cv.remove("verified_at") {
+            user.verified_at = v.into();
         }
 
         if let Some(v) = cv.remove("status") {
@@ -306,8 +306,6 @@ pub struct AuthUserPayload {
     #[validate(email(message = "most be a valid email address"))]
     pub email: Option<String>,
     #[serde(default)]
-    pub email_verified: Option<bool>,
-    #[serde(default)]
     pub status: Option<AuthUserStatus>,
     #[serde(default)]
     pub reset_password: Option<bool>,
@@ -316,6 +314,8 @@ pub struct AuthUserPayload {
     pub password: Option<String>,
     #[serde(default)]
     pub rotate_salt: bool,
+    #[serde(default)]
+    pub verified_at: OptionalDateTimeField,
     #[serde(default)]
     pub soft_delete: bool,
     #[serde(default)]
@@ -327,7 +327,7 @@ impl IntoColumnAndValue for AuthUserPayload {
         let mut builder = ColumnAndValueBuilder::new()
             .try_to_insert("id", self.id.as_ref())
             .try_to_insert("username", self.username.as_ref())
-            .try_to_insert("email_verified", self.email_verified)
+            .try_to_insert("verified_at", self.verified_at)
             .try_to_insert("status", self.status.as_ref())
             .try_to_insert("reset_password", self.reset_password.as_ref());
 

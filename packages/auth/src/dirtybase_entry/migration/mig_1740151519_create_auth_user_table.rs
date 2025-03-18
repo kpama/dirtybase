@@ -23,6 +23,7 @@ impl Migration for Mig1740151519CreateAuthUserTable {
                 table.number("login_attempt").set_default_from(0);
                 table.datetime("last_login_at").set_is_nullable(true);
                 table.string("email_hash").set_is_unique(true);
+                table.datetime("verified_at").set_is_nullable(true);
                 table.timestamps();
                 table.soft_deletable();
             })
