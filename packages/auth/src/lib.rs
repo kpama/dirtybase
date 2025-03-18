@@ -2,7 +2,6 @@ mod config;
 mod dirtybase_entry;
 mod storage;
 
-pub mod middlewares;
 pub use config::*;
 pub use dirtybase_entry::*;
 pub use storage::*;
