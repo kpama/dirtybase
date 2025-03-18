@@ -1,5 +1,3 @@
-mod middleware;
-
 use std::{env, sync::Arc};
 
 use axum::Router;
