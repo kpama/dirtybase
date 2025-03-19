@@ -14,6 +14,7 @@ use dirtybase_contract::multitenant::{
 };
 
 use named_routes_axum::RouterWrapper;
+use tower_http::cors::CorsLayer;
 use tracing::{Instrument, field};
 
 use crate::{core::AppService, shutdown_signal};
