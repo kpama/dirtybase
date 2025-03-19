@@ -58,7 +58,9 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                     if let Some(order) = app.config().middleware().api_route() {
                         let api_router =
                             middleware_manager.apply(flatten_routes(collection), order);
-                        router = router.merge(api_router.into_router());
+                        // FIXME: Add the ability for this to be configurable
+                        let cors = CorsLayer::permissive();
+                        router = router.merge(api_router.into_router().layer(cors));
                     }
                 }
             }
@@ -67,7 +69,9 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                     if let Some(order) = app.config().middleware().insecure_api_route() {
                         let insecure_api_router =
                             middleware_manager.apply(flatten_routes(collection), order);
-                        router = router.merge(insecure_api_router.into_router());
+                        // FIXME: Add the ability for this to be configurable
+                        let cors = CorsLayer::very_permissive();
+                        router = router.merge(insecure_api_router.into_router().layer(cors));
                     }
                 }
             }
