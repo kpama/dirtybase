@@ -26,5 +26,15 @@ pub(crate) fn register_routes(
                 "auth:do-register-form",
             )
     });
+
+    manager.insecure_api(Some("/auth"), |router| {
+        router
+            .post(
+                "/do-registration",
+                handle_api_register_request,
+                "auth-api:do-register-form",
+            )
+            .post("/my-token", handle_get_auth_token, "auth-api:get-token")
+    });
     manager
 }
