@@ -96,6 +96,23 @@ pub(crate) async fn handle_register_request(
     }
 }
 
+pub(crate) async fn handle_api_register_request(
+    RequestContext(ctx): RequestContext,
+    Json(payload): Json<AuthUserPayload>,
+) -> impl IntoResponse {
+    // This will use the auth service in the future
+    let storage = StorageResolverPipeline::new(ctx)
+        .get_provider()
+        .await
+        .unwrap();
+
+    if let Ok(user) = storage.store(payload).await {
+        format!("token: {}", user.generate_token().unwrap())
+    } else {
+        format!("token: ")
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub(crate) struct RegisterData {
     username: String,
