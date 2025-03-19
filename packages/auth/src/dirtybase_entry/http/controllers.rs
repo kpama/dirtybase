@@ -98,19 +98,23 @@ pub(crate) async fn handle_register_request(
 
 pub(crate) async fn handle_api_register_request(
     RequestContext(ctx): RequestContext,
-    Json(payload): Json<AuthUserPayload>,
-) -> impl IntoResponse {
+    Json(mut payload): Json<AuthUserPayload>,
+) -> ApiResponse<String> {
     // This will use the auth service in the future
     let storage = StorageResolverPipeline::new(ctx)
         .get_provider()
         .await
         .unwrap();
 
+    payload.rotate_salt = true;
+    let mut resp = ApiResponse::<String>::default();
+
     if let Ok(user) = storage.store(payload).await {
-        format!("token: {}", user.generate_token().unwrap())
+        resp.set_data(user.generate_token().unwrap());
     } else {
-        format!("token: ")
+        resp.set_error("could not register user");
     }
+    resp
 }
 
 #[derive(Debug, Deserialize)]
