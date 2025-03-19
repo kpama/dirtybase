@@ -30,9 +30,9 @@ pub(crate) fn register_routes(
     manager.insecure_api(Some("/auth"), |router| {
         router
             .post(
-                "/do-registration",
+                "/register",
                 handle_api_register_request,
-                "auth-api:do-register-form",
+                "auth-api:register",
             )
             .post("/my-token", handle_get_auth_token, "auth-api:get-token")
     });
