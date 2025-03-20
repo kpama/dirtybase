@@ -9,7 +9,7 @@ use named_routes_axum::RouterWrapper;
 
 pub type WrappedRouter = RouterWrapper<Arc<busybody::ServiceContainer>>;
 
-type RegistererFn = Box<dyn FnMut(Registerer) -> Registerer + Send + Sync>;
+type RegistererFn = Box<dyn Fn(Registerer) -> Registerer + Send + Sync>;
 
 pub struct Registerer {
     wrapper: WrappedRouter,
@@ -99,7 +99,7 @@ impl WebMiddlewareManager {
     /// Register a middleware that maybe apply later
     pub fn register<F>(&mut self, name: &str, registerer: F) -> &mut Self
     where
-        F: FnMut(Registerer) -> Registerer + Sync + Send + 'static,
+        F: Fn(Registerer) -> Registerer + Sync + Send + 'static,
     {
         self.0.insert(name.into(), Box::new(registerer));
         self
@@ -107,7 +107,7 @@ impl WebMiddlewareManager {
 
     /// Apply the specified middlewares on the router
     pub fn apply<I>(
-        &mut self,
+        &self,
         mut router: RouterWrapper<Arc<busybody::ServiceContainer>>,
         order: impl IntoIterator<Item = I>,
     ) -> RouterWrapper<Arc<busybody::ServiceContainer>>
@@ -120,7 +120,7 @@ impl WebMiddlewareManager {
                 continue;
             }
             let (key, params) = self.split_name_and_param(name);
-            if let Some(m) = self.0.get_mut(&key) {
+            if let Some(m) = self.0.get(&key) {
                 let mut reg = Registerer {
                     wrapper: router,
                     name: Arc::new(key),
