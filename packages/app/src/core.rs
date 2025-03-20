@@ -92,19 +92,19 @@ impl App {
     /// to register web routers and middlewares.
     pub async fn setup_web<F>(&self, mut callback: F)
     where
-        F: FnMut(RouterManager, &WebMiddlewareManager) -> RouterManager,
+        F: FnMut(RouterManager, &mut WebMiddlewareManager) -> RouterManager,
     {
         if ExtensionManager::is_ready().await {
             return;
         }
         let mut w_lock = self.web_setup.write().await;
-        let WebSetup(mut m, mm) = if let Some(web_setup) = w_lock.take() {
+        let WebSetup(mut m, mut mm) = if let Some(web_setup) = w_lock.take() {
             web_setup
         } else {
             WebSetup::new(&self.config)
         };
 
-        m = callback(m, &mm);
+        m = callback(m, &mut mm);
 
         w_lock.replace(WebSetup(m, mm));
     }
