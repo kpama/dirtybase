@@ -1,5 +1,5 @@
 use dirtybase_contract::{
-    app::{Context, UserContext},
+    app::Context,
     http::prelude::*,
     user::{UserProviderService, model::UserRepositoryTrait},
 };

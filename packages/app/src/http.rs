@@ -5,7 +5,7 @@ use axum_extra::extract::CookieJar;
 use dirtybase_contract::{
     ExtensionManager,
     app::Context,
-    http::{RouteCollection, RouteType, RouterManager, WebMiddlewareManager},
+    http::{RouteCollection, RouteType},
 };
 
 #[cfg(feature = "multitenant")]
@@ -17,7 +17,10 @@ use named_routes_axum::RouterWrapper;
 use tower_http::cors::CorsLayer;
 use tracing::{Instrument, field};
 
-use crate::{core::AppService, shutdown_signal};
+use crate::{
+    core::{AppService, WebSetup},
+    shutdown_signal,
+};
 
 pub async fn init(app: AppService) -> anyhow::Result<()> {
     app.init().await;
@@ -26,14 +29,13 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
         env::var("DTY_PUBLIC_DIRECTORY").unwrap_or_else(|_| String::from("./public"));
     let config = app.config();
 
+    let mut w_lock = app.web_setup.write().await;
+    let WebSetup(mut manager, mut middleware_manager) = if let Some(web_setup) = w_lock.take() {
+        web_setup
+    } else {
+        WebSetup::new(&app.config())
+    };
     let mut router = Router::new();
-    let mut manager = RouterManager::new(
-        config.web_api_route_prefix(),
-        config.web_admin_route_prefix(),
-        config.web_insecure_api_route_prefix(),
-        config.web_dev_route_prefix(),
-    );
-    let mut middleware_manager = WebMiddlewareManager::new();
     let mut has_routes = false;
 
     let lock = ExtensionManager::list().read().await;

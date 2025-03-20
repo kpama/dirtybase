@@ -15,17 +15,37 @@ pub use config::ConfigBuilder;
 use dirtybase_contract::ExtensionManager;
 use dirtybase_contract::app::Context;
 use dirtybase_contract::config::DirtyConfig;
+use dirtybase_contract::http::RouterManager;
+use dirtybase_contract::http::WebMiddlewareManager;
+use tokio::sync::RwLock;
 
 pub type AppService = busybody::Service<App>;
 
+pub(crate) struct WebSetup(pub(crate) RouterManager, pub(crate) WebMiddlewareManager);
+
+impl WebSetup {
+    pub(crate) fn new(config: &Config) -> Self {
+        let manager = RouterManager::new(
+            config.web_api_route_prefix(),
+            config.web_admin_route_prefix(),
+            config.web_insecure_api_route_prefix(),
+            config.web_dev_route_prefix(),
+        );
+        let middleware_manager = WebMiddlewareManager::new();
+        Self(manager, middleware_manager)
+    }
+}
+
 pub struct App {
     config: Config,
+    pub(crate) web_setup: RwLock<Option<WebSetup>>,
 }
 
 impl App {
     pub async fn new(config: &Config) -> anyhow::Result<AppService> {
         let instance = Self {
             config: config.clone(),
+            web_setup: RwLock::default(),
         };
 
         busybody::helpers::service_container().set(instance).await;
@@ -65,6 +85,28 @@ impl App {
 
     pub fn config(&self) -> Config {
         self.config.clone()
+    }
+
+    /// Setup a quick web application
+    /// Instead of creating an extension, ths method can be used
+    /// to register web routers and middlewares.
+    pub async fn setup_web<F>(&self, mut callback: F)
+    where
+        F: FnMut(RouterManager, &WebMiddlewareManager) -> RouterManager,
+    {
+        if ExtensionManager::is_ready().await {
+            return;
+        }
+        let mut w_lock = self.web_setup.write().await;
+        let WebSetup(mut m, mm) = if let Some(web_setup) = w_lock.take() {
+            web_setup
+        } else {
+            WebSetup::new(&self.config)
+        };
+
+        m = callback(m, &mm);
+
+        w_lock.replace(WebSetup(m, mm));
     }
 
     pub fn dirty_config(&self) -> DirtyConfig {
