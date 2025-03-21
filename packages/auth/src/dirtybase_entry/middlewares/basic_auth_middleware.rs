@@ -1,10 +1,16 @@
+use std::collections::HashMap;
+
 use dirtybase_contract::{
     app::Context,
     http::prelude::*,
     user::{UserProviderService, model::UserRepositoryTrait},
 };
 
-pub async fn handle_basic_auth_middleware(req: Request, next: Next) -> impl IntoResponse {
+pub async fn handle_basic_auth_middleware(
+    req: Request,
+    next: Next,
+    params: Option<HashMap<String, String>>,
+) -> impl IntoResponse {
     log::debug!(">>>> Basic auth ran <<<<<");
     let context = req.extensions().get::<Context>().unwrap();
     let user_provider = context.get::<UserProviderService>().await.unwrap();

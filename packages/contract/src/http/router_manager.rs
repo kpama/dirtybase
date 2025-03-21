@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use named_routes_axum::RouterWrapper;
 
@@ -8,8 +8,8 @@ pub type ExtensionRouter = WrappedRouter;
 
 pub struct RouteCollection {
     pub prefix: String,
-    pub base_route: RouterWrapper<Arc<busybody::ServiceContainer>>,
-    pub routers: HashMap<String, Vec<RouterWrapper<Arc<busybody::ServiceContainer>>>>,
+    pub base_route: RouterWrapper<busybody::ServiceContainer>,
+    pub routers: HashMap<String, Vec<RouterWrapper<busybody::ServiceContainer>>>,
 }
 
 impl RouteCollection {
@@ -26,7 +26,7 @@ impl RouteCollection {
         self.prefix.clone()
     }
 
-    pub fn add(&mut self, prefix: &str, router: RouterWrapper<Arc<busybody::ServiceContainer>>) {
+    pub fn add(&mut self, prefix: &str, router: RouterWrapper<busybody::ServiceContainer>) {
         let full_path = format!("{}{}", self.prefix(), prefix);
         self.routers.entry(full_path).or_default().push(router);
     }
@@ -144,7 +144,7 @@ impl RouterManager {
         &mut self,
         base_type: RouteType,
         prefix: &str,
-        router: RouterWrapper<Arc<busybody::ServiceContainer>>,
+        router: RouterWrapper<busybody::ServiceContainer>,
     ) -> &mut Self {
         if let Some(base) = self.base.get_mut(&base_type) {
             base.add(prefix, router);

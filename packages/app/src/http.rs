@@ -5,7 +5,7 @@ use axum_extra::extract::CookieJar;
 use dirtybase_contract::{
     ExtensionManager,
     app::Context,
-    http::{RouteCollection, RouteType},
+    http::{RouteCollection, RouteType, RouterBuilder},
 };
 
 #[cfg(feature = "multitenant")]
@@ -46,6 +46,9 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
     for ext in lock.iter() {
         manager = ext.register_routes(manager, &middleware_manager);
+        let mut builder = RouterBuilder::default();
+        ext.register_routes2(&mut builder);
+        manager.general(None, |r| r.merge(builder.into_router_wrapper().unwrap()));
     }
     drop(lock);
 
@@ -179,9 +182,6 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                         }
                     }
                 }
-                // 2. Find the app
-                // 3. Find the role
-                // 4: Find the user
 
                 // Add the request context
                 req.extensions_mut().insert(context.clone());
@@ -222,7 +222,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
         listener,
         web_app
             .into_router()
-            .with_state(busybody::helpers::service_container()),
+            .with_state(busybody::helpers::make_proxy()),
     )
     .with_graceful_shutdown(shutdown_signal())
     .await
@@ -247,7 +247,7 @@ fn display_welcome_info(address: &str, port: u16) {
     eprintln!("Http server running at : {} on port: {}", address, port);
 }
 
-fn flatten_routes(collection: RouteCollection) -> RouterWrapper<Arc<busybody::ServiceContainer>> {
+fn flatten_routes(collection: RouteCollection) -> RouterWrapper<busybody::ServiceContainer> {
     let mut base = collection.base_route;
     for (sub_path, collection) in collection.routers {
         for a_router in collection {

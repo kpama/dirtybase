@@ -14,7 +14,7 @@ use crate::{
     app::Context,
     cli::{CliCommandManager, CliMiddlewareManager},
     config::DirtyConfig,
-    http::{RouterManager, WebMiddlewareManager},
+    http::{RouterBuilder, RouterManager, WebMiddlewareManager},
 };
 
 pub(crate) static EXTENSION_COLLECTION: OnceLock<RwLock<Vec<Box<dyn ExtensionSetup>>>> =
@@ -59,6 +59,10 @@ pub trait ExtensionSetup: Send + Sync {
         middleware_manager: &WebMiddlewareManager,
     ) -> RouterManager {
         manager
+    }
+
+    fn register_routes2(&self, router: &mut RouterBuilder) {
+        //-
     }
 
     /// Calls for each web requests

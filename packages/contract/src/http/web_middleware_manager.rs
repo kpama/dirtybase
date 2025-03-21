@@ -7,7 +7,7 @@ use axum::{
 };
 use named_routes_axum::RouterWrapper;
 
-pub type WrappedRouter = RouterWrapper<Arc<busybody::ServiceContainer>>;
+pub type WrappedRouter = RouterWrapper<busybody::ServiceContainer>;
 
 type RegistererFn = Box<dyn Fn(Registerer) -> Registerer + Send + Sync>;
 
@@ -108,9 +108,9 @@ impl WebMiddlewareManager {
     /// Apply the specified middlewares on the router
     pub fn apply<I>(
         &self,
-        mut router: RouterWrapper<Arc<busybody::ServiceContainer>>,
+        mut router: RouterWrapper<busybody::ServiceContainer>,
         order: impl IntoIterator<Item = I>,
-    ) -> RouterWrapper<Arc<busybody::ServiceContainer>>
+    ) -> RouterWrapper<busybody::ServiceContainer>
     where
         I: ToString,
     {

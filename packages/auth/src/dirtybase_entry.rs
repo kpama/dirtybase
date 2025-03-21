@@ -6,11 +6,8 @@ use dirtybase_contract::{
     ExtensionMigrations, ExtensionSetup,
     app::Context,
     http::{RouterManager, WebMiddlewareManager},
-    prelude::IntoResponse,
 };
-use dirtybase_helper::hash::sha256;
 use middlewares::setup_middlewares;
-use serde::{Deserialize, Serialize};
 
 use crate::{AuthConfig, DATABASE_STORAGE, register_storages, setup_context_managers};
 
