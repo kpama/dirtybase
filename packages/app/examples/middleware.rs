@@ -1,8 +1,4 @@
-use std::sync::Arc;
-
 use axum::response::Html;
-use dirtybase_contract::{http::RouterBuilder, prelude::*};
-use tower_service::Service;
 use tracing::Level;
 
 #[tokio::main]
@@ -13,28 +9,7 @@ async fn main() {
         .expect("could not setup tracing");
     let app = dirtybase_app::setup().await.unwrap();
 
-    app.register(Ext).await;
-
-    app.setup_web(|mut manager, middleware_manager| {
-        middleware_manager.register("our-middleware", |reg| {
-            reg.middleware(|req, mut next, params| async move {
-                if params.is_some() {
-                    println!("our middleware params: {:#?}", params);
-                }
-                next.call(req).await
-            })
-        });
-        middleware_manager.register("middleware2", |reg| {
-            reg.middleware_with_state(
-                |state, req, mut next, params| async move {
-                    println!("our state: {:?}", &state);
-                    println!("params: {:?}", params);
-                    next.call(req).await
-                },
-                Arc::new("this is our state".to_string()),
-            )
-        });
-
+    app.setup_web(|mut manager, _middleware_manager| {
         manager.general(None, |router| {
             router.get_x("/", || async { Html("Home page") });
             router.group_with_middleware(
@@ -44,11 +19,7 @@ async fn main() {
                         Html("Hello world from middleware example")
                     });
                 },
-                [
-                    "our-middleware::log=1:roles=manager,admin,student",
-                    "middleware2::count=true",
-                    "auth",
-                ],
+                ["auth"],
             );
         });
         manager
@@ -56,37 +27,4 @@ async fn main() {
     .await;
 
     _ = dirtybase_app::run_http(app).await;
-}
-
-struct Ext;
-
-#[async_trait::async_trait]
-impl ExtensionSetup for Ext {
-    fn register_routes(&self, manager: &mut RouterManager) {
-        manager.general(None, |builder| {
-            builder.get_x("/ext", || async { "we are testing the new router builder" });
-            builder.middleware([
-                "our-middleware::log=1:roles=manager,admin,student",
-                "middleware2::count=true",
-                "auth",
-            ]);
-
-            builder.group_with_middleware(
-                "/ext2",
-                |b| {
-                    b.get_x("/", || async { "from ext2" });
-                },
-                ["auth"],
-            );
-        });
-    }
-
-    fn register_web_middlewares(&self, mut manager: WebMiddlewareManager) -> WebMiddlewareManager {
-        manager.register("foo-middleware", |r| {
-            r.middleware(|req, next, params| async {
-                println!(">>>>>>>>> foo-middleware called");
-            })
-        });
-        manager
-    }
 }
