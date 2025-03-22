@@ -9,7 +9,7 @@ use dirtybase_contract::{
 #[tokio::main]
 async fn main() {
     let dty_config = DirtyConfig::default();
-    let ctx = Context::make_global();
+    let ctx = Context::make_global().await;
     let config = CacheConfig::from_config(&dty_config, &ctx).await.unwrap();
     let manager = CacheManager::new(&config).await;
 
