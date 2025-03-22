@@ -37,7 +37,7 @@ impl ExtensionSetup for App {
             |_| {
                 Box::pin(async {
                     tracing::error!(">>>>>>>>>>>>>>>>>>>>>>>  making new i32");
-                    40000
+                    Ok(40000)
                 })
             },
             |_| Box::pin(async {}),
