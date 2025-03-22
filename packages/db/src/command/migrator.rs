@@ -2,7 +2,7 @@
 
 use anyhow::Ok;
 use dirtybase_contract::{
-    ExtensionManager, ExtensionMigrations, db::base::manager::Manager, prelude::ArgMatches,
+    ExtensionManager, ExtensionMigrations, cli::clap::ArgMatches, db::base::manager::Manager,
 };
 
 use crate::model::migration::MigrationRepository;

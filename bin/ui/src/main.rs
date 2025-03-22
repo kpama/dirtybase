@@ -58,12 +58,11 @@ async fn main() {
 struct UiApp;
 
 impl ExtensionSetup for UiApp {
-    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
+    fn register_routes(&self, manager: &mut RouterManager) {
         manager.general(None, |router| {
             router
                 .get("/", home, "home")
                 .get("/_ui/*path", assets, "assets");
         });
-        manager
     }
 }

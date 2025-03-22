@@ -41,7 +41,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
     }
 
     for ext in lock.iter() {
-        manager = ext.register_routes(manager);
+        ext.register_routes(&mut manager);
     }
     drop(lock);
 

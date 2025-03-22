@@ -28,10 +28,10 @@ struct MyApp;
 
 #[async_trait::async_trait]
 impl dirtybase_app::contract::ExtensionSetup for MyApp {
-    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
+    fn register_routes(&self, manager: &mut RouterManager) {
         manager
-            .general(None, |mut router| {
-                router = router
+            .general(None, |router| {
+                router
                     .get("/", handle_home, "home")
                     .get("/home2", handle_home2, "home2")
                     .get_x("/one", another_one)
@@ -44,8 +44,6 @@ impl dirtybase_app::contract::ExtensionSetup for MyApp {
             .api("/jj".into(), |router| {
                 router.get("/people", || async { "List of people" }, "api-people");
             });
-
-        manager
     }
 
     fn register_web_middlewares(&self, mut manager: WebMiddlewareManager) -> WebMiddlewareManager {

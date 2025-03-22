@@ -3,10 +3,9 @@ use anyhow::anyhow;
 use dirtybase_contract::{
     cli::{
         CliCommandManager,
-        clap::{self},
+        clap::{self, ArgMatches},
     },
     db::base::manager::Manager,
-    prelude::ArgMatches,
 };
 use migrator::{MigrateAction, Migrator};
 

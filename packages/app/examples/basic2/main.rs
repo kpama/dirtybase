@@ -21,7 +21,7 @@ struct MyAwesomeApp;
 
 #[async_trait::async_trait]
 impl dirtybase_app::contract::ExtensionSetup for MyAwesomeApp {
-    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
+    fn register_routes(&self, manager: &mut RouterManager) {
         manager.general(None, |router| {
             router
                 .get("/", || async { Html("Hello from awesome app") }, "homepage")
@@ -30,8 +30,6 @@ impl dirtybase_app::contract::ExtensionSetup for MyAwesomeApp {
                     router.get_x("/given", || async { Html("Hello from given") });
                 });
         });
-
-        manager
     }
 
     async fn shutdown(&mut self, _context: &Context) {
@@ -47,7 +45,7 @@ struct UrlShortener;
 
 #[async_trait::async_trait]
 impl dirtybase_app::contract::ExtensionSetup for UrlShortener {
-    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
+    fn register_routes(&self, manager: &mut RouterManager) {
         manager.api(Some("/v1/short"), |router| {
             router.get(
                 "/url-shortener",
@@ -55,6 +53,5 @@ impl dirtybase_app::contract::ExtensionSetup for UrlShortener {
                 "shortener-home",
             );
         });
-        manager
     }
 }

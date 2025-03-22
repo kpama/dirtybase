@@ -2343,6 +2343,8 @@ dependencies = [
 [[package]]
 name = "named_routes_axum"
 version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4c6b8f3bd8ff4f613ba21e36d797c045a1708eeec1a2417a709ff2c4cb9ef5f"
 dependencies = [
  "axum",
  "tower",

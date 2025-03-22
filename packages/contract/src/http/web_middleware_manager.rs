@@ -105,6 +105,26 @@ impl WebMiddlewareManager {
         self
     }
 
+    pub fn register2<F, Fut, Out>(&mut self, name: &str, handler: F) -> &mut Self
+    where
+        F: FnMut(Request, Next, Option<HashMap<String, String>>) -> Fut
+            + Clone
+            + Send
+            + Sync
+            + 'static,
+        Fut: Future<Output = Out> + Send + 'static,
+        Out: IntoResponse + 'static,
+    {
+        self.0.insert(
+            name.into(),
+            Box::new(move |r| {
+                //
+                r.middleware(handler.clone())
+            }),
+        );
+        self
+    }
+
     /// Apply the specified middlewares on the router
     pub fn apply<I>(
         &self,

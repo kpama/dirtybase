@@ -2,6 +2,7 @@ use axum::response::Html;
 use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
 use dirtybase_contract::app::RequestContext;
+use dirtybase_contract::cli::CliMiddlewareManager;
 use dirtybase_contract::{
     app::{Context, ContextResourceManager, CtxExt},
     prelude::*,
@@ -58,7 +59,7 @@ impl ExtensionSetup for App {
         manager
     }
 
-    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
+    fn register_routes(&self, manager: &mut RouterManager) {
         manager.general(None, |router| {
             let router = router.get("/", index_request_handler, "index-page");
             // middleware_manager.apply(router, ["auth::jwt"])
@@ -112,8 +113,6 @@ impl ExtensionSetup for App {
                     },
                 );
         });
-
-        manager
     }
 
     async fn on_web_request(&self, req: Request, context: Context, _cookie: &CookieJar) -> Request {

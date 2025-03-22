@@ -24,8 +24,4 @@ impl dirtybase_contract::ExtensionSetup for Extension {
     fn migrations(&self, _context: &Context) -> Option<dirtybase_contract::ExtensionMigrations> {
         migration::setup()
     }
-
-    fn register_routes(&self, manager: RouterManager) -> RouterManager {
-        manager
-    }
 }

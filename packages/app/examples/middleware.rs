@@ -62,7 +62,7 @@ struct Ext;
 
 #[async_trait::async_trait]
 impl ExtensionSetup for Ext {
-    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
+    fn register_routes(&self, manager: &mut RouterManager) {
         manager.general(None, |builder| {
             builder.get_x("/ext", || async { "we are testing the new router builder" });
             builder.middleware([
@@ -79,11 +79,6 @@ impl ExtensionSetup for Ext {
                 ["auth"],
             );
         });
-        manager
-    }
-
-    fn register_routes2(&self, router: &mut RouterBuilder) {
-        router.get_x("/okay", || async { "This is working..." });
     }
 
     fn register_web_middlewares(&self, mut manager: WebMiddlewareManager) -> WebMiddlewareManager {
