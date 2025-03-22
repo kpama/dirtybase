@@ -1,7 +1,5 @@
 use std::{collections::HashMap, sync::RwLock};
 
-use serde::Serialize;
-
 #[derive(Default)]
 pub struct ContextMetadata {
     data: RwLock<HashMap<String, String>>,

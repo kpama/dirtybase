@@ -19,8 +19,6 @@ use dirtybase_contract::http::RouterManager;
 use dirtybase_contract::http::WebMiddlewareManager;
 use tokio::sync::RwLock;
 
-use crate::http;
-
 pub type AppService = busybody::Service<App>;
 
 pub(crate) struct WebSetup(pub(crate) RouterManager, pub(crate) WebMiddlewareManager);

@@ -1,6 +1,6 @@
 mod aggregate_wrapper;
 
-use std::sync::{Arc, LockResult, Mutex, MutexGuard};
+use std::sync::Arc;
 
 pub use aggregate_wrapper::*;
 use dirtybase_contract::db::types::ArcUuid7;

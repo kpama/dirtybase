@@ -1,11 +1,5 @@
-use axum::{extract::Path, response::Html, routing::get};
-use dirtybase_contract::{
-    ExtensionSetup,
-    app::Context,
-    http::{RouterManager, WebMiddlewareManager},
-};
-use named_routes_axum::helpers::get_path_with;
-use tower_service::Service;
+use axum::{extract::Path, response::Html};
+use dirtybase_contract::{app::Context, http::RouterManager};
 
 #[tokio::main]
 async fn main() {

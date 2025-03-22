@@ -16,7 +16,7 @@ impl MigrationRepository {
         &self.manager
     }
 
-    pub async fn init(&self) {
+    pub async fn init(&self) -> Result<(), anyhow::Error> {
         self.manager
             .create_table_schema(TABLE_NAME, |table| {
                 // id
@@ -31,7 +31,7 @@ impl MigrationRepository {
                 // created at
                 table.created_at();
             })
-            .await;
+            .await
     }
 
     pub async fn exist(&self, name: &str) -> bool {

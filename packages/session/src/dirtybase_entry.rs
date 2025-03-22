@@ -5,7 +5,6 @@ use dirtybase_contract::{
     app::Context,
     async_trait,
     axum::response::Response,
-    config::DirtyConfig,
     prelude::{
         Request,
         axum_extra::extract::{CookieJar, cookie::Cookie},

@@ -1,7 +1,5 @@
 use std::{collections::HashMap, sync::Arc};
 
-use serde::de::DeserializeOwned;
-
 use crate::db::types::ArcUuid7;
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]

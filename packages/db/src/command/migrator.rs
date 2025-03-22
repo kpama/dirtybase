@@ -110,7 +110,9 @@ impl Migrator {
 
     async fn repo(&self, manager: &Manager) -> MigrationRepository {
         let repo = MigrationRepository::new(manager.clone());
-        repo.init().await;
+        if let Err(e) = repo.init().await {
+            tracing::error!("could not initialize migrator: {}", e);
+        }
 
         repo
     }
