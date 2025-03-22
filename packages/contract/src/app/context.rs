@@ -83,7 +83,7 @@ impl Context {
         }
 
         if let Ok(dirty_config) = self.get::<DirtyConfig>().await {
-            return C::from_config(&dirty_config).await;
+            return C::from_config(&dirty_config, self).await;
         }
 
         Err(anyhow!(

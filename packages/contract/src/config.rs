@@ -9,6 +9,8 @@ pub use dirtybase_config::*;
 pub use config;
 use serde::{Deserialize, Serialize};
 
+use crate::app::Context;
+
 /// Loads configuration from .env files.
 /// Multiple .env files are check in the following order
 ///  - .env.defaults
@@ -31,7 +33,7 @@ pub type ConfigResult<C> = Result<C, anyhow::Error>;
 #[async_trait::async_trait]
 pub trait TryFromDirtyConfig {
     type Returns;
-    async fn from_config(config: &DirtyConfig) -> ConfigResult<Self::Returns>;
+    async fn from_config(config: &DirtyConfig, ctx: &Context) -> ConfigResult<Self::Returns>;
 }
 
 fn load_dot_env<P: AsRef<Path>>(mut dir: Option<P>) {

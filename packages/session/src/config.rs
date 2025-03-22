@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use dirtybase_contract::{
+    app::Context,
     config::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
     session::DEFAULT_LIFETIME,
 };
@@ -43,7 +44,7 @@ impl Default for SessionConfig {
 #[async_trait::async_trait]
 impl TryFromDirtyConfig for SessionConfig {
     type Returns = Self;
-    async fn from_config(config: &DirtyConfig) -> ConfigResult<Self::Returns> {
+    async fn from_config(config: &DirtyConfig, _ctx: &Context) -> ConfigResult<Self::Returns> {
         match config
             .optional_file("session.toml", Some("DTY_SESSION"))
             .build()
@@ -79,10 +80,6 @@ impl SessionConfig {
 
     pub fn cookie_id(&self) -> Arc<String> {
         self.cookie_id.clone()
-    }
-
-    pub async fn from_dirty_config(config: &DirtyConfig) -> Self {
-        Self::from_config(config).await.unwrap()
     }
 }
 

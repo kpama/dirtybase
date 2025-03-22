@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use busybody::async_trait;
-use dirtybase_contract::config::{ConfigResult, DirtyConfig, TryFromDirtyConfig};
+use dirtybase_contract::{
+    app::Context,
+    config::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
+};
 
 pub const MEMORY_STORAGE: &'static str = "memory";
 pub const DATABASE_STORAGE: &'static str = "database";
@@ -28,7 +31,7 @@ impl Default for AuthConfig {
 impl TryFromDirtyConfig for AuthConfig {
     type Returns = Self;
 
-    async fn from_config(base: &DirtyConfig) -> ConfigResult<Self::Returns> {
+    async fn from_config(base: &DirtyConfig, _ctx: &Context) -> ConfigResult<Self::Returns> {
         let mut config = base
             .optional_file("auth.toml", Some("DTY_AUTH"))
             .build()
@@ -59,9 +62,5 @@ impl AuthConfig {
 
     pub fn storage_ref(&self) -> &Arc<String> {
         &self.storage
-    }
-
-    pub async fn from_dirty_config(config: &DirtyConfig) -> Self {
-        Self::from_config(config).await.unwrap()
     }
 }

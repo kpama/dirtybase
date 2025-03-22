@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use base64ct::Encoding;
+use dirtybase_contract::app::Context;
 use dirtybase_contract::config::ConfigResult;
 use dirtybase_contract::config::DirtyConfig;
 use dirtybase_contract::config::TryFromDirtyConfig;
@@ -316,7 +317,7 @@ where
 impl TryFromDirtyConfig for Config {
     type Returns = Self;
 
-    async fn from_config(config: &DirtyConfig) -> ConfigResult<Self::Returns> {
+    async fn from_config(config: &DirtyConfig, _ctx: &Context) -> ConfigResult<Self::Returns> {
         Self::try_from_config(config).await
     }
 }

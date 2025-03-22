@@ -9,13 +9,10 @@ use dirtybase_contract::{
         Request,
         axum_extra::extract::{CookieJar, cookie::Cookie},
     },
-    session::{Session, SessionId, SessionStorage, SessionStorageProvider},
+    session::{Session, SessionId, SessionStorageProvider},
 };
 
-use crate::{
-    SessionConfig, SessionStorageDriver, resource_manager::register_resource_manager,
-    storage::MemoryStorage,
-};
+use crate::{SessionConfig, resource_manager::register_resource_manager, storage::MemoryStorage};
 
 #[derive(Default)]
 pub struct Extension;
@@ -24,6 +21,9 @@ pub struct Extension;
 impl ExtensionSetup for Extension {
     async fn setup(&mut self, global_context: &Context) {
         println!(">> session setup method called");
+        if let Ok(config) = global_context.get_config::<SessionConfig>("session").await {
+            global_context.set(config).await;
+        }
 
         register_resource_manager().await;
     }

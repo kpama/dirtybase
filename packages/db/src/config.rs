@@ -1,7 +1,10 @@
 use std::{collections::HashMap, sync::Arc};
 
 use anyhow::anyhow;
-use dirtybase_contract::config::{DirtyConfig, TryFromDirtyConfig};
+use dirtybase_contract::{
+    app::Context,
+    config::{DirtyConfig, TryFromDirtyConfig},
+};
 
 use crate::connector::sqlite::sqlite_schema_manager::SQLITE_KIND;
 
@@ -25,7 +28,10 @@ pub struct DbConfig {
 #[async_trait::async_trait]
 impl TryFromDirtyConfig for DbConfig {
     type Returns = Self;
-    async fn from_config(config: &DirtyConfig) -> Result<Self::Returns, anyhow::Error> {
+    async fn from_config(
+        config: &DirtyConfig,
+        _ctx: &Context,
+    ) -> Result<Self::Returns, anyhow::Error> {
         config
             .optional_file("database.toml", Some("DTY_DB"))
             .build()
