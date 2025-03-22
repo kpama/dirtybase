@@ -35,19 +35,21 @@ async fn main() {
             )
         });
 
-        manager.general(None, |mut router| {
-            router = router.get_x("/", || async {
-                Html("Hello world from middleware example")
-            });
-
-            middleware_manager.apply(
-                router,
+        manager.general(None, |router| {
+            router.get_x("/", || async { Html("Home page") });
+            router.group_with_middleware(
+                "/foo",
+                |r| {
+                    r.get_x("/", || async {
+                        Html("Hello world from middleware example")
+                    });
+                },
                 [
                     "our-middleware::log=1:roles=manager,admin,student",
                     "middleware2::count=true",
                     "auth",
                 ],
-            )
+            );
         });
         manager
     })
@@ -60,16 +62,8 @@ struct Ext;
 
 #[async_trait::async_trait]
 impl ExtensionSetup for Ext {
-    fn register_routes(
-        &self,
-        mut manager: RouterManager,
-        middleware_manager: &WebMiddlewareManager,
-    ) -> RouterManager {
-        manager.general(None, |router| {
-            let mut builder = RouterBuilder::new_with_wrapper(router);
-            // router = router.get_x("/ext", || async { "Hello from extension" });
-            // middleware_manager.apply(router, ["auth"])
-
+    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
+        manager.general(None, |builder| {
             builder.get_x("/ext", || async { "we are testing the new router builder" });
             builder.middleware([
                 "our-middleware::log=1:roles=manager,admin,student",
@@ -77,11 +71,13 @@ impl ExtensionSetup for Ext {
                 "auth",
             ]);
 
-            builder.group_with_middleware(["auth"], |b| {
-                b.get_x("/ext2", || async { "from ext2" });
-            });
-
-            builder.into_router_wrapper().unwrap()
+            builder.group_with_middleware(
+                "/ext2",
+                |b| {
+                    b.get_x("/", || async { "from ext2" });
+                },
+                ["auth"],
+            );
         });
         manager
     }

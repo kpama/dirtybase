@@ -25,11 +25,7 @@ impl dirtybase_contract::ExtensionSetup for Extension {
         migration::setup()
     }
 
-    fn register_routes(
-        &self,
-        manager: RouterManager,
-        _middleware: &WebMiddlewareManager,
-    ) -> RouterManager {
+    fn register_routes(&self, manager: RouterManager) -> RouterManager {
         manager
     }
 }

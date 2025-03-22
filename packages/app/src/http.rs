@@ -1,12 +1,8 @@
-use std::{env, sync::Arc};
+use std::env;
 
 use axum::Router;
 use axum_extra::extract::CookieJar;
-use dirtybase_contract::{
-    ExtensionManager,
-    app::Context,
-    http::{RouteCollection, RouteType, RouterBuilder},
-};
+use dirtybase_contract::{ExtensionManager, app::Context, http::RouteType};
 
 #[cfg(feature = "multitenant")]
 use dirtybase_contract::multitenant::{
@@ -45,69 +41,107 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
     }
 
     for ext in lock.iter() {
-        manager = ext.register_routes(manager, &middleware_manager);
-        let mut builder = RouterBuilder::default();
-        ext.register_routes2(&mut builder);
-        manager.general(None, |r| r.merge(builder.into_router_wrapper().unwrap()));
+        manager = ext.register_routes(manager);
     }
     drop(lock);
 
-    for (route_type, collection) in manager.take() {
-        if collection.routers.is_empty() {
+    for (route_type, (prefix, entry)) in manager.take() {
+        if entry.is_none() {
             continue;
         }
+        let mut builder = entry.unwrap();
         has_routes = true;
 
         match route_type {
             RouteType::Api => {
                 if app.config().web_enable_api_routes() {
-                    if let Some(order) = app.config().middleware().api_route() {
-                        let api_router =
-                            middleware_manager.apply(flatten_routes(collection), order);
+                    if let Some(mut api_router) =
+                        builder.into_router_wrapper(&mut middleware_manager)
+                    {
+                        // now add global middleware for this collection
+                        if let Some(order) = app.config().middleware().api_route() {
+                            api_router = middleware_manager.apply(api_router, order);
+                        }
+
                         // FIXME: Add the ability for this to be configurable
                         let cors = CorsLayer::permissive();
-                        router = router.merge(api_router.into_router().layer(cors));
+                        if prefix.is_empty() {
+                            router = router.merge(api_router.into_router().layer(cors));
+                        } else {
+                            router = router.nest(&prefix, api_router.into_router().layer(cors));
+                        }
                     }
                 }
             }
             RouteType::InsecureApi => {
                 if app.config().web_enable_insecure_api_routes() {
-                    if let Some(order) = app.config().middleware().insecure_api_route() {
-                        let insecure_api_router =
-                            middleware_manager.apply(flatten_routes(collection), order);
+                    if let Some(mut insecure_api_router) =
+                        builder.into_router_wrapper(&mut middleware_manager)
+                    {
+                        if let Some(order) = app.config().middleware().insecure_api_route() {
+                            insecure_api_router =
+                                middleware_manager.apply(insecure_api_router, order);
+                        }
+
                         // FIXME: Add the ability for this to be configurable
                         let cors = CorsLayer::very_permissive();
-                        router = router.merge(insecure_api_router.into_router().layer(cors));
+                        if prefix.is_empty() {
+                            router = router.merge(insecure_api_router.into_router().layer(cors));
+                        } else {
+                            router =
+                                router.nest(&prefix, insecure_api_router.into_router().layer(cors));
+                        }
                     }
                 }
             }
             RouteType::Backend => {
                 if app.config().web_enable_admin_routes() {
-                    if let Some(order) = app.config().middleware().admin_route() {
-                        let backend_router =
-                            middleware_manager.apply(flatten_routes(collection), order);
+                    if let Some(mut backend_router) =
+                        builder.into_router_wrapper(&mut middleware_manager)
+                    {
+                        if let Some(order) = app.config().middleware().admin_route() {
+                            backend_router = middleware_manager.apply(backend_router, order);
+                        }
 
-                        router = router.merge(backend_router.into_router());
+                        if prefix.is_empty() {
+                            router = router.merge(backend_router.into_router());
+                        } else {
+                            router = router.nest(&prefix, backend_router.into_router());
+                        }
                     }
                 }
             }
             RouteType::General => {
                 if app.config().web_enable_general_routes() {
-                    if let Some(order) = app.config().middleware().general_route() {
-                        let general_router =
-                            middleware_manager.apply(flatten_routes(collection), order);
+                    if let Some(mut general_router) =
+                        builder.into_router_wrapper(&mut middleware_manager)
+                    {
+                        if let Some(order) = app.config().middleware().general_route() {
+                            general_router = middleware_manager.apply(general_router, order);
+                        }
 
-                        router = router.merge(general_router.into_router());
+                        if prefix.is_empty() {
+                            router = router.merge(general_router.into_router());
+                        } else {
+                            router = router.nest(&prefix, general_router.into_router());
+                        }
                     }
                 }
             }
             RouteType::Dev => {
                 if app.config().web_enable_dev_routes() {
-                    if let Some(order) = app.config().middleware().general_route() {
-                        let dev_router =
-                            middleware_manager.apply(flatten_routes(collection), order);
+                    if let Some(mut dev_router) =
+                        builder.into_router_wrapper(&mut middleware_manager)
+                    {
+                        if let Some(order) = app.config().middleware().general_route() {
+                            dev_router = middleware_manager.apply(dev_router, order);
+                        }
 
-                        router = router.merge(dev_router.into_router());
+                        if prefix.is_empty() {
+                            router = router.merge(dev_router.into_router());
+                        } else {
+                            router = router.nest(&prefix, dev_router.into_router());
+                        }
                     }
                 }
             }
@@ -245,19 +279,4 @@ fn display_welcome_info(address: &str, port: u16) {
     );
     eprintln!("version: {}", VERSION);
     eprintln!("Http server running at : {} on port: {}", address, port);
-}
-
-fn flatten_routes(collection: RouteCollection) -> RouterWrapper<busybody::ServiceContainer> {
-    let mut base = collection.base_route;
-    for (sub_path, collection) in collection.routers {
-        for a_router in collection {
-            if sub_path.is_empty() || sub_path == "/" {
-                base = base.merge(a_router);
-            } else {
-                base = base.nest(&sub_path, a_router);
-            }
-        }
-    }
-
-    base
 }

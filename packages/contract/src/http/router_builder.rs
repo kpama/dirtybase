@@ -1,10 +1,14 @@
-use axum::handler::Handler;
+use std::collections::HashMap;
+
+use axum::{handler::Handler, Router};
 use named_routes_axum::RouterWrapper;
+
+use super::WebMiddlewareManager;
 
 pub struct RouterBuilder {
     wrapper: Option<RouterWrapper<busybody::ServiceContainer>>,
     middleware: Option<Vec<String>>,
-    nest: Option<Vec<RouterBuilder>>,
+    nest: Option<HashMap<String, RouterBuilder>>,
     merge: Option<Vec<RouterBuilder>>,
 }
 
@@ -38,6 +42,26 @@ impl RouterBuilder {
         self
     }
 
+    pub fn delete_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        name: &str,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.delete("/", handler, name);
+        self.append(builder, path);
+        self
+    }
+
     /// Register a DELETE handler with no name
     pub fn delete_x<H, T>(&mut self, path: &str, handler: H) -> &mut Self
     where
@@ -46,6 +70,25 @@ impl RouterBuilder {
     {
         let wrapper = self.wrapper.take();
         self.wrapper = Some(wrapper.unwrap().delete_x(path, handler));
+        self
+    }
+
+    pub fn delete_x_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.delete_x("/", handler);
+        self.append(builder, path);
         self
     }
 
@@ -61,6 +104,26 @@ impl RouterBuilder {
         self
     }
 
+    pub fn get_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        name: &str,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.get("/", handler, name);
+        self.append(builder, path);
+        self
+    }
+
     /// Register a GET handler with no name
     pub fn get_x<H, T>(&mut self, path: &str, handler: H) -> &mut Self
     where
@@ -72,6 +135,25 @@ impl RouterBuilder {
         self
     }
 
+    pub fn get_x_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.get_x("/", handler);
+        self.append(builder, path);
+        self
+    }
+
     /// Register a HEAD handler
     pub fn head<H, T>(&mut self, path: &str, handler: H, name: &str) -> &mut Self
     where
@@ -80,6 +162,25 @@ impl RouterBuilder {
     {
         let wrapper = self.wrapper.take();
         self.wrapper = Some(wrapper.unwrap().head(path, handler, name));
+        self
+    }
+    pub fn head_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        name: &str,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.head("/", handler, name);
+        self.append(builder, path);
         self
     }
 
@@ -94,6 +195,25 @@ impl RouterBuilder {
         self
     }
 
+    pub fn head_x_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.head_x("/", handler);
+        self.append(builder, path);
+        self
+    }
+
     /// Register a OPTIONS handler
     pub fn options<H, T>(&mut self, path: &str, handler: H, name: &str) -> &mut Self
     where
@@ -102,6 +222,25 @@ impl RouterBuilder {
     {
         let wrapper = self.wrapper.take();
         self.wrapper = Some(wrapper.unwrap().options(path, handler, name));
+        self
+    }
+    pub fn options_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        name: &str,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.options("/", handler, name);
+        self.append(builder, path);
         self
     }
 
@@ -116,6 +255,25 @@ impl RouterBuilder {
         self
     }
 
+    pub fn options_x_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.options_x("/", handler);
+        self.append(builder, path);
+        self
+    }
+
     /// Register a PATCH handler
     pub fn patch<H, T>(&mut self, path: &str, handler: H, name: &str) -> &mut Self
     where
@@ -124,6 +282,26 @@ impl RouterBuilder {
     {
         let wrapper = self.wrapper.take();
         self.wrapper = Some(wrapper.unwrap().patch(path, handler, name));
+        self
+    }
+
+    pub fn patch_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        name: &str,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.patch("/", handler, name);
+        self.append(builder, path);
         self
     }
 
@@ -138,6 +316,25 @@ impl RouterBuilder {
         self
     }
 
+    pub fn patch_x_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.patch_x("/", handler);
+        self.append(builder, path);
+        self
+    }
+
     /// Register a POST handler
     pub fn post<H, T>(&mut self, path: &str, handler: H, name: &str) -> &mut Self
     where
@@ -146,6 +343,26 @@ impl RouterBuilder {
     {
         let wrapper = self.wrapper.take();
         self.wrapper = Some(wrapper.unwrap().post(path, handler, name));
+        self
+    }
+
+    pub fn post_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        name: &str,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.post("/", handler, name);
+        self.append(builder, path);
         self
     }
 
@@ -160,6 +377,25 @@ impl RouterBuilder {
         self
     }
 
+    pub fn post_x_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.post_x("/", handler);
+        self.append(builder, path);
+        self
+    }
+
     /// Register a PUT handler
     pub fn put<H, T>(&mut self, path: &str, handler: H, name: &str) -> &mut Self
     where
@@ -168,6 +404,26 @@ impl RouterBuilder {
     {
         let wrapper = self.wrapper.take();
         self.wrapper = Some(wrapper.unwrap().put(path, handler, name));
+        self
+    }
+
+    pub fn put_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        name: &str,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.put("/", handler, name);
+        self.append(builder, path);
         self
     }
 
@@ -182,6 +438,25 @@ impl RouterBuilder {
         self
     }
 
+    pub fn put_x_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.put_x("/", handler);
+        self.append(builder, path);
+        self
+    }
+
     /// Register a TRACE handler
     pub fn trace<H, T>(&mut self, path: &str, handler: H, name: &str) -> &mut Self
     where
@@ -193,6 +468,26 @@ impl RouterBuilder {
         self
     }
 
+    pub fn trace_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        name: &str,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.trace("/", handler, name);
+        self.append(builder, path);
+        self
+    }
+
     /// Register a TRACE handler with no name
     pub fn trace_x<H, T>(&mut self, path: &str, handler: H) -> &mut Self
     where
@@ -201,6 +496,25 @@ impl RouterBuilder {
     {
         let wrapper = self.wrapper.take();
         self.wrapper = Some(wrapper.unwrap().trace_x(path, handler));
+        self
+    }
+
+    pub fn trace_x_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.trace_x("/", handler);
+        self.append(builder, path);
         self
     }
 
@@ -216,6 +530,26 @@ impl RouterBuilder {
         self
     }
 
+    pub fn any_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        name: &str,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.any("/", handler, name);
+        self.append(builder, path);
+        self
+    }
+
     /// Register a route handler that handles most of the common HTTP verbs:
     ///  - GET, POST, PUT, DELETE, PATCH , OPTIONS, TRACE
     pub fn any_x<H, T>(&mut self, path: &str, handler: H) -> &mut Self
@@ -225,6 +559,25 @@ impl RouterBuilder {
     {
         let wrapper = self.wrapper.take();
         self.wrapper = Some(wrapper.unwrap().any_x(path, handler));
+        self
+    }
+
+    pub fn any_x_with_middleware<H, T, L, I>(
+        &mut self,
+        path: &str,
+        handler: H,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.any_x("/", handler);
+        self.append(builder, path);
         self
     }
 
@@ -239,6 +592,28 @@ impl RouterBuilder {
         self
     }
 
+    pub fn any_of_with_middleware<H, T, L, I, V>(
+        &mut self,
+        verbs: &[V],
+        path: &str,
+        handler: H,
+        name: &str,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+        V: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.any_of(verbs, "/", handler, name);
+        self.append(builder, path);
+        self
+    }
+
     pub fn any_of_x<H, T, V>(&mut self, verbs: &[V], path: &str, handler: H) -> &mut Self
     where
         H: Handler<T, busybody::ServiceContainer>,
@@ -247,6 +622,27 @@ impl RouterBuilder {
     {
         let wrapper = self.wrapper.take();
         self.wrapper = Some(wrapper.unwrap().any_of_x(verbs, path, handler));
+        self
+    }
+
+    pub fn any_of_x_with_middleware<H, T, L, I, V>(
+        &mut self,
+        verbs: &[V],
+        path: &str,
+        handler: H,
+        list: L,
+    ) -> &mut Self
+    where
+        H: Handler<T, busybody::ServiceContainer>,
+        L: IntoIterator<Item = I>,
+        T: 'static,
+        I: ToString,
+        V: ToString,
+    {
+        let mut builder = Self::default();
+        builder.middleware(list);
+        builder.any_of_x(verbs, "/", handler);
+        self.append(builder, path);
         self
     }
 
@@ -272,38 +668,123 @@ impl RouterBuilder {
         self
     }
 
-    pub fn group_with_middleware<L, I, C>(&mut self, list: L, mut callback: C) -> &mut Self
+    pub fn nest<C>(&mut self, prefix: &str, mut callback: C) -> &mut Self
+    where
+        C: FnMut(&mut Self) -> (),
+    {
+        if prefix.is_empty() || prefix == "/" {
+            panic!("routes in a grouped middleware must have a valid uri prefix");
+        }
+
+        let mut router = Self::default();
+
+        callback(&mut router);
+        self.append(router, prefix);
+
+        self
+    }
+
+    pub fn merge<C>(&mut self, mut callback: C) -> &mut Self
+    where
+        C: FnMut(&mut Self) -> (),
+    {
+        let mut router = Self::default();
+
+        callback(&mut router);
+        self.append(router, "");
+
+        self
+    }
+
+    pub fn group_with_middleware<L, I, C>(
+        &mut self,
+        prefix: &str,
+        mut callback: C,
+        list: L,
+    ) -> &mut Self
     where
         L: IntoIterator<Item = I>,
         I: ToString,
         C: FnMut(&mut Self) -> (),
     {
-        let mut router = Self::default();
-        router.middleware(list);
-
-        callback(&mut router);
-
-        if self.nest.is_none() {
-            self.nest = Some(vec![router])
-        } else {
-            if let Some(mut list) = self.nest.take() {
-                list.push(router);
-                self.nest = Some(list);
-            }
+        if prefix.is_empty() || prefix == "/" {
+            panic!("routes in a grouped middleware must have a valid uri prefix");
         }
 
+        let mut router = Self::default();
+        router.middleware(list);
+        callback(&mut router);
+        self.append(router, prefix);
         self
     }
 
-    pub fn into_router_wrapper(&mut self) -> Option<RouterWrapper<busybody::ServiceContainer>> {
-        self.wrapper.take()
+    pub fn into_router_wrapper(
+        &mut self,
+        manager: &mut WebMiddlewareManager,
+    ) -> Option<RouterWrapper<busybody::ServiceContainer>> {
+        if let Some(mut wrapper) = self.wrapper.take() {
+            wrapper = if let Some(order) = self.middleware.take() {
+                manager.apply(wrapper, order)
+            } else {
+                wrapper
+            };
+
+            if let Some(list) = self.merge.take() {
+                for mut entry in list {
+                    if let Some(result) = entry.into_router_wrapper(manager) {
+                        wrapper = wrapper.merge(result);
+                    }
+                }
+            }
+
+            if let Some(map) = self.nest.take() {
+                for (prefix, mut builder) in map {
+                    if let Some(result) = builder.into_router_wrapper(manager) {
+                        wrapper = wrapper.nest(&prefix, result);
+                    }
+                }
+            }
+
+            return Some(wrapper);
+        }
+        None
     }
 
-    pub fn take_nested(&mut self) -> Option<Vec<Self>> {
-        self.nest.take()
+    pub fn build(
+        mut self,
+        manager: &mut WebMiddlewareManager,
+    ) -> Option<Router<busybody::ServiceContainer>> {
+        if let Some(wrapper) = self.into_router_wrapper(manager) {
+            return Some(wrapper.into_router());
+        }
+        None
     }
 
-    pub fn take_merged(&mut self) -> Option<Vec<Self>> {
-        self.merge.take()
+    pub(crate) fn append(&mut self, builder: Self, prefix: &str) {
+        if !prefix.is_empty() {
+            if self.nest.is_none() {
+                let mut map = HashMap::new();
+                map.insert(prefix.to_string(), builder);
+                self.nest = Some(map);
+            } else {
+                if let Some(mut map) = self.nest.take() {
+                    if let Some(existing) = map.get_mut(prefix) {
+                        existing.append(builder, ""); // nested prefix already exist
+                    } else {
+                        map.insert(prefix.to_string(), builder);
+                    }
+                    self.nest = Some(map);
+                }
+            }
+        } else {
+            if self.merge.is_none() {
+                self.merge = Some(vec![builder])
+            } else {
+                if let Some(mut list) = self.merge.take() {
+                    list.push(builder);
+                    self.merge = Some(list);
+                }
+            }
+        }
     }
 }

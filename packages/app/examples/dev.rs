@@ -58,19 +58,14 @@ impl ExtensionSetup for App {
         manager
     }
 
-    fn register_routes(
-        &self,
-        mut manager: RouterManager,
-        middleware_manager: &WebMiddlewareManager,
-    ) -> RouterManager {
+    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
         manager.general(None, |router| {
             let router = router.get("/", index_request_handler, "index-page");
-            middleware_manager.apply(router, ["auth::jwt"])
+            // middleware_manager.apply(router, ["auth::jwt"])
         });
 
         manager.api(None, |router| {
-            let router = router.get_x("/hello", || async { "Hello from api" });
-            router
+            router.get_x("/hello", || async { "Hello from api" });
         });
 
         // login
@@ -115,7 +110,7 @@ impl ExtensionSetup for App {
                         tracing::error!("column/value: {:#?}", data.into_column_value());
                         format!("updated user id: {}", &id)
                     },
-                )
+                );
         });
 
         manager

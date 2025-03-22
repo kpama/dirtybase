@@ -9,6 +9,5 @@ pub async fn handle_auth_middleware(
 ) -> impl IntoResponse {
     println!(">>>>>>>>>>>>>>>>>>> In auth middleware");
 
-    //next.run(req).await
-    "Response from auth middleware"
+    next.run(req).await
 }

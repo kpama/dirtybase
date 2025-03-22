@@ -53,11 +53,7 @@ pub trait ExtensionSetup: Send + Sync {
     }
 
     /// Register HTTP routes
-    fn register_routes(
-        &self,
-        mut manager: RouterManager,
-        middleware_manager: &WebMiddlewareManager,
-    ) -> RouterManager {
+    fn register_routes(&self, mut manager: RouterManager) -> RouterManager {
         manager
     }
 

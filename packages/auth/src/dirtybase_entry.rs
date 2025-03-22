@@ -59,11 +59,7 @@ impl ExtensionSetup for Extension {
         setup_middlewares(manager)
     }
 
-    fn register_routes(
-        &self,
-        manager: RouterManager,
-        middleware_manager: &WebMiddlewareManager,
-    ) -> RouterManager {
-        http::register_routes(manager, middleware_manager)
+    fn register_routes(&self, manager: RouterManager) -> RouterManager {
+        http::register_routes(manager)
     }
 }

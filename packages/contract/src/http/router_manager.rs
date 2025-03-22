@@ -1,36 +1,8 @@
 use std::collections::HashMap;
 
-use named_routes_axum::RouterWrapper;
-
-use super::WrappedRouter;
+use super::{RouterBuilder, WrappedRouter};
 
 pub type ExtensionRouter = WrappedRouter;
-
-pub struct RouteCollection {
-    pub prefix: String,
-    pub base_route: RouterWrapper<busybody::ServiceContainer>,
-    pub routers: HashMap<String, Vec<RouterWrapper<busybody::ServiceContainer>>>,
-}
-
-impl RouteCollection {
-    pub(crate) fn new(prefix: String) -> Self {
-        let base_route = RouterWrapper::new();
-        Self {
-            prefix: prefix.to_string(),
-            routers: HashMap::new(),
-            base_route,
-        }
-    }
-
-    pub fn prefix(&self) -> String {
-        self.prefix.clone()
-    }
-
-    pub fn add(&mut self, prefix: &str, router: RouterWrapper<busybody::ServiceContainer>) {
-        let full_path = format!("{}{}", self.prefix(), prefix);
-        self.routers.entry(full_path).or_default().push(router);
-    }
-}
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Hash)]
 pub enum RouteType {
@@ -42,7 +14,7 @@ pub enum RouteType {
 }
 
 pub struct RouterManager {
-    base: HashMap<RouteType, RouteCollection>,
+    builders: HashMap<RouteType, (String, Option<RouterBuilder>)>,
 }
 
 impl RouterManager {
@@ -52,8 +24,6 @@ impl RouterManager {
         insecure_api_prefix: &str,
         dev_prefix: &str,
     ) -> Self {
-        let mut routers = HashMap::new();
-
         let api = if !api_prefix.is_empty() {
             api_prefix.to_string()
         } else {
@@ -77,77 +47,82 @@ impl RouterManager {
             String::from("/_admin")
         };
 
+        let mut builders = HashMap::new();
         // general
-        routers.insert(RouteType::General, RouteCollection::new("".to_string()));
+        builders.insert(RouteType::General, ("".to_string(), None));
         // api
-        routers.insert(RouteType::Api, RouteCollection::new(api));
+        builders.insert(RouteType::Api, (api, None));
         // insecure api
-        routers.insert(RouteType::InsecureApi, RouteCollection::new(insecure_api));
+        builders.insert(RouteType::InsecureApi, (insecure_api, None));
         // backend
-        routers.insert(RouteType::Backend, RouteCollection::new(backend));
+        builders.insert(RouteType::Backend, (backend, None));
         // dev
-        routers.insert(RouteType::Dev, RouteCollection::new(dev));
+        builders.insert(RouteType::Dev, (dev, None));
 
-        Self { base: routers }
+        Self { builders }
     }
 
     pub fn api(
         &mut self,
         prefix: Option<&str>,
-        mut callback: impl FnMut(ExtensionRouter) -> ExtensionRouter,
+        mut callback: impl FnMut(&mut RouterBuilder) -> (),
     ) -> &mut Self {
-        let router = callback(RouterWrapper::new());
-        self.append(RouteType::Api, prefix.unwrap_or_default(), router)
+        let mut builder = RouterBuilder::default();
+        callback(&mut builder);
+        self.append(RouteType::Api, prefix.unwrap_or_default(), builder)
     }
 
     pub fn insecure_api(
         &mut self,
         prefix: Option<&str>,
-        callback: fn(ExtensionRouter) -> ExtensionRouter,
+        callback: fn(&mut RouterBuilder) -> (),
     ) -> &mut Self {
-        let router = callback(RouterWrapper::new());
-        self.append(RouteType::InsecureApi, prefix.unwrap_or_default(), router)
+        let mut builder = RouterBuilder::default();
+        callback(&mut builder);
+        self.append(RouteType::InsecureApi, prefix.unwrap_or_default(), builder)
     }
 
     pub fn backend(
         &mut self,
         prefix: Option<&str>,
-        mut callback: impl FnMut(ExtensionRouter) -> ExtensionRouter,
+        mut callback: impl FnMut(&mut RouterBuilder) -> (),
     ) -> &mut Self {
-        let router = callback(RouterWrapper::new());
-        self.append(RouteType::Backend, prefix.unwrap_or_default(), router)
+        let mut builder = RouterBuilder::default();
+        callback(&mut builder);
+        self.append(RouteType::Backend, prefix.unwrap_or_default(), builder)
     }
 
     pub fn general(
         &mut self,
         prefix: Option<&str>,
-        mut callback: impl FnMut(ExtensionRouter) -> ExtensionRouter,
+        mut callback: impl FnMut(&mut RouterBuilder) -> (),
     ) -> &mut Self {
-        let router = callback(RouterWrapper::new());
-        self.append(RouteType::General, prefix.unwrap_or_default(), router)
+        let mut builder = RouterBuilder::default();
+        callback(&mut builder);
+        self.append(RouteType::General, prefix.unwrap_or_default(), builder)
     }
 
     pub fn dev(
         &mut self,
         prefix: Option<&str>,
-        mut callback: impl FnMut(ExtensionRouter) -> ExtensionRouter,
+        mut callback: impl FnMut(&mut RouterBuilder) -> (),
     ) -> &mut Self {
-        let router = callback(RouterWrapper::new());
-        self.append(RouteType::Dev, prefix.unwrap_or_default(), router)
+        let mut builder = RouterBuilder::default();
+        callback(&mut builder);
+        self.append(RouteType::Dev, prefix.unwrap_or_default(), builder)
     }
 
-    pub fn take(self) -> HashMap<RouteType, RouteCollection> {
-        self.base
+    pub fn take(self) -> HashMap<RouteType, (String, Option<RouterBuilder>)> {
+        self.builders
     }
 
-    fn append(
-        &mut self,
-        base_type: RouteType,
-        prefix: &str,
-        router: RouterWrapper<busybody::ServiceContainer>,
-    ) -> &mut Self {
-        if let Some(base) = self.base.get_mut(&base_type) {
-            base.add(prefix, router);
+    fn append(&mut self, base_type: RouteType, prefix: &str, builder: RouterBuilder) -> &mut Self {
+        if let Some(entry) = self.builders.get_mut(&base_type) {
+            if entry.1.is_none() {
+                entry.1 = Some(RouterBuilder::default());
+            }
+
+            entry.1.as_mut().unwrap().append(builder, prefix);
         }
 
         self
