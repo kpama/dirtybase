@@ -7,7 +7,11 @@ pub async fn handle_auth_middleware(
     next: Next,
     params: Option<HashMap<String, String>>,
 ) -> impl IntoResponse {
-    println!(">>>>>>>>>>>>>>>>>>> In auth middleware: {:#?}", &params);
+    if params.is_none() {
+        tracing::debug!("using session auth");
+    } else {
+        println!(">>>>>>>>>>>>>>>>>>> In auth middleware: {:#?}", &params);
+    }
 
     next.run(req).await
 }

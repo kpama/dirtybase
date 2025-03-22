@@ -24,7 +24,8 @@ pub enum SessionStorageDriver {
 pub struct SessionConfig {
     storage: SessionStorageDriver,
     lifetime: i64,
-    cookie: String,
+    #[serde(default = "default_session_id")]
+    cookie_id: String,
 }
 
 impl Default for SessionConfig {
@@ -32,7 +33,7 @@ impl Default for SessionConfig {
         Self {
             storage: SessionStorageDriver::Dummy,
             lifetime: DEFAULT_LIFETIME as i64 * 60,
-            cookie: "dty_session".to_string().into(),
+            cookie_id: "dty_session".to_string().into(),
         }
     }
 }
@@ -70,15 +71,19 @@ impl SessionConfig {
         self.lifetime
     }
 
-    pub fn cookie_ref(&self) -> &str {
-        self.cookie.as_ref()
+    pub fn cookie_id_ref(&self) -> &str {
+        self.cookie_id.as_ref()
     }
 
-    pub fn cookie(&self) -> String {
-        self.cookie.clone()
+    pub fn cookie_id(&self) -> String {
+        self.cookie_id.clone()
     }
 
     pub async fn from_dirty_config(config: &DirtyConfig) -> Self {
         Self::from_config(config).await.unwrap()
     }
+}
+
+fn default_session_id() -> String {
+    "dty_session".to_string()
 }

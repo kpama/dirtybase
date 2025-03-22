@@ -65,7 +65,7 @@ impl Extension {
         context: Context,
         cookie: &CookieJar,
     ) -> Request {
-        let request_session_id = cookie.get(self.config.cookie_ref());
+        let request_session_id = cookie.get(self.config.cookie_id_ref());
         let session_storage_provider = context
             .container_ref()
             .get_type::<Arc<SessionStorageProvider>>()
@@ -73,6 +73,7 @@ impl Extension {
             .unwrap();
 
         tracing::trace!("request has session id {:?}", request_session_id.is_some());
+        tracing::debug!("header: {:#?}", req.headers());
 
         let id = match request_session_id {
             Some(c) => {
@@ -82,8 +83,7 @@ impl Extension {
             None => SessionId::new(),
         };
 
-        let session =
-            Session::find_or_new(id, session_storage_provider, self.config.lifetime()).await;
+        let session = Session::init(id, session_storage_provider, self.config.lifetime()).await;
         tracing::trace!("adding session {} to request", session.id().to_string());
 
         context.set(session.clone()).await;
@@ -104,11 +104,9 @@ impl Extension {
                 session.id()
             );
             cookie = cookie.add(Cookie::new(
-                self.config.cookie().to_string(),
+                self.config.cookie_id().to_string(),
                 session.id().to_string(),
             ));
-        } else {
-            println!(">>> could not get the current session");
         }
 
         (resp, cookie)

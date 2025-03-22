@@ -12,6 +12,11 @@ async fn main() {
     app.setup_web(|mut manager, _middleware_manager| {
         manager.general(None, |router| {
             router.get_x("/", || async { Html("Home page") });
+            router.get_x_with_middleware(
+                "/secure",
+                || async { Html("Secure get X route") },
+                ["auth"],
+            );
             router.group_with_middleware(
                 "/foo",
                 |r| {
