@@ -204,12 +204,12 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
                 // 1. Find the tenant
                 #[cfg(feature = "multitenant")]
-                if let Some(manager) = context.get::<TenantResolverProvider>().await {
+                if let Ok(manager) = context.get::<TenantResolverProvider>().await {
                     if let Some(raw_id) =
                         manager.pluck_id_str_from_request(&req, TenantIdLocation::Subdomain)
                     {
                         tracing::trace!("current tenant Id: {}", &raw_id);
-                        if let Some(manager) = context.get::<TenantStorageProvider>().await {
+                        if let Ok(manager) = context.get::<TenantStorageProvider>().await {
                             tracing::trace!("validate tenant id and try fetching data");
                             // let tenant = manager.by_id(raw_id).await;
                             // tracing::trace!("found tenant record: {}", tenant.is_some());

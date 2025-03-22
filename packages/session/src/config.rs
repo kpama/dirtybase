@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use dirtybase_contract::{
     config::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
@@ -20,18 +22,18 @@ pub enum SessionStorageDriver {
     Redis,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SessionConfig {
-    storage: SessionStorageDriver,
+    storage: Arc<String>,
     lifetime: i64,
     #[serde(default = "default_session_id")]
-    cookie_id: String,
+    cookie_id: Arc<String>,
 }
 
 impl Default for SessionConfig {
     fn default() -> Self {
         Self {
-            storage: SessionStorageDriver::Dummy,
+            storage: Arc::new("dummy".to_string()),
             lifetime: DEFAULT_LIFETIME as i64 * 60,
             cookie_id: "dty_session".to_string().into(),
         }
@@ -59,12 +61,12 @@ impl TryFromDirtyConfig for SessionConfig {
 }
 
 impl SessionConfig {
-    pub fn storage(&self) -> SessionStorageDriver {
+    pub fn storage(&self) -> Arc<String> {
         self.storage.clone()
     }
 
-    pub fn storage_ref(&self) -> &SessionStorageDriver {
-        &self.storage
+    pub fn storage_ref(&self) -> &str {
+        &self.storage.as_str()
     }
 
     pub fn lifetime(&self) -> i64 {
@@ -75,7 +77,7 @@ impl SessionConfig {
         self.cookie_id.as_ref()
     }
 
-    pub fn cookie_id(&self) -> String {
+    pub fn cookie_id(&self) -> Arc<String> {
         self.cookie_id.clone()
     }
 
@@ -84,6 +86,6 @@ impl SessionConfig {
     }
 }
 
-fn default_session_id() -> String {
-    "dty_session".to_string()
+fn default_session_id() -> Arc<String> {
+    Arc::new("dty_session".to_string())
 }

@@ -3,6 +3,7 @@ use std::{
     sync::{atomic::AtomicI64, Arc},
 };
 
+use anyhow::anyhow;
 use futures::future::BoxFuture;
 use tokio::{sync::RwLock, time::sleep};
 
@@ -45,7 +46,11 @@ impl<T: Clone + Sync + Sync + 'static> ResourceWrapper<T> {
 pub struct ContextResourceManager<T: Clone + Send + Sync + 'static> {
     setup_fn:
         Arc<RwLock<Box<dyn FnMut(Context) -> BoxFuture<'static, (String, i64)> + Send + Sync>>>,
-    resolver_fn: Arc<RwLock<Box<dyn FnMut(Context) -> BoxFuture<'static, T> + Send + Sync>>>,
+    resolver_fn: Arc<
+        RwLock<
+            Box<dyn FnMut(Context) -> BoxFuture<'static, Result<T, anyhow::Error>> + Send + Sync>,
+        >,
+    >,
     drop_fn: Arc<RwLock<Box<dyn FnMut(T) -> BoxFuture<'static, ()> + Send + Sync>>>,
     collection: ContextCollection<T>,
 }
@@ -74,7 +79,7 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
     pub async fn new<S, F, C>(setup_fn: S, resolver_fn: F, drop_fn: C) -> Self
     where
         S: FnMut(Context) -> BoxFuture<'static, (String, i64)> + Send + Sync + 'static,
-        F: FnMut(Context) -> BoxFuture<'static, T> + Send + Sync + 'static,
+        F: FnMut(Context) -> BoxFuture<'static, Result<T, anyhow::Error>> + Send + Sync + 'static,
         C: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         let instance = Self {
@@ -93,7 +98,7 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
     pub async fn register<S, F, C>(setup_fn: S, resolver_fn: F, drop_fn: C)
     where
         S: FnMut(Context) -> BoxFuture<'static, (String, i64)> + Send + Sync + 'static,
-        F: FnMut(Context) -> BoxFuture<'static, T> + Send + Sync + 'static,
+        F: FnMut(Context) -> BoxFuture<'static, Result<T, anyhow::Error>> + Send + Sync + 'static,
         C: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         let instance = Self::new(setup_fn, resolver_fn, drop_fn).await;
@@ -105,7 +110,7 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
     pub async fn scoped<S, R>(mut setup_fn: S, resolver_fn: R)
     where
         S: FnMut(Context) -> BoxFuture<'static, String> + Send + Sync + 'static,
-        R: FnMut(Context) -> BoxFuture<'static, T> + Send + Sync + 'static,
+        R: FnMut(Context) -> BoxFuture<'static, Result<T, anyhow::Error>> + Send + Sync + 'static,
     {
         Self::register(
             move |c| {
@@ -125,19 +130,17 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
         .await;
     }
 
-    pub async fn try_get(context: &Context) -> Option<T> {
+    pub async fn try_get(context: &Context) -> Result<T, anyhow::Error> {
         if let Some(manager) = context.container().get::<Self>().await {
             let mut setup_fn_lock = manager.setup_fn.write().await;
             let (name, idle_timeout) = (setup_fn_lock)(context.clone()).await;
 
-            return Some(
-                manager
-                    .get_resource(context.clone(), &name, idle_timeout)
-                    .await,
-            );
+            return manager
+                .get_resource(context.clone(), &name, idle_timeout)
+                .await;
         }
 
-        None
+        Err(anyhow!("resource not found"))
     }
 
     async fn get_resource(
@@ -145,12 +148,16 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
         context: Context,
         name: &str,
         idle_timeout: i64, // in seconds
-    ) -> T {
+    ) -> Result<T, anyhow::Error> {
         let mut lock = self.collection.write().await;
 
         if !lock.contains_key(name) {
             let mut resolver_lock = self.resolver_fn.write().await;
             let resource = (resolver_lock)(context).await;
+
+            if resource.is_err() {
+                return resource;
+            }
 
             if idle_timeout > 0 {
                 return resource;
@@ -158,7 +165,7 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
 
             lock.insert(
                 name.to_string(),
-                ResourceWrapper::new(resource, idle_timeout),
+                ResourceWrapper::new(resource.unwrap(), idle_timeout),
             );
 
             if idle_timeout > 0 {
@@ -193,7 +200,7 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
             }
         }
 
-        lock.get(name).unwrap().resource()
+        Ok(lock.get(name).unwrap().resource())
     }
 
     pub async fn has_resource(&self, name: &str) -> bool {
@@ -275,14 +282,14 @@ mod test {
     async fn test_context_creation() {
         let manager = ContextResourceManager::new(
             |_| Box::pin(async { ("global".to_owned(), 20) }),
-            |_| Box::pin(async { 100 }),
+            |_| Box::pin(async { Ok(100) }),
             |_| Box::pin(async {}),
         )
         .await;
 
         let counter = manager.get_resource(Context::default(), "counter", 1).await;
 
-        assert_eq!(counter, 100);
+        assert_eq!(counter.unwrap(), 100);
     }
 
     #[tokio::test]
@@ -299,7 +306,7 @@ mod test {
                 Box::pin({
                     async move {
                         let url = url_string.to_string();
-                        DbConnection { url }
+                        Ok(DbConnection { url })
                     }
                 })
             },
@@ -310,14 +317,14 @@ mod test {
             .get_resource(Context::default(), "db_connection", 1)
             .await;
 
-        assert_eq!(&connection.url, url_string);
+        assert_eq!(&connection.unwrap().url, url_string);
     }
 
     #[tokio::test]
     async fn test_idle_time_expired() {
         let manager = ContextResourceManager::new(
             |_| Box::pin(async { ("global".to_string(), 100) }),
-            |_| Box::pin(async { 100 }),
+            |_| Box::pin(async { Ok(100) }),
             |_| Box::pin(async {}),
         )
         .await;
@@ -332,7 +339,7 @@ mod test {
     async fn test_idle_time_not_expired() {
         let manager = ContextResourceManager::new(
             |_| Box::pin(async { ("global".to_owned(), 20) }),
-            |_| Box::pin(async { 100 }),
+            |_| Box::pin(async { Ok(100) }),
             |_| Box::pin(async {}),
         )
         .await;

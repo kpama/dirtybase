@@ -44,7 +44,7 @@ pub(crate) fn setup_commands(mut manager: CliCommandManager) -> CliCommandManage
             match command {
                 Commands::Migrate { action } => {
                     let migrator = Migrator::new().await;
-                    if let Some(db_manager) = context.get::<Manager>().await {
+                    if let Ok(db_manager) = context.get::<Manager>().await {
                         match action {
                             MigrateAction::Up => return migrator.up(&db_manager).await,
                             MigrateAction::Down => return migrator.down(&db_manager).await,

@@ -76,17 +76,20 @@ impl Context {
     where
         C: DeserializeOwned + TryFromDirtyConfig<Returns = C>,
     {
-        if let Some(app) = self.get::<AppContext>().await {
+        if let Ok(app) = self.get::<AppContext>().await {
             if let Some(str_value) = app.config_string(key).await {
                 return serde_json::from_str(&str_value).map_err(|e| anyhow!("{}", e));
             }
         }
 
-        if let Some(dirty_config) = self.get::<DirtyConfig>().await {
+        if let Ok(dirty_config) = self.get::<DirtyConfig>().await {
             return C::from_config(&dirty_config).await;
         }
 
-        Err(anyhow!("could not resolve configuration"))
+        Err(anyhow!(
+            "could not resolve configuration for: {}",
+            std::any::type_name::<C>()
+        ))
     }
 
     pub fn container(&self) -> Arc<busybody::ServiceContainer> {
@@ -98,15 +101,15 @@ impl Context {
     }
 
     pub async fn user(&self) -> Option<UserContext> {
-        self.get().await
+        self.get().await.ok()
     }
 
     pub async fn tenant(&self) -> Option<TenantContext> {
-        self.get().await
+        self.get().await.ok()
     }
 
     pub async fn app(&self) -> Option<AppContext> {
-        self.get().await
+        self.get().await.ok()
     }
 
     pub async fn set<T: Clone + Send + Sync + 'static>(&self, value: T) -> &Self {
@@ -114,11 +117,11 @@ impl Context {
         self
     }
 
-    pub async fn get<T: Clone + Send + Sync + 'static>(&self) -> Option<T> {
+    pub async fn get<T: Clone + Send + Sync + 'static>(&self) -> Result<T, anyhow::Error> {
         let result = self.sc.get_type().await;
 
         if result.is_some() {
-            return result;
+            return Ok(result.unwrap());
         }
 
         ContextResourceManager::try_get(&self).await
@@ -134,7 +137,7 @@ impl Context {
 
     pub async fn metadata(&self) -> Arc<ContextMetadata> {
         let result = self.get().await;
-        if result.is_none() {
+        if result.is_err() {
             return self
                 .set(Arc::new(ContextMetadata::default()))
                 .await
@@ -189,7 +192,7 @@ where
             .ok_or_else(|| "Context not yet setup".to_string())
             .cloned()?;
 
-        if let Some(ext) = context.get::<T>().await {
+        if let Ok(ext) = context.get::<T>().await {
             Ok(Self(ext))
         } else {
             tracing::error!("{} not found in context", std::any::type_name::<T>());

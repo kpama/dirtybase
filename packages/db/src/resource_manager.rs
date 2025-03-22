@@ -25,9 +25,7 @@ pub(crate) async fn register_resource_manager() {
                 let default_set = config
                     .default_set()
                     .expect("could not get default db config set");
-                MakePoolManagerCommand::make(default_set)
-                    .await
-                    .expect("could not create a database manager")
+                MakePoolManagerCommand::make(default_set).await
             })
         },
         move |manager| {

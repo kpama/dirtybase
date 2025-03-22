@@ -26,7 +26,7 @@ pub async fn handle_normal_auth_middleware(req: Request, next: Next) -> impl Int
     tracing::error!("do we have auth user storage: {}", storage.is_some());
 
     // 1. Check if there is an active session
-    if let Some(s) = context.get::<Session>().await {
+    if let Ok(s) = context.get::<Session>().await {
         session = s;
     } else {
         tracing::error!("session not set on request");

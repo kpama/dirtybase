@@ -95,7 +95,6 @@ impl Session {
         _ = self.storage.remove(&self.id).await;
     }
 
-    // TODO: Not sure we  need this method...
     pub async fn invalidate(self) -> Self {
         self.storage.remove(&self.id).await;
         Self::new(SessionId::new(), self.storage).await
