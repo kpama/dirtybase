@@ -40,6 +40,7 @@ pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
     let app = core::App::new(config).await?;
 
     // core extensions
+    #[cfg(feature = "session")]
     app.register(dirtybase_session::Extension::default()).await;
     #[cfg(feature = "auth")]
     app.register(dirtybase_auth::Extension::default()).await;
