@@ -2,7 +2,6 @@ use std::sync::{Arc, atomic::AtomicU64};
 
 use axum::{
     body::Body,
-    extract::State,
     response::{Html, IntoResponse, Response},
 };
 use dirtybase_contract::{
@@ -47,23 +46,9 @@ impl dirtybase_app::contract::ExtensionSetup for MyApp {
     }
 
     fn register_web_middlewares(&self, mut manager: WebMiddlewareManager) -> WebMiddlewareManager {
-        manager.register("example1", |reg| {
-            reg.middleware(|req, mut next, _params| async move {
-                println!(">>>>> we are in the basic example middleware");
-                next.call(req).await
-            })
-        });
-
-        manager.register("example2", |reg| {
-            reg.middleware_with_state(
-                |State(state): State<MyAppState>, request, mut next, _params| async move {
-                    let total = state.increment();
-                    println!("Total visitors: {}", total);
-
-                    next.call(request).await
-                },
-                MyAppState::new(),
-            )
+        manager.register("example1", |req, mut next, _params| async move {
+            println!(">>>>> we are in the basic example middleware");
+            next.call(req).await
         });
 
         manager

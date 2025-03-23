@@ -1,5 +1,5 @@
 use controllers::{
-    handle_api_register_request, handle_get_auth_token, handle_login_request,
+    handle_api_get_me, handle_api_register_request, handle_get_auth_token, handle_login_request,
     handle_register_request, login_form_handler, register_form_handler,
 };
 use dirtybase_contract::http::RouterManager;
@@ -32,5 +32,8 @@ pub(crate) fn register_routes(manager: &mut RouterManager) {
                     "auth-api:register",
                 )
                 .post("/my-token", handle_get_auth_token, "auth-api:get-token");
+        })
+        .api(Some("/auth"), |router| {
+            router.get("/me", handle_api_get_me, "auth::get-me");
         });
 }

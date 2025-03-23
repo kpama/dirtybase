@@ -117,6 +117,10 @@ pub(crate) async fn handle_api_register_request(
     resp
 }
 
+pub(crate) async fn handle_api_get_me() -> impl IntoResponse {
+    "my token here..."
+}
+
 #[derive(Debug, Deserialize)]
 pub(crate) struct RegisterData {
     username: String,
