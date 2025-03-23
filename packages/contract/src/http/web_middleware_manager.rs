@@ -97,15 +97,15 @@ impl WebMiddlewareManager {
     }
 
     /// Register a middleware that maybe apply later
-    pub fn register<F>(&mut self, name: &str, registerer: F) -> &mut Self
-    where
-        F: Fn(Registerer) -> Registerer + Sync + Send + 'static,
-    {
-        self.0.insert(name.into(), Box::new(registerer));
-        self
-    }
+    // pub fn register<F>(&mut self, name: &str, registerer: F) -> &mut Self
+    // where
+    //     F: Fn(Registerer) -> Registerer + Sync + Send + 'static,
+    // {
+    //     self.0.insert(name.into(), Box::new(registerer));
+    //     self
+    // }
 
-    pub fn register2<F, Fut, Out>(&mut self, name: &str, handler: F) -> &mut Self
+    pub fn register<F, Fut, Out>(&mut self, name: &str, handler: F) -> &mut Self
     where
         F: FnMut(Request, Next, Option<HashMap<String, String>>) -> Fut
             + Clone
@@ -122,6 +122,33 @@ impl WebMiddlewareManager {
                 r.middleware(handler.clone())
             }),
         );
+        self
+    }
+
+    pub fn register_with_state<F, Fut, Out, ST>(
+        &mut self,
+        name: &str,
+        handler: F,
+        state: ST,
+    ) -> &mut Self
+    where
+        F: FnMut(State<ST>, Request, Next, Option<HashMap<String, String>>) -> Fut
+            + Clone
+            + Send
+            + Sync
+            + 'static,
+        Fut: Future<Output = Out> + Send + 'static,
+        Out: IntoResponse + 'static,
+        ST: Clone + Send + Sync + 'static,
+    {
+        self.0.insert(
+            name.into(),
+            Box::new(move |r| {
+                //
+                r.middleware_with_state(handler.clone(), state.clone())
+            }),
+        );
+
         self
     }
 

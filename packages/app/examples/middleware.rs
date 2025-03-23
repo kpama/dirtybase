@@ -24,7 +24,7 @@ async fn main() {
                         Html("Hello world from middleware example")
                     });
                 },
-                ["auth"],
+                ["auth::jwt"],
             );
         });
         manager
