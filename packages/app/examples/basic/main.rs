@@ -28,14 +28,10 @@ struct MyApp;
 
 #[async_trait::async_trait]
 impl dirtybase_app::contract::ExtensionSetup for MyApp {
-    fn register_routes(
-        &self,
-        mut manager: RouterManager,
-        middleware: &WebMiddlewareManager,
-    ) -> RouterManager {
+    fn register_routes(&self, manager: &mut RouterManager) {
         manager
-            .general(None, |mut router| {
-                router = router
+            .general(None, |router| {
+                router
                     .get("/", handle_home, "home")
                     .get("/home2", handle_home2, "home2")
                     .get_x("/one", another_one)
@@ -43,31 +39,31 @@ impl dirtybase_app::contract::ExtensionSetup for MyApp {
                     .get("/new2", || async { "Hello from new two" }, "new2")
                     .get_x("/middleware", || async { "Testing middleware features" });
 
-                middleware.apply(router, ["example1", "auth:normal"])
+                // middleware.apply(router, ["example1", "auth:normal"])
             })
             .api("/jj".into(), |router| {
-                router.get("/people", || async { "List of people" }, "api-people")
+                router.get("/people", || async { "List of people" }, "api-people");
             });
-
-        manager
     }
 
     fn register_web_middlewares(&self, mut manager: WebMiddlewareManager) -> WebMiddlewareManager {
-        manager.register("example1", |router| {
-            router
-                .middleware(|req, mut next| async move {
-                    println!(">>>>> we are in the basic example middleware");
-                    next.call(req).await
-                })
-                .middleware_with_state(
-                    |State(state): State<MyAppState>, request, mut next| async move {
-                        let total = state.increment();
-                        println!("Total visitors: {}", total);
+        manager.register("example1", |reg| {
+            reg.middleware(|req, mut next, _params| async move {
+                println!(">>>>> we are in the basic example middleware");
+                next.call(req).await
+            })
+        });
 
-                        next.call(request).await
-                    },
-                    MyAppState::new(),
-                )
+        manager.register("example2", |reg| {
+            reg.middleware_with_state(
+                |State(state): State<MyAppState>, request, mut next, _params| async move {
+                    let total = state.increment();
+                    println!("Total visitors: {}", total);
+
+                    next.call(request).await
+                },
+                MyAppState::new(),
+            )
         });
 
         manager

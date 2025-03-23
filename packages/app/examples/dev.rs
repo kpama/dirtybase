@@ -2,6 +2,7 @@ use axum::response::Html;
 use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
 use dirtybase_contract::app::RequestContext;
+use dirtybase_contract::cli::CliMiddlewareManager;
 use dirtybase_contract::{
     app::{Context, ContextResourceManager, CtxExt},
     prelude::*,
@@ -36,7 +37,7 @@ impl ExtensionSetup for App {
             |_| {
                 Box::pin(async {
                     tracing::error!(">>>>>>>>>>>>>>>>>>>>>>>  making new i32");
-                    40000
+                    Ok(40000)
                 })
             },
             |_| Box::pin(async {}),
@@ -58,19 +59,14 @@ impl ExtensionSetup for App {
         manager
     }
 
-    fn register_routes(
-        &self,
-        mut manager: RouterManager,
-        middleware_manager: &WebMiddlewareManager,
-    ) -> RouterManager {
+    fn register_routes(&self, manager: &mut RouterManager) {
         manager.general(None, |router| {
             let router = router.get("/", index_request_handler, "index-page");
-            middleware_manager.apply(router, ["auth::jwt"])
+            // middleware_manager.apply(router, ["auth::jwt"])
         });
 
         manager.api(None, |router| {
-            let router = router.get_x("/hello", || async { "Hello from api" });
-            router
+            router.get_x("/hello", || async { "Hello from api" });
         });
 
         // login
@@ -115,10 +111,8 @@ impl ExtensionSetup for App {
                         tracing::error!("column/value: {:#?}", data.into_column_value());
                         format!("updated user id: {}", &id)
                     },
-                )
+                );
         });
-
-        manager
     }
 
     async fn on_web_request(&self, req: Request, context: Context, _cookie: &CookieJar) -> Request {

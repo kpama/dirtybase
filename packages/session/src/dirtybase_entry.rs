@@ -5,35 +5,27 @@ use dirtybase_contract::{
     app::Context,
     async_trait,
     axum::response::Response,
-    config::DirtyConfig,
     prelude::{
         Request,
         axum_extra::extract::{CookieJar, cookie::Cookie},
     },
-    session::{Session, SessionId, SessionStorage, SessionStorageProvider},
+    session::{Session, SessionId, SessionStorageProvider},
 };
 
-use crate::{SessionConfig, SessionStorageDriver, storage::MemoryStorage};
+use crate::{SessionConfig, resource_manager::register_resource_manager, storage::MemoryStorage};
 
 #[derive(Default)]
-pub struct Extension {
-    config: SessionConfig,
-}
+pub struct Extension;
 
 #[async_trait]
 impl ExtensionSetup for Extension {
     async fn setup(&mut self, global_context: &Context) {
         println!(">> session setup method called");
-        // // TODO: Source the storage type for a config
+        if let Ok(config) = global_context.get_config::<SessionConfig>("session").await {
+            global_context.set(config).await;
+        }
 
-        let config = global_context
-            .get_config::<SessionConfig>("dirtybase::session")
-            .await
-            .unwrap();
-        println!("{:?}", &config);
-
-        self.setup_session_storage(&config).await;
-        self.config = config;
+        register_resource_manager().await;
     }
 
     async fn on_web_request(
@@ -62,33 +54,31 @@ impl ExtensionSetup for Extension {
 impl Extension {
     async fn add_session_to_request(
         &self,
-        mut req: Request,
+        req: Request,
         context: Context,
         cookie: &CookieJar,
     ) -> Request {
-        let request_session_id = cookie.get(self.config.cookie_ref());
-        let session_storage_provider = context
-            .container_ref()
-            .get_type::<Arc<SessionStorageProvider>>()
-            .await
-            .unwrap();
+        if let Ok(config) = context.get_config::<SessionConfig>("session").await {
+            if let Ok(provider) = context.get::<Arc<SessionStorageProvider>>().await {
+                let request_session_id = cookie.get(config.cookie_id_ref());
 
-        tracing::trace!("request has session id {:?}", request_session_id.is_some());
+                let id = match request_session_id {
+                    Some(c) => {
+                        // check the cookie
+                        SessionId::from_str(&c.value().to_string()).unwrap_or_default()
+                    }
+                    None => SessionId::new(),
+                };
 
-        let id = match request_session_id {
-            Some(c) => {
-                // check the cookie
-                SessionId::from_str(&c.value().to_string()).unwrap_or_default()
+                let session = Session::init(id, provider, config.lifetime()).await;
+                tracing::trace!("adding session {} to request", session.id().to_string());
+
+                context.set(session).await;
+                context.set(config).await;
             }
-            None => SessionId::new(),
-        };
-
-        let session =
-            Session::find_or_new(id, session_storage_provider, self.config.lifetime()).await;
-        tracing::trace!("adding session {} to request", session.id().to_string());
-
-        context.set(session.clone()).await;
-        req.extensions_mut().insert(session);
+        } else {
+            tracing::error!("could not setup request sesssion")
+        }
 
         req
     }
@@ -99,50 +89,19 @@ impl Extension {
         mut cookie: CookieJar,
         context: Context,
     ) -> (Response, CookieJar) {
-        if let Some(session) = context.get::<Session>().await {
-            println!(
-                "context instance still exist: session Id: {:?}",
-                session.id()
-            );
-            cookie = cookie.add(Cookie::new(
-                self.config.cookie().to_string(),
-                session.id().to_string(),
-            ));
-        } else {
-            println!(">>> could not get the current session");
+        if let Ok(session) = context.get::<Session>().await {
+            if let Ok(config) = context.get::<SessionConfig>().await {
+                println!(
+                    "context instance still exist: session Id: {:?}",
+                    session.id()
+                );
+                cookie = cookie.add(Cookie::new(
+                    config.cookie_id().to_string(),
+                    session.id().to_string(),
+                ));
+            }
         }
 
         (resp, cookie)
-    }
-
-    async fn setup_session_storage(&self, config: &SessionConfig) {
-        println!("current session storage driver: {:?}", config.storage_ref());
-        match config.storage() {
-            SessionStorageDriver::Memory => {
-                log::debug!(
-                    "current session storage provider: {:?}",
-                    SessionStorageDriver::Memory
-                );
-                let provider = MemoryStorage::make_provider().await;
-
-                // In memory cron job
-                let lifetime = config.lifetime();
-                let _ctx = dirtybase_cron::CronJob::register(
-                    "every 5 minutes",
-                    move |_| {
-                        Box::pin({
-                            let storage = provider.clone();
-                            async move {
-                                storage.gc(lifetime).await;
-                            }
-                        })
-                    },
-                    "session::memory-storage",
-                )
-                .await;
-            }
-            _ => todo!("session storage driver not implemented"),
-        }
-        println!("session config: {:?}", config);
     }
 }

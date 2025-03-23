@@ -2,7 +2,7 @@
 
 use anyhow::Ok;
 use dirtybase_contract::{
-    ExtensionManager, ExtensionMigrations, db::base::manager::Manager, prelude::ArgMatches,
+    ExtensionManager, ExtensionMigrations, cli::clap::ArgMatches, db::base::manager::Manager,
 };
 
 use crate::model::migration::MigrationRepository;
@@ -110,7 +110,9 @@ impl Migrator {
 
     async fn repo(&self, manager: &Manager) -> MigrationRepository {
         let repo = MigrationRepository::new(manager.clone());
-        repo.init().await;
+        if let Err(e) = repo.init().await {
+            tracing::error!("could not initialize migrator: {}", e);
+        }
 
         repo
     }

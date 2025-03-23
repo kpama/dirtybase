@@ -5,7 +5,7 @@ use dirtybase_contract::{
     http::{api::ApiResponse, prelude::*},
 };
 use dirtybase_helper::hash::sha256;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 pub(crate) async fn login_form_handler() -> impl IntoResponse {
     Html(

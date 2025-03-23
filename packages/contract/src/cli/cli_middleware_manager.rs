@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, future::Future, sync::Arc};
 
 use futures::future::BoxFuture;
 use simple_middleware::Manager;
@@ -13,6 +13,32 @@ type RegistererFn = Box<
         + Sync
         + 'static,
 >;
+
+pub struct Registerer {
+    wrapper: simple_middleware::Manager<(String, clap::ArgMatches, Context), ()>,
+    name: Arc<String>,
+    params: Option<HashMap<String, String>>,
+}
+
+impl Registerer {
+    pub async fn middleware<F, Fut>(self, mut handler: F) -> Self
+    where
+        F: FnMut(String, clap::ArgMatches, Context, Option<HashMap<String, String>>) -> Fut
+            + Send
+            + Sync
+            + 'static,
+        Fut: Future<Output = ()> + Send + Sync + 'static,
+    {
+        self.wrapper
+            .next(move |(a, b, c), next| {
+                //
+                let x = (handler)(a, b, c, None);
+                Box::pin(x)
+            })
+            .await;
+        self
+    }
+}
 
 #[derive(Default)]
 pub struct CliMiddlewareManager(HashMap<String, RegistererFn>);

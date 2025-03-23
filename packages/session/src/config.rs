@@ -1,5 +1,8 @@
+use std::sync::Arc;
+
 use anyhow::anyhow;
 use dirtybase_contract::{
+    app::Context,
     config::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
     session::DEFAULT_LIFETIME,
 };
@@ -20,19 +23,20 @@ pub enum SessionStorageDriver {
     Redis,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SessionConfig {
-    storage: SessionStorageDriver,
+    storage: Arc<String>,
     lifetime: i64,
-    cookie: String,
+    #[serde(default = "default_session_id")]
+    cookie_id: Arc<String>,
 }
 
 impl Default for SessionConfig {
     fn default() -> Self {
         Self {
-            storage: SessionStorageDriver::Dummy,
+            storage: Arc::new("dummy".to_string()),
             lifetime: DEFAULT_LIFETIME as i64 * 60,
-            cookie: "dty_session".to_string().into(),
+            cookie_id: "dty_session".to_string().into(),
         }
     }
 }
@@ -40,7 +44,7 @@ impl Default for SessionConfig {
 #[async_trait::async_trait]
 impl TryFromDirtyConfig for SessionConfig {
     type Returns = Self;
-    async fn from_config(config: &DirtyConfig) -> ConfigResult<Self::Returns> {
+    async fn from_config(config: &DirtyConfig, _ctx: &Context) -> ConfigResult<Self::Returns> {
         match config
             .optional_file("session.toml", Some("DTY_SESSION"))
             .build()
@@ -58,27 +62,27 @@ impl TryFromDirtyConfig for SessionConfig {
 }
 
 impl SessionConfig {
-    pub fn storage(&self) -> SessionStorageDriver {
+    pub fn storage(&self) -> Arc<String> {
         self.storage.clone()
     }
 
-    pub fn storage_ref(&self) -> &SessionStorageDriver {
-        &self.storage
+    pub fn storage_ref(&self) -> &str {
+        &self.storage.as_str()
     }
 
     pub fn lifetime(&self) -> i64 {
         self.lifetime
     }
 
-    pub fn cookie_ref(&self) -> &str {
-        self.cookie.as_ref()
+    pub fn cookie_id_ref(&self) -> &str {
+        self.cookie_id.as_ref()
     }
 
-    pub fn cookie(&self) -> String {
-        self.cookie.clone()
+    pub fn cookie_id(&self) -> Arc<String> {
+        self.cookie_id.clone()
     }
+}
 
-    pub async fn from_dirty_config(config: &DirtyConfig) -> Self {
-        Self::from_config(config).await.unwrap()
-    }
+fn default_session_id() -> Arc<String> {
+    Arc::new("dty_session".to_string())
 }

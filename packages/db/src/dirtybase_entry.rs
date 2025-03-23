@@ -1,4 +1,4 @@
-use dirtybase_contract::{ExtensionSetup, app::Context, cli::CliCommandManager, prelude::Command};
+use dirtybase_contract::{ExtensionSetup, app::Context, cli::CliCommandManager};
 
 use crate::{command::setup_commands, resource_manager::register_resource_manager};
 

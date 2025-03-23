@@ -1,4 +1,5 @@
 use dirtybase_contract::{
+    app::Context,
     async_trait,
     config::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
     multitenant::TenantIdLocation,
@@ -27,7 +28,7 @@ impl Default for MultitenantConfig {
 #[async_trait]
 impl TryFromDirtyConfig for MultitenantConfig {
     type Returns = Self;
-    async fn from_config(config: &DirtyConfig) -> ConfigResult<Self::Returns> {
+    async fn from_config(config: &DirtyConfig, _ctx: &Context) -> ConfigResult<Self::Returns> {
         match config
             .optional_file("multitenant.toml", Some("DTY_MULTITENANT"))
             .build()
@@ -53,7 +54,7 @@ impl MultitenantConfig {
         &self.id_location
     }
 
-    pub async fn from_dirty_config(base: &DirtyConfig) -> Self {
-        Self::from_config(base).await.unwrap()
-    }
+    // pub async fn from_dirty_config(base: &DirtyConfig) -> Self {
+    //     Self::from_config(base).await.unwrap()
+    // }
 }

@@ -1,11 +1,5 @@
-use axum::{extract::Path, response::Html, routing::get};
-use dirtybase_contract::{
-    ExtensionSetup,
-    app::Context,
-    http::{RouterManager, WebMiddlewareManager},
-};
-use named_routes_axum::helpers::get_path_with;
-use tower_service::Service;
+use axum::{extract::Path, response::Html};
+use dirtybase_contract::{app::Context, http::RouterManager};
 
 #[tokio::main]
 async fn main() {
@@ -21,47 +15,15 @@ struct MyAwesomeApp;
 
 #[async_trait::async_trait]
 impl dirtybase_app::contract::ExtensionSetup for MyAwesomeApp {
-    fn register_routes(
-        &self,
-        mut manager: RouterManager,
-        middleware: &WebMiddlewareManager,
-    ) -> RouterManager {
+    fn register_routes(&self, manager: &mut RouterManager) {
         manager.general(None, |router| {
             router
                 .get("/", || async { Html("Hello from awesome app") }, "homepage")
                 .get("/hello/:name", say_hi, "say-hello2")
-                .middleware(|req, mut n| async move {
-                    println!("in inline middleware");
-                    n.call(req).await
-                })
-                .merge_given(|router| {
-                    router
-                        .get_x("/given", || async { Html("Hello from given") })
-                        .middleware(|r, mut n| async move {
-                            println!("merge given middleware");
-                            n.call(r).await
-                        })
-                })
-                .route(
-                    "/hello2/:name",
-                    get(|Path(name): Path<String>| async move {
-                        Html(format!(
-                            "Hello {} from hello 2, the path to say-hello is: {}",
-                            name,
-                            get_path_with("say-hello3", "james brown")
-                        ))
-                    }),
-                )
-                .name_route(
-                    "/hello3/:name",
-                    get(|Path(name): Path<String>| async move {
-                        Html(format!("Hello {} from hello3", name))
-                    }),
-                    "say-hello3",
-                )
+                .merge(|router| {
+                    router.get_x("/given", || async { Html("Hello from given") });
+                });
         });
-
-        manager
     }
 
     async fn shutdown(&mut self, _context: &Context) {
@@ -77,18 +39,13 @@ struct UrlShortener;
 
 #[async_trait::async_trait]
 impl dirtybase_app::contract::ExtensionSetup for UrlShortener {
-    fn register_routes(
-        &self,
-        mut manager: RouterManager,
-        _middleware: &WebMiddlewareManager,
-    ) -> RouterManager {
+    fn register_routes(&self, manager: &mut RouterManager) {
         manager.api(Some("/v1/short"), |router| {
             router.get(
                 "/url-shortener",
                 || async { "Url shortener. App Id" },
                 "shortener-home",
-            )
+            );
         });
-        manager
     }
 }

@@ -11,7 +11,7 @@ pub struct Session {
 }
 
 impl Session {
-    pub async fn new(id: SessionId, storage: Arc<SessionStorageProvider>) -> Self {
+    pub(crate) async fn new(id: SessionId, storage: Arc<SessionStorageProvider>) -> Self {
         let instance = Self {
             id: id.clone(),
             storage,
@@ -20,7 +20,7 @@ impl Session {
         instance
     }
 
-    pub async fn find_or_new(
+    pub async fn init(
         old_id: SessionId,
         storage: Arc<SessionStorageProvider>,
         lifetime: i64,
@@ -95,7 +95,6 @@ impl Session {
         _ = self.storage.remove(&self.id).await;
     }
 
-    // TODO: Not sure we  need this method...
     pub async fn invalidate(self) -> Self {
         self.storage.remove(&self.id).await;
         Self::new(SessionId::new(), self.storage).await
