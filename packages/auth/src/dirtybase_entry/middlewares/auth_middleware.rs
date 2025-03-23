@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use dirtybase_contract::{app::Context, http::prelude::*};
 
@@ -21,11 +21,11 @@ pub async fn handle_auth_middleware(
             req = result.0;
             if let Ok(Some(user)) = result.1 {
                 let context = req.extensions().get::<Context>().unwrap();
-                context.set(user);
+                context.set(user).await;
                 return next.run(req).await;
             }
         }
     }
 
-    (StatusCode::FORBIDDEN, ()).into_response()
+    (StatusCode::UNAUTHORIZED, ()).into_response()
 }

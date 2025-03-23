@@ -31,7 +31,7 @@ use super::ParseToken;
 #[derive(Clone, Validate, Serialize, Deserialize)]
 pub struct AuthUser {
     id: Option<ArcUuid7>,
-    #[validate(length(min = 4))]
+    #[validate(length(min = 4, max = 255))]
     username: Arc<String>,
     email_hash: Arc<String>,
     status: AuthUserStatus,
@@ -300,7 +300,7 @@ pub struct AuthUserPayload {
     #[serde(skip_deserializing)]
     pub id: Option<ArcUuid7>,
     #[serde(default)]
-    #[validate(length(min = 4))]
+    #[validate(length(min = 4, max = 256))]
     pub username: Option<String>,
     #[serde(default)]
     #[validate(email(message = "most be a valid email address"))]

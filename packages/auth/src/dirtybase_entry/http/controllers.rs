@@ -1,6 +1,6 @@
 use dirtybase_contract::{
     app::RequestContext,
-    auth::{AuthUserPayload, LoginCredential, StorageResolverPipeline},
+    auth::{AuthUser, AuthUserPayload, LoginCredential, StorageResolverPipeline},
     axum::response::Html,
     http::{api::ApiResponse, prelude::*},
 };
@@ -117,8 +117,11 @@ pub(crate) async fn handle_api_register_request(
     resp
 }
 
-pub(crate) async fn handle_api_get_me() -> impl IntoResponse {
-    "my token here..."
+pub(crate) async fn handle_api_get_me(
+    RequestContext(context): RequestContext,
+) -> ApiResponse<AuthUser> {
+    // FIXME: Get the auth user another way
+    ApiResponse::success(context.get::<AuthUser>().await.unwrap())
 }
 
 #[derive(Debug, Deserialize)]

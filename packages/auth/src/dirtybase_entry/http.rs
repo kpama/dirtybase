@@ -33,7 +33,7 @@ pub(crate) fn register_routes(manager: &mut RouterManager) {
                 )
                 .post("/my-token", handle_get_auth_token, "auth-api:get-token");
         })
-        .api(Some("/auth"), |router| {
+        .api(Some("/auth/v1"), |router| {
             router.get("/me", handle_api_get_me, "auth::get-me");
         });
 }
