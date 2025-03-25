@@ -56,8 +56,7 @@ syn = { version = "2.0", features = ["extra-traits"] }
 dotenvy = "0.15"
 busybody = { version = "0.5" }
 orsomafo = { version = "0.5" }
-#fama = { version = "0.4" }
-fama = { path="../fama" }
+fama = { version = "0.4" }
 busstop = { version = "0.2" }
 redis = { version = "0.29", features = [
 	"tokio-comp",
