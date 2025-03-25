@@ -1,11 +1,13 @@
 use dirtybase_contract::{
     app::RequestContext,
-    auth::{AuthUser, AuthUserPayload, LoginCredential, StorageResolverPipeline},
+    auth::{AuthUser, AuthUserPayload, LoginCredential},
     axum::response::Html,
     http::{api::ApiResponse, prelude::*},
 };
 use dirtybase_helper::hash::sha256;
 use serde::Deserialize;
+
+use crate::StorageResolver;
 
 pub(crate) async fn login_form_handler() -> impl IntoResponse {
     Html(
@@ -30,10 +32,7 @@ pub(crate) async fn handle_get_auth_token(
     Json(cred): Json<LoginCredential>,
 ) -> impl IntoResponse {
     // This will use the auth service in the future
-    let storage = StorageResolverPipeline::new(ctx)
-        .get_provider()
-        .await
-        .unwrap();
+    let storage = StorageResolver::new(ctx).get_provider().await.unwrap();
 
     let result = if cred.username().is_some() {
         storage
@@ -78,10 +77,7 @@ pub(crate) async fn handle_register_request(
     Form(data): Form<RegisterData>,
 ) -> impl IntoResponse {
     // This will use the auth service in the future
-    let storage = StorageResolverPipeline::new(ctx)
-        .get_provider()
-        .await
-        .unwrap();
+    let storage = StorageResolver::new(ctx).get_provider().await.unwrap();
     let mut payload = AuthUserPayload::default();
     payload.username = Some(data.username.clone());
     payload.email = Some(data.email.clone());
@@ -101,10 +97,7 @@ pub(crate) async fn handle_api_register_request(
     Json(mut payload): Json<AuthUserPayload>,
 ) -> ApiResponse<String> {
     // This will use the auth service in the future
-    let storage = StorageResolverPipeline::new(ctx)
-        .get_provider()
-        .await
-        .unwrap();
+    let storage = StorageResolver::new(ctx).get_provider().await.unwrap();
 
     payload.rotate_salt = true;
     let mut resp = ApiResponse::<String>::default();

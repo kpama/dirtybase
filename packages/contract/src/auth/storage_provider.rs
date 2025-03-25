@@ -23,13 +23,6 @@ impl AuthUserStorageProvider {
     {
         Self(Arc::new(Box::new(inner)))
     }
-
-    pub fn from<S>(storage: S) -> Self
-    where
-        S: AuthUserStorage + 'static,
-    {
-        Self(Arc::new(Box::new(storage)))
-    }
 }
 
 impl Deref for AuthUserStorageProvider {
@@ -55,5 +48,14 @@ impl AuthUserStorage for AuthUserStorageProvider {
     }
     async fn delete(&self, id: ArcUuid7) -> Result<(), anyhow::Error> {
         self.0.delete(id).await
+    }
+}
+
+impl<P> From<Box<P>> for AuthUserStorageProvider
+where
+    P: AuthUserStorage + 'static,
+{
+    fn from(value: Box<P>) -> Self {
+        Self(Arc::new(value))
     }
 }

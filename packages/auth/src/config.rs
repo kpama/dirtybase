@@ -63,4 +63,7 @@ impl AuthConfig {
     pub fn storage_ref(&self) -> &Arc<String> {
         &self.storage
     }
+    pub fn storage_as_str(&self) -> &str {
+        self.storage_ref().as_str()
+    }
 }

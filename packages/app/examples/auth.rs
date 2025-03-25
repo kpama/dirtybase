@@ -1,5 +1,6 @@
 use dirtybase_app::setup;
-use dirtybase_contract::{auth::StorageResolverPipeline, prelude::*};
+use dirtybase_auth::StorageResolver;
+use dirtybase_contract::prelude::*;
 use dirtybase_db::types::ArcUuid7;
 use tracing::Level;
 
@@ -14,7 +15,7 @@ async fn main() {
     app_service.init().await;
 
     let global_context = app_service.global_context().await;
-    let storage = StorageResolverPipeline::new(global_context.clone())
+    let storage = StorageResolver::new(global_context.clone())
         .get_provider()
         .await
         .unwrap();

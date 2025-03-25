@@ -10,50 +10,59 @@ pub use memory_storage::*;
 use crate::AuthConfig;
 use crate::DATABASE_STORAGE;
 use crate::MEMORY_STORAGE;
+use crate::StorageResolver;
 
 pub(crate) async fn register_storages() {
-    dirtybase_contract::auth::StorageResolverPipeline::pipeline_builder()
+    // database storage
+    StorageResolver::provider(|p, name| async move {
+        let config = p.context_ref().get::<AuthConfig>().await.unwrap();
+        println!(">>>>>>>>>>>>>>>>>>>> name: {:?}", name);
+        if name.as_str() == DATABASE_STORAGE {
+            tracing::error!("cleanner implementation for database .....");
+        }
+        p
+    })
+    .await;
+
+    // memory storage
+    StorageResolver::provider(|p, name| async move {
+        if name.as_str() == MEMORY_STORAGE {
+            tracing::error!("cleanner implementation for memory.....");
+        }
+        p
+    })
+    .await;
+
+    StorageResolver::pipeline_builder()
         .await
         .register(move |pipe| {
             Box::pin(async move {
-                pipe.next_fn(
-                    async |mut p: dirtybase_contract::auth::StorageResolverPipeline,
-                           c: PipeContent| {
-                        let config = p.context_ref().get::<AuthConfig>().await.unwrap();
+                pipe.next_fn(async |mut p: StorageResolver, c: PipeContent| {
+                    let config = p.context_ref().get::<AuthConfig>().await.unwrap();
 
-                        tracing::warn!("we got call to when resolving auth user storage");
-                        tracing::warn!("storage already exist?: {}", p.has_provider());
-                        tracing::warn!("context id: {}", p.context_ref().id_ref());
-                        tracing::warn!("config: {:#?}", &config);
-
-                        if !p.has_provider() {
-                            match config.storage_ref().as_str() {
-                                MEMORY_STORAGE => {
-                                    p.set_storage(AuthUserMemoryStorage::new());
-                                    c.store(p).await;
-                                }
-                                DATABASE_STORAGE => {
-                                    tracing::error!("Auth database driver setting up");
-                                    let manager =
-                                    //     ContextResourceManager::<Manager>::try_get(p.context_ref())
-                                    //         .await
-                                    //         .unwrap();
-                                    p.context_ref().get::<Manager>().await.unwrap();
-                                    let result = manager.has_table("auth_users").await;
-                                    tracing::error!("do we have the auth_users table: {}", result);
-
-                                    p.set_storage(AuthUserDatabaseStorage::new(manager));
-                                    c.store(p).await;
-                                    tracing::debug!(
-                                        "database driver configured as auth user provider"
-                                    );
-                                }
-                                _ => (),
+                    if !p.has_provider() {
+                        match config.storage_ref().as_str() {
+                            MEMORY_STORAGE => {
+                                p.set_storage(AuthUserMemoryStorage::new());
+                                c.store(p).await;
                             }
+                            DATABASE_STORAGE => {
+                                tracing::error!(
+                                    ">>>>>>>>>>>>>>>>>>>>>> Auth database driver setting up"
+                                );
+                                let manager = p.context_ref().get::<Manager>().await.unwrap();
+                                let result = manager.has_table("auth_users").await;
+                                tracing::error!("do we have the auth_users table: {}", result);
+
+                                p.set_storage(AuthUserDatabaseStorage::new(manager));
+                                c.store(p).await;
+                                tracing::debug!("database driver configured as auth user provider");
+                            }
+                            _ => (),
                         }
-                        true
-                    },
-                )
+                    }
+                    true
+                })
                 .await
             })
         })

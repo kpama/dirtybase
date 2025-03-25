@@ -1,12 +1,14 @@
 use axum_extra::extract::CookieJar;
 use dirtybase_contract::{
     app::{Context, CtxExt},
-    auth::{LoginCredential, StorageResolverPipeline},
+    auth::LoginCredential,
     http::prelude::*,
     session::Session,
     user::{UserProviderService, model::UserRepositoryTrait},
 };
 use serde::Deserialize;
+
+use crate::StorageResolver;
 
 pub async fn handle_normal_auth_middleware(req: Request, next: Next) -> impl IntoResponse {
     let context;
@@ -20,9 +22,7 @@ pub async fn handle_normal_auth_middleware(req: Request, next: Next) -> impl Int
         return return_500_response();
     }
 
-    let storage = StorageResolverPipeline::new(context.clone())
-        .get_provider()
-        .await;
+    let storage = StorageResolver::new(context.clone()).get_provider().await;
     tracing::error!("do we have auth user storage: {}", storage.is_some());
 
     // 1. Check if there is an active session

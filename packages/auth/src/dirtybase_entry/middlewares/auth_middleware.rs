@@ -17,6 +17,7 @@ pub async fn handle_auth_middleware(
 
     if let Some(p) = params {
         if p.contains_key("jwt") {
+            // FIXME: pass the request and the storage provider to the specific auth
             let result = jwt_auth(req).await;
             req = result.0;
             if let Ok(Some(user)) = result.1 {
