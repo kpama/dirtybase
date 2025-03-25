@@ -20,5 +20,6 @@ bcrypt = { workspace = true }
 tokio = { workspace = true }
 futures = { workspace = true }
 jsonwebtoken = { workspace = true }
+simple-middleware = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

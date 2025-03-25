@@ -21,7 +21,7 @@ pub struct Extension {
 impl ExtensionSetup for Extension {
     async fn setup(&mut self, global_context: &Context) {
         let global_config = global_context
-            .get_config::<AuthConfig>("dirtybase::auth")
+            .get_config::<AuthConfig>("auth")
             .await
             .unwrap();
 
