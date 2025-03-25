@@ -96,15 +96,6 @@ impl WebMiddlewareManager {
         Self(HashMap::new())
     }
 
-    /// Register a middleware that maybe apply later
-    // pub fn register<F>(&mut self, name: &str, registerer: F) -> &mut Self
-    // where
-    //     F: Fn(Registerer) -> Registerer + Sync + Send + 'static,
-    // {
-    //     self.0.insert(name.into(), Box::new(registerer));
-    //     self
-    // }
-
     pub fn register<F, Fut, Out>(&mut self, name: &str, handler: F) -> &mut Self
     where
         F: FnMut(Request, Next, Option<HashMap<String, String>>) -> Fut

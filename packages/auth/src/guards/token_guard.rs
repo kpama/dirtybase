@@ -6,10 +6,10 @@ use dirtybase_contract::{
 
 use crate::GuardResolver;
 
-pub const JWT_GUARD: &'static str = "jwt";
+pub const TOKEN_GUARD: &'static str = "token";
 
 pub async fn authenticate(mut resolver: GuardResolver) -> GuardResolver {
-    tracing::info!(">>>> In JWT Authentication guard");
+    tracing::info!(">>>> In Token Authentication guard");
 
     if let Some(header) = resolver.request_ref().headers().get("authorization") {
         let bearer = axum_extra::headers::authorization::Bearer::decode(header);

@@ -2,21 +2,23 @@ use std::collections::HashMap;
 
 use dirtybase_contract::{app::Context, http::prelude::*};
 
-use crate::{GuardResolver, StorageResolver};
+use crate::{GuardResolver, StorageResolver, guards::session_guard::SESSION_GUARD};
 
 pub async fn handle_auth_middleware(
-    mut req: Request,
+    req: Request,
     next: Next,
-    mut params: Option<HashMap<String, String>>,
+    params: Option<HashMap<String, String>>,
 ) -> impl IntoResponse {
-    if params.is_none() {
-        tracing::debug!("using session auth");
-    } else {
-        tracing::debug!(">>>>>>>>>>>>>>>>>>> In auth middleware: {:#?}", &params);
-    }
-
     if let Some(mut p) = params {
-        let guard_name = p.remove("guard").unwrap_or_else(|| "normal".to_string());
+        // changes jwt => "" to guard => "jwt"
+        if p.keys().len() == 1 && p.get("guard").is_none() {
+            let first = p.keys().into_iter().next().cloned().unwrap();
+            p.insert("guard".to_string(), first);
+        }
+
+        let guard_name = p
+            .remove("guard")
+            .unwrap_or_else(|| SESSION_GUARD.to_string());
         let context = req
             .extensions()
             .get::<Context>()
@@ -35,6 +37,7 @@ pub async fn handle_auth_middleware(
                 return response;
             }
 
+            println!(">>>>>>>>>>>>>>>. here <<<<<<<<<<<l");
             if let Some(Err(err)) = guard.user {
                 tracing::error!("authentication error: {}", err.to_string());
             }

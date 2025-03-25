@@ -1,11 +1,17 @@
 use std::fmt::Debug;
 
-use axum::{response::IntoResponse, Json};
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    Json,
+};
 
 #[derive(Debug, serde::Serialize)]
 pub struct ApiResponse<D: serde::Serialize = ()> {
     data: Option<D>,
     error: Option<ApiError>,
+    #[serde(skip)]
+    status_code: Option<StatusCode>,
 }
 
 impl<D: serde::Serialize> Default for ApiResponse<D> {
@@ -13,18 +19,31 @@ impl<D: serde::Serialize> Default for ApiResponse<D> {
         Self {
             data: None,
             error: None,
+            status_code: None,
         }
     }
 }
 
 impl<D: serde::Serialize> ApiResponse<D> {
     pub fn new(data: Option<D>, error: Option<ApiError>) -> Self {
-        Self { data, error }
+        Self {
+            data,
+            error,
+            status_code: None,
+        }
     }
 
     pub fn success(data: D) -> Self {
         Self {
             data: Some(data),
+            ..Self::default()
+        }
+    }
+
+    pub fn created(data: D) -> Self {
+        Self {
+            data: Some(data),
+            status_code: Some(StatusCode::CREATED),
             ..Self::default()
         }
     }
@@ -36,14 +55,34 @@ impl<D: serde::Serialize> ApiResponse<D> {
         }
     }
 
+    pub fn error_with_status<E: Into<ApiError>>(error: E, code: StatusCode) -> Self {
+        Self {
+            error: Some(error.into()),
+            status_code: Some(code),
+            ..Self::default()
+        }
+    }
+
     pub fn set_data(&mut self, data: D) {
         self.data = Some(data);
         self.error = None;
     }
 
+    pub fn set_data_status(&mut self, data: D, code: StatusCode) {
+        self.data = Some(data);
+        self.error = None;
+        self.status_code = Some(code);
+    }
+
     pub fn set_error<E: Into<ApiError>>(&mut self, error: E) {
         self.error = Some(error.into());
         self.data = None;
+    }
+
+    pub fn set_error_and_status<E: Into<ApiError>>(&mut self, error: E, code: StatusCode) {
+        self.error = Some(error.into());
+        self.data = None;
+        self.status_code = Some(code);
     }
 
     pub fn has_data(&self) -> bool {
@@ -112,6 +151,24 @@ impl From<anyhow::Error> for ApiError {
 
 impl<D: serde::Serialize> IntoResponse for ApiResponse<D> {
     fn into_response(self) -> axum::response::Response {
-        Json(self).into_response()
+        if self.has_data() {
+            (
+                self.status_code.unwrap_or_else(|| StatusCode::OK),
+                Json(self),
+            )
+                .into_response()
+        } else {
+            (
+                self.status_code.unwrap_or_else(|| StatusCode::BAD_REQUEST),
+                Json(self),
+            )
+                .into_response()
+        }
+    }
+}
+
+impl<D: serde::Serialize> Into<Response> for ApiResponse<D> {
+    fn into(self) -> Response {
+        self.into_response()
     }
 }

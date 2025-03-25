@@ -32,6 +32,7 @@ named_routes_axum = { workspace = true }
 futures = { workspace = true }
 futures-util = { workspace = true }
 Inflector = { workspace = true }
+jwt = { workspace = true }
 hex = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

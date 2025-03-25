@@ -86,8 +86,12 @@ impl GuardResolver {
         if let Some(r) = busybody::helpers::service_container().get().await {
             r
         } else {
+            let manager = simple_middleware::Manager::<Self, Self>::last(|resolver, _| {
+                Box::pin(async move { resolver })
+            })
+            .await;
             busybody::helpers::service_container()
-                .set(simple_middleware::Manager::<Self, Self>::new())
+                .set(manager)
                 .await
                 .get()
                 .await

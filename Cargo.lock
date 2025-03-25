@@ -1071,6 +1071,7 @@ dependencies = [
  "futures",
  "futures-util",
  "hex",
+ "jwt",
  "log 0.4.26",
  "named_routes_axum",
  "orsomafo",

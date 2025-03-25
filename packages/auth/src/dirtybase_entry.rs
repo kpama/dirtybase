@@ -9,7 +9,10 @@ use dirtybase_contract::{
 };
 use middlewares::setup_middlewares;
 
-use crate::{AuthConfig, DATABASE_STORAGE, register_storages, setup_context_managers};
+use crate::{
+    AuthConfig, DATABASE_STORAGE, guards::register_guards, register_storages,
+    setup_context_managers,
+};
 
 #[derive(Debug, Default)]
 pub struct Extension {
@@ -36,6 +39,7 @@ impl ExtensionSetup for Extension {
         self.global_container().set_type(global_config).await;
 
         register_storages().await;
+        register_guards().await;
         setup_context_managers().await;
     }
 
