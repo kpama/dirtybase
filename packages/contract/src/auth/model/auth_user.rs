@@ -322,6 +322,16 @@ pub struct AuthUserPayload {
     pub restore: bool,
 }
 
+impl AuthUserPayload {
+    pub fn new() -> Self {
+        let mut payload = Self::default();
+        payload.status = Some(AuthUserStatus::Pending);
+        payload.rotate_salt = true;
+
+        payload
+    }
+}
+
 impl IntoColumnAndValue for AuthUserPayload {
     fn into_column_value(&self) -> crate::db::types::ColumnAndValue {
         let mut builder = ColumnAndValueBuilder::new()

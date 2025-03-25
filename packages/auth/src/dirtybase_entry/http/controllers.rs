@@ -5,7 +5,6 @@ use dirtybase_contract::{
     http::{api::ApiResponse, prelude::*},
 };
 use dirtybase_helper::hash::sha256;
-use serde::Deserialize;
 
 use crate::StorageResolver;
 
@@ -74,15 +73,18 @@ pub(crate) async fn register_form_handler() -> impl IntoResponse {
 
 pub(crate) async fn handle_register_request(
     RequestContext(ctx): RequestContext,
-    Form(data): Form<RegisterData>,
+    Form(mut payload): Form<AuthUserPayload>,
 ) -> impl IntoResponse {
-    // This will use the auth service in the future
+    // FIXME: This will use the auth service in the future
     let storage = StorageResolver::new(ctx).get_provider().await.unwrap();
-    let mut payload = AuthUserPayload::default();
-    payload.username = Some(data.username.clone());
-    payload.email = Some(data.email.clone());
-    payload.password = Some(data.password.clone());
+
     payload.rotate_salt = true;
+    payload.status = match payload.status {
+        Some(s) => Some(s),
+        None => Some(dirtybase_contract::auth::AuthUserStatus::Pending),
+    };
+
+    // FIXME: Send email for verification
     payload.verified_at = Some(dirtybase_helper::time::current_datetime());
 
     if let Ok(user) = storage.store(payload).await {
@@ -114,13 +116,9 @@ pub(crate) async fn handle_api_get_me(
     RequestContext(context): RequestContext,
 ) -> ApiResponse<AuthUser> {
     // FIXME: Get the auth user another way
-    ApiResponse::success(context.get::<AuthUser>().await.unwrap())
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct RegisterData {
-    username: String,
-    email: String,
-    password: String,
-    confirm_password: String,
+    if let Ok(user) = context.get::<AuthUser>().await {
+        ApiResponse::success(user)
+    } else {
+        ApiResponse::error("user not found")
+    }
 }
