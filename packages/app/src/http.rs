@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, net::SocketAddr};
 
 use axum::Router;
 use axum_extra::extract::CookieJar;
@@ -63,8 +63,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                             api_router = middleware_manager.apply(api_router, order);
                         }
 
-                        // FIXME: Add the ability for this to be configurable
-                        let cors = CorsLayer::permissive();
+                        let cors = config.web_api_routes_cors();
                         if prefix.is_empty() {
                             router = router.merge(api_router.into_router().layer(cors));
                         } else {
@@ -83,8 +82,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                                 middleware_manager.apply(insecure_api_router, order);
                         }
 
-                        // FIXME: Add the ability for this to be configurable
-                        let cors = CorsLayer::very_permissive();
+                        let cors = config.web_insecure_api_routes_cors();
                         if prefix.is_empty() {
                             router = router.merge(insecure_api_router.into_router().layer(cors));
                         } else {
@@ -103,10 +101,11 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                             backend_router = middleware_manager.apply(backend_router, order);
                         }
 
+                        let cors = config.web_backend_routes_cors();
                         if prefix.is_empty() {
-                            router = router.merge(backend_router.into_router());
+                            router = router.merge(backend_router.into_router().layer(cors));
                         } else {
-                            router = router.nest(&prefix, backend_router.into_router());
+                            router = router.nest(&prefix, backend_router.into_router().layer(cors));
                         }
                     }
                 }
@@ -120,10 +119,11 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                             general_router = middleware_manager.apply(general_router, order);
                         }
 
+                        let cors = config.web_general_routes_cors();
                         if prefix.is_empty() {
-                            router = router.merge(general_router.into_router());
+                            router = router.merge(general_router.into_router().layer(cors));
                         } else {
-                            router = router.nest(&prefix, general_router.into_router());
+                            router = router.nest(&prefix, general_router.into_router().layer(cors));
                         }
                     }
                 }
@@ -137,10 +137,11 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                             dev_router = middleware_manager.apply(dev_router, order);
                         }
 
+                        let cors = config.web_dev_routes_cors();
                         if prefix.is_empty() {
-                            router = router.merge(dev_router.into_router());
+                            router = router.merge(dev_router.into_router().layer(cors));
                         } else {
-                            router = router.nest(&prefix, dev_router.into_router());
+                            router = router.nest(&prefix, dev_router.into_router().layer(cors));
                         }
                     }
                 }
@@ -256,7 +257,8 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
         listener,
         web_app
             .into_router()
-            .with_state(busybody::helpers::make_proxy()),
+            .with_state(busybody::helpers::make_proxy())
+            .into_make_service_with_connect_info::<SocketAddr>(),
     )
     .with_graceful_shutdown(shutdown_signal())
     .await

@@ -106,3 +106,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tempfile = { version = "3.19" }
 uuid25 = { version = "0.3", features = ["gen", "serde", "uuid"] }
 snowflaker = { version = "0.3", features = ["dynamic"] }
+ipnet = { version = "2" }

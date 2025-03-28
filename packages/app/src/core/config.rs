@@ -1,22 +1,125 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
+use axum::http::HeaderName;
+use axum::http::HeaderValue;
+use axum::http::Method;
 use base64ct::Encoding;
 use dirtybase_contract::app::Context;
 use dirtybase_contract::config::ConfigResult;
 use dirtybase_contract::config::DirtyConfig;
 use dirtybase_contract::config::TryFromDirtyConfig;
+use dirtybase_contract::config::field_to_option_array;
 use dirtybase_contract::config::field_to_vec_u8;
 use dirtybase_contract::config::vec_u8_to_field;
 use serde::Deserializer;
+use tower_http::cors::AllowHeaders;
+use tower_http::cors::AllowMethods;
+use tower_http::cors::AllowOrigin;
+use tower_http::cors::CorsLayer;
+use tower_http::cors::ExposeHeaders;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+#[derive(Debug, Default, serde::Serialize, serde::Deserialize, Clone)]
 pub struct MiddlewareConfig {
+    #[serde(deserialize_with = "field_to_option_array")]
     global: Option<Vec<String>>,
+    #[serde(deserialize_with = "field_to_option_array")]
     general_route: Option<Vec<String>>,
+    #[serde(deserialize_with = "field_to_option_array")]
     api_route: Option<Vec<String>>,
+    #[serde(deserialize_with = "field_to_option_array")]
     insecure_api_route: Option<Vec<String>>,
+    #[serde(deserialize_with = "field_to_option_array")]
     admin_route: Option<Vec<String>>,
+    #[serde(deserialize_with = "field_to_option_array")]
     dev_route: Option<Vec<String>>,
+}
+
+#[derive(Debug, Default, serde::Serialize, serde::Deserialize, Clone)]
+pub struct RouterCorsConfig {
+    #[serde(deserialize_with = "field_to_option_array")]
+    headers: Option<Vec<String>>,
+    #[serde(deserialize_with = "field_to_option_array")]
+    methods: Option<Vec<String>>,
+    #[serde(deserialize_with = "field_to_option_array")]
+    origins: Option<Vec<String>>,
+    #[serde(deserialize_with = "field_to_option_array")]
+    expose: Option<Vec<String>>,
+}
+
+impl From<&RouterCorsConfig> for CorsLayer {
+    fn from(config: &RouterCorsConfig) -> Self {
+        let mut cors = CorsLayer::new();
+        cors = cors.allow_headers(match config.headers.as_ref() {
+            None => AllowHeaders::list(None),
+            Some(list) => {
+                if list.contains(&"*".to_string()) {
+                    AllowHeaders::any()
+                } else {
+                    AllowHeaders::list(
+                        list.iter()
+                            .map(|e| HeaderName::from_str(e))
+                            .filter(|e| e.is_ok())
+                            .map(|e| e.unwrap())
+                            .collect::<Vec<HeaderName>>(),
+                    )
+                }
+            }
+        });
+
+        cors = cors.allow_methods(match config.methods.as_ref() {
+            None => AllowMethods::list(None),
+            Some(list) => {
+                if list.contains(&"*".to_string()) {
+                    AllowMethods::any()
+                } else {
+                    AllowMethods::list(
+                        list.iter()
+                            .map(|e| Method::from_str(e))
+                            .filter(|e| e.is_ok())
+                            .map(|e| e.unwrap())
+                            .collect::<Vec<Method>>(),
+                    )
+                }
+            }
+        });
+
+        cors = cors.allow_origin(match config.origins.as_ref() {
+            None => AllowOrigin::list(None),
+            Some(list) => {
+                if list.contains(&"*".to_string()) {
+                    AllowOrigin::any()
+                } else {
+                    AllowOrigin::list(
+                        list.iter()
+                            .map(|e| HeaderValue::from_str(e))
+                            .filter(|e| e.is_ok())
+                            .map(|e| e.unwrap())
+                            .collect::<Vec<HeaderValue>>(),
+                    )
+                }
+            }
+        });
+
+        cors = cors.expose_headers(match config.expose.as_ref() {
+            None => ExposeHeaders::list(None),
+            Some(list) => {
+                if list.contains(&"*".to_string()) {
+                    ExposeHeaders::any()
+                } else {
+                    ExposeHeaders::list(
+                        list.iter()
+                            .map(|e| HeaderName::from_str(e))
+                            .filter(|e| e.is_ok())
+                            .map(|e| e.unwrap())
+                            .collect::<Vec<HeaderName>>(),
+                    )
+                }
+            }
+        });
+
+        cors
+    }
 }
 
 impl MiddlewareConfig {
@@ -68,7 +171,20 @@ struct ConfigEntry {
     web_dev_route_prefix: String,
     #[serde(rename = "web_public_directory")]
     web_public_dir: String,
+    #[serde(default)]
     web_middleware: MiddlewareConfig,
+    #[serde(default)]
+    web_general_routes_cors: RouterCorsConfig,
+    #[serde(default)]
+    web_api_routes_cors: RouterCorsConfig,
+    #[serde(default)]
+    web_insecure_api_routes_cors: RouterCorsConfig,
+    #[serde(default)]
+    web_backend_routes_cors: RouterCorsConfig,
+    #[serde(default)]
+    web_admin_routes_cors: RouterCorsConfig,
+    #[serde(default)]
+    web_dev_routes_cors: RouterCorsConfig,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -176,6 +292,29 @@ impl Config {
 
     pub fn web_public_dir(&self) -> &str {
         self.entry.web_public_dir.as_str()
+    }
+
+    pub fn web_general_routes_cors(&self) -> CorsLayer {
+        CorsLayer::from(&self.entry.web_general_routes_cors)
+    }
+
+    pub fn web_api_routes_cors(&self) -> CorsLayer {
+        CorsLayer::from(&self.entry.web_api_routes_cors)
+    }
+
+    pub fn web_insecure_api_routes_cors(&self) -> CorsLayer {
+        CorsLayer::from(&self.entry.web_insecure_api_routes_cors)
+    }
+
+    pub fn web_backend_routes_cors(&self) -> CorsLayer {
+        CorsLayer::from(&self.entry.web_backend_routes_cors)
+    }
+    pub fn web_admin_routes_cors(&self) -> CorsLayer {
+        CorsLayer::from(&self.entry.web_admin_routes_cors)
+    }
+
+    pub fn web_dev_routes_cors(&self) -> CorsLayer {
+        CorsLayer::from(&self.entry.web_dev_routes_cors)
     }
 
     pub fn environment(&self) -> &dirtybase_contract::config::CurrentEnvironment {

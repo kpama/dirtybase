@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use dirtybase_contract::{
+    app::Context,
     auth::{AuthUser, AuthUserStorageProvider},
     axum::response::Response,
     prelude::Request,
@@ -11,12 +12,14 @@ pub struct GuardResolver {
     pub(crate) user: Option<Result<Option<AuthUser>, anyhow::Error>>,
     pub(crate) storage: AuthUserStorageProvider,
     pub(crate) resp: Option<Response>,
+    pub(crate) context: Context,
     name: Arc<String>,
 }
 
 impl GuardResolver {
     pub fn new(req: Request, storage: AuthUserStorageProvider, name: &str) -> Self {
         Self {
+            context: req.extensions().get::<Context>().cloned().unwrap(),
             req,
             storage,
             user: None,
@@ -35,6 +38,14 @@ impl GuardResolver {
 
     pub fn storage_ref(&self) -> &AuthUserStorageProvider {
         &self.storage
+    }
+
+    pub fn context(&self) -> Context {
+        self.context.clone()
+    }
+
+    pub fn context_ref(&self) -> &Context {
+        &self.context
     }
 
     pub fn storage_mut_ref(&mut self) -> &mut AuthUserStorageProvider {

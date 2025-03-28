@@ -1,0 +1,97 @@
+# Application current mode
+# Valid options: dev, prod, staging 
+env = "dev"
+
+# Application's name
+name = "Dirty Base App"
+
+# Security
+key = ""
+previous_keys = []
+
+#------------------------------------------------
+#       Dirtybase Web App 
+#------------------------------------------------
+web_port = 8080
+web_ip_address = "0.0.0.0"
+web_public_directory = "./public"
+
+#       Dirtybase Web App 
+#------------------------------------------------
+
+#------------------------------------------------
+#       Dirtybase Web App Route collection 
+#------------------------------------------------
+web_enable_general_routes = true
+web_enable_admin_routes = true
+web_enable_api_routes = true
+web_enable_insecure_api_routes = true
+web_enable_dev_routes = true
+
+#       Dirtybase Web App Route collection 
+#------------------------------------------------
+
+#------------------------------------------------
+#       Dirtybase Web App middleware 
+#------------------------------------------------
+[web_middleware]
+admin_route = []
+api_route = []
+dev_route = []
+general_route = []
+global = []
+insecure_api_route = []
+
+
+#------------------------------------------------
+#       Dirtybase Web App CORs 
+#------------------------------------------------
+[web_api_routes_cors]
+headers = ["*"]
+methods = ["*"]
+origins = ["*"]
+expose = ["*"]
+
+[web_insecure_api_routes_cors]
+headers = ["*"]
+methods = ["*"]
+origins = ["*"]
+expose = ["*"]
+
+[web_general_routes_cors]
+headers = []
+methods = []
+origins = []
+expose = []
+
+[web_backend_routes_cors]
+headers = []
+methods = []
+origins = []
+expose = []
+
+[web_admin_routes_cors]
+headers = []
+methods = []
+origins = []
+expose = []
+
+[web_dev_routes_cors]
+headers = []
+methods = []
+origins = []
+expose = []
+
+#       Dirtybase Web App CORS 
+#------------------------------------------------
+
+#------------------------------------------------
+#       Dirtybase Web App Route collection prefix
+#------------------------------------------------
+web_api_route_prefix = "/api"
+web_insecure_api_route_prefix = "/_open"
+web_admin_route_prefix = "/_admin"
+web_dev_route_prefix = "/_dev"
+
+#       Dirtybase Web App Route collection prefix
+#------------------------------------------------

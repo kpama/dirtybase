@@ -8,6 +8,7 @@ use dirtybase_contract::{
     prelude::{
         Request,
         axum_extra::extract::{CookieJar, cookie::Cookie},
+        header::USER_AGENT,
     },
     session::{Session, SessionId, SessionStorageProvider},
 };
@@ -58,6 +59,8 @@ impl Extension {
         context: Context,
         cookie: &CookieJar,
     ) -> Request {
+        let user_agent = req.headers().get(USER_AGENT).cloned();
+        println!("headers: {:#?}", req.headers());
         if let Ok(config) = context.get_config::<SessionConfig>("session").await {
             if let Ok(provider) = context.get::<Arc<SessionStorageProvider>>().await {
                 let request_session_id = cookie.get(config.cookie_id_ref());

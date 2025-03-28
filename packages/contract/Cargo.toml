@@ -39,3 +39,4 @@ tracing-subscriber = { workspace = true }
 dotenvy = { workspace = true }
 config = { workspace = true }
 base64ct = { workspace = true }
+ipnet = { workspace = true }

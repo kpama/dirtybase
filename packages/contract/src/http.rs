@@ -1,3 +1,4 @@
+mod http_context;
 mod router_builder;
 mod router_manager;
 mod web_middleware_manager;
@@ -7,6 +8,7 @@ pub mod axum;
 
 use std::sync::Arc;
 
+pub use http_context::*;
 pub use router_builder::*;
 pub use router_manager::*;
 pub use web_middleware_manager::*;
