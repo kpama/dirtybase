@@ -1,21 +1,33 @@
-use std::{collections::HashMap, str::FromStr, sync::OnceLock};
+use std::{
+    collections::{HashMap, VecDeque},
+    net::{IpAddr, SocketAddr},
+    str::FromStr,
+};
 
 use axum::{
-    extract::Request,
+    extract::{ConnectInfo, Request},
     http::{HeaderMap, HeaderValue, Uri},
 };
-use tokio::io::split;
-
-use crate::db::base::query;
 
 #[derive(Clone)]
 pub struct HttpContext {
     uri: Uri,
     headers: HeaderMap<HeaderValue>,
-    client_id: OnceLock<Option<String>>,
+    ip: Option<IpAddr>,
+    info: Option<ConnectInfo<SocketAddr>>,
 }
 
 impl HttpContext {
+    pub fn new<T, H: IntoIterator<Item = I>, I: ToString>(
+        req: &Request<T>,
+        trusted_headers: H,
+        trusted_ips: &[TrustedIp],
+    ) -> Self {
+        let mut instance = Self::from(req);
+        instance.ip = instance.ip_from_headers(trusted_headers, trusted_ips);
+
+        instance
+    }
     pub fn path(&self) -> &str {
         self.uri.path()
     }
@@ -73,82 +85,104 @@ impl HttpContext {
         None
     }
 
-    pub fn ip_from_headers<H: IntoIterator<Item = I>, P: IntoIterator<Item = I>, I: ToString>(
+    pub fn ip(&self) -> Option<IpAddr> {
+        self.ip.clone()
+    }
+
+    fn ip_from_headers<H: IntoIterator<Item = I>, I: ToString>(
         &self,
         trusted_headers: H,
-        trusted_ips: P,
-    ) {
-        // if self.client_id.get_or_init(||);
-        let mut accept_all = false;
+        trusted: &[TrustedIp],
+    ) -> Option<IpAddr> {
+        let mut ip: Option<IpAddr> = None;
         let names = trusted_headers
             .into_iter()
             .map(|e| e.to_string())
             .collect::<Vec<String>>();
-        let ips_as_string = trusted_ips
-            .into_iter()
-            .map(|e| e.to_string())
-            .collect::<Vec<String>>();
-        accept_all = ips_as_string.contains(&"*".to_string());
+        let accept_all = trusted
+            .iter()
+            .filter(|entry| **entry == TrustedIp::All)
+            .count()
+            > 0;
 
-        'outer: for a_name in &names {
-            if let Some(last_entry) = self.headers.get_all(a_name).iter().last() {
-                let mut values = last_entry
-                    .to_str()
-                    .unwrap()
-                    .split(",")
-                    .map(|e| {
-                        //
-                        let s = e.to_string();
-                        println!("ip entry in header: {}", &s);
-                        s
-                    })
-                    .map(|entry| ipnet::IpNet::from_str(entry.trim()))
-                    .filter(|e| {
-                        if let Err(error) = &e {
-                            println!("error parsing string to IP address: {}", error);
-                            false
-                        } else {
-                            true
-                        }
-                    })
-                    .map(|e| e.unwrap())
-                    .collect::<Vec<ipnet::IpNet>>();
+        if let Some(info) = &self.info {
+            ip = Some(info.ip())
+        }
 
-                println!("raw values: {:?}", &values);
-                // this header exist but is empty
-                if values.len() == 0 {
-                    continue;
-                }
-
-                // the request passed through at least one proxy
-                let client_ip = values.pop();
-                if values.len() > 1 && !accept_all {
-                    // convert the strings to real IPs
-                    let ips = ips_as_string
-                        .iter()
-                        .map(|e| ipnet::IpNet::from_str(e))
-                        .filter(|e| e.is_ok())
-                        .map(|e| e.unwrap())
-                        .collect::<Vec<ipnet::IpNet>>();
-                    if ips.len() != ips_as_string.len() {
-                        tracing::error!("one or more trust IPs could not be person to a valid string: {:?}, {:?}", &ips_as_string, &ips);
-                        println!("one or more trust IPs could not be person to a valid string: {:?}, {:?}", &ips_as_string, &ips);
-                        continue 'outer;
+        for a_name in &names {
+            match a_name.to_lowercase().as_ref() {
+                "x-forwarded-for" => {
+                    if trusted.len() == 0 {
+                        continue;
                     }
-                    // TODO: Validate each entry as a valid ip, check that this ip is in the list of trusted ip
-                    for an_ip in &values {
-                        if !ips.contains(an_ip) {
-                            continue 'outer;
+                    if let Some(mut values) = self.x_forwarded_ips() {
+                        ip = values.pop_front();
+                        if ip.is_none() || accept_all {
+                            continue;
+                        }
+
+                        if values.len() > 0 && ip.is_some() {
+                            for forwarded_ip in &values {
+                                for trusted_ip in trusted {
+                                    if !trusted_ip.passes(forwarded_ip) {
+                                        ip = None;
+                                        break;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
+                _ => {
+                    if let Some(last) = self.headers.get_all(a_name).iter().last() {
+                        let pieces = last
+                            .to_str()
+                            .unwrap()
+                            .split(",")
+                            .map(|e| e.to_string())
+                            .collect::<Vec<String>>();
 
-                // TODO: Validate client's actual IP
-                println!("header: {}, values: {:?}", &a_name, values);
-                println!("header: {}, client ip: {:?}", &a_name, client_ip);
-                break;
+                        let mut values = pieces
+                            .iter()
+                            .map(|entry| IpAddr::from_str(entry.trim()))
+                            .filter(|e| e.is_ok())
+                            .map(|e| e.unwrap())
+                            .collect::<VecDeque<IpAddr>>();
+                        if pieces.len() == values.len() {
+                            ip = values.pop_front();
+                            break;
+                        }
+                    }
+                }
             }
         }
+        ip
+    }
+
+    fn x_forwarded_ips(&self) -> Option<VecDeque<IpAddr>> {
+        let mut ips = VecDeque::new();
+        for entry in self.headers.get_all("x-forwarded-for").iter() {
+            let pieces = entry
+                .to_str()
+                .unwrap()
+                .split(",")
+                .map(|e| e.to_string())
+                .collect::<Vec<String>>();
+
+            let values = pieces
+                .iter()
+                .map(|entry| IpAddr::from_str(entry.trim()))
+                .filter(|e| e.is_ok())
+                .map(|e| e.unwrap())
+                .collect::<VecDeque<IpAddr>>();
+            if pieces.len() != values.len() {
+                return None;
+            }
+
+            ips.extend(values);
+        }
+
+        Some(ips)
     }
 }
 
@@ -157,8 +191,59 @@ impl<T> From<&Request<T>> for HttpContext {
         HttpContext {
             uri: req.uri().clone(),
             headers: req.headers().clone(),
-            client_id: OnceLock::default(),
+            ip: None,
+            info: req.extensions().get::<ConnectInfo<_>>().cloned(),
         }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TrustedIp {
+    All,
+    Net(ipnet::IpNet),
+    Ip(IpAddr),
+}
+
+impl FromStr for TrustedIp {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "*" {
+            return Ok(Self::All);
+        }
+
+        if s.contains('/') {
+            if let Ok(net) = ipnet::IpNet::from_str(s) {
+                return Ok(Self::Net(net));
+            }
+        } else {
+            if let Ok(ip) = IpAddr::from_str(s) {
+                return Ok(Self::Ip(ip));
+            }
+        }
+        Err(String::from("could not parse IP"))
+    }
+}
+
+impl TrustedIp {
+    pub fn passes(&self, other: &IpAddr) -> bool {
+        match self {
+            Self::All => true,
+            Self::Net(net) => net.contains(other),
+            Self::Ip(ip) => ip == other,
+        }
+    }
+
+    pub fn form_collection<S, I>(value: S) -> Vec<Self>
+    where
+        S: IntoIterator<Item = I>,
+        I: AsRef<str>,
+    {
+        value
+            .into_iter()
+            .map(|e| Self::from_str(e.as_ref()))
+            .filter(|e| e.is_ok())
+            .map(|e| e.unwrap())
+            .collect::<Vec<TrustedIp>>()
     }
 }
 
@@ -207,36 +292,52 @@ mod test {
     }
 
     #[test]
-    fn test_ip_from_forwarded_for() {
+    fn test_ip_from_forwarded_for1() {
         let req = Request::builder()
             .uri("https://yahoo.com/path1/path2?query1=value1&query2=value2")
-            // .header("True-Client-IP", "10")
-            .header("X-FORWARDED-FOR", "192.168.0.2, 192.168.0.5, 192.168.1.44")
-            // .header("X-FORWARDED-FOR", "4, 5, 6")
-            // .header("True-Client-IP", "6, 8, 11")
-            // .header("X-FORWARDED-FOR", "20,21,22")
+            .header("X-FORWARDED-FOR", "192.168.0.100")
+            .header("X-FORWARDED-FOR", "192.168.0.8")
+            // .header("X-FORWARDED-FOR", "192.168.0.5, 192.168.0.44, 192.168.3.6")
             .body(())
             .unwrap();
-        let ctx = HttpContext::from(&req);
 
-        let result = req
-            .headers()
-            .get_all("x-forwarded-for")
-            .iter()
-            .last()
-            .map(|v| {
-                //
-                v.to_str()
-                    .unwrap()
-                    .split(",")
-                    .map(|entry| entry.to_string())
-                    .collect::<Vec<String>>()
-            });
-        println!("x-forwarded-for header: {:?}", result);
-        println!("headers: {:?}", req.headers());
-        ctx.ip_from_headers(
-            &["x-forwarded-for", "X-Real-IP", "True-Client-IP"],
-            &["192.168.0.2", "192.168.0.5"],
-        );
+        let trusted = TrustedIp::form_collection(["192.168.0.5/24"]);
+        let ctx = HttpContext::new(&req, &["x-forwarded-for"], &trusted);
+
+        let result = ctx.ip().unwrap();
+        let ip = IpAddr::from_str("192.168.0.100").unwrap();
+        assert_eq!(result, ip);
+    }
+
+    #[test]
+    fn test_ip_from_forwarded_for2() {
+        let req = Request::builder()
+            .uri("https://yahoo.com/path1/path2?query1=value1&query2=value2")
+            .header("X-FORWARDED-FOR", "192.168.0.100")
+            .header("X-FORWARDED-FOR", "192.168.0.8")
+            // .header("X-FORWARDED-FOR", "192.168.0.5, 192.168.0.44, 192.168.3.6")
+            .body(())
+            .unwrap();
+
+        let trusted = TrustedIp::form_collection(["192.168.1.5/24"]);
+        let ctx = HttpContext::new(&req, &["x-forwarded-for"], &trusted);
+
+        let result = ctx.ip();
+        assert_eq!(result.is_none(), true);
+    }
+
+    #[test]
+    fn test_trusted_ip() {
+        let ip1 = IpAddr::from_str("192.168.0.2").unwrap();
+        let ip2 = IpAddr::from_str("192.168.0.10").unwrap();
+
+        let trusted1 = TrustedIp::from_str("192.168.0.2").unwrap();
+        let trusted2 = TrustedIp::from_str("192.168.0.2/24").unwrap();
+
+        assert_eq!(trusted1.passes(&ip1), true);
+        assert_eq!(trusted1.passes(&ip2), false);
+
+        assert_eq!(trusted2.passes(&ip2), true);
+        assert_eq!(trusted2.passes(&ip2), true);
     }
 }

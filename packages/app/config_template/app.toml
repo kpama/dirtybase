@@ -86,6 +86,17 @@ expose = []
 #------------------------------------------------
 
 #------------------------------------------------
+#      Dirtybase Web App proxy and fowarded seaders
+#------------------------------------------------
+web_trusted_proxies= [] # list of IP addresses or IPNET addresses
+# One or more headers to source the client's IP address from
+# The order is important. Searching will stop on the first valid result
+web_proxy_trusted_headers=[]
+
+#      Dirtybase Web App proxy and fowarded seaders
+#------------------------------------------------
+
+#------------------------------------------------
 #       Dirtybase Web App Route collection prefix
 #------------------------------------------------
 web_api_route_prefix = "/api"

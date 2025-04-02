@@ -169,6 +169,10 @@ struct ConfigEntry {
     web_insecure_api_route_prefix: String,
     web_admin_route_prefix: String,
     web_dev_route_prefix: String,
+    #[serde(deserialize_with = "field_to_option_array")]
+    web_trusted_proxies: Option<Vec<String>>,
+    #[serde(deserialize_with = "field_to_option_array")]
+    web_proxy_trusted_headers: Option<Vec<String>>,
     #[serde(rename = "web_public_directory")]
     web_public_dir: String,
     #[serde(default)]
@@ -315,6 +319,26 @@ impl Config {
 
     pub fn web_dev_routes_cors(&self) -> CorsLayer {
         CorsLayer::from(&self.entry.web_dev_routes_cors)
+    }
+
+    pub fn web_trusted_proxies(&self) -> &[String] {
+        if let Some(trusted) = &self.entry.web_trusted_proxies {
+            return trusted;
+        }
+        &[]
+    }
+
+    pub fn web_proxy_trusted_headers_ref(&self) -> &[String] {
+        if let Some(headers) = &self.entry.web_proxy_trusted_headers {
+            return headers;
+        }
+        &[]
+    }
+    pub fn web_proxy_trusted_headers(&self) -> Vec<String> {
+        if let Some(headers) = &self.entry.web_proxy_trusted_headers {
+            return headers.clone();
+        }
+        Vec::new()
     }
 
     pub fn environment(&self) -> &dirtybase_contract::config::CurrentEnvironment {

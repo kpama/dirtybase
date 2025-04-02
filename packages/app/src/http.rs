@@ -1,8 +1,12 @@
-use std::{env, net::SocketAddr};
+use std::{env, net::SocketAddr, sync::Arc};
 
 use axum::Router;
 use axum_extra::extract::CookieJar;
-use dirtybase_contract::{ExtensionManager, app::Context, http::RouteType};
+use dirtybase_contract::{
+    ExtensionManager,
+    app::Context,
+    http::{HttpContext, RouteType, TrustedIp},
+};
 
 #[cfg(feature = "multitenant")]
 use dirtybase_contract::multitenant::{
@@ -10,11 +14,11 @@ use dirtybase_contract::multitenant::{
 };
 
 use named_routes_axum::RouterWrapper;
-use tower_http::cors::CorsLayer;
+use tower_service::Service;
 use tracing::{Instrument, field};
 
 use crate::{
-    core::{AppService, WebSetup},
+    core::{AppService, Config, WebSetup},
     shutdown_signal,
 };
 
@@ -172,7 +176,14 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
         // proxy container
         // this should be the last middleware registered.
         // It sets up the current request specific context
-        web_app = web_app.middleware(|mut req, next| async {
+        let trusted_headers = Arc::new(app.config_ref().web_proxy_trusted_headers());
+        let trusted_ips = Arc::new(TrustedIp::form_collection(
+            app.config_ref().web_trusted_proxies(),
+        ));
+
+        web_app = web_app.middleware(move |mut req, next| {
+            let trusted_headers = trusted_headers.clone();
+            let trusted_ips = trusted_ips.clone();
             let context = Context::default();
             let span = tracing::trace_span!(
                 "http",
@@ -219,6 +230,86 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 }
 
                 // Add the request context
+                context
+                    .set(HttpContext::new(
+                        &req,
+                        trusted_headers.as_ref(),
+                        &trusted_ips,
+                    ))
+                    .await;
+                req.extensions_mut().insert(context.clone());
+
+                // pass the request
+                let mut response = next.run(req).await;
+
+                let mut cookie = CookieJar::from_headers(response.headers());
+
+                response.extensions_mut().insert(context.clone());
+
+                for ext in ExtensionManager::list().read().await.iter() {
+                    tracing::trace!("on web response: {}", ext.id());
+                    (response, cookie) =
+                        ext.on_web_response(response, cookie, context.clone()).await;
+                }
+
+                (cookie, response)
+            }
+            .instrument(span.clone())
+        });
+        /*
+        web_app = web_app.middleware(|mut req, next| async {
+            // let trusted_headers = trusted_headers.clone();
+            let context = Context::default();
+            let span = tracing::trace_span!(
+                "http",
+                ctx_id = context.id_ref().to_string(),
+                data = field::Empty
+            );
+
+            tracing::dispatcher::get_default(|dispatch| {
+                let _context = context.clone();
+
+                if let Some(id) = span.id() {
+                    if let Some(current) = dispatch.current_span().id() {
+                        dispatch.record_follows_from(&id, current)
+                    }
+                } else {
+                    log::error!("tracing has not being setup"); // FIXME: translation
+                }
+            });
+
+            async move {
+                log::trace!("uri: {}", req.uri());
+                log::trace!(
+                    "full url: : {}",
+                    dirtybase_contract::http::axum::full_request_url(&req)
+                );
+                tracing::trace!(
+                    "host: {:?}",
+                    dirtybase_contract::http::axum::host_from_request(&req)
+                );
+
+                // 1. Find the tenant
+                #[cfg(feature = "multitenant")]
+                if let Ok(manager) = context.get::<TenantResolverProvider>().await {
+                    if let Some(raw_id) =
+                        manager.pluck_id_str_from_request(&req, TenantIdLocation::Subdomain)
+                    {
+                        tracing::trace!("current tenant Id: {}", &raw_id);
+                        if let Ok(manager) = context.get::<TenantStorageProvider>().await {
+                            tracing::trace!("validate tenant id and try fetching data");
+                            // let tenant = manager.by_id(raw_id).await;
+                            // tracing::trace!("found tenant record: {}", tenant.is_some());
+                        }
+                    }
+                }
+
+                // Add the request context
+                // context.set(HttpContext::new(
+                //     &req,
+                //     *trusted_headers.as_ref(),
+                //     &trusted_ips,
+                // ));
                 req.extensions_mut().insert(context.clone());
 
                 // pass the request
@@ -238,7 +329,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             }
             .instrument(span.clone())
             .await
-        });
+        });*/
     }
     drop(middleware_manager);
 

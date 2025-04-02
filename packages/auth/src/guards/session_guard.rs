@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 
 use dirtybase_contract::{
+    http::HttpContext,
     prelude::{
         ConnectInfo, FromRequest, FromRequestParts, HeaderValue,
         connect_info::Connected,
@@ -39,6 +40,11 @@ pub async fn authenticate(resolver: GuardResolver) -> GuardResolver {
 
         tracing::warn!("current user id: {:?}", user_id);
         tracing::warn!("we go the session: {}", session.id());
+
+        if let Ok(http_context) = resolver.context().get::<HttpContext>().await {
+            //
+            tracing::warn!(">>>> IP from http context: {:?}", http_context.ip())
+        }
     }
 
     resolver

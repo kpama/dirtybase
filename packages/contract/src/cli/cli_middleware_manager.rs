@@ -83,7 +83,7 @@ impl CliMiddlewareManager {
                 move |(a, b, c), _| {
                     let result = (handler)(a, b, c);
                     Box::pin(async move {
-                        result.await;
+                        _ = result.await;
                     })
                 },
             )
