@@ -1,13 +1,15 @@
 use std::{
     collections::{HashMap, VecDeque},
+    fmt::Display,
     net::{IpAddr, SocketAddr},
     str::FromStr,
 };
 
 use axum::{
     extract::{ConnectInfo, Request},
-    http::{HeaderMap, HeaderValue, Uri},
+    http::{header::USER_AGENT, HeaderMap, HeaderValue, Uri},
 };
+use dirtybase_helper::hash::sha256;
 
 #[derive(Clone)]
 pub struct HttpContext {
@@ -30,6 +32,15 @@ impl HttpContext {
     }
     pub fn path(&self) -> &str {
         self.uri.path()
+    }
+
+    pub fn user_agent(&self) -> Option<HeaderValue> {
+        self.headers.get(USER_AGENT).cloned()
+    }
+
+    pub fn fingerprint(&self) -> String {
+        let id = self.to_string();
+        sha256::hash_str(&id)
     }
 
     pub fn full_path(&self) -> String {
@@ -194,6 +205,22 @@ impl<T> From<&Request<T>> for HttpContext {
             ip: None,
             info: req.extensions().get::<ConnectInfo<_>>().cloned(),
         }
+    }
+}
+
+impl Display for HttpContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let ip = if let Some(ip) = self.ip() {
+            ip.to_string()
+        } else {
+            String::new()
+        };
+        let user_agent = if let Some(ua) = self.user_agent() {
+            ua.to_str().unwrap().to_string()
+        } else {
+            String::new()
+        };
+        write!(f, "{}::{}", ip, user_agent)
     }
 }
 

@@ -20,3 +20,4 @@ async-trait = { workspace = true }
 uuid = { workspace = true }
 uuid25 = { workspace = true }
 tracing = { workspace = true }
+cookie = { workspace = true }

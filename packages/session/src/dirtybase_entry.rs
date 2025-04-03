@@ -1,19 +1,20 @@
 use std::sync::Arc;
 
+use cookie::SameSite;
 use dirtybase_contract::{
     ExtensionSetup,
     app::Context,
     async_trait,
     axum::response::Response,
+    http::HttpContext,
     prelude::{
         Request,
         axum_extra::extract::{CookieJar, cookie::Cookie},
-        header::USER_AGENT,
     },
     session::{Session, SessionId, SessionStorageProvider},
 };
 
-use crate::{SessionConfig, resource_manager::register_resource_manager, storage::MemoryStorage};
+use crate::{SessionConfig, resource_manager::register_resource_manager};
 
 #[derive(Default)]
 pub struct Extension;
@@ -59,8 +60,6 @@ impl Extension {
         context: Context,
         cookie: &CookieJar,
     ) -> Request {
-        let user_agent = req.headers().get(USER_AGENT).cloned();
-        println!("headers: {:#?}", req.headers());
         if let Ok(config) = context.get_config::<SessionConfig>("session").await {
             if let Ok(provider) = context.get::<Arc<SessionStorageProvider>>().await {
                 let request_session_id = cookie.get(config.cookie_id_ref());
@@ -73,11 +72,16 @@ impl Extension {
                     None => SessionId::new(),
                 };
 
-                let session = Session::init(id, provider, config.lifetime()).await;
-                tracing::trace!("adding session {} to request", session.id().to_string());
+                if let Ok(h_context) = context.get::<HttpContext>().await {
+                    let session =
+                        Session::init(id, provider, config.lifetime(), &h_context.fingerprint())
+                            .await;
 
-                context.set(session).await;
-                context.set(config).await;
+                    tracing::trace!("adding session {} to request", session.id().to_string());
+
+                    context.set(session).await;
+                    context.set(config).await;
+                }
             }
         } else {
             tracing::error!("could not setup request sesssion")
@@ -98,10 +102,15 @@ impl Extension {
                     "context instance still exist: session Id: {:?}",
                     session.id()
                 );
-                cookie = cookie.add(Cookie::new(
-                    config.cookie_id().to_string(),
-                    session.id().to_string(),
-                ));
+                let mut entry =
+                    Cookie::new(config.cookie_id().to_string(), session.id().to_string());
+
+                let mut ts = cookie::time::OffsetDateTime::now_utc();
+                ts += cookie::time::Duration::minutes(config.lifetime());
+                entry.set_expires(ts);
+                entry.set_same_site(SameSite::Strict);
+                // entry.set_secure(true);
+                cookie = cookie.add(entry);
             }
         }
 

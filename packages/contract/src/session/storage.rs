@@ -1,24 +1,25 @@
 use std::{fmt::Display, sync::Arc};
 
 use busybody::async_trait;
-
-use crate::db::types::ArcUuid7;
+use dirtybase_helper::security::random_bytes_hex;
 
 use super::SessionData;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, serde::Serialize, serde::Deserialize)]
-pub struct SessionId(ArcUuid7);
+pub struct SessionId(Arc<String>);
 
 impl SessionId {
     pub fn new() -> Self {
-        Self(ArcUuid7::default())
+        Self(random_bytes_hex(32).into())
     }
 
     pub fn from_str(input: &str) -> Option<Self> {
-        match ArcUuid7::try_from(input) {
-            Ok(v) => Some(Self(v)),
-            _ => None,
+        if let Ok(bytes) = hex::decode(input) {
+            if bytes.len() == 32 {
+                return Some(Self(input.to_string().into()));
+            }
         }
+        None
     }
 }
 
@@ -42,14 +43,11 @@ impl From<&SessionId> for String {
 
 #[async_trait]
 pub trait SessionStorage: Send + Sync {
-    /// Start a session for the specified ID
-    async fn open(&self, id: SessionId);
-
     /// Persists the provided data
     async fn store(&self, id: SessionId, value: SessionData);
 
     /// Retrieves the data with the specified key
-    async fn get(&self, id: &SessionId) -> Option<SessionData>;
+    async fn get(&self, id: &SessionId) -> SessionData;
 
     /// Deletes and return the data with with specify key
     async fn remove(&self, id: &SessionId) -> Option<SessionData>;
@@ -63,15 +61,11 @@ pub struct SessionStorageProvider(Box<dyn SessionStorage>);
 
 #[async_trait]
 impl SessionStorage for SessionStorageProvider {
-    async fn open(&self, id: SessionId) {
-        self.0.open(id).await;
-    }
-
     async fn store(&self, id: SessionId, value: SessionData) {
         self.0.store(id, value).await;
     }
 
-    async fn get(&self, id: &SessionId) -> Option<SessionData> {
+    async fn get(&self, id: &SessionId) -> SessionData {
         self.0.get(id).await
     }
 

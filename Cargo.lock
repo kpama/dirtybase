@@ -337,6 +337,7 @@ dependencies = [
  "tower",
  "tower-layer",
  "tower-service",
+ "tracing",
 ]
 
 [[package]]
@@ -1169,6 +1170,7 @@ dependencies = [
  "base64ct",
  "chrono",
  "hex",
+ "rand 0.9.0",
  "serde",
  "serde_json",
  "sha2",
@@ -1235,6 +1237,7 @@ dependencies = [
  "async-trait",
  "bcrypt",
  "busybody",
+ "cookie",
  "dirtybase_contract",
  "dirtybase_cron",
  "dirtybase_db_macro",

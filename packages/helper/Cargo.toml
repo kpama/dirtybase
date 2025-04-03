@@ -15,5 +15,6 @@ ulid = { workspace = true }
 uuid = { workspace = true }
 uuid25 = { workspace = true }
 base64ct = { workspace = true }
+rand = { workspace = true }
 hex = { workspace = true }
 snowflaker = { workspace = true, features = ["dynamic"] }

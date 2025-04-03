@@ -16,61 +16,52 @@ impl Session {
             id: id.clone(),
             storage,
         };
-        instance.storage.open(id).await;
         instance
     }
 
     pub async fn init(
-        old_id: SessionId,
+        id: SessionId,
         storage: Arc<SessionStorageProvider>,
         lifetime: i64,
+        fingerprint: &str,
     ) -> Self {
-        if let Some(data) = storage.get(&old_id).await {
-            if !data.has_expired(lifetime) {
-                tracing::event!(
-                    tracing::Level::TRACE,
-                    "Session {} is still valid",
-                    old_id.to_string()
-                );
-
-                let session = Self {
-                    id: old_id,
-                    storage,
-                };
-                session.touch().await;
-                return session;
+        let mut session = Self::new(id, storage).await;
+        let is_valid = if fingerprint.is_empty() || fingerprint != session.fingerprint().await {
+            false
+        } else {
+            if session.has_expired(lifetime).await {
+                false
             } else {
-                storage.remove(&old_id).await;
+                true
             }
+        };
+
+        if is_valid {
+            session.touch().await;
+        } else {
+            session = session.invalidate().await;
+            session.set_fingerprint(fingerprint).await;
         }
 
-        tracing::event!(
-            tracing::Level::TRACE,
-            "Session {} has expired. Generating a new one",
-            old_id.to_string()
-        );
-
-        Self::new(SessionId::new(), storage).await
+        session
     }
 
     pub async fn get<T: DeserializeOwned>(&self, name: &str) -> Option<T> {
-        if let Some(bucket) = self.storage.get(&self.id).await {
-            if let Some(value) = bucket.get(name) {
-                return serde_json::from_str(&value).ok();
-            }
+        let bucket = self.storage.get(&self.id).await;
+        if let Some(value) = bucket.get(name) {
+            return serde_json::from_str(&value).ok();
         }
 
         None
     }
 
     pub async fn put<V: serde::Serialize>(&self, name: &str, value: V) {
-        if let Some(mut bucket) = self.storage.get(&self.id).await {
-            bucket.add(
-                name.to_string(),
-                serde_json::to_string(&value).unwrap_or_default(),
-            );
-            self.storage.store(self.id.clone(), bucket).await;
-        }
+        let bucket = self.storage.get(&self.id).await;
+        bucket.add(
+            name.to_string(),
+            serde_json::to_string(&value).unwrap_or_default(),
+        );
+        self.storage.store(self.id.clone(), bucket).await;
     }
 
     pub fn id(&self) -> SessionId {
@@ -78,17 +69,14 @@ impl Session {
     }
 
     pub async fn touch(&self) {
-        if let Some(mut bucket) = self.storage.get(&self.id).await {
-            bucket.touch();
-            self.storage.store(self.id.clone(), bucket).await;
-        }
+        let bucket = self.storage.get(&self.id).await;
+        bucket.touch();
+        self.storage.store(self.id.clone(), bucket).await;
     }
 
     pub async fn has_expired(&self, lifetime: i64) -> bool {
-        if let Some(bucket) = self.storage.get(&self.id).await {
-            return bucket.has_expired(lifetime);
-        }
-        true
+        let bucket = self.storage.get(&self.id).await;
+        bucket.has_expired(lifetime)
     }
 
     pub async fn delete(self) {
@@ -98,5 +86,13 @@ impl Session {
     pub async fn invalidate(self) -> Self {
         self.storage.remove(&self.id).await;
         Self::new(SessionId::new(), self.storage).await
+    }
+
+    async fn fingerprint(&self) -> String {
+        self.get("_fp").await.unwrap_or_default()
+    }
+
+    async fn set_fingerprint(&self, value: &str) {
+        self.put("_fp", value).await
     }
 }

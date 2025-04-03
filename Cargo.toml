@@ -80,6 +80,7 @@ axum-extra = { version = "0.10", features = [
 	"cookie",
 	"cookie-private",
 	"cookie-signed",
+	"attachment",
 	"query",
 	"protobuf",
 	"typed-header",
@@ -107,3 +108,4 @@ tempfile = { version = "3.19" }
 uuid25 = { version = "0.3", features = ["gen", "serde", "uuid"] }
 snowflaker = { version = "0.3", features = ["dynamic"] }
 ipnet = { version = "2" }
+cookie = { version = "0.18" }

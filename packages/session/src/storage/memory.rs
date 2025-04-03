@@ -13,18 +13,20 @@ pub struct MemoryStorage {
 
 #[async_trait]
 impl SessionStorage for MemoryStorage {
-    async fn open(&self, id: SessionId) {
-        self.store(id, SessionData::new()).await;
-    }
-
     async fn store(&self, id: SessionId, value: SessionData) {
         let mut w_lock = self.storage.write().await;
         w_lock.insert(id, value);
     }
 
-    async fn get(&self, id: &SessionId) -> Option<SessionData> {
+    async fn get(&self, id: &SessionId) -> SessionData {
         let r_lock = self.storage.read().await;
-        r_lock.get(&id).cloned()
+        if let Some(data) = r_lock.get(&id).cloned() {
+            return data;
+        }
+        drop(r_lock);
+
+        self.store(id.clone(), SessionData::new()).await;
+        self.get(id).await
     }
 
     async fn remove(&self, id: &SessionId) -> Option<SessionData> {

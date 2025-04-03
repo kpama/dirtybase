@@ -5,17 +5,12 @@ pub struct DummyStorage;
 
 #[async_trait::async_trait]
 impl SessionStorage for DummyStorage {
-    async fn open(&self, _id: SessionId) {
-        log::debug!("dummy session storage open");
-    }
-
     async fn store(&self, _id: SessionId, _value: SessionData) {
         log::debug!("dummy session storage store");
     }
 
-    async fn get(&self, _id: &SessionId) -> Option<SessionData> {
-        log::debug!("dummy session storage get");
-        None
+    async fn get(&self, _id: &SessionId) -> SessionData {
+        SessionData::new()
     }
 
     async fn remove(&self, _id: &SessionId) -> Option<SessionData> {
