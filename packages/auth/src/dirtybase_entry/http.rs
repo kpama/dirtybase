@@ -10,8 +10,8 @@ pub(crate) fn register_routes(manager: &mut RouterManager) {
     manager
         .general(Some("/auth"), |router| {
             router
-                .get("/login-form", login_form_handler, "auth::signin-form")
-                .post("/do-login", handle_login_request, "auth::do-signin")
+                .get("/login-form", login_form_handler, "auth:signin-form")
+                .post("/do-login", handle_login_request, "auth:do-signin")
                 .post("/my-token", handle_get_auth_token, "auth:get-token")
                 .get(
                     "/register-form",
@@ -34,6 +34,6 @@ pub(crate) fn register_routes(manager: &mut RouterManager) {
                 .post("/my-token", handle_get_auth_token, "auth-api:get-token");
         })
         .api(Some("/auth/v1"), |router| {
-            router.get("/me", handle_api_get_me, "auth::get-me");
+            router.get("/me", handle_api_get_me, "auth:get-me");
         });
 }

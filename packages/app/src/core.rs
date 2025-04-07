@@ -11,6 +11,7 @@ use axum::http::request::Parts;
 
 pub use config::Config;
 pub use config::ConfigBuilder;
+pub use config::CookieConfig;
 
 use dirtybase_contract::ExtensionManager;
 use dirtybase_contract::app::Context;

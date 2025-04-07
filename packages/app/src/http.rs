@@ -1,6 +1,10 @@
 use std::{env, net::SocketAddr, sync::Arc};
 
-use axum::Router;
+use axum::{
+    Router,
+    body::Body,
+    http::{Request, header::COOKIE},
+};
 use axum_extra::extract::CookieJar;
 use dirtybase_contract::{
     ExtensionManager,
@@ -13,12 +17,12 @@ use dirtybase_contract::multitenant::{
     TenantIdLocation, TenantResolverProvider, TenantResolverTrait, TenantStorageProvider,
 };
 
+use dirtybase_encrypt::Encrypter;
 use named_routes_axum::RouterWrapper;
-use tower_service::Service;
 use tracing::{Instrument, field};
 
 use crate::{
-    core::{AppService, Config, WebSetup},
+    core::{AppService, WebSetup},
     shutdown_signal,
 };
 
@@ -192,9 +196,8 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             );
 
             tracing::dispatcher::get_default(|dispatch| {
-                let _context = context.clone();
-
                 if let Some(id) = span.id() {
+                    log::error!("tracing span id: {:?}", &id);
                     if let Some(current) = dispatch.current_span().id() {
                         dispatch.record_follows_from(&id, current)
                     }
@@ -239,97 +242,37 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                     .await;
                 req.extensions_mut().insert(context.clone());
 
+                let cookie_jar = CookieJar::from_headers(req.headers());
+                let app = context.get::<AppService>().await.unwrap();
+                let app_config = app.config_ref();
+                let cookie_config = app_config.web_cookie_ref();
+                let encryptor = dirtybase_encrypt::Encrypter::new(
+                    app_config.key_ref(),
+                    app_config.previous_keys(),
+                );
+
+                decrypt_cookies(cookie_jar, &encryptor, cookie_config, &mut req);
+
                 // pass the request
                 let mut response = next.run(req).await;
 
-                let mut cookie = CookieJar::from_headers(response.headers());
+                let mut cookie_jar = CookieJar::from_headers(response.headers());
 
                 response.extensions_mut().insert(context.clone());
 
                 for ext in ExtensionManager::list().read().await.iter() {
                     tracing::trace!("on web response: {}", ext.id());
-                    (response, cookie) =
-                        ext.on_web_response(response, cookie, context.clone()).await;
+                    (response, cookie_jar) = ext
+                        .on_web_response(response, cookie_jar, context.clone())
+                        .await;
                 }
 
-                (cookie, response)
+                cookie_jar = encrypt_cookies(cookie_jar, &encryptor, cookie_config);
+
+                (cookie_jar, response)
             }
             .instrument(span.clone())
         });
-        /*
-        web_app = web_app.middleware(|mut req, next| async {
-            // let trusted_headers = trusted_headers.clone();
-            let context = Context::default();
-            let span = tracing::trace_span!(
-                "http",
-                ctx_id = context.id_ref().to_string(),
-                data = field::Empty
-            );
-
-            tracing::dispatcher::get_default(|dispatch| {
-                let _context = context.clone();
-
-                if let Some(id) = span.id() {
-                    if let Some(current) = dispatch.current_span().id() {
-                        dispatch.record_follows_from(&id, current)
-                    }
-                } else {
-                    log::error!("tracing has not being setup"); // FIXME: translation
-                }
-            });
-
-            async move {
-                log::trace!("uri: {}", req.uri());
-                log::trace!(
-                    "full url: : {}",
-                    dirtybase_contract::http::axum::full_request_url(&req)
-                );
-                tracing::trace!(
-                    "host: {:?}",
-                    dirtybase_contract::http::axum::host_from_request(&req)
-                );
-
-                // 1. Find the tenant
-                #[cfg(feature = "multitenant")]
-                if let Ok(manager) = context.get::<TenantResolverProvider>().await {
-                    if let Some(raw_id) =
-                        manager.pluck_id_str_from_request(&req, TenantIdLocation::Subdomain)
-                    {
-                        tracing::trace!("current tenant Id: {}", &raw_id);
-                        if let Ok(manager) = context.get::<TenantStorageProvider>().await {
-                            tracing::trace!("validate tenant id and try fetching data");
-                            // let tenant = manager.by_id(raw_id).await;
-                            // tracing::trace!("found tenant record: {}", tenant.is_some());
-                        }
-                    }
-                }
-
-                // Add the request context
-                // context.set(HttpContext::new(
-                //     &req,
-                //     *trusted_headers.as_ref(),
-                //     &trusted_ips,
-                // ));
-                req.extensions_mut().insert(context.clone());
-
-                // pass the request
-                let mut response = next.run(req).await;
-
-                let mut cookie = CookieJar::from_headers(response.headers());
-
-                response.extensions_mut().insert(context.clone());
-
-                for ext in ExtensionManager::list().read().await.iter() {
-                    tracing::trace!("on web response: {}", ext.id());
-                    (response, cookie) =
-                        ext.on_web_response(response, cookie, context.clone()).await;
-                }
-
-                (cookie, response)
-            }
-            .instrument(span.clone())
-            .await
-        });*/
     }
     drop(middleware_manager);
 
@@ -372,4 +315,57 @@ fn display_welcome_info(address: &str, port: u16) {
     );
     eprintln!("version: {}", VERSION);
     eprintln!("Http server running at : {} on port: {}", address, port);
+}
+
+fn encrypt_cookies(
+    cookie_jar: CookieJar,
+    encryptor: &Encrypter,
+    cookie_config: &super::core::CookieConfig,
+) -> CookieJar {
+    let mut jar = CookieJar::new();
+
+    if !cookie_config.encrypt() {
+        return cookie_jar;
+    }
+
+    for entry in cookie_jar.iter() {
+        let mut new_entry = entry.clone();
+        new_entry.set_same_site(cookie_config.same_site());
+        new_entry.set_secure(cookie_config.secure());
+        new_entry.set_http_only(cookie_config.http_only());
+
+        if let Ok(val) = encryptor.encrypt(entry.value().bytes().collect::<Vec<u8>>()) {
+            new_entry.set_value(dirtybase_helper::base64::encode(&val));
+        }
+        jar = jar.add(new_entry);
+    }
+    jar
+}
+
+fn decrypt_cookies(
+    cookie_jar: CookieJar,
+    encryptor: &Encrypter,
+    cookie_config: &super::core::CookieConfig,
+    req: &mut Request<Body>,
+) {
+    if !cookie_config.encrypt() {
+        return;
+    }
+
+    let mut jar = CookieJar::new();
+    for entry in cookie_jar.iter() {
+        if let Ok(data) = dirtybase_helper::base64::decode(entry.value()) {
+            if let Ok(val) = encryptor.decrypt(&data) {
+                let mut new_entry = entry.clone();
+                new_entry.set_value(String::from_utf8(val).unwrap_or_default());
+                jar = jar.add(new_entry);
+            }
+        }
+    }
+    req.headers_mut().remove(COOKIE);
+    for cookie in jar.iter() {
+        if let Ok(header_value) = cookie.encoded().to_string().parse() {
+            req.headers_mut().append(COOKIE, header_value);
+        }
+    }
 }

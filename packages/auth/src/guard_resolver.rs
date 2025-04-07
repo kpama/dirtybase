@@ -56,6 +56,10 @@ impl GuardResolver {
         self.resp = Some(resp);
     }
 
+    pub fn clear_response(&mut self) {
+        self.resp = None;
+    }
+
     pub fn set_user(&mut self, user: Result<Option<AuthUser>, anyhow::Error>) {
         self.user = Some(user);
     }

@@ -67,7 +67,7 @@ impl RouterManager {
         prefix: Option<&str>,
         mut callback: impl FnMut(&mut RouterBuilder) -> (),
     ) -> &mut Self {
-        let mut builder = RouterBuilder::default();
+        let mut builder = RouterBuilder::new(Some(&self.generate_prefix(RouteType::Api, prefix)));
         callback(&mut builder);
         self.append(RouteType::Api, prefix.unwrap_or_default(), builder)
     }
@@ -77,7 +77,8 @@ impl RouterManager {
         prefix: Option<&str>,
         callback: fn(&mut RouterBuilder) -> (),
     ) -> &mut Self {
-        let mut builder = RouterBuilder::default();
+        let mut builder =
+            RouterBuilder::new(Some(&self.generate_prefix(RouteType::InsecureApi, prefix)));
         callback(&mut builder);
         self.append(RouteType::InsecureApi, prefix.unwrap_or_default(), builder)
     }
@@ -87,7 +88,8 @@ impl RouterManager {
         prefix: Option<&str>,
         mut callback: impl FnMut(&mut RouterBuilder) -> (),
     ) -> &mut Self {
-        let mut builder = RouterBuilder::default();
+        let mut builder =
+            RouterBuilder::new(Some(&self.generate_prefix(RouteType::Backend, prefix)));
         callback(&mut builder);
         self.append(RouteType::Backend, prefix.unwrap_or_default(), builder)
     }
@@ -97,7 +99,8 @@ impl RouterManager {
         prefix: Option<&str>,
         mut callback: impl FnMut(&mut RouterBuilder) -> (),
     ) -> &mut Self {
-        let mut builder = RouterBuilder::default();
+        let mut builder =
+            RouterBuilder::new(Some(&self.generate_prefix(RouteType::General, prefix)));
         callback(&mut builder);
         self.append(RouteType::General, prefix.unwrap_or_default(), builder)
     }
@@ -107,7 +110,7 @@ impl RouterManager {
         prefix: Option<&str>,
         mut callback: impl FnMut(&mut RouterBuilder) -> (),
     ) -> &mut Self {
-        let mut builder = RouterBuilder::default();
+        let mut builder = RouterBuilder::new(Some(&self.generate_prefix(RouteType::Dev, prefix)));
         callback(&mut builder);
         self.append(RouteType::Dev, prefix.unwrap_or_default(), builder)
     }
@@ -119,12 +122,24 @@ impl RouterManager {
     fn append(&mut self, base_type: RouteType, prefix: &str, builder: RouterBuilder) -> &mut Self {
         if let Some(entry) = self.builders.get_mut(&base_type) {
             if entry.1.is_none() {
-                entry.1 = Some(RouterBuilder::default());
+                entry.1 = Some(RouterBuilder::new(Some(&entry.0)));
             }
 
             entry.1.as_mut().unwrap().append(builder, prefix);
         }
 
         self
+    }
+
+    fn generate_prefix(&self, base_type: RouteType, prefix: Option<&str>) -> String {
+        format!(
+            "{}{}",
+            if let Some(entry) = self.builders.get(&base_type) {
+                &entry.0
+            } else {
+                ""
+            },
+            prefix.unwrap_or_default()
+        )
     }
 }

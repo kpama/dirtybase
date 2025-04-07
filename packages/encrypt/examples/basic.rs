@@ -5,7 +5,7 @@ fn main() {
     let key = Encrypter::generate_aes256gcm_key();
     let data = "The quick brown fox jumps over the lazy dog";
 
-    let encrypter = Encrypter::new(key, None);
+    let encrypter = Encrypter::new(&key, None);
 
     let encrypted_data = encrypter.encrypt(data.into());
 

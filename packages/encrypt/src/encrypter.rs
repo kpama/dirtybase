@@ -10,9 +10,9 @@ pub struct Encrypter {
 }
 
 impl Encrypter {
-    pub fn new(key: Vec<u8>, previous_keys: Option<Vec<Vec<u8>>>) -> Self {
+    pub fn new(key: &[u8], previous_keys: Option<Vec<Vec<u8>>>) -> Self {
         Self {
-            key: Arc::new(key),
+            key: Arc::new(key.iter().map(|e| e.clone()).collect::<Vec<u8>>()),
             previous_keys: Arc::new(previous_keys),
         }
     }

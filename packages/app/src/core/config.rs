@@ -4,6 +4,7 @@ use std::sync::Arc;
 use axum::http::HeaderName;
 use axum::http::HeaderValue;
 use axum::http::Method;
+use axum_extra::extract::cookie::SameSite;
 use base64ct::Encoding;
 use dirtybase_contract::app::Context;
 use dirtybase_contract::config::ConfigResult;
@@ -13,6 +14,7 @@ use dirtybase_contract::config::field_to_option_array;
 use dirtybase_contract::config::field_to_vec_u8;
 use dirtybase_contract::config::vec_u8_to_field;
 use serde::Deserializer;
+use serde::Serializer;
 use tower_http::cors::AllowHeaders;
 use tower_http::cors::AllowMethods;
 use tower_http::cors::AllowOrigin;
@@ -149,6 +151,47 @@ impl MiddlewareConfig {
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct CookieConfig {
+    http_only: bool,
+    #[serde(
+        deserialize_with = "same_site_de_field",
+        serialize_with = "same_site_se_field"
+    )]
+    same_site: SameSite,
+    secure: bool,
+    encrypt: bool,
+}
+
+impl Default for CookieConfig {
+    fn default() -> Self {
+        Self {
+            http_only: true,
+            same_site: SameSite::Lax,
+            secure: true,
+            encrypt: true,
+        }
+    }
+}
+
+impl CookieConfig {
+    pub fn http_only(&self) -> bool {
+        self.http_only
+    }
+
+    pub fn same_site(&self) -> SameSite {
+        self.same_site
+    }
+
+    pub fn secure(&self) -> bool {
+        self.secure
+    }
+
+    pub fn encrypt(&self) -> bool {
+        self.encrypt
+    }
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 struct ConfigEntry {
     name: String,
     #[serde(
@@ -189,6 +232,7 @@ struct ConfigEntry {
     web_admin_routes_cors: RouterCorsConfig,
     #[serde(default)]
     web_dev_routes_cors: RouterCorsConfig,
+    web_cookie: CookieConfig,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -242,8 +286,11 @@ impl Config {
         &self.entry.key
     }
 
-    pub fn previous_keys(&self) -> Option<Arc<Vec<Vec<u8>>>> {
-        self.entry.previous_keys.clone()
+    pub fn previous_keys(&self) -> Option<Vec<Vec<u8>>> {
+        if let Some(v) = &self.entry.previous_keys {
+            return Some(v.iter().map(|e| e.clone()).collect::<Vec<Vec<u8>>>());
+        }
+        None
     }
 
     pub fn previous_keys_ref(&self) -> &Option<Arc<Vec<Vec<u8>>>> {
@@ -339,6 +386,14 @@ impl Config {
             return headers.clone();
         }
         Vec::new()
+    }
+
+    pub fn web_cookie_ref(&self) -> &CookieConfig {
+        &self.entry.web_cookie
+    }
+
+    pub fn web_cookie(&self) -> CookieConfig {
+        self.entry.web_cookie.clone()
     }
 
     pub fn environment(&self) -> &dirtybase_contract::config::CurrentEnvironment {
@@ -482,5 +537,30 @@ impl TryFromDirtyConfig for Config {
 
     async fn from_config(config: &DirtyConfig, _ctx: &Context) -> ConfigResult<Self::Returns> {
         Self::try_from_config(config).await
+    }
+}
+
+pub fn same_site_de_field<'de, D>(deserializer: D) -> Result<SameSite, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = serde::de::Deserialize::deserialize(deserializer).unwrap_or_default();
+
+    match s.trim().to_ascii_lowercase().as_str() {
+        "lax" => Ok(SameSite::Lax),
+        "strict" => Ok(SameSite::Strict),
+        "none" => Ok(SameSite::None),
+        _ => Ok(SameSite::Lax),
+    }
+}
+
+pub fn same_site_se_field<S>(same_site: &SameSite, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match same_site {
+        &SameSite::Lax => s.serialize_str("lax"),
+        &SameSite::Strict => s.serialize_str("strict"),
+        &SameSite::None => s.serialize_str("none"),
     }
 }

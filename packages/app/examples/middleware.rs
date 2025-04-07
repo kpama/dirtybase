@@ -4,7 +4,7 @@ use tracing::Level;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_max_level(Level::DEBUG)
+        .with_max_level(Level::INFO)
         .try_init()
         .expect("could not setup tracing");
     let app = dirtybase_app::setup().await.unwrap();

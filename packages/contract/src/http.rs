@@ -9,6 +9,7 @@ pub mod axum;
 use std::sync::Arc;
 
 pub use http_context::*;
+pub use named_routes_axum;
 pub use router_builder::*;
 pub use router_manager::*;
 pub use web_middleware_manager::*;
@@ -27,5 +28,6 @@ pub mod prelude {
     pub use axum_extra;
     pub use axum_extra::headers::authorization::*;
     pub use axum_extra::headers::Header;
+    pub use named_routes_axum::*;
     pub use validator::Validate;
 }

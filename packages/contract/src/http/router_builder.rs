@@ -15,7 +15,7 @@ pub struct RouterBuilder {
 impl Default for RouterBuilder {
     fn default() -> Self {
         Self {
-            wrapper: Some(RouterWrapper::default()),
+            wrapper: Some(RouterWrapper::new()),
             middleware: None,
             nest: None,
             merge: None,
@@ -24,6 +24,14 @@ impl Default for RouterBuilder {
 }
 
 impl RouterBuilder {
+    pub fn new(prefix: Option<&str>) -> Self {
+        Self {
+            wrapper: Some(RouterWrapper::new_with_prefix(prefix)),
+            middleware: None,
+            nest: None,
+            merge: None,
+        }
+    }
     pub fn new_with_wrapper(wrapper: RouterWrapper<busybody::ServiceContainer>) -> Self {
         Self {
             wrapper: Some(wrapper),

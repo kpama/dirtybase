@@ -108,8 +108,7 @@ impl Extension {
                 let mut ts = cookie::time::OffsetDateTime::now_utc();
                 ts += cookie::time::Duration::minutes(config.lifetime());
                 entry.set_expires(ts);
-                entry.set_same_site(SameSite::Strict);
-                // entry.set_secure(true);
+                entry.set_path("/");
                 cookie = cookie.add(entry);
             }
         }

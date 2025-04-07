@@ -16,6 +16,7 @@ dirtybase_cron = { path = "../cron", version = "*" }
 dirtybase_auth = { path = "../auth", version = "*", optional = true }
 dirtybase_session = { path = "../session", version = "*", optional = true }
 dirtybase_multitenant = { path = "../multitenant", version = "*", optional = true }
+dirtybase_encrypt = { path ="../encrypt", version = "*" }
 simple-middleware = { workspace = true }
 anyhow = { workspace = true }
 validator = { workspace = true }

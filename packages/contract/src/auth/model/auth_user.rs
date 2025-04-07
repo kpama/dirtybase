@@ -28,6 +28,9 @@ use argon2::{
 
 use super::ParseToken;
 
+// FIXME: use this for username. 40 character long max
+pub struct Username(Arc<String>);
+
 #[derive(Clone, Validate, Serialize, Deserialize)]
 pub struct AuthUser {
     id: Option<ArcUuid7>,
