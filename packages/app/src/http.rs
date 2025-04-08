@@ -330,8 +330,13 @@ fn encrypt_cookies(
 
     for entry in cookie_jar.iter() {
         let mut new_entry = entry.clone();
-        new_entry.set_same_site(cookie_config.same_site());
-        new_entry.set_secure(cookie_config.secure());
+        let same_site = new_entry.same_site();
+        if new_entry.secure().is_none() || new_entry.secure().unwrap() == false {
+            new_entry.set_secure(cookie_config.secure());
+        }
+        if same_site.is_none() || same_site.unwrap().is_strict() == false {
+            new_entry.set_same_site(cookie_config.same_site());
+        }
         new_entry.set_http_only(cookie_config.http_only());
 
         if let Ok(val) = encryptor.encrypt(entry.value().bytes().collect::<Vec<u8>>()) {
