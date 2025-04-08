@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use cookie::Cookie;
 use serde::de::DeserializeOwned;
 
 use super::{SessionId, SessionStorage, SessionStorageProvider};
@@ -8,6 +9,7 @@ use super::{SessionId, SessionStorage, SessionStorageProvider};
 pub struct Session {
     id: SessionId,
     storage: Arc<SessionStorageProvider>,
+    lifetime: i64,
 }
 
 impl Session {
@@ -15,6 +17,7 @@ impl Session {
         let instance = Self {
             id: id.clone(),
             storage,
+            lifetime: 60,
         };
         instance
     }
@@ -26,6 +29,7 @@ impl Session {
         fingerprint: &str,
     ) -> Self {
         let mut session = Self::new(id, storage).await;
+        session.lifetime = lifetime;
         let is_valid = if fingerprint.is_empty() || fingerprint != session.fingerprint().await {
             false
         } else {
@@ -84,8 +88,30 @@ impl Session {
     }
 
     pub async fn invalidate(self) -> Self {
+        let fingerprint = self.fingerprint().await;
+        let lifetime = self.lifetime;
+
         self.storage.remove(&self.id).await;
-        Self::new(SessionId::new(), self.storage).await
+
+        let mut instance = Self::new(SessionId::new(), self.storage).await;
+        instance.lifetime = lifetime;
+        instance.set_fingerprint(&fingerprint).await;
+
+        instance
+    }
+
+    /// Creates a cookie that has the same lifetime as the session
+    pub fn make_sessioned_cookie<V>(&self, name: &str, value: V) -> Cookie<'static>
+    where
+        V: ToString,
+    {
+        let mut cookie = Cookie::new(name.to_string(), value.to_string());
+        let mut ts = cookie::time::OffsetDateTime::now_utc();
+        ts += cookie::time::Duration::minutes(self.lifetime);
+
+        cookie.set_path("/");
+        cookie.set_expires(ts);
+        cookie
     }
 
     async fn fingerprint(&self) -> String {

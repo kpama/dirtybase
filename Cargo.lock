@@ -1067,6 +1067,7 @@ dependencies = [
  "chrono",
  "clap",
  "config",
+ "cookie",
  "crypto",
  "dirtybase_helper",
  "dotenvy",

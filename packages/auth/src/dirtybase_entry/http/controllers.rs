@@ -1,36 +1,85 @@
 use dirtybase_contract::{
-    app::RequestContext,
+    app::{CtxExt, RequestContext},
     auth::{AuthUser, AuthUserPayload, LoginCredential},
     axum::response::Html,
-    http::{api::ApiResponse, prelude::*},
+    http::{HttpContext, api::ApiResponse, named_routes_axum, prelude::*},
+    session::Session,
 };
-use dirtybase_helper::hash::sha256;
+use dirtybase_helper::{hash::sha256, security::random_bytes_hex};
 
-use crate::StorageResolver;
+use crate::{AuthConfig, StorageResolver};
 
-pub(crate) async fn login_form_handler() -> impl IntoResponse {
+pub(crate) async fn login_form_handler(
+    RequestContext(context): RequestContext,
+) -> impl IntoResponse {
+    let mut submit_uri = named_routes_axum::helpers::get_path("auth:do-signin");
+    if let Ok(auth_config) = context.get_config::<AuthConfig>("auth").await {
+        submit_uri = named_routes_axum::helpers::get_path(&auth_config.auth_route());
+    }
+
     Html(
-        "<h1>Login Form</h1>
-      <form method='post' action='/auth/do-registration'>
-    <label>Username: </label><input type='text' name='username' placeholder='username' /> <br/>
-    <label>Password: </label><input type='password' name='password' placeholder='password' /> <br/>
-    <button type='submit'>Login</button>
-    <p>
-         <a href='/auth/register-form'>Register </a>
-    </p>
-  </form>",
-    )
+            format!("<h1>Login Form</h1>
+          <form method='post' action='{}'>
+        <label>Username: </label><input type='text' name='username' placeholder='username' value='admin' /> <br/>
+        <label>Password: </label><input type='password' name='password' placeholder='password' value='password' /> <br/>
+        <button type='submit'>Login</button>
+        <p>
+             <a href='/auth/register-form'>Register </a>
+        </p>
+      </form>", submit_uri),
+        )
 }
 
-pub(crate) async fn handle_login_request(Form(cred): Form<LoginCredential>) -> impl IntoResponse {
-    ""
+pub(crate) async fn handle_login_request(
+    RequestContext(ctx): RequestContext,
+    CtxExt(http_ctx): CtxExt<HttpContext>,
+    Form(cred): Form<LoginCredential>,
+) -> impl IntoResponse {
+    // TODO: This will use the auth service in the future
+    let storage = StorageResolver::new(ctx.clone())
+        .get_provider()
+        .await
+        .unwrap();
+    let mut session = ctx.get::<Session>().await.unwrap();
+
+    let result = if cred.username().is_some() {
+        storage
+            .find_by_username(cred.username().as_ref().unwrap())
+            .await
+    } else {
+        let hash = sha256::hash_str(&cred.email().cloned().unwrap_or(":::nothing:::".to_string()));
+        storage.find_by_email_hash(&hash).await
+    };
+    if let Ok(Some(user)) = result {
+        if user.verify_password(cred.password()) {
+            // 1. generate cookie id
+            let cookie_key = random_bytes_hex(4);
+            // 2. generate auth hash
+            let hash = random_bytes_hex(16);
+            // 3. store hash in the session and cookie
+            session = session.invalidate().await;
+            ctx.set(session.clone()).await;
+            session.put("auth_hash", &hash).await;
+            session.put("auth_cookie_key", &cookie_key).await;
+            session.put("auth_user_id", user.id()).await;
+            let cookie = session.make_sessioned_cookie(&cookie_key, hash); // FIXME: Build the cookie instance!!!!
+            http_ctx.set_cookie(cookie).await;
+
+            return Html(format!(
+                "Welcome: {}, session id in cookie",
+                user.username_ref(),
+            ));
+        }
+    }
+
+    Html("Auth failed".to_string())
 }
 
 pub(crate) async fn handle_get_auth_token(
     RequestContext(ctx): RequestContext,
     Json(cred): Json<LoginCredential>,
 ) -> impl IntoResponse {
-    // This will use the auth service in the future
+    // TODO: This will use the auth service in the future
     let storage = StorageResolver::new(ctx).get_provider().await.unwrap();
 
     let result = if cred.username().is_some() {

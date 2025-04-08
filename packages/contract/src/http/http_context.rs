@@ -3,13 +3,16 @@ use std::{
     fmt::Display,
     net::{IpAddr, SocketAddr},
     str::FromStr,
+    sync::Arc,
 };
 
 use axum::{
     extract::{ConnectInfo, Request},
     http::{header::USER_AGENT, HeaderMap, HeaderValue, Uri},
 };
+use axum_extra::extract::{cookie::Cookie, CookieJar};
 use dirtybase_helper::hash::sha256;
+use tokio::sync::RwLock;
 
 #[derive(Clone)]
 pub struct HttpContext {
@@ -17,6 +20,7 @@ pub struct HttpContext {
     headers: HeaderMap<HeaderValue>,
     ip: Option<IpAddr>,
     info: Option<ConnectInfo<SocketAddr>>,
+    cookie_jar: Arc<RwLock<Option<CookieJar>>>,
 }
 
 impl HttpContext {
@@ -73,6 +77,30 @@ impl HttpContext {
 
     pub fn host(&self) -> Option<&str> {
         self.uri.host()
+    }
+
+    pub async fn get_cookie(&self, name: &str) -> Option<Cookie> {
+        let r_lock = self.cookie_jar.read().await;
+        return r_lock.as_ref().unwrap().get(name).cloned();
+    }
+
+    pub async fn set_cookie(&self, cookie: Cookie<'static>) {
+        let mut w_lock = self.cookie_jar.write().await;
+        *w_lock = Some(w_lock.take().unwrap().add(cookie));
+    }
+
+    pub async fn cookie_jar(&self) -> CookieJar {
+        let r_lock = self.cookie_jar.read().await;
+        return r_lock.as_ref().unwrap().clone();
+    }
+
+    pub async fn set_cookie_kv<V>(&self, name: &str, value: V)
+    where
+        V: ToString,
+    {
+        let mut cookie = Cookie::new(name.to_string(), value.to_string());
+        cookie.set_path("/");
+        self.set_cookie(cookie).await
     }
 
     pub fn query_as_map(&self) -> Option<HashMap<String, String>> {
@@ -204,6 +232,7 @@ impl<T> From<&Request<T>> for HttpContext {
             headers: req.headers().clone(),
             ip: None,
             info: req.extensions().get::<ConnectInfo<_>>().cloned(),
+            cookie_jar: Arc::new(RwLock::new(Some(CookieJar::from_headers(req.headers())))),
         }
     }
 }

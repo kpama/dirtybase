@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use cookie::SameSite;
 use dirtybase_contract::{
     ExtensionSetup,
     app::Context,

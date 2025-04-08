@@ -232,14 +232,6 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                     }
                 }
 
-                // Add the request context
-                context
-                    .set(HttpContext::new(
-                        &req,
-                        trusted_headers.as_ref(),
-                        &trusted_ips,
-                    ))
-                    .await;
                 req.extensions_mut().insert(context.clone());
 
                 let cookie_jar = CookieJar::from_headers(req.headers());
@@ -253,10 +245,22 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
                 decrypt_cookies(cookie_jar, &encryptor, cookie_config, &mut req);
 
+                // Add the request context
+                context
+                    .set(HttpContext::new(
+                        &req,
+                        trusted_headers.as_ref(),
+                        &trusted_ips,
+                    ))
+                    .await;
+
                 // pass the request
                 let mut response = next.run(req).await;
 
-                let mut cookie_jar = CookieJar::from_headers(response.headers());
+                let http_context = context.get::<HttpContext>().await.unwrap();
+                // The cookie must be setting via the http context
+                let mut cookie_jar = http_context.cookie_jar().await;
+                // CookieJar::from_headers(response.headers());
 
                 response.extensions_mut().insert(context.clone());
 
