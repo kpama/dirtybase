@@ -1,8 +1,8 @@
 use anyhow::anyhow;
 use busybody::async_trait;
 use dirtybase_contract::{
-    auth::{AuthUser, AuthUserPayload, AuthUserStorage},
-    db::{base::manager::Manager, types::ArcUuid7},
+    auth_contract::{AuthUser, AuthUserPayload, AuthUserStorage},
+    db_contract::{base::manager::Manager, types::ArcUuid7},
 };
 
 use crate::AUTH_USER_TABLE;

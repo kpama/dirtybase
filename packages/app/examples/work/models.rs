@@ -1,4 +1,4 @@
-use dirtybase_contract::db::{
+use dirtybase_contract::db_contract::{
     TableEntityTrait,
     types::{ArcUlidField, NumberField, StringField, UlidField},
 };

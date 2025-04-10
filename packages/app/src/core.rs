@@ -14,10 +14,10 @@ pub use config::ConfigBuilder;
 pub use config::CookieConfig;
 
 use dirtybase_contract::ExtensionManager;
-use dirtybase_contract::app::Context;
-use dirtybase_contract::config::DirtyConfig;
-use dirtybase_contract::http::RouterManager;
-use dirtybase_contract::http::WebMiddlewareManager;
+use dirtybase_contract::app_contract::Context;
+use dirtybase_contract::config_contract::DirtyConfig;
+use dirtybase_contract::http_contract::RouterManager;
+use dirtybase_contract::http_contract::WebMiddlewareManager;
 use tokio::sync::RwLock;
 
 pub type AppService = busybody::Service<App>;
@@ -66,7 +66,7 @@ impl App {
     }
 
     pub async fn global_context(&self) -> Context {
-        dirtybase_contract::app::global_context().await
+        dirtybase_contract::app_contract::global_context().await
     }
     pub async fn init(&self) {
         ExtensionManager::setup_boot_run(&self.global_context().await).await;

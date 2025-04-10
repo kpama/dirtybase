@@ -8,12 +8,12 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use dirtybase_contract::{
     ExtensionManager,
-    app::Context,
-    http::{HttpContext, RouteType, TrustedIp},
+    app_contract::Context,
+    http_contract::{HttpContext, RouteType, TrustedIp},
 };
 
 #[cfg(feature = "multitenant")]
-use dirtybase_contract::multitenant::{
+use dirtybase_contract::multitenant_contract::{
     TenantIdLocation, TenantResolverProvider, TenantResolverTrait, TenantStorageProvider,
 };
 
@@ -210,11 +210,11 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 log::trace!("uri: {}", req.uri());
                 log::trace!(
                     "full url: : {}",
-                    dirtybase_contract::http::axum::full_request_url(&req)
+                    dirtybase_contract::http_contract::axum::full_request_url(&req)
                 );
                 tracing::trace!(
                     "host: {:?}",
-                    dirtybase_contract::http::axum::host_from_request(&req)
+                    dirtybase_contract::http_contract::axum::host_from_request(&req)
                 );
 
                 // 1. Find the tenant

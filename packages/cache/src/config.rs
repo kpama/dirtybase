@@ -1,6 +1,6 @@
 use dirtybase_contract::{
-    app::Context,
-    config::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
+    app_contract::Context,
+    config_contract::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
 };
 
 #[derive(Debug, Clone, serde::Deserialize)]

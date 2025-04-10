@@ -284,7 +284,7 @@ impl SqliteSchemaManager {
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
             }
             QueryAction::Delete => {
-                sql = format!("DELETE {0} FROM {0} ", query.table());
+                sql = format!("DELETE FROM {0} ", query.table());
                 // joins
                 sql = format!("{} {}", sql, self.build_join(&query, &mut params));
                 // where

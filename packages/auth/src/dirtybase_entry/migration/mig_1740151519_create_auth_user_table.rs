@@ -1,7 +1,7 @@
 use anyhow::anyhow;
-use dirtybase_contract::auth::AuthUserStatus;
-use dirtybase_contract::db::base::manager::Manager;
-use dirtybase_contract::db::migration::Migration;
+use dirtybase_contract::auth_contract::AuthUserStatus;
+use dirtybase_contract::db_contract::base::manager::Manager;
+use dirtybase_contract::db_contract::migration::Migration;
 
 use crate::AUTH_USER_TABLE;
 

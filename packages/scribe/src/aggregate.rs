@@ -3,7 +3,7 @@ mod aggregate_wrapper;
 use std::sync::Arc;
 
 pub use aggregate_wrapper::*;
-use dirtybase_contract::db::types::ArcUuid7;
+use dirtybase_contract::db_contract::types::ArcUuid7;
 use tokio::sync::RwLock;
 
 use crate::{DispatchedDomainEvent, DomainEvent};

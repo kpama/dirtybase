@@ -1,4 +1,4 @@
-use dirtybase_contract::config::DirtyConfig;
+use dirtybase_contract::config_contract::DirtyConfig;
 
 #[tokio::main]
 async fn main() {

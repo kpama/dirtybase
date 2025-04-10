@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use dirtybase_cache::{CacheManager, config::CacheConfig};
 use dirtybase_contract::{
-    app::Context,
-    config::{DirtyConfig, TryFromDirtyConfig},
+    app_contract::Context,
+    config_contract::{DirtyConfig, TryFromDirtyConfig},
 };
 
 #[tokio::main]

@@ -2,7 +2,7 @@
 
 use chrono::{DateTime, Utc};
 
-use crate::{db::types::ArcUuid7, user::status::UserStatus};
+use crate::{db_contract::types::ArcUuid7, user::status::UserStatus};
 
 use super::User;
 

@@ -1,7 +1,7 @@
 use dirtybase_contract::{
     async_trait,
-    db::types::ArcUuid7,
-    multitenant::{TenantContext, TenantStorageTrait},
+    db_contract::types::ArcUuid7,
+    multitenant_contract::{TenantContext, TenantStorageTrait},
 };
 
 pub struct DummyTenantRepository;

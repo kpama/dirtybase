@@ -5,8 +5,8 @@ use axum::{
     response::{Html, IntoResponse, Response},
 };
 use dirtybase_contract::{
-    app::CtxExt,
-    http::{RouterManager, WebMiddlewareManager},
+    app_contract::CtxExt,
+    http_contract::{RouterManager, WebMiddlewareManager},
 };
 use dirtybase_db::base::manager::Manager;
 use tower_service::Service;

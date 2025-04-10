@@ -1,10 +1,12 @@
 use std::{collections::HashMap, sync::Arc};
 
 use busybody::async_trait;
-use dirtybase_contract::session::{
-    SessionData, SessionId, SessionStorage, SessionStorageProvider, SessionStorageProviderService,
-};
+use dirtybase_contract::session_contract::{SessionData, SessionId, SessionStorage};
 use tokio::sync::RwLock;
+
+use crate::SessionStorageResolver;
+
+pub const NAME: &'static str = "memory";
 
 #[derive(Debug, Default, Clone)]
 pub struct MemoryStorage {
@@ -50,17 +52,25 @@ impl SessionStorage for MemoryStorage {
     }
 }
 
-impl MemoryStorage {
-    pub async fn make_provider() -> SessionStorageProviderService {
-        let provider = busybody::helpers::service_container()
-            .set_type(Arc::new(SessionStorageProvider::from(
-                MemoryStorage::default(),
-            )))
-            .await
-            .get_type::<SessionStorageProviderService>()
-            .await
-            .unwrap();
+pub async fn resolver(mut resolver: SessionStorageResolver) -> SessionStorageResolver {
+    let storage = MemoryStorage::default();
+    let storage2 = storage.clone();
+    resolver.set_storage(storage);
 
-        provider
-    }
+    let lifetime = resolver.config_ref().lifetime();
+    let _ctx = dirtybase_cron::CronJob::register(
+        "every 5 minutes",
+        move |_| {
+            Box::pin({
+                let storage = storage2.clone();
+                async move {
+                    storage.gc(lifetime).await;
+                }
+            })
+        },
+        "session::memory-storage",
+    )
+    .await;
+
+    resolver
 }

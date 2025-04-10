@@ -1,9 +1,9 @@
 use dirtybase_contract::{
-    app::{CtxExt, RequestContext},
-    auth::{AuthUser, AuthUserPayload, LoginCredential},
+    app_contract::{CtxExt, RequestContext},
+    auth_contract::{AuthUser, AuthUserPayload, LoginCredential},
     axum::response::Html,
-    http::{HttpContext, api::ApiResponse, named_routes_axum, prelude::*},
-    session::Session,
+    http_contract::{HttpContext, api::ApiResponse, named_routes_axum, prelude::*},
+    session_contract::Session,
 };
 use dirtybase_helper::{hash::sha256, security::random_bytes_hex};
 
@@ -62,7 +62,7 @@ pub(crate) async fn handle_login_request(
             session.put("auth_hash", &hash).await;
             session.put("auth_cookie_key", &cookie_key).await;
             session.put("auth_user_id", user.id()).await;
-            let cookie = session.make_sessioned_cookie(&cookie_key, hash); // FIXME: Build the cookie instance!!!!
+            let cookie = session.make_session_cookie(&cookie_key, hash); // FIXME: Build the cookie instance!!!!
             http_ctx.set_cookie(cookie).await;
 
             return Html(format!(
@@ -130,7 +130,7 @@ pub(crate) async fn handle_register_request(
     payload.rotate_salt = true;
     payload.status = match payload.status {
         Some(s) => Some(s),
-        None => Some(dirtybase_contract::auth::AuthUserStatus::Pending),
+        None => Some(dirtybase_contract::auth_contract::AuthUserStatus::Pending),
     };
 
     // FIXME: Send email for verification

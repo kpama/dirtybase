@@ -11,17 +11,17 @@ use clap::ArgMatches;
 use tokio::sync::RwLock;
 
 use crate::{
-    app::Context,
-    cli::{CliCommandManager, CliMiddlewareManager},
-    config::DirtyConfig,
-    http::{RouterBuilder, RouterManager, WebMiddlewareManager},
+    app_contract::Context,
+    cli_contract::{CliCommandManager, CliMiddlewareManager},
+    config_contract::DirtyConfig,
+    http_contract::{RouterBuilder, RouterManager, WebMiddlewareManager},
 };
 
 pub(crate) static EXTENSION_COLLECTION: OnceLock<RwLock<Vec<Box<dyn ExtensionSetup>>>> =
     OnceLock::new();
 pub(crate) static EXTENSIONS_READY: OnceLock<bool> = OnceLock::new();
 
-pub type ExtensionMigrations = Vec<Box<dyn super::db::migration::Migration>>;
+pub type ExtensionMigrations = Vec<Box<dyn super::db_contract::migration::Migration>>;
 
 #[async_trait::async_trait]
 pub trait ExtensionSetup: Send + Sync {

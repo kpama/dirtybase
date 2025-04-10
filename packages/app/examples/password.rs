@@ -1,4 +1,4 @@
-use dirtybase_contract::auth::AuthUser;
+use dirtybase_contract::auth_contract::AuthUser;
 
 fn main() {
     let mut auth_user = AuthUser::default();

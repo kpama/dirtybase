@@ -25,10 +25,10 @@ use connector::{
         sqlite_pool_manager::SqlitePoolManagerRegisterer, sqlite_schema_manager::SQLITE_KIND,
     },
 };
-use dirtybase_contract::db::base::{
+use dirtybase_contract::db_contract::base::{
     connection::ConnectionPoolTrait, manager::Manager, schema::ClientType,
 };
-pub use dirtybase_contract::db::*;
+pub use dirtybase_contract::db_contract::*;
 pub use dirtybase_entry::*;
 
 use busstop::DispatchableQuery;

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use dirtybase_contract::{app::Context, http::prelude::*};
+use dirtybase_contract::{app_contract::Context, http_contract::prelude::*};
 
 use crate::{GuardResolver, StorageResolver, guards::session_guard::SESSION_GUARD};
 

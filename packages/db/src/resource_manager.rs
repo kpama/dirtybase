@@ -1,4 +1,6 @@
-use dirtybase_contract::{app::ContextResourceManager, db::base::manager::Manager};
+use dirtybase_contract::{
+    app_contract::ContextResourceManager, db_contract::base::manager::Manager,
+};
 
 use crate::{config::DbConfig, connection_bus::MakePoolManagerCommand};
 

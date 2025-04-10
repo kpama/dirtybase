@@ -1,8 +1,8 @@
 use dirtybase_contract::{
-    app::Context,
+    app_contract::Context,
     async_trait,
-    config::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
-    multitenant::TenantIdLocation,
+    config_contract::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
+    multitenant_contract::TenantIdLocation,
     serde,
 };
 

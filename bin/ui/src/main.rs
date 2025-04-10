@@ -5,7 +5,7 @@ use dirtybase_app::{
         http::{HeaderValue, Response, header::CONTENT_TYPE},
         response::IntoResponse,
     },
-    contract::{ExtensionSetup, http::prelude::*},
+    contract::{ExtensionSetup, http_contract::prelude::*},
     core::App,
 };
 use include_dir::{Dir, include_dir};

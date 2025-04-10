@@ -2,8 +2,8 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::anyhow;
 use dirtybase_contract::{
-    app::Context,
-    config::{DirtyConfig, TryFromDirtyConfig},
+    app_contract::Context,
+    config_contract::{DirtyConfig, TryFromDirtyConfig},
 };
 
 use crate::connector::sqlite::sqlite_schema_manager::SQLITE_KIND;

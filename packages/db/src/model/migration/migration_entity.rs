@@ -1,4 +1,4 @@
-use dirtybase_contract::db::types::{
+use dirtybase_contract::db_contract::types::{
     FromColumnAndValue, IntegerField, InternalIdField, OptionalDateTimeField, StringField,
 };
 
@@ -17,7 +17,7 @@ pub struct MigrationEntity {
 }
 
 impl FromColumnAndValue for MigrationEntity {
-    fn from_column_value(cv: dirtybase_contract::db::types::ColumnAndValue) -> Self {
+    fn from_column_value(cv: dirtybase_contract::db_contract::types::ColumnAndValue) -> Self {
         Self {
             id: cv.get("id").unwrap().into(),
             name: cv.get(NAME_COLUMN).unwrap().into(),

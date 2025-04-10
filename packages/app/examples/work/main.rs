@@ -6,7 +6,7 @@ use std::{result, sync::Arc};
 use dirtybase_helper::ulid::Ulid;
 use setup::*;
 
-use dirtybase_contract::db::{
+use dirtybase_contract::db_contract::{
     TableEntityTrait,
     relations::{
         BelongsTo, BelongsToMany, HasMany, HasManyThrough, HasOne, MorphOneOfMany, MorphOneToMany,

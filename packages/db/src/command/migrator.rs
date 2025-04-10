@@ -2,7 +2,8 @@
 
 use anyhow::Ok;
 use dirtybase_contract::{
-    ExtensionManager, ExtensionMigrations, cli::clap::ArgMatches, db::base::manager::Manager,
+    ExtensionManager, ExtensionMigrations, cli_contract::clap::ArgMatches,
+    db_contract::base::manager::Manager,
 };
 
 use crate::model::migration::MigrationRepository;
@@ -25,7 +26,7 @@ const LOG_TARGET: &str = "db::migrator";
 impl Migrator {
     pub async fn new() -> Self {
         let mut migrations = Vec::new();
-        let context = dirtybase_contract::app::global_context().await;
+        let context = dirtybase_contract::app_contract::global_context().await;
         ExtensionManager::extensions(|ext| {
             if let Some(m) = ext.migrations(&context) {
                 migrations.extend(m);

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use dirtybase_contract::{
-    app::Context,
-    auth::{AuthUser, AuthUserStorageProvider},
+    app_contract::Context,
+    auth_contract::{AuthUser, AuthUserStorageProvider},
     axum::response::Response,
     prelude::Request,
 };

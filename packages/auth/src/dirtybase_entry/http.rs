@@ -2,7 +2,7 @@ use controllers::{
     handle_api_get_me, handle_api_register_request, handle_get_auth_token, handle_login_request,
     handle_register_request, login_form_handler, register_form_handler,
 };
-use dirtybase_contract::http::RouterManager;
+use dirtybase_contract::http_contract::RouterManager;
 
 pub(crate) mod controllers;
 

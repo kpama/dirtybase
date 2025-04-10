@@ -1,4 +1,4 @@
-use dirtybase_contract::config::DirtyConfig;
+use dirtybase_contract::config_contract::DirtyConfig;
 use dirtybase_db::config::ConnectionConfig;
 
 #[tokio::main]

@@ -1,11 +1,11 @@
 mod migrator;
 use anyhow::anyhow;
 use dirtybase_contract::{
-    cli::{
+    cli_contract::{
         CliCommandManager,
         clap::{self, ArgMatches},
     },
-    db::base::manager::Manager,
+    db_contract::base::manager::Manager,
 };
 use migrator::{MigrateAction, Migrator};
 

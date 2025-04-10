@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::db::types::ArcUuid7;
+use crate::db_contract::types::ArcUuid7;
 
 use super::model::{User, UserRepositoryTrait};
 

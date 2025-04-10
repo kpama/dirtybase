@@ -1,6 +1,6 @@
 use dirtybase_contract::{
-    app::Context,
-    auth::{AuthUser, ParseToken},
+    app_contract::Context,
+    auth_contract::{AuthUser, ParseToken},
     prelude::{Credentials, Request, axum_extra},
 };
 

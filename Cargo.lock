@@ -1249,6 +1249,7 @@ dependencies = [
  "log 0.4.27",
  "serde",
  "serde_json",
+ "simple-middleware",
  "tokio",
  "tracing",
  "uuid",

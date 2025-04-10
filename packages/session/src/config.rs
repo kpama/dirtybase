@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use dirtybase_contract::{
-    app::Context,
-    config::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
-    session::DEFAULT_LIFETIME,
+    app_contract::Context,
+    config_contract::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
+    session_contract::DEFAULT_LIFETIME,
 };
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

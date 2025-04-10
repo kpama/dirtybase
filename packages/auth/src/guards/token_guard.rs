@@ -1,6 +1,6 @@
 use dirtybase_contract::{
-    auth::ParseToken,
-    http::api::ApiResponse,
+    auth_contract::ParseToken,
+    http_contract::api::ApiResponse,
     prelude::{Credentials, StatusCode, axum_extra},
 };
 

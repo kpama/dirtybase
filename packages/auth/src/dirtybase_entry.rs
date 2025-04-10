@@ -4,8 +4,8 @@ mod migration;
 
 use dirtybase_contract::{
     ExtensionMigrations, ExtensionSetup,
-    app::Context,
-    http::{RouterManager, WebMiddlewareManager},
+    app_contract::Context,
+    http_contract::{RouterManager, WebMiddlewareManager},
 };
 use middlewares::setup_middlewares;
 

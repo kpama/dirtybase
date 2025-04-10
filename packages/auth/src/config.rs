@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use busybody::async_trait;
 use dirtybase_contract::{
-    app::Context,
-    config::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
+    app_contract::Context,
+    config_contract::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
 };
 
 pub const MEMORY_STORAGE: &'static str = "memory";

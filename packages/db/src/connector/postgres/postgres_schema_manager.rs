@@ -9,12 +9,12 @@ use crate::base::{
 use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAndValue};
 use anyhow::anyhow;
 use async_trait::async_trait;
-use dirtybase_contract::db::base::index::IndexType;
+use dirtybase_contract::db_contract::base::index::IndexType;
 use futures::stream::TryStreamExt;
 use sqlx::{
     Arguments, Column, Pool, Postgres, Row,
     postgres::{PgArguments, PgRow},
-    types::chrono,
+    types::{Json, chrono},
 };
 use std::{collections::HashMap, sync::Arc};
 
@@ -265,7 +265,7 @@ impl PostgresSchemaManager {
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
             }
             QueryAction::Delete => {
-                sql = format!("DELETE {0} FROM {0} ", query.table());
+                sql = format!("DELETE FROM {0} ", query.table());
                 // joins
                 sql = format!("{} {}", sql, self.build_join(&query));
                 // where
@@ -778,6 +778,16 @@ impl PostgresSchemaManager {
                     } else {
                         this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
                     }
+                }
+                "JSONB" => {
+                    let v = row.try_get::<Vec<u8>, &str>(col.name());
+                    tracing::warn!("jsonb value as u8 vec: {:#?}", &v);
+                    // if let Ok(v) = v {
+                    //     this_row.insert(col.name().to_string(), FieldValue::Binary(v));
+                    // } else {
+                    //     this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
+                    // }
+                    this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
                 }
                 "NULL" => {
                     if let Ok(v) = row.try_get::<i64, &str>(col.name()) {

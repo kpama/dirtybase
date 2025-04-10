@@ -1,65 +1,16 @@
-use std::sync::Arc;
-
-use anyhow::anyhow;
 use dirtybase_contract::{
-    app::ContextResourceManager,
-    session::{SessionStorage, SessionStorageProvider, SessionStorageProviderService},
-};
-use dirtybase_cron::prelude::{DispatchableQuery, DispatchedQuery, QueryHandler};
-
-use crate::{
-    MakeSessionStorageCommand, MakeSessionStorageResult, SessionConfig,
-    storage::{DummyStorage, MemoryStorage},
+    app_contract::ContextResourceManager, session_contract::SessionStorageProvider,
 };
 
-#[derive(Default)]
-struct MakeSessionStorageCommandHandler;
-
-#[async_trait::async_trait]
-impl QueryHandler for MakeSessionStorageCommandHandler {
-    async fn handle_query(&self, mut dispatched: DispatchedQuery) -> DispatchedQuery {
-        if let Some(query) = dispatched.the_query_mut::<MakeSessionStorageCommand>() {
-            let lifetime = query.config_ref().lifetime();
-            match query.config_ref().storage_ref() {
-                "dummy" => {
-                    let provider = Arc::new(SessionStorageProvider::from(DummyStorage::default()));
-                    dispatched.set_value::<MakeSessionStorageResult>(Ok(provider));
-                }
-                "memory" => {
-                    let provider = MemoryStorage::make_provider().await;
-                    let storage = provider.clone();
-                    let _ctx = dirtybase_cron::CronJob::register(
-                        "every 5 minutes",
-                        move |_| {
-                            Box::pin({
-                                let storage = storage.clone();
-                                async move {
-                                    storage.gc(lifetime).await;
-                                }
-                            })
-                        },
-                        "session::memory-storage",
-                    )
-                    .await;
-                    dispatched.set_value::<MakeSessionStorageResult>(Ok(provider));
-                }
-                "database" => dispatched
-                    .set_value::<MakeSessionStorageResult>(Err(anyhow!("not implemented yet"))),
-                "file" => dispatched
-                    .set_value::<MakeSessionStorageResult>(Err(anyhow!("not implemented yet"))),
-                "redis" => dispatched
-                    .set_value::<MakeSessionStorageResult>(Err(anyhow!("not implemented yet"))),
-                _ => (),
-            }
-        }
-        dispatched
-    }
-}
+use crate::{SessionConfig, SessionStorageResolver, storage};
 
 pub(crate) async fn register_resource_manager() {
-    MakeSessionStorageCommand::query_handler::<MakeSessionStorageCommandHandler>().await;
+    // register resolver for the various storage providers
+    SessionStorageResolver::register(storage::database::NAME, storage::database::resolver).await;
+    SessionStorageResolver::register(storage::dummy::NAME, storage::dummy::resolver).await;
+    SessionStorageResolver::register(storage::memory::NAME, storage::memory::resolver).await;
 
-    ContextResourceManager::<SessionStorageProviderService>::register(
+    ContextResourceManager::<SessionStorageProvider>::register(
         |context| {
             //
             Box::pin(async move {
@@ -85,20 +36,13 @@ pub(crate) async fn register_resource_manager() {
         |context| {
             //
             Box::pin(async move {
-                let _config = context.get::<SessionConfig>().await.unwrap();
                 let config = context
                     .get_config::<SessionConfig>("session")
                     .await
                     .unwrap();
-                if let Some(result) = MakeSessionStorageCommand::new(config)
-                    .dispatch_query()
+                SessionStorageResolver::new(context, config)
+                    .get_provider()
                     .await
-                    .take_value::<MakeSessionStorageResult>()
-                {
-                    *result
-                } else {
-                    Err(anyhow!("could not...."))
-                }
             })
         },
         |context| {

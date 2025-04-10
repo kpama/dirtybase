@@ -1,16 +1,17 @@
+mod migration;
 use std::sync::Arc;
 
 use dirtybase_contract::{
-    ExtensionSetup,
-    app::Context,
+    ExtensionMigrations, ExtensionSetup,
+    app_contract::Context,
     async_trait,
     axum::response::Response,
-    http::HttpContext,
+    http_contract::HttpContext,
     prelude::{
         Request,
         axum_extra::extract::{CookieJar, cookie::Cookie},
     },
-    session::{Session, SessionId, SessionStorageProvider},
+    session_contract::{Session, SessionId, SessionStorageProvider},
 };
 
 use crate::{SessionConfig, resource_manager::register_resource_manager};
@@ -21,7 +22,6 @@ pub struct Extension;
 #[async_trait]
 impl ExtensionSetup for Extension {
     async fn setup(&mut self, global_context: &Context) {
-        println!(">> session setup method called");
         if let Ok(config) = global_context.get_config::<SessionConfig>("session").await {
             global_context.set(config).await;
         }
@@ -50,6 +50,10 @@ impl ExtensionSetup for Extension {
 
         result
     }
+
+    fn migrations(&self, _context: &Context) -> Option<ExtensionMigrations> {
+        migration::setup()
+    }
 }
 
 impl Extension {
@@ -60,7 +64,7 @@ impl Extension {
         cookie: &CookieJar,
     ) -> Request {
         if let Ok(config) = context.get_config::<SessionConfig>("session").await {
-            if let Ok(provider) = context.get::<Arc<SessionStorageProvider>>().await {
+            if let Ok(provider) = context.get::<SessionStorageProvider>().await {
                 let request_session_id = cookie.get(config.cookie_id_ref());
 
                 let id = match request_session_id {
@@ -83,7 +87,7 @@ impl Extension {
                 }
             }
         } else {
-            tracing::error!("could not setup request sesssion")
+            tracing::error!("could not setup request session")
         }
 
         req

@@ -1,4 +1,4 @@
-use dirtybase_contract::cli::CliCommandManager;
+use dirtybase_contract::cli_contract::CliCommandManager;
 
 mod commands_setup;
 

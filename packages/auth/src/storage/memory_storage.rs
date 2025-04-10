@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use busybody::async_trait;
 use dirtybase_contract::{
-    auth::{AuthUser, AuthUserPayload, AuthUserStorage},
-    db::types::ArcUuid7,
+    auth_contract::{AuthUser, AuthUserPayload, AuthUserStorage},
+    db_contract::types::ArcUuid7,
 };
 use tokio::sync::RwLock;
 

@@ -1,6 +1,6 @@
 pub struct MemoryConnector;
 
-impl dirtybase_contract::queue::Connector for MemoryConnector {
+impl dirtybase_contract::queue_contract::Connector for MemoryConnector {
     fn fetch(&self) -> i32 {
         0
     }

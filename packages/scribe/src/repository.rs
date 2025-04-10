@@ -1,4 +1,4 @@
-use dirtybase_contract::db::types::ArcUuid7;
+use dirtybase_contract::db_contract::types::ArcUuid7;
 
 use crate::{Aggregate, AggregateTrait};
 

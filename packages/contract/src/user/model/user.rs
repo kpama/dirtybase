@@ -1,5 +1,7 @@
 use crate::{
-    db::types::{ArcUuid7, BooleanField, IntegerField, OptionalDateTimeField, OptionalStringField},
+    db_contract::types::{
+        ArcUuid7, BooleanField, IntegerField, OptionalDateTimeField, OptionalStringField,
+    },
     user::status::UserStatus,
 };
 

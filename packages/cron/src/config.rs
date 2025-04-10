@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use busstop::async_trait;
 use dirtybase_contract::{
-    app::Context,
-    config::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
+    app_contract::Context,
+    config_contract::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
 };
 use english_to_cron::str_cron_syntax;
 

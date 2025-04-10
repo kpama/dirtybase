@@ -1,4 +1,4 @@
-use dirtybase_contract::db::base::manager::Manager;
+use dirtybase_contract::db_contract::base::manager::Manager;
 use std::collections::{BTreeMap, HashMap};
 
 use super::{BATCH_COLUMN, MigrationEntity, NAME_COLUMN, TABLE_NAME};

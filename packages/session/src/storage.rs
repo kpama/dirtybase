@@ -1,5 +1,3 @@
-mod dummy_storage;
-mod memory;
-
-pub use dummy_storage::*;
-pub use memory::*;
+pub mod database;
+pub mod dummy;
+pub mod memory;

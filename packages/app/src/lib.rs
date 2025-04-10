@@ -10,8 +10,8 @@ pub use busstop;
 pub use busybody;
 pub use clap;
 pub use dirtybase_contract as contract;
-use dirtybase_contract::cli::setup_cli_command_manager;
-pub use dirtybase_contract::config;
+use dirtybase_contract::cli_contract::setup_cli_command_manager;
+pub use dirtybase_contract::config_contract;
 pub use dirtybase_db as db;
 pub use dirtybase_db_macro as db_macro;
 pub use dirtybase_helper as helper;
@@ -40,9 +40,7 @@ pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
     let app = core::App::new(config).await?;
 
     // core extensions
-    #[cfg(feature = "session")]
     app.register(dirtybase_session::Extension::default()).await;
-    #[cfg(feature = "auth")]
     app.register(dirtybase_auth::Extension::default()).await;
     app.register(dirtybase_db::Extension::default()).await;
     // the core app

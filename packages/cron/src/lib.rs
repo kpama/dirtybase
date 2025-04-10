@@ -9,7 +9,7 @@ mod manager;
 use busstop::DispatchableCommand;
 use command_handler::CronJobCommandHandler;
 use config::CronConfig;
-use dirtybase_contract::app::Context;
+use dirtybase_contract::app_contract::Context;
 pub use dirtybase_entry::*;
 pub use job::*;
 pub use job_context::*;

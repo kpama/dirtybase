@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use dirtybase_contract::config::DirtyConfig;
+use dirtybase_contract::config_contract::DirtyConfig;
 use dirtybase_cron::config::CronConfig;
 #[tokio::main]
 async fn main() {

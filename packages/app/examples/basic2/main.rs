@@ -1,5 +1,5 @@
 use axum::{extract::Path, response::Html};
-use dirtybase_contract::{app::Context, http::RouterManager};
+use dirtybase_contract::{app_contract::Context, http_contract::RouterManager};
 
 #[tokio::main]
 async fn main() {

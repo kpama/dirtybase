@@ -1,12 +1,12 @@
 use axum::response::Html;
 use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
-use dirtybase_contract::app::RequestContext;
-use dirtybase_contract::cli::CliMiddlewareManager;
+use dirtybase_contract::app_contract::RequestContext;
+use dirtybase_contract::cli_contract::CliMiddlewareManager;
 use dirtybase_contract::{
-    app::{Context, ContextResourceManager, CtxExt},
+    app_contract::{Context, ContextResourceManager, CtxExt},
     prelude::*,
-    session::Session,
+    session_contract::Session,
 };
 use dirtybase_db::base::manager::Manager;
 use dirtybase_db::types::{ArcUuid7, IntoColumnAndValue};
@@ -15,7 +15,7 @@ use tracing::Level;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_max_level(Level::ERROR)
+        .with_max_level(Level::TRACE)
         .try_init()
         .expect("could not setup tracing");
 

@@ -42,7 +42,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
 
         #(#column_name_methods)*
 
-        pub fn from_struct_column_value(mut cv: &mut ::dirtybase_contract::db::types::StructuredColumnAndValue, key: Option<&str>) -> Option<Self> {
+        pub fn from_struct_column_value(mut cv: &mut ::dirtybase_contract::db_contract::types::StructuredColumnAndValue, key: Option<&str>) -> Option<Self> {
           if let Some(name) = key {
               if let Some(values) = cv.get(name) {
                     Some(values.clone().into())
@@ -50,18 +50,18 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
                     None
                 }
           } else {
-            Some(::dirtybase_contract::db::types::FromColumnAndValue::from_column_value(cv.clone().fields()))
+            Some(::dirtybase_contract::db_contract::types::FromColumnAndValue::from_column_value(cv.clone().fields()))
           }
         }
 
-        pub fn into_embeddable(&self) -> ::dirtybase_contract::db::field_values::FieldValue {
-          ::dirtybase_contract::db::field_values::FieldValue::from(self)
+        pub fn into_embeddable(&self) -> ::dirtybase_contract::db_contract::field_values::FieldValue {
+          ::dirtybase_contract::db_contract::field_values::FieldValue::from(self)
         }
 
       }
 
       // TableEntityTrait
-      impl #ty_generics ::dirtybase_contract::db::TableEntityTrait for #name  #ty_generics #where_clause {
+      impl #ty_generics ::dirtybase_contract::db_contract::TableEntityTrait for #name  #ty_generics #where_clause {
 
         #id_column_method
 
@@ -81,8 +81,8 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
       }
 
       // FromColumnAndValue for T
-      impl #ty_generics ::dirtybase_contract::db::types::FromColumnAndValue  for #name  #ty_generics #where_clause {
-        fn from_column_value(cv: ::dirtybase_contract::db::types::ColumnAndValue) -> Self {
+      impl #ty_generics ::dirtybase_contract::db_contract::types::FromColumnAndValue  for #name  #ty_generics #where_clause {
+        fn from_column_value(cv: ::dirtybase_contract::db_contract::types::ColumnAndValue) -> Self {
             Self {
                 #(#from_cv_for_handlers),*,
                 #defaults
@@ -91,43 +91,43 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
       }
 
       // IntoColumnAndValue for T
-      impl #ty_generics ::dirtybase_contract::db::types::IntoColumnAndValue for #name  #ty_generics #where_clause {
-        fn into_column_value(&self) -> ::dirtybase_contract::db::types::ColumnAndValue {
-            ::dirtybase_contract::db::ColumnAndValueBuilder::new()
+      impl #ty_generics ::dirtybase_contract::db_contract::types::IntoColumnAndValue for #name  #ty_generics #where_clause {
+        fn into_column_value(&self) -> ::dirtybase_contract::db_contract::types::ColumnAndValue {
+            ::dirtybase_contract::db_contract::ColumnAndValueBuilder::new()
                 #(.#into_cv_for_calls)*
                 .build()
         }
       }
 
       // Impl From FieldValue
-      impl #ty_generics From<::dirtybase_contract::db::field_values::FieldValue> for #name  #ty_generics #where_clause {
-          fn from(value: ::dirtybase_contract::db::field_values::FieldValue) -> Self {
-             let cv = ::dirtybase_contract::db::types::ColumnAndValue::from(value);
+      impl #ty_generics From<::dirtybase_contract::db_contract::field_values::FieldValue> for #name  #ty_generics #where_clause {
+          fn from(value: ::dirtybase_contract::db_contract::field_values::FieldValue) -> Self {
+             let cv = ::dirtybase_contract::db_contract::types::ColumnAndValue::from(value);
              if cv.is_empty() {
                 Self::default()
              } else {
-              ::dirtybase_contract::db::types::FromColumnAndValue::from_column_value(cv)
+              ::dirtybase_contract::db_contract::types::FromColumnAndValue::from_column_value(cv)
              }
           }
       }
 
-      impl #ty_generics From<&::dirtybase_contract::db::field_values::FieldValue> for #name  #ty_generics #where_clause {
-          fn from(value: &::dirtybase_contract::db::field_values::FieldValue) -> Self {
+      impl #ty_generics From<&::dirtybase_contract::db_contract::field_values::FieldValue> for #name  #ty_generics #where_clause {
+          fn from(value: &::dirtybase_contract::db_contract::field_values::FieldValue) -> Self {
             value.clone().into()
           }
       }
 
       // Impl from &Self to FieldValue
-      impl #ty_generics From<&#name> for ::dirtybase_contract::db::field_values::FieldValue {
-          fn from(value: &#name ) -> ::dirtybase_contract::db::field_values::FieldValue {
-              ::dirtybase_contract::db::field_values::FieldValue::Object(::dirtybase_contract::db::types::IntoColumnAndValue::into_column_value(value))
+      impl #ty_generics From<&#name> for ::dirtybase_contract::db_contract::field_values::FieldValue {
+          fn from(value: &#name ) -> ::dirtybase_contract::db_contract::field_values::FieldValue {
+              ::dirtybase_contract::db_contract::field_values::FieldValue::Object(::dirtybase_contract::db_contract::types::IntoColumnAndValue::into_column_value(value))
           }
       }
 
       // Impl from Self to FieldValue
-      impl #ty_generics From<#name> for ::dirtybase_contract::db::field_values::FieldValue {
-          fn from(value: #name ) -> ::dirtybase_contract::db::field_values::FieldValue {
-            ::dirtybase_contract::db::field_values::FieldValue::Object(::dirtybase_contract::db::types::IntoColumnAndValue::into_column_value(&value))
+      impl #ty_generics From<#name> for ::dirtybase_contract::db_contract::field_values::FieldValue {
+          fn from(value: #name ) -> ::dirtybase_contract::db_contract::field_values::FieldValue {
+            ::dirtybase_contract::db_contract::field_values::FieldValue::Object(::dirtybase_contract::db_contract::types::IntoColumnAndValue::into_column_value(&value))
           }
       }
 

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
-use crate::db::field_values::FieldValue;
+use crate::db_contract::field_values::FieldValue;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum UserStatus {

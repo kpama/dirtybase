@@ -6,13 +6,13 @@ use axum::http::HeaderValue;
 use axum::http::Method;
 use axum_extra::extract::cookie::SameSite;
 use base64ct::Encoding;
-use dirtybase_contract::app::Context;
-use dirtybase_contract::config::ConfigResult;
-use dirtybase_contract::config::DirtyConfig;
-use dirtybase_contract::config::TryFromDirtyConfig;
-use dirtybase_contract::config::field_to_option_array;
-use dirtybase_contract::config::field_to_vec_u8;
-use dirtybase_contract::config::vec_u8_to_field;
+use dirtybase_contract::app_contract::Context;
+use dirtybase_contract::config_contract::ConfigResult;
+use dirtybase_contract::config_contract::DirtyConfig;
+use dirtybase_contract::config_contract::TryFromDirtyConfig;
+use dirtybase_contract::config_contract::field_to_option_array;
+use dirtybase_contract::config_contract::field_to_vec_u8;
+use dirtybase_contract::config_contract::vec_u8_to_field;
 use serde::Deserializer;
 use serde::Serializer;
 use tower_http::cors::AllowHeaders;
@@ -396,11 +396,11 @@ impl Config {
         self.entry.web_cookie.clone()
     }
 
-    pub fn environment(&self) -> &dirtybase_contract::config::CurrentEnvironment {
+    pub fn environment(&self) -> &dirtybase_contract::config_contract::CurrentEnvironment {
         self.dirty_config.current_env()
     }
 
-    pub fn dirty_config(&self) -> &dirtybase_contract::config::DirtyConfig {
+    pub fn dirty_config(&self) -> &dirtybase_contract::config_contract::DirtyConfig {
         &self.dirty_config
     }
 }
@@ -417,7 +417,7 @@ pub struct ConfigBuilder {
     web_enable_admin_routes: Option<bool>,
     web_enable_general_routes: Option<bool>,
     web_middleware: Option<MiddlewareConfig>,
-    dirty_config: Option<dirtybase_contract::config::DirtyConfig>,
+    dirty_config: Option<dirtybase_contract::config_contract::DirtyConfig>,
 }
 
 impl ConfigBuilder {

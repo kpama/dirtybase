@@ -2,7 +2,7 @@ mod database_storage;
 mod memory_storage;
 
 pub use database_storage::*;
-use dirtybase_contract::db::base::manager::Manager;
+use dirtybase_contract::db_contract::base::manager::Manager;
 pub use dirtybase_contract::fama::PipeContent;
 pub use dirtybase_contract::fama::PipelineBuilderTrait;
 pub use memory_storage::*;

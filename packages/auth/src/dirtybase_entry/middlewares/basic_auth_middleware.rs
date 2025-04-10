@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use dirtybase_contract::{
-    app::Context,
-    http::prelude::*,
+    app_contract::Context,
+    http_contract::prelude::*,
     user::{UserProviderService, model::UserRepositoryTrait},
 };
 

@@ -14,5 +14,5 @@ pub(crate) async fn register_guards() {
     // Token guard
     GuardResolver::register(TOKEN_GUARD, token_guard::authenticate).await;
     // Session guard
-    GuardResolver::register(SESSION_GUARD, session_guard::authenticate).await;
+    GuardResolver::register(SESSION_GUARD, session_guard::authorize).await;
 }

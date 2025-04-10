@@ -1,14 +1,14 @@
 mod extension;
 
-pub mod app;
-pub mod auth;
-pub mod cli;
-pub mod config;
-pub mod db;
-pub mod http;
-pub mod multitenant;
-pub mod queue;
-pub mod session;
+pub mod app_contract;
+pub mod auth_contract;
+pub mod cli_contract;
+pub mod config_contract;
+pub mod db_contract;
+pub mod http_contract;
+pub mod multitenant_contract;
+pub mod queue_contract;
+pub mod session_contract;
 pub mod user;
 
 pub use async_trait::async_trait;
@@ -28,7 +28,7 @@ macro_rules! register_migration {
     };
     ($($m:expr),+ $(,)?) => {
         {
-            let mut v = Vec::<Box<dyn ::dirtybase_contract::db::migration::Migration>>::new();
+            let mut v = Vec::<Box<dyn ::dirtybase_contract::db_contract::migration::Migration>>::new();
             $(
                 v.push(Box::new($m));
             )*
@@ -38,14 +38,14 @@ macro_rules! register_migration {
 }
 
 pub mod prelude {
-    pub use super::app::*;
-    pub use super::auth::prelude::*;
+    pub use super::app_contract::*;
+    pub use super::auth_contract::prelude::*;
     // pub use super::cli::prelude::*;
-    pub use super::config::*;
+    pub use super::config_contract::*;
     pub use super::extension::ExtensionManager;
     pub use super::extension::ExtensionMigrations;
     pub use super::extension::ExtensionSetup;
-    pub use super::http::prelude::*;
+    pub use super::http_contract::prelude::*;
 
     pub use async_trait::async_trait;
     pub use busybody;

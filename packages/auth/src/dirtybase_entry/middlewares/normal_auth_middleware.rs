@@ -1,9 +1,9 @@
 use axum_extra::extract::CookieJar;
 use dirtybase_contract::{
-    app::{Context, CtxExt},
-    auth::LoginCredential,
-    http::prelude::*,
-    session::Session,
+    app_contract::{Context, CtxExt},
+    auth_contract::LoginCredential,
+    http_contract::prelude::*,
+    session_contract::Session,
     user::{UserProviderService, model::UserRepositoryTrait},
 };
 use serde::Deserialize;
