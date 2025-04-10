@@ -3,15 +3,20 @@ use dirtybase_db::{
     connector::postgres::make_postgres_manager,
     types::{JsonField, OptionalDateTimeField, OptionalStringField},
 };
+use tracing::Level;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    pretty_env_logger::init();
+    tracing_subscriber::fmt()
+        .with_max_level(Level::INFO)
+        .try_init()
+        .expect("could not setup tracing");
 
     dirtybase_db::setup_handlers().await;
 
     let base_config = ConnectionConfig {
         url: "postgres://dbuser:dbpassword@postgres/dirtybase".to_string(),
+        kind: "postgres".into(),
         ..Default::default()
     };
 
@@ -23,7 +28,7 @@ async fn main() -> anyhow::Result<()> {
                 "9528b376c621442edcabd7959b7e52ec",
             );
         })
-        .first()
+        .first_to::<SessionTable>()
         .await;
 
     dbg!("{:?}", result);

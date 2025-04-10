@@ -36,14 +36,14 @@ pub async fn seed_tables(manager: &Manager) {
             logo: b"This is a test".to_vec(),
             ..Default::default()
         };
-        manager.insert(Company::table_name(), company).await;
+        _ = manager.insert(Company::table_name(), company).await;
     }
 
     // warehouse
     for index in 0..=3 {
         let warehouse_name = format!("Warehouse {}", index);
         let warehouse_id = UlidField::new();
-        manager
+        _ = manager
             .insert(
                 Warehouse::table_name(),
                 Warehouse {
@@ -59,7 +59,7 @@ pub async fn seed_tables(manager: &Manager) {
     for index in 1..=150 {
         let product_sku = format!("PROD-{}", index);
         let product_id = UlidField::new();
-        manager
+        _ = manager
             .insert(
                 Product::table_name(),
                 Product {
@@ -71,7 +71,7 @@ pub async fn seed_tables(manager: &Manager) {
             .await;
 
         // product image
-        manager
+        _ = manager
             .insert(
                 Image::table_name(),
                 Image::make_imageable::<Product>(
@@ -81,7 +81,7 @@ pub async fn seed_tables(manager: &Manager) {
             )
             .await;
         for image_index in 1..rng.random_range(1..=4) {
-            manager
+            _ = manager
                 .insert(
                     Image::table_name(),
                     Image::make_imageable::<Product>(
@@ -103,7 +103,7 @@ pub async fn seed_tables(manager: &Manager) {
                 .fetch_one_to::<Warehouse>()
                 .await
             {
-                manager
+                _ = manager
                     .insert(
                         Inventory::table_name(),
                         Inventory {
@@ -121,7 +121,7 @@ pub async fn seed_tables(manager: &Manager) {
     for index in 1..2001 {
         let customer_name = format!("Customer{}", index);
         let customer_id = UlidField::new();
-        manager
+        _ = manager
             .insert(
                 Customer::table_name(),
                 Customer {
@@ -133,7 +133,7 @@ pub async fn seed_tables(manager: &Manager) {
             .await;
 
         // customer image: avatar
-        manager
+        _ = manager
             .insert(
                 Image::table_name(),
                 Image::make_imageable::<Customer>(
@@ -146,7 +146,7 @@ pub async fn seed_tables(manager: &Manager) {
         // customer sales order, order items and invoice
         for _ in 1..rng.random_range(1..=101) {
             let order_id = UlidField::new();
-            manager
+            _ = manager
                 .insert(
                     SalesOrder::table_name(),
                     SalesOrder {
@@ -157,7 +157,7 @@ pub async fn seed_tables(manager: &Manager) {
                 )
                 .await;
 
-            manager
+            _ = manager
                 .insert(
                     Invoice::table_name(),
                     Invoice {
@@ -212,14 +212,14 @@ pub async fn seed_tables(manager: &Manager) {
             if items.is_empty() {
                 panic!("line item is empty");
             }
-            manager.insert_multi(OrderItem::table_name(), items).await;
+            _ = manager.insert_multi(OrderItem::table_name(), items).await;
         }
     }
 }
 
 pub async fn create_tables(manager: &Manager) {
     // foo
-    manager
+    _ = manager
         .create_table_schema(Foo::table_name(), |table| {
             table.id_set();
             table.binary(Foo::col_name_for_data());
@@ -229,7 +229,7 @@ pub async fn create_tables(manager: &Manager) {
         .await;
 
     // company
-    manager
+    _ = manager
         .create_table_schema(Company::table_name(), |table| {
             table.id_set();
             table.string(Company::col_name_for_name());
@@ -242,14 +242,14 @@ pub async fn create_tables(manager: &Manager) {
         })
         .await;
     // customer
-    manager
+    _ = manager
         .create_table_schema(Customer::table_name(), |table| {
             table.id_set();
             table.string(Customer::col_name_for_name());
         })
         .await;
     // product
-    manager
+    _ = manager
         .create_table_schema(Product::table_name(), |table| {
             table.id_set();
             table.string(Product::col_name_for_sku());
@@ -257,7 +257,7 @@ pub async fn create_tables(manager: &Manager) {
         .await;
 
     // warehouse
-    manager
+    _ = manager
         .create_table_schema(Warehouse::table_name(), |table| {
             table.id_set();
             table.string(Warehouse::col_name_for_name());
@@ -265,7 +265,7 @@ pub async fn create_tables(manager: &Manager) {
         .await;
 
     // inventory
-    manager
+    _ = manager
         .create_table_schema(Inventory::table_name(), |table| {
             table.ulid_table_fk::<Warehouse>(true);
             table.ulid_table_fk::<Product>(true);
@@ -274,14 +274,14 @@ pub async fn create_tables(manager: &Manager) {
         .await;
 
     // sales order
-    manager
+    _ = manager
         .create_table_schema(SalesOrder::table_name(), |table| {
             table.id_set();
             table.ulid_table_fk::<Customer>(true);
         })
         .await;
     // order item
-    manager
+    _ = manager
         .create_table_schema(OrderItem::table_name(), |table| {
             table.id_set();
             table.ulid_table_fk::<SalesOrder>(true);
@@ -291,7 +291,7 @@ pub async fn create_tables(manager: &Manager) {
         .await;
 
     // image
-    manager
+    _ = manager
         .create_table_schema(Image::table_name(), |table| {
             table.id_set();
             table.string(Image::col_name_for_url());
@@ -306,7 +306,7 @@ pub async fn create_tables(manager: &Manager) {
         .await;
 
     // invoice
-    manager
+    _ = manager
         .create_table_schema(Invoice::table_name(), |table| {
             table.id_set();
             table.ulid_table_fk::<SalesOrder>(true);

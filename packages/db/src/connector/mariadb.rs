@@ -16,7 +16,7 @@ use crate::{
 };
 
 /// Create a new manager using the configuration provided
-pub async fn make_mysql_manager(base: ConnectionConfig) -> Manager {
+pub async fn make_mariadb_manager(base: ConnectionConfig) -> Manager {
     let mut config_set = ConfigSet::new();
     let kind: DatabaseKind = MARIADB_KIND.into();
     config_set.insert(base.client_type, base);

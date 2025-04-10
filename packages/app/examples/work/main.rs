@@ -16,7 +16,7 @@ use dirtybase_contract::db_contract::{
 use dirtybase_db::{
     config::ConnectionConfig,
     connector::{
-        mysql::make_mysql_manager, postgres::make_postgres_manager, sqlite::make_sqlite_manager,
+        mariadb::make_mariadb_manager, postgres::make_postgres_manager, sqlite::make_sqlite_manager,
     },
 };
 use models::{
@@ -29,21 +29,21 @@ async fn main() -> anyhow::Result<()> {
     pretty_env_logger::init();
 
     // sqlite
-    let base_config = ConnectionConfig {
-        url: "packages/app/examples/work/data/database.db".to_string(),
-        ..Default::default()
-    };
-
-    let manager = make_sqlite_manager(base_config).await;
-
-    // mysql
-    // let base_config = BaseConfig {
-    //     url: "mariadb://root:dbpassword@db/work".to_string(),
-    //     kind: dirtybase_db::base::schema::DatabaseKind::Mysql,
+    // let base_config = ConnectionConfig {
+    //     url: "packages/app/examples/work/data/database.db".to_string(),
     //     ..Default::default()
     // };
 
-    // let manager = make_mysql_manager(base_config).await;
+    // let manager = make_sqlite_manager(base_config).await;
+
+    // mariadb
+    let base_config = ConnectionConfig {
+        url: "mariadb://root:dbpassword@db/work".to_string(),
+        kind: "mariadb".into(),
+        ..Default::default()
+    };
+
+    let manager = make_mariadb_manager(base_config).await;
 
     // postgres
     // let base_config = BaseConfig {

@@ -13,7 +13,7 @@ use dirtybase_contract::db_contract::base::index::IndexType;
 use futures::stream::TryStreamExt;
 use sqlx::{
     Arguments, Column, Pool, Postgres, Row,
-    postgres::{PgArguments, PgRow},
+    postgres::{PgArguments, PgRow, types},
     types::{Json, chrono},
 };
 use std::{collections::HashMap, sync::Arc};
@@ -779,15 +779,15 @@ impl PostgresSchemaManager {
                         this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
                     }
                 }
-                "JSONB" => {
-                    let v = row.try_get::<Vec<u8>, &str>(col.name());
-                    tracing::warn!("jsonb value as u8 vec: {:#?}", &v);
-                    // if let Ok(v) = v {
-                    //     this_row.insert(col.name().to_string(), FieldValue::Binary(v));
-                    // } else {
-                    //     this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
-                    // }
-                    this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
+                "JSONB" | "JSON" => {
+                    if let Ok(v) = row.try_get::<serde_json::Value, &str>(col.name()) {
+                        this_row.insert(col.name().to_string(), v.into());
+                    } else {
+                        this_row.insert(
+                            col.name().to_string(),
+                            serde_json::value::Value::Null.into(),
+                        );
+                    }
                 }
                 "NULL" => {
                     if let Ok(v) = row.try_get::<i64, &str>(col.name()) {

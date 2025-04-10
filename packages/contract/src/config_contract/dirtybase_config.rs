@@ -241,7 +241,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::config::{LOADED_FLAG_KEY, LOADED_FLAG_VALUE};
+    use crate::config_contract::{LOADED_FLAG_KEY, LOADED_FLAG_VALUE};
 
     use super::*;
 
