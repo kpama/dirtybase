@@ -16,7 +16,7 @@ use sqlx::{
     sqlite::{SqliteArguments, SqliteRow},
     types::chrono,
 };
-use std::{collections::HashMap, fmt::format, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 const LOG_TARGET: &str = "sqlite_db_driver";
 pub const SQLITE_KIND: &str = "sqlite";
