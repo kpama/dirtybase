@@ -12,23 +12,8 @@ pub struct DatabaseStore {
     repo: Arc<CacheDbStoreRepository>,
 }
 
-impl DatabaseStore {
-    fn new(repo: CacheDbStoreRepository) -> Self {
-        Self {
-            repo: Arc::new(repo),
-        }
-    }
-}
-
 #[async_trait]
 impl CacheStoreTrait for DatabaseStore {
-    fn store_name() -> &'static str
-    where
-        Self: Sized,
-    {
-        "db"
-    }
-
     /// Add the entry if it does not already exist
     async fn put(
         &self,

@@ -18,7 +18,7 @@ pub async fn setup_cache_db_store_tables(manager: &Manager) {
 
 // Main cache store table
 async fn setup_cache_db_store_table(manager: &Manager) {
-    manager
+    _ = manager
         .create_table_schema(CacheDbStoreEntity::table_name(), |table| {
             table
                 .string(CacheDbStoreEntity::id_column().unwrap())
@@ -35,7 +35,7 @@ async fn setup_cache_db_store_table(manager: &Manager) {
 
 // Tags table
 async fn setup_catch_db_tag_store_table(manager: &Manager) {
-    manager
+    _ = manager
         .create_table_schema(CacheDbTagStoreEntity::table_name(), |table| {
             // table.id(CacheDbTagStoreEntity::id_column());
             table
@@ -48,7 +48,7 @@ async fn setup_catch_db_tag_store_table(manager: &Manager) {
 
 // Tags to entry pivot table
 async fn setup_catch_db_tag_entries_pivot(manager: &Manager) {
-    manager
+    _ = manager
         .create_table_schema(CacheDbPivotEntity::table_name(), |table| {
             table
                 .string(CacheDbPivotEntity::col_name_for_core_cache_tags_id())

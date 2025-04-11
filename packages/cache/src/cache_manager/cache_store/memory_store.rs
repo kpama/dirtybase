@@ -43,13 +43,6 @@ pub struct MemoryStore {
 }
 
 impl MemoryStore {
-    pub fn new() -> Self {
-        Self {
-            storage: Arc::new(RwLock::new(HashMap::default())),
-            tags: Arc::new(RwLock::default()),
-        }
-    }
-
     async fn tag_key(&self, tags: Option<&[String]>, key: String) {
         let mut lock = self.tags.write().await;
         if let Some(list) = tags {
@@ -82,13 +75,6 @@ impl MemoryStore {
 
 #[async_trait]
 impl CacheStoreTrait for MemoryStore {
-    fn store_name() -> &'static str
-    where
-        Self: Sized,
-    {
-        "memory"
-    }
-
     /// Add the entry if it does not already exist
     async fn put(
         &self,
@@ -188,22 +174,5 @@ impl CacheStoreTrait for MemoryStore {
         self.delete_tags(tags).await;
 
         true
-    }
-}
-
-#[busybody::async_trait]
-impl busybody::Injectable for MemoryStore {
-    async fn inject(container: &busybody::ServiceContainer) -> Self {
-        if let Some(store) = container.get_type::<Self>().await {
-            return store;
-        } else {
-            let store = Self::new();
-            return container
-                .set_type(store)
-                .await
-                .get_type::<Self>()
-                .await
-                .unwrap();
-        }
     }
 }

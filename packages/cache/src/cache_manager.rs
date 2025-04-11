@@ -1,7 +1,6 @@
 use crate::config::CacheConfig;
 
 use self::cache_store::{CacheStoreTrait, MemoryStore};
-use busybody::helpers::provide;
 use std::collections::HashMap;
 use std::future::Future;
 use std::sync::Arc;
@@ -22,8 +21,10 @@ pub struct CacheManager {
 
 impl CacheManager {
     // TODO: remove this code
-    async fn get_store(store_name: &str) -> StoreDriver {
-        Arc::new(Box::new(provide::<MemoryStore>().await))
+    async fn get_store(_store_name: &str) -> StoreDriver {
+        Arc::new(Box::new(
+            busybody::helpers::get_type::<MemoryStore>().await.unwrap(),
+        ))
         // match store_name {
         //     _ if store_name == DatabaseStore::store_name() => {
         //         Arc::new(Box::new(provide::<DatabaseStore>().await))
@@ -35,10 +36,12 @@ impl CacheManager {
         // }
     }
 
-    pub async fn new(config: &CacheConfig) -> Self {
+    pub async fn new(_config: &CacheConfig) -> Self {
         // TODO: The store must be passed as an argument
         Self {
-            store: Arc::new(Box::new(provide::<MemoryStore>().await)),
+            store: Arc::new(Box::new(
+                busybody::helpers::get_type::<MemoryStore>().await.unwrap(),
+            )),
             prefix: None,
             tags: Vec::new(),
         }
@@ -350,24 +353,5 @@ where
     type Future = Fut;
     fn call(&self, _: ()) -> Self::Future {
         (self)()
-    }
-}
-
-#[busybody::async_trait]
-impl busybody::Injectable for CacheManager {
-    async fn inject(container: &busybody::ServiceContainer) -> Self {
-        if let Some(manager) = container.get_type::<CacheManager>().await {
-            return manager;
-        } else {
-            let config = container.get_type::<CacheConfig>().await.unwrap();
-            let manager = Self::new(&config).await;
-
-            return container
-                .set_type(manager)
-                .await
-                .get_type::<CacheManager>()
-                .await
-                .unwrap();
-        }
     }
 }

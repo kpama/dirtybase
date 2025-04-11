@@ -498,7 +498,9 @@ impl ConfigBuilder {
     }
 }
 
-pub fn field_previous_keys<'de, D>(deserializer: D) -> Result<Option<Arc<Vec<Vec<u8>>>>, D::Error>
+pub type PreviousKeys = Arc<Vec<Vec<u8>>>;
+
+pub fn field_previous_keys<'de, D>(deserializer: D) -> Result<Option<PreviousKeys>, D::Error>
 where
     D: Deserializer<'de>,
 {

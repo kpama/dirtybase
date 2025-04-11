@@ -14,12 +14,6 @@ pub struct RedisStore {
 }
 
 impl RedisStore {
-    pub fn new(conn: redis::aio::MultiplexedConnection) -> Self {
-        Self {
-            redis_client: Arc::new(RwLock::new(conn)),
-        }
-    }
-
     async fn tag_key(&self, key: &str, tags: Option<&[String]>) {
         if tags.is_some() {
             let mut client = self.redis_client.write().await;
@@ -32,13 +26,6 @@ impl RedisStore {
 
 #[async_trait]
 impl CacheStoreTrait for RedisStore {
-    fn store_name() -> &'static str
-    where
-        Self: Sized,
-    {
-        "redis"
-    }
-
     async fn get(&self, key: String) -> Option<CacheEntry> {
         let mut client = self.redis_client.write().await;
 
@@ -166,23 +153,5 @@ impl CacheStoreTrait for RedisStore {
         }
 
         return true;
-    }
-}
-
-#[busybody::async_trait]
-impl busybody::Injectable for RedisStore {
-    async fn inject(container: &busybody::ServiceContainer) -> Self {
-        if let Some(store) = container.get_type::<Self>().await {
-            return store;
-        } else {
-            let redis_client = dirtybase_3rd_client::redis::get_client().await.unwrap();
-            let store = Self::new(redis_client);
-            return container
-                .set_type(store)
-                .await
-                .get_type::<Self>()
-                .await
-                .unwrap();
-        }
     }
 }

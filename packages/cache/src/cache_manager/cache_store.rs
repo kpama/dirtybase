@@ -12,10 +12,6 @@ use super::cache_entry::CacheEntry;
 
 #[async_trait]
 pub trait CacheStoreTrait: Send + Sync {
-    fn store_name() -> &'static str
-    where
-        Self: Sized;
-
     async fn get(&self, key: String) -> Option<CacheEntry>;
 
     async fn many(&self, keys: &[String]) -> Option<Vec<CacheEntry>>;
