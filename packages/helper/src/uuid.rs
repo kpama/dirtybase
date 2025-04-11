@@ -60,7 +60,7 @@ pub fn uuid_v7_from_str(input: &str) -> Option<Uuid> {
 pub fn uuid_v7_from_vec(input: &Vec<u8>) -> Option<Uuid> {
     let mut bytes: [u8; 16] = [0; 16];
     for (index, b) in input.take(16).into_inner().iter().enumerate() {
-        bytes[index] = b.clone();
+        bytes[index] = *b;
     }
     let u = Uuid::from_bytes(bytes);
     if u.is_nil() { None } else { Some(u) }

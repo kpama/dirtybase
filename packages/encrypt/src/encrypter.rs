@@ -12,7 +12,7 @@ pub struct Encrypter {
 impl Encrypter {
     pub fn new(key: &[u8], previous_keys: Option<Vec<Vec<u8>>>) -> Self {
         Self {
-            key: Arc::new(key.iter().map(|e| e.clone()).collect::<Vec<u8>>()),
+            key: Arc::new(key.to_vec()),
             previous_keys: Arc::new(previous_keys),
         }
     }
@@ -55,7 +55,7 @@ struct Aes256GcmEncrypter {
 impl Aes256GcmEncrypter {
     fn encrypt(&self, data: Vec<u8>) -> aead::Result<Vec<u8>> {
         let key = Key::<Aes256Gcm>::from_slice(&self.key);
-        let cipher = Aes256Gcm::new(&key);
+        let cipher = Aes256Gcm::new(key);
         let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
         let data = cipher.encrypt(&nonce, &*data)?;
 
@@ -72,7 +72,7 @@ impl Aes256GcmEncrypter {
 
         let (nonce, ciphered) = input.split_at(12);
         let key = Key::<Aes256Gcm>::from_slice(&self.key);
-        let cipher = Aes256Gcm::new(&key);
+        let cipher = Aes256Gcm::new(key);
 
         if let Ok(d) = cipher.decrypt(GenericArray::from_slice(nonce), ciphered) {
             return Ok(d);
@@ -87,8 +87,8 @@ impl Aes256GcmEncrypter {
 
         for keys in self.previous_keys.as_ref().iter() {
             for a_key in keys {
-                let key = Key::<Aes256Gcm>::from_slice(&a_key);
-                let cipher = Aes256Gcm::new(&key);
+                let key = Key::<Aes256Gcm>::from_slice(a_key);
+                let cipher = Aes256Gcm::new(key);
 
                 let d = cipher.decrypt(GenericArray::from_slice(nonce), ciphered);
                 if d.is_ok() {

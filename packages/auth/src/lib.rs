@@ -12,4 +12,4 @@ pub use dirtybase_entry::*;
 pub use guard_resolver::*;
 pub use storage::*;
 
-pub const AUTH_USER_TABLE: &'static str = "auth_users";
+pub const AUTH_USER_TABLE: &str = "auth_users";

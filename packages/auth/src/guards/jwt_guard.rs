@@ -6,7 +6,7 @@ use dirtybase_contract::{
 
 use crate::GuardResolver;
 
-pub const JWT_GUARD: &'static str = "jwt";
+pub const JWT_GUARD: &str = "jwt";
 
 pub async fn authenticate(mut resolver: GuardResolver) -> GuardResolver {
     tracing::info!(">>>> In JWT Authentication guard");

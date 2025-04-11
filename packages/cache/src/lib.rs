@@ -10,7 +10,6 @@ pub use cache_dirtybase_entry::*;
 pub use cache_manager::CacheManager;
 pub use cache_manager::cache_entry::CacheEntry;
 use dirtybase_contract::app_contract::Context;
-use dirtybase_contract::config_contract::DirtyConfig;
 
 pub async fn setup(context: &Context) -> cache_manager::CacheManager {
     let cache_config = context

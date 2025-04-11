@@ -1,11 +1,8 @@
 use dirtybase_db::{
     TableEntityTrait,
     config::ConnectionConfig,
-    connector::{
-        mariadb::make_mariadb_manager, postgres::make_postgres_manager,
-        sqlite::make_sqlite_in_memory_manager,
-    },
-    types::{IntegerField, JsonField, OptionalDateTimeField, OptionalStringField},
+    connector::postgres::make_postgres_manager,
+    types::IntegerField,
 };
 use dirtybase_db_macro::DirtyTable;
 use tracing::Level;

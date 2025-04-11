@@ -6,8 +6,8 @@ use dirtybase_contract::{
     config_contract::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
 };
 
-pub const MEMORY_STORAGE: &'static str = "memory";
-pub const DATABASE_STORAGE: &'static str = "database";
+pub const MEMORY_STORAGE: &str = "memory";
+pub const DATABASE_STORAGE: &str = "database";
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct AuthConfig {
     enable: bool,

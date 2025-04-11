@@ -1,5 +1,4 @@
 mod migration;
-use std::sync::Arc;
 
 use dirtybase_contract::{
     ExtensionMigrations, ExtensionSetup,
@@ -46,9 +45,9 @@ impl ExtensionSetup for Extension {
         cookie: CookieJar,
         context: Context,
     ) -> (Response, CookieJar) {
-        let result = self.add_session_id_to_cookie(resp, cookie, context).await;
+        
 
-        result
+        self.add_session_id_to_cookie(resp, cookie, context).await
     }
 
     fn migrations(&self, _context: &Context) -> Option<ExtensionMigrations> {
@@ -70,7 +69,7 @@ impl Extension {
                 let id = match request_session_id {
                     Some(c) => {
                         // check the cookie
-                        SessionId::from_str(&c.value().to_string()).unwrap_or_default()
+                        SessionId::from_str(c.value()).unwrap_or_default()
                     }
                     None => SessionId::new(),
                 };

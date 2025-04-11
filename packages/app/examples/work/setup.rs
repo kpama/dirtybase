@@ -191,7 +191,7 @@ pub async fn seed_tables(manager: &Manager) {
                         if product_lists.contains(product.internal_id.as_ref().unwrap()) {
                             continue;
                         }
-                        product_lists.push(product.internal_id.as_ref().unwrap().clone());
+                        product_lists.push(*product.internal_id.as_ref().unwrap());
                         items.push(OrderItem {
                             id: Default::default(),
                             name: item_name.to_string(),

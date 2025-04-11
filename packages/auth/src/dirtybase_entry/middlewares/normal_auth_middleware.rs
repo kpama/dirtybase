@@ -13,7 +13,7 @@ use crate::StorageResolver;
 pub async fn handle_normal_auth_middleware(req: Request, next: Next) -> impl IntoResponse {
     let context;
     let session;
-    let mut is_success = false;
+    let is_success = false;
 
     if let Some(c) = req.extensions().get::<Context>() {
         context = c;

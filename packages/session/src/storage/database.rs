@@ -14,7 +14,7 @@ use dirtybase_contract::{
 
 use crate::SessionStorageResolver;
 
-pub const NAME: &'static str = "database";
+pub const NAME: &str = "database";
 
 pub struct DatabaseStorage {
     manager: Manager,

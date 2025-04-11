@@ -60,9 +60,7 @@ impl From<&RouterCorsConfig> for CorsLayer {
                 } else {
                     AllowHeaders::list(
                         list.iter()
-                            .map(|e| HeaderName::from_str(e))
-                            .filter(|e| e.is_ok())
-                            .map(|e| e.unwrap())
+                            .flat_map(|e| HeaderName::from_str(e))
                             .collect::<Vec<HeaderName>>(),
                     )
                 }
@@ -77,9 +75,7 @@ impl From<&RouterCorsConfig> for CorsLayer {
                 } else {
                     AllowMethods::list(
                         list.iter()
-                            .map(|e| Method::from_str(e))
-                            .filter(|e| e.is_ok())
-                            .map(|e| e.unwrap())
+                            .flat_map(|e| Method::from_str(e))
                             .collect::<Vec<Method>>(),
                     )
                 }
@@ -94,9 +90,7 @@ impl From<&RouterCorsConfig> for CorsLayer {
                 } else {
                     AllowOrigin::list(
                         list.iter()
-                            .map(|e| HeaderValue::from_str(e))
-                            .filter(|e| e.is_ok())
-                            .map(|e| e.unwrap())
+                            .flat_map(|e| HeaderValue::from_str(e))
                             .collect::<Vec<HeaderValue>>(),
                     )
                 }
@@ -111,9 +105,7 @@ impl From<&RouterCorsConfig> for CorsLayer {
                 } else {
                     ExposeHeaders::list(
                         list.iter()
-                            .map(|e| HeaderName::from_str(e))
-                            .filter(|e| e.is_ok())
-                            .map(|e| e.unwrap())
+                            .flat_map(|e| HeaderName::from_str(e))
                             .collect::<Vec<HeaderName>>(),
                     )
                 }
@@ -288,7 +280,7 @@ impl Config {
 
     pub fn previous_keys(&self) -> Option<Vec<Vec<u8>>> {
         if let Some(v) = &self.entry.previous_keys {
-            return Some(v.iter().map(|e| e.clone()).collect::<Vec<Vec<u8>>>());
+            return Some(v.iter().cloned().collect::<Vec<Vec<u8>>>());
         }
         None
     }
@@ -518,7 +510,6 @@ where
 
     Ok(Some(Arc::new(
         s.split(',')
-            .into_iter()
             .map(|v| {
                 let s = v.trim();
                 if s.starts_with("base64:") {
@@ -558,9 +549,9 @@ pub fn same_site_se_field<S>(same_site: &SameSite, s: S) -> Result<S::Ok, S::Err
 where
     S: Serializer,
 {
-    match same_site {
-        &SameSite::Lax => s.serialize_str("lax"),
-        &SameSite::Strict => s.serialize_str("strict"),
-        &SameSite::None => s.serialize_str("none"),
+    match *same_site {
+        SameSite::Lax => s.serialize_str("lax"),
+        SameSite::Strict => s.serialize_str("strict"),
+        SameSite::None => s.serialize_str("none"),
     }
 }

@@ -2,7 +2,7 @@ use dirtybase_contract::session_contract::{SessionData, SessionId, SessionStorag
 
 use crate::SessionStorageResolver;
 
-pub const NAME: &'static str = "dummy";
+pub const NAME: &str = "dummy";
 
 #[derive(Default)]
 pub struct DummyStorage;
@@ -27,6 +27,6 @@ impl SessionStorage for DummyStorage {
 }
 
 pub async fn resolver(mut resolver: SessionStorageResolver) -> SessionStorageResolver {
-    resolver.set_storage(DummyStorage::default());
+    resolver.set_storage(DummyStorage);
     resolver
 }

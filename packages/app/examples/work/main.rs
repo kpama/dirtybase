@@ -1,9 +1,7 @@
 mod models;
 mod setup;
 
-use std::{result, sync::Arc};
 
-use dirtybase_helper::ulid::Ulid;
 use setup::*;
 
 use dirtybase_contract::db_contract::{
@@ -15,9 +13,7 @@ use dirtybase_contract::db_contract::{
 };
 use dirtybase_db::{
     config::ConnectionConfig,
-    connector::{
-        mariadb::make_mariadb_manager, postgres::make_postgres_manager, sqlite::make_sqlite_manager,
-    },
+    connector::mariadb::make_mariadb_manager,
 };
 use models::{
     Address, Company, Customer, Image, Inventory, Invoice, Product, SalesOrder, Warehouse,
@@ -135,8 +131,8 @@ async fn main() -> anyhow::Result<()> {
     // --- morph one to one
     let mut morph_one_to_one = MorphOneToMany::<Product, Image>::new(
         manager.clone(),
-        &Image::col_name_for_imageable_id(),
-        &Image::col_name_for_imageable_type(),
+        Image::col_name_for_imageable_id(),
+        Image::col_name_for_imageable_type(),
     );
 
     morph_one_to_one.constrain_key(product_id.as_str());
@@ -150,8 +146,8 @@ async fn main() -> anyhow::Result<()> {
     // --- morph one to many
     let mut morph_one_to_many = MorphOneToMany::<Product, Image>::new(
         manager.clone(),
-        &Image::col_name_for_imageable_id(),
-        &Image::col_name_for_imageable_type(),
+        Image::col_name_for_imageable_id(),
+        Image::col_name_for_imageable_type(),
     );
     morph_one_to_many.constrain_key(product_id.as_str());
 
@@ -164,8 +160,8 @@ async fn main() -> anyhow::Result<()> {
     // -- morph one of many: latest
     let mut morph_one_of_many = MorphOneOfMany::<Product, Image>::new(
         manager.clone(),
-        &Image::col_name_for_imageable_id(),
-        &Image::col_name_for_imageable_type(),
+        Image::col_name_for_imageable_id(),
+        Image::col_name_for_imageable_type(),
     );
 
     morph_one_of_many.parent_key(&product_id);

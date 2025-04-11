@@ -11,13 +11,13 @@ use dirtybase_helper::{hash::sha256, security::random_bytes_hex};
 use crate::{AuthConfig, GuardResolver, StorageResolver};
 
 /// Session guard ID
-pub const SESSION_GUARD: &'static str = "session";
+pub const SESSION_GUARD: &str = "session";
 /// The key under which the cookie ID is kept in the session
-pub const AUTH_COOKIE_KEY: &'static str = "auth_cookie_key";
+pub const AUTH_COOKIE_KEY: &str = "auth_cookie_key";
 /// The key for the auth hash in the session
-pub const AUTH_HASH_KEY: &'static str = "auth_hash";
+pub const AUTH_HASH_KEY: &str = "auth_hash";
 /// The key for the authenticate user ID
-pub const AUTH_USER_ID_KEY: &'static str = "auth_user_id";
+pub const AUTH_USER_ID_KEY: &str = "auth_user_id";
 
 /// Session guard handler
 ///
@@ -89,7 +89,7 @@ pub async fn authorize(mut resolver: GuardResolver) -> GuardResolver {
 }
 
 pub async fn authenticate(ctx: Context, cred: LoginCredential) -> bool {
-    return match login_and_verify(ctx.clone(), cred).await {
+    match login_and_verify(ctx.clone(), cred).await {
         (true, Ok(Some(user))) => {
             let mut session = match ctx.get::<Session>().await {
                 Ok(s) => s,
@@ -112,14 +112,14 @@ pub async fn authenticate(ctx: Context, cred: LoginCredential) -> bool {
 
                 return true;
             }
-            return false;
+            false
         }
         (false, Ok(Some(user))) => {
             // log failed attempt
             false
         }
         _ => false,
-    };
+    }
 }
 
 pub async fn login_and_verify(
@@ -138,13 +138,11 @@ pub async fn login_and_verify(
         storage
             .find_by_username(cred.username().as_ref().unwrap())
             .await
+    } else if let Some(email) = cred.email() {
+        let hash = sha256::hash_str(email);
+        storage.find_by_email_hash(&hash).await
     } else {
-        if let Some(email) = cred.email() {
-            let hash = sha256::hash_str(email);
-            storage.find_by_email_hash(&hash).await
-        } else {
-            return (false, Err(anyhow::anyhow!("username or email is required")));
-        }
+        return (false, Err(anyhow::anyhow!("username or email is required")));
     };
 
     if let Ok(Some(user)) = result {
@@ -161,5 +159,5 @@ pub async fn login_and_verify(
         return (false, Ok(Some(user)));
     }
 
-    return (false, Err(anyhow::anyhow!("user not found")));
+    (false, Err(anyhow::anyhow!("user not found")))
 }

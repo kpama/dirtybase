@@ -6,7 +6,7 @@ use tokio::sync::RwLock;
 
 use crate::SessionStorageResolver;
 
-pub const NAME: &'static str = "memory";
+pub const NAME: &str = "memory";
 
 #[derive(Debug, Default, Clone)]
 pub struct MemoryStorage {
@@ -22,7 +22,7 @@ impl SessionStorage for MemoryStorage {
 
     async fn get(&self, id: &SessionId) -> SessionData {
         let r_lock = self.storage.read().await;
-        if let Some(data) = r_lock.get(&id).cloned() {
+        if let Some(data) = r_lock.get(id).cloned() {
             return data;
         }
         drop(r_lock);
@@ -33,7 +33,7 @@ impl SessionStorage for MemoryStorage {
 
     async fn remove(&self, id: &SessionId) -> Option<SessionData> {
         let mut w_lock = self.storage.write().await;
-        w_lock.remove(&id)
+        w_lock.remove(id)
     }
 
     async fn gc(&self, lifetime: i64) {

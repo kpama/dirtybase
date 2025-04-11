@@ -1,7 +1,6 @@
 use axum::response::Html;
 use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
-use dirtybase_contract::app_contract::RequestContext;
 use dirtybase_contract::cli_contract::CliMiddlewareManager;
 use dirtybase_contract::{
     app_contract::{Context, ContextResourceManager, CtxExt},

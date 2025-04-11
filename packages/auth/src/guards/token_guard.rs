@@ -6,7 +6,7 @@ use dirtybase_contract::{
 
 use crate::GuardResolver;
 
-pub const TOKEN_GUARD: &'static str = "token";
+pub const TOKEN_GUARD: &str = "token";
 
 pub async fn authenticate(mut resolver: GuardResolver) -> GuardResolver {
     tracing::info!(">>>> In Token Authentication guard");

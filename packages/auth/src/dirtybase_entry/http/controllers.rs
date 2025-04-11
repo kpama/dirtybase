@@ -139,7 +139,7 @@ pub(crate) async fn handle_register_request(
     if let Ok(user) = storage.store(payload).await {
         format!("token: {}", user.generate_token().unwrap())
     } else {
-        format!("token: ")
+        "token: ".to_string()
     }
 }
 

@@ -12,7 +12,7 @@ pub async fn handle_auth_middleware(
     if let Some(mut p) = params {
         // changes jwt => "" to guard => "jwt"
         if p.keys().len() == 1 && p.get("guard").is_none() {
-            let first = p.keys().into_iter().next().cloned().unwrap();
+            let first = p.keys().next().cloned().unwrap();
             p.insert("guard".to_string(), first);
         }
 

@@ -7,8 +7,6 @@ pub use dirtybase_contract::fama::PipeContent;
 pub use dirtybase_contract::fama::PipelineBuilderTrait;
 pub use memory_storage::*;
 
-use crate::AUTH_USER_TABLE;
-use crate::AuthConfig;
 use crate::DATABASE_STORAGE;
 use crate::MEMORY_STORAGE;
 use crate::StorageResolver;

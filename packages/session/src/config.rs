@@ -53,7 +53,7 @@ impl TryFromDirtyConfig for SessionConfig {
         {
             Ok(c) => Ok(c),
             Err(e) => {
-                let message = format!("could not build session config: {}", e.to_string());
+                let message = format!("could not build session config: {}", e);
                 tracing::error!("{}", &message);
                 Err(anyhow!(e))
             }
@@ -67,7 +67,7 @@ impl SessionConfig {
     }
 
     pub fn storage_ref(&self) -> &str {
-        &self.storage.as_str()
+        self.storage.as_str()
     }
 
     pub fn lifetime(&self) -> i64 {
