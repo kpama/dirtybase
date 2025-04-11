@@ -70,7 +70,7 @@ async fn setup_db() {
 }
 
 async fn create_tables(manager: &Manager) {
-    manager
+    _ = manager
         .create_table_schema(Person::table_name(), |builder| {
             builder.id(Person::id_column());
             builder.string(Person::col_name_for_first_name());

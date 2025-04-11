@@ -13,8 +13,8 @@ use dirtybase_contract::db_contract::base::index::IndexType;
 use futures::stream::TryStreamExt;
 use sqlx::{
     Arguments, Column, Pool, Postgres, Row,
-    postgres::{PgArguments, PgRow, types},
-    types::{Json, chrono},
+    postgres::{PgArguments, PgRow},
+    types::chrono,
 };
 use std::{collections::HashMap, sync::Arc};
 
@@ -213,35 +213,37 @@ impl PostgresSchemaManager {
                     if *do_soft_insert { "IGNORE" } else { "" },
                     query.table()
                 );
+                sql = self.build_insert_data(&mut params, rows, sql);
+            }
+            QueryAction::Upsert {
+                rows,
+                unique,
+                to_update,
+            } => {
+                sql = format!("INSERT INTO {}", query.table());
+                sql = self.build_insert_data(&mut params, &rows, sql);
 
-                if !rows.is_empty() {
-                    let first_row = rows.first().unwrap();
-                    let keys = first_row.keys().cloned().collect::<Vec<String>>();
-                    let placeholders2 = keys
-                        .iter()
-                        .enumerate()
-                        .map(|(i, _)| format!("${}", i + 1))
-                        .collect::<Vec<String>>()
-                        .join(",");
-                    let columns = keys
-                        .iter()
-                        .map(|e| e.to_string())
-                        .collect::<Vec<String>>()
-                        .join(",");
+                if !unique.is_empty() && !to_update.is_empty() {
+                    sql = format!(
+                        "{} ON CONFLICT ({}) ",
+                        sql,
+                        unique
+                            .iter()
+                            .map(|e| format!("\"{}\"", e))
+                            .collect::<Vec<String>>()
+                            .join(",")
+                    );
 
-                    sql = format!("{} ({}) VALUES ", sql, columns);
-
-                    for a_row in rows.iter().enumerate() {
-                        keys.iter().for_each(|col| {
-                            let field = a_row.1.get(col).unwrap();
-                            self.field_value_to_args(field, &mut params);
-                        });
-                        let separator = if a_row.0 > 0 { "," } else { "" };
-
-                        sql = format!("{} {} ({})", sql, separator, &placeholders2);
+                    let mut update_values = Vec::new();
+                    for entry in to_update {
+                        update_values.push(format!("\"{0}\" = \"excluded\".\"{0}\"", entry));
                     }
+
+                    sql = format!("{} DO UPDATE SET {}", sql, update_values.join(","));
+                    println!("sql generated: {} ", &sql);
                 }
             }
+
             QueryAction::Update(column_values) => {
                 let mut columns = Vec::new();
                 for entry in column_values {
@@ -813,13 +815,13 @@ impl PostgresSchemaManager {
     fn field_value_to_args(&self, field: &FieldValue, params: &mut PgArguments) {
         match field {
             FieldValue::DateTime(dt) => {
-                _ = Arguments::add(params, dt); // format!("{}", dt.format("%F %T")));
+                _ = Arguments::add(params, dt);
             }
             FieldValue::Timestamp(dt) => {
-                _ = Arguments::add(params, dt); //format!("{}", dt.format("%F %T")));
+                _ = Arguments::add(params, dt);
             }
             FieldValue::Date(d) => {
-                _ = Arguments::add(params, d); //format!("{}", d.format("%F")));
+                _ = Arguments::add(params, d);
             }
             FieldValue::Binary(d) => {
                 _ = Arguments::add(params, d);
@@ -848,7 +850,7 @@ impl PostgresSchemaManager {
                 _ = Arguments::add(params, v);
             }
             FieldValue::Time(t) => {
-                _ = Arguments::add(params, t); // format!("{}", t.format("%T"))
+                _ = Arguments::add(params, t);
             }
             FieldValue::U64(v) => {
                 let v = *v as i64;
@@ -859,5 +861,45 @@ impl PostgresSchemaManager {
             }
             FieldValue::NotSet => (),
         }
+    }
+
+    fn build_insert_data(
+        &self,
+        params: &mut PgArguments,
+        rows: &[ColumnAndValue],
+        mut sql: String,
+    ) -> String {
+        if !rows.is_empty() {
+            let first_row = rows.first().unwrap();
+            let keys = first_row.keys().cloned().collect::<Vec<String>>();
+            let columns = keys
+                .iter()
+                .map(|e| format!("\"{}\"", e))
+                .collect::<Vec<String>>()
+                .join(",");
+
+            sql = format!("{} ({}) VALUES ", sql, columns);
+            let mut placeholder_counter = 0;
+            for a_row in rows.iter().enumerate() {
+                keys.iter().for_each(|col| {
+                    let field = a_row.1.get(col).unwrap();
+                    self.field_value_to_args(field, params);
+                });
+                let separator = if a_row.0 > 0 { "," } else { "" };
+
+                let placeholders = keys
+                    .iter()
+                    .enumerate()
+                    .map(|_| {
+                        placeholder_counter += 1;
+                        format!("${}", placeholder_counter)
+                    })
+                    .collect::<Vec<String>>()
+                    .join(",");
+                sql = format!("{} {} ({})", sql, separator, &placeholders);
+            }
+        }
+
+        sql
     }
 }

@@ -1,23 +1,19 @@
-use std::{
-    collections::HashMap,
-    sync::{atomic::AtomicI64, Arc, RwLock},
-};
+use std::sync::{atomic::AtomicI64, Arc, RwLock};
 
 use dirtybase_helper::time::now_ts;
+use serde::Serialize;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SessionData {
-    created_at: Arc<AtomicI64>,
-    updated_at: Arc<AtomicI64>,
-    inner: Arc<RwLock<HashMap<String, String>>>,
+    expires: Arc<AtomicI64>,
+    inner: Arc<RwLock<serde_json::Map<String, serde_json::Value>>>,
 }
 
 impl Default for SessionData {
     fn default() -> Self {
         let ts = dirtybase_helper::time::now_ts();
         Self {
-            created_at: Arc::new(ts.into()),
-            updated_at: Arc::new(ts.into()),
+            expires: Arc::new(ts.into()),
             inner: Arc::default(),
         }
     }
@@ -28,48 +24,49 @@ impl SessionData {
         Default::default()
     }
 
-    pub fn new_from(data: HashMap<String, String>, created_at: i64, updated_at: i64) -> Self {
+    pub fn new_from(data: serde_json::Map<String, serde_json::Value>, expires: i64) -> Self {
         Self {
             inner: Arc::new(RwLock::new(data)),
-            created_at: Arc::new(created_at.into()),
-            updated_at: Arc::new(updated_at.into()),
+            expires: Arc::new(expires.into()),
         }
     }
 
-    pub fn created_at(&self) -> i64 {
-        self.created_at.load(std::sync::atomic::Ordering::Relaxed)
+    pub fn touch(&self, lifetime: i64) {
+        let mut now = dirtybase_helper::time::Time::now();
+        now = now.add_minutes(lifetime);
+        self.expires
+            .swap(now.timestamp(), std::sync::atomic::Ordering::Relaxed);
     }
 
-    pub fn touch(&self) {
-        self.updated_at
-            .fetch_add(now_ts(), std::sync::atomic::Ordering::Relaxed);
-    }
-
-    pub fn updated_at(&self) -> i64 {
-        self.updated_at.load(std::sync::atomic::Ordering::Relaxed)
+    pub fn expires(&self) -> i64 {
+        self.expires.load(std::sync::atomic::Ordering::Relaxed)
     }
 
     pub fn has_expired(&self, lifetime: i64) -> bool {
-        self.updated_at() + lifetime < now_ts()
+        self.expires() + lifetime < now_ts()
     }
 
-    pub fn add<K: ToString, V: ToString>(&self, key: K, value: V) {
+    pub fn add<K: ToString, V: Serialize>(&self, key: K, value: V) {
         if let Ok(mut w_lock) = self.inner.write() {
-            w_lock.insert(key.to_string(), value.to_string());
+            w_lock.insert(
+                key.to_string(),
+                serde_json::to_value(value).unwrap_or_default(),
+            );
         }
-        self.touch();
     }
 
-    pub fn get(&self, key: &str) -> Option<String> {
+    pub fn get(&self, key: &str) -> Option<serde_json::Value> {
         if let Ok(r_lock) = self.inner.read() {
             return r_lock.get(key).cloned();
         }
         None
     }
 
-    pub fn delete(&self, key: &str) -> Option<String> {
+    pub fn delete(&self, key: &str) -> Option<serde_json::Value> {
         match self.inner.write() {
-            Ok(mut w_lock) => w_lock.remove(key),
+            Ok(mut w_lock) => {
+                return w_lock.remove(key);
+            }
             Err(e) => {
                 tracing::error!("could not delete session data: {}", e);
                 None
@@ -78,22 +75,25 @@ impl SessionData {
     }
 
     pub fn has(&self, key: &str) -> bool {
-        match self.inner.read() {
-            Ok(r_lock) => r_lock.contains_key(key),
-            Err(_) => false,
+        if let Ok(r_lock) = self.inner.read() {
+            return r_lock.contains_key(key);
         }
+        false
     }
 
-    pub fn all(&self) -> HashMap<String, String> {
+    pub fn all(&self) -> serde_json::Map<String, serde_json::Value> {
         match self.inner.read() {
-            Ok(r_lock) => r_lock.clone(),
-            Err(_) => HashMap::new(),
+            Ok(r_lock) => {
+                return r_lock.clone();
+            }
+            _ => (),
         }
+        serde_json::Map::default()
     }
 
     pub fn reset(&self) {
         if let Ok(mut w_lock) = self.inner.write() {
-            _ = w_lock.drain();
+            w_lock.clear();
         }
     }
 }

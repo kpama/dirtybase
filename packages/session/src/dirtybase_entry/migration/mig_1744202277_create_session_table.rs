@@ -19,7 +19,9 @@ impl Migration for Mig1744202277CreateSessionTable {
                     .json(SessionTable::col_name_for_data())
                     .default_is_empty_object();
                 table.created_at();
-                table.updated_at();
+                table
+                    .timestamp(SessionTable::col_name_for_expires())
+                    .set_is_nullable(true);
             })
             .await
     }

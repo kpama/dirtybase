@@ -34,6 +34,11 @@ pub enum QueryAction {
         rows: Vec<ColumnAndValue>,
         do_soft_insert: bool,
     },
+    Upsert {
+        rows: Vec<ColumnAndValue>,
+        to_update: Vec<String>,
+        unique: Vec<String>,
+    },
     Update(ColumnAndValue),
     Delete,
     DropTable,
@@ -56,6 +61,11 @@ impl Display for QueryAction {
                     rows: _,
                     do_soft_insert: _,
                 } => "Create",
+                QueryAction::Upsert {
+                    rows: _,
+                    unique: _,
+                    to_update: _,
+                } => "Upsert",
                 QueryAction::Query { columns: _ } => "Query",
                 QueryAction::Update(_) => "Update",
                 QueryAction::Delete => "Delete",
@@ -117,14 +127,6 @@ impl QueryBuilder {
         callback(&mut query_builder);
 
         QueryValue::SubQuery(Box::new(query_builder))
-    }
-
-    /// By default all fields are select
-    #[deprecated]
-    pub fn select_all(&mut self) -> &mut Self {
-        if let QueryAction::Query { columns: None } = &mut self.action {}
-
-        self
     }
 
     pub fn count(&mut self, column: &str) -> &mut Self {

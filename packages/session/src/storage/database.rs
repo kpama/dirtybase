@@ -2,9 +2,12 @@ use std::collections::HashMap;
 
 use dirtybase_contract::{
     db_contract::{
-        TableEntityTrait,
         base::manager::Manager,
-        types::{DateTimeField, JsonField, OptionalDateTimeField, OptionalStringField},
+        field_values::FieldValue,
+        types::{
+            JsonField, OptionalDateTimeField, OptionalStringField, OptionalTimestampField,
+            TimestampField,
+        },
     },
     session_contract::{SessionData, SessionId, SessionStorage},
 };
@@ -26,19 +29,44 @@ impl DatabaseStorage {
 #[async_trait::async_trait]
 impl SessionStorage for DatabaseStorage {
     async fn store(&self, id: SessionId, value: SessionData) {
-        log::debug!("db session storage store");
         // 1. Try to update existing data
-        let result = self
+        if let Ok(Some(_)) = self
             .manager
-            .delete_from_table::<SessionTable>(|q| {
-                q.eq(SessionTable::col_name_for_id(), id.clone().to_string());
+            .select_from::<SessionTable>(|q| {
+                q.eq("id", id.clone().to_string());
             })
-            .await;
-        tracing::warn!("deleted session {}, result: {:?}", &id, result);
-        let mut model: SessionTable = value.into();
-        model.id = Some(id.to_string());
-        let result = self.manager.insert_into::<SessionTable>(model).await;
-        tracing::warn!("inserted session {}, result: {:?}", &id, result);
+            .fetch_one_to::<SessionTable>()
+            .await
+        {
+            // let result = self
+            //     .manager
+            //     .delete_from_table::<SessionTable>(|q| {
+            //         q.eq(SessionTable::col_name_for_id(), id.clone().to_string());
+            //     })
+            //     .await;
+            let mut data = HashMap::new();
+            let model: SessionTable = value.into();
+            data.insert(
+                SessionTable::col_name_for_expires().to_string(),
+                FieldValue::from(model.expires),
+            );
+            data.insert(
+                SessionTable::col_name_for_data().to_string(),
+                FieldValue::from(model.data),
+            );
+
+            let result = self
+                .manager
+                .update_table::<SessionTable>(data, |q| {
+                    //
+                    q.eq("id", id.to_string());
+                })
+                .await;
+        } else {
+            let mut model: SessionTable = value.into();
+            model.id = Some(id.to_string());
+            let result = self.manager.insert_into::<SessionTable>(model).await;
+        }
     }
 
     async fn get(&self, id: &SessionId) -> SessionData {
@@ -52,12 +80,7 @@ impl SessionStorage for DatabaseStorage {
             .fetch_one_to::<SessionTable>()
             .await
         {
-            Ok(Some(data)) => {
-                tracing::warn!("got the existing session data: {:#?}", &data);
-                let x = SessionData::from(data);
-                tracing::warn!("got the existing session data: {:#?}", &x);
-                x
-            }
+            Ok(Some(data)) => SessionData::from(data),
             _ => {
                 tracing::error!("we should have the session in storage");
                 SessionData::new()
@@ -80,37 +103,24 @@ impl SessionStorage for DatabaseStorage {
 pub struct SessionTable {
     id: OptionalStringField,
     data: JsonField,
-    // data: HashMap<String, String>,
+    #[dirty(skip_insert)]
     created_at: OptionalDateTimeField,
-    updated_at: OptionalDateTimeField,
+    expires: OptionalTimestampField,
 }
 
 impl From<SessionTable> for SessionData {
     fn from(value: SessionTable) -> Self {
-        let mut data = HashMap::<String, String>::new();
-        for (key, value) in value.data {
-            data.insert(key, value.to_string());
-        }
-        SessionData::new_from(
-            data,
-            value.created_at.unwrap_or_default().timestamp(),
-            value.updated_at.unwrap_or_default().timestamp(),
-        )
+        SessionData::new_from(value.data, value.expires.unwrap_or_default().timestamp())
     }
 }
 
 impl From<SessionData> for SessionTable {
     fn from(value: SessionData) -> Self {
-        let mut data = serde_json::Map::new();
-        for (key, value) in value.all() {
-            data.insert(key, value.to_string().into());
-        }
-
         Self {
             id: None,
-            data,
+            data: value.all(),
             created_at: None,
-            updated_at: None,
+            expires: TimestampField::from_timestamp(value.expires(), 0),
         }
     }
 }

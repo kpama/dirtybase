@@ -1,8 +1,13 @@
 use dirtybase_db::{
+    TableEntityTrait,
     config::ConnectionConfig,
-    connector::postgres::make_postgres_manager,
-    types::{JsonField, OptionalDateTimeField, OptionalStringField},
+    connector::{
+        mariadb::make_mariadb_manager, postgres::make_postgres_manager,
+        sqlite::make_sqlite_in_memory_manager,
+    },
+    types::{IntegerField, JsonField, OptionalDateTimeField, OptionalStringField},
 };
+use dirtybase_db_macro::DirtyTable;
 use tracing::Level;
 
 #[tokio::main]
@@ -19,29 +24,39 @@ async fn main() -> anyhow::Result<()> {
         kind: "postgres".into(),
         ..Default::default()
     };
+    // let base_config = ConnectionConfig {
+    //     url: "mariadb://root:dbpassword@mariadb/dirtybase".to_string(),
+    //     kind: "mariadb".into(),
+    //     ..Default::default()
+    // };
 
     let manager = make_postgres_manager(base_config).await;
-    let result = manager
-        .select_from::<SessionTable>(|q| {
-            q.eq(
-                SessionTable::col_name_for_id(),
-                "9528b376c621442edcabd7959b7e52ec",
-            );
-        })
-        .first_to::<SessionTable>()
-        .await;
+    // let manager = make_mariadb_manager(base_config).await;
+    // let manager = make_sqlite_in_memory_manager().await;
 
-    dbg!("{:?}", result);
+    let first = Score {
+        user_id: 1,
+        points: 5,
+    };
+    let second = Score {
+        user_id: 2,
+        points: 6,
+    };
+    let result = manager
+        .upsert_multi(
+            Score::table_name(),
+            [first, second],
+            &["points"],
+            &["user_id"],
+        )
+        .await;
+    println!("insert result: {:?}", result);
 
     Ok(())
 }
 
-#[derive(Debug, dirtybase_db_macro::DirtyTable, Default, Clone)]
-#[dirty(table = "sessions")]
-pub struct SessionTable {
-    id: OptionalStringField,
-    data: JsonField,
-    // data: HashMap<String, String>,
-    created_at: OptionalDateTimeField,
-    updated_at: OptionalDateTimeField,
+#[derive(Debug, Clone, Default, DirtyTable)]
+struct Score {
+    user_id: IntegerField,
+    points: IntegerField,
 }

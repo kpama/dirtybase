@@ -176,7 +176,7 @@ impl Manager {
         self.create_insert_query(table_name, rows, false).await
     }
 
-    /// Insert a row gracefully ignore insert creates duplicate
+    /// Insert row gracefully ignore insert duplicates
     pub async fn soft_insert<I: IntoColumnAndValue>(&self, table_name: &str, row: I) -> Result<()> {
         self.create_insert_query(table_name, vec![row], true).await
     }
@@ -188,6 +188,44 @@ impl Manager {
         rows: R,
     ) -> Result<()> {
         self.create_insert_query(table_name, rows, true).await
+    }
+
+    pub async fn upsert<I: IntoColumnAndValue>(
+        &self,
+        table_name: &str,
+        row: I,
+        update: &[&str],
+        unique: &[&str],
+    ) -> Result<()> {
+        self.upsert_multi(table_name, vec![row], update, unique)
+            .await
+    }
+
+    pub async fn upsert_multi<R: IntoIterator<Item = I>, I: IntoColumnAndValue>(
+        &self,
+        table_name: &str,
+        rows: R,
+        update: &[&str],
+        unique: &[&str],
+    ) -> Result<()> {
+        let query = QueryBuilder::new(
+            table_name,
+            super::query::QueryAction::Upsert {
+                rows: rows.into_iter().map(|r| r.into_column_value()).collect(),
+                to_update: update
+                    .iter()
+                    .map(|e| e.to_string())
+                    .collect::<Vec<String>>(),
+                unique: unique
+                    .iter()
+                    .map(|e| e.to_string())
+                    .collect::<Vec<String>>(),
+            },
+        );
+
+        self.write_schema_manager().execute(query).await?;
+        self.dispatch_written_event();
+        Ok(())
     }
 
     pub async fn update<R: IntoColumnAndValue>(
@@ -204,6 +242,14 @@ impl Manager {
         self.write_schema_manager().execute(query).await?;
         self.dispatch_written_event();
         Ok(())
+    }
+
+    pub async fn update_table<T: TableEntityTrait>(
+        &self,
+        row: impl IntoColumnAndValue,
+        callback: impl FnOnce(&mut QueryBuilder),
+    ) -> Result<()> {
+        self.update(T::table_name(), row, callback).await
     }
 
     pub async fn delete(

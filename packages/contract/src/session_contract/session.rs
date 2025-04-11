@@ -13,7 +13,7 @@ pub struct Session {
 impl Session {
     pub(crate) async fn new(id: SessionId, storage: SessionStorageProvider) -> Self {
         let instance = Self {
-            id: id.clone(),
+            id,
             storage,
             lifetime: 60,
         };
@@ -51,7 +51,7 @@ impl Session {
     pub async fn get<T: DeserializeOwned>(&self, name: &str) -> Option<T> {
         let bucket = self.storage.get(&self.id).await;
         if let Some(value) = bucket.get(name) {
-            return serde_json::from_str(&value).ok();
+            return serde_json::from_value(value).ok();
         }
 
         None
@@ -61,8 +61,9 @@ impl Session {
         let bucket = self.storage.get(&self.id).await;
         bucket.add(
             name.to_string(),
-            serde_json::to_string(&value).unwrap_or_default(),
+            serde_json::to_value(&value).unwrap_or_default(),
         );
+        bucket.touch(self.lifetime);
         self.storage.store(self.id.clone(), bucket).await;
     }
 
@@ -72,7 +73,7 @@ impl Session {
 
     pub async fn touch(&self) {
         let bucket = self.storage.get(&self.id).await;
-        bucket.touch();
+        bucket.touch(self.lifetime);
         self.storage.store(self.id.clone(), bucket).await;
     }
 
@@ -113,6 +114,10 @@ impl Session {
     }
 
     async fn fingerprint(&self) -> String {
+        println!(
+            "getting finger print: {:?}",
+            self.get::<String>("_fp").await
+        );
         self.get("_fp").await.unwrap_or_default()
     }
 

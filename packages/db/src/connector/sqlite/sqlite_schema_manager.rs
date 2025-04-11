@@ -16,7 +16,7 @@ use sqlx::{
     sqlite::{SqliteArguments, SqliteRow},
     types::chrono,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, fmt::format, sync::Arc};
 
 const LOG_TARGET: &str = "sqlite_db_driver";
 pub const SQLITE_KIND: &str = "sqlite";
@@ -236,32 +236,33 @@ impl SqliteSchemaManager {
                     if *do_soft_insert { "OR IGNORE" } else { "" },
                     query.table()
                 );
-                if !rows.is_empty() {
-                    let keys = rows
-                        .first()
-                        .unwrap()
-                        .keys()
-                        .cloned()
-                        .collect::<Vec<String>>();
+                sql = self.build_insert_data(&mut params, rows, sql);
+            }
+            QueryAction::Upsert {
+                rows,
+                unique,
+                to_update,
+            } => {
+                sql = format!("INSERT INTO {}", query.table());
+                sql = self.build_insert_data(&mut params, &rows, sql);
 
-                    let placeholders = keys.iter().map(|_| "?").collect::<Vec<&str>>().join(",");
-                    let columns = keys
-                        .iter()
-                        .map(|e| format!("`{}`", e))
-                        .collect::<Vec<String>>()
-                        .join(",");
+                if !unique.is_empty() && !to_update.is_empty() {
+                    sql = format!(
+                        "{} ON CONFLICT ({}) ",
+                        sql,
+                        unique
+                            .iter()
+                            .map(|e| format!("`{}`", e))
+                            .collect::<Vec<String>>()
+                            .join(",")
+                    );
 
-                    sql = format!("{} ({}) VALUES ", sql, columns);
-
-                    for a_row in rows.iter().enumerate() {
-                        keys.iter().for_each(|col| {
-                            let field = a_row.1.get(col).unwrap();
-                            self.field_value_to_args(field, &mut params);
-                        });
-                        let separator = if a_row.0 > 0 { "," } else { "" };
-
-                        sql = format!("{} {} ({})", sql, separator, &placeholders);
+                    let mut update_values = Vec::new();
+                    for entry in to_update {
+                        update_values.push(format!("`{0}` = `excluded`.`{0}`", entry));
                     }
+
+                    sql = format!("{} DO UPDATE SET {}", sql, update_values.join(","));
                 }
             }
             QueryAction::Update(column_values) => {
@@ -853,5 +854,42 @@ impl SqliteSchemaManager {
             }
             FieldValue::NotSet => (),
         }
+    }
+
+    fn build_insert_data(
+        &self,
+        params: &mut SqliteArguments,
+        rows: &[ColumnAndValue],
+        mut sql: String,
+    ) -> String {
+        if !rows.is_empty() {
+            let keys = rows
+                .first()
+                .unwrap()
+                .keys()
+                .cloned()
+                .collect::<Vec<String>>();
+
+            let placeholders = keys.iter().map(|_| "?").collect::<Vec<&str>>().join(",");
+            let columns = keys
+                .iter()
+                .map(|e| format!("`{}`", e))
+                .collect::<Vec<String>>()
+                .join(",");
+
+            sql = format!("{} ({}) VALUES ", sql, columns);
+
+            for a_row in rows.iter().enumerate() {
+                keys.iter().for_each(|col| {
+                    let field = a_row.1.get(col).unwrap();
+                    self.field_value_to_args(field, params);
+                });
+                let separator = if a_row.0 > 0 { "," } else { "" };
+
+                sql = format!("{} {} ({})", sql, separator, &placeholders);
+            }
+        }
+
+        sql
     }
 }
