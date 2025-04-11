@@ -1,17 +1,20 @@
+use dirtybase_db_macro::DirtyTable;
 use dirtybase_helper::time::now;
 
-#[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
+type CacheContent = serde_json::Value;
+
+#[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize, DirtyTable)]
 pub struct CacheEntry {
     pub key: String,
-    pub value: String,
+    pub value: CacheContent,
     pub expiration: Option<i64>,
 }
 
 impl CacheEntry {
-    pub fn new(key: &str, value: &str, expiration: Option<i64>) -> Self {
+    pub fn new(key: String, value: serde_json::Value, expiration: Option<i64>) -> Self {
         Self {
+            value,
             key: key.to_string(),
-            value: value.to_string(),
             expiration,
         }
     }

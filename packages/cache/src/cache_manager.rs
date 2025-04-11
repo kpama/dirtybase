@@ -68,9 +68,9 @@ impl CacheManager {
         R: serde::de::DeserializeOwned,
     {
         let key = self.prefix_a_key(key);
-        if let Some(entry) = self.store.get(key).await {
+        if let Some(entry) = self.store.get(&key).await {
             if entry.still_hot() {
-                return match serde_json::from_str(&entry.value) {
+                return match serde_json::from_value(entry.value) {
                     Ok(v) => Some(v),
                     Err(e) => {
                         log::error!("Error parsing cache data. {}", e);
@@ -118,7 +118,7 @@ impl CacheManager {
             let mut built = HashMap::new();
             for entry in map {
                 if entry.still_hot() {
-                    if let Ok(value) = serde_json::from_str(&entry.value) {
+                    if let Ok(value) = serde_json::from_value(entry.value) {
                         built.insert(entry.key.clone(), value);
                     }
                 }
@@ -145,7 +145,7 @@ impl CacheManager {
     /// Check is an entry exist
     pub async fn has(&self, key: &str) -> bool {
         let key = self.prefix_a_key(key);
-        self.store.get(key).await.is_some()
+        self.store.get(&key).await.is_some()
     }
 
     // Fetches and deletes the entry with the key specified
@@ -267,7 +267,7 @@ impl CacheManager {
         let key = self.prefix_a_key(key);
         let tags = self.prefix_tags(tags);
 
-        match serde_json::to_string(&value) {
+        match serde_json::to_value(&value) {
             Ok(v) => self.store.add(key, v, expiration, tags.as_deref()).await,
             _ => false,
         }
@@ -283,7 +283,7 @@ impl CacheManager {
         let key = self.prefix_a_key(key);
         let tags = self.prefix_tags(tags);
 
-        match serde_json::to_string(value) {
+        match serde_json::to_value(value) {
             Ok(v) => self.store.put(key, v, expiration, tags.as_deref()).await,
             Err(e) => {
                 log::error!("{}", e);
@@ -302,13 +302,13 @@ impl CacheManager {
 
         let built = kv
             .iter()
-            .map(|entry| (entry.0.clone(), serde_json::to_string(entry.1)))
+            .map(|entry| (entry.0.clone(), serde_json::to_value(entry.1)))
             .filter(|entry| entry.1.is_ok())
             .map(|entry| (entry.0, entry.1.unwrap()))
             .collect();
 
         self.store
-            .put_many(&built, expiration, tags.as_deref())
+            .put_many(built, expiration, tags.as_deref())
             .await
     }
 

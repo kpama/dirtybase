@@ -26,10 +26,10 @@ impl RedisStore {
 
 #[async_trait]
 impl CacheStoreTrait for RedisStore {
-    async fn get(&self, key: String) -> Option<CacheEntry> {
+    async fn get(&self, key: &str) -> Option<CacheEntry> {
         let mut client = self.redis_client.write().await;
 
-        if let Ok(data) = client.get::<String, String>(key).await {
+        if let Ok(data) = client.get::<String, String>(key.to_string()).await {
             return serde_json::from_str::<CacheEntry>(&data).ok();
         }
 
@@ -39,7 +39,8 @@ impl CacheStoreTrait for RedisStore {
     async fn many(&self, keys: &[String]) -> Option<Vec<CacheEntry>> {
         let mut client = self.redis_client.write().await;
 
-        if let Ok(list_of_data) = client.mget::<&[String], Vec<String>>(keys).await {
+        let ks = keys.iter().map(|e| e.to_string()).collect::<Vec<String>>();
+        if let Ok(list_of_data) = client.mget::<&[String], Vec<String>>(&ks).await {
             return Some(
                 list_of_data
                     .iter()
@@ -54,12 +55,12 @@ impl CacheStoreTrait for RedisStore {
     async fn put(
         &self,
         key: String,
-        value: String,
+        value: serde_json::Value,
         expiration: Option<i64>,
         tags: Option<&[String]>,
     ) -> bool {
         let mut client = self.redis_client.write().await;
-        let entry = CacheEntry::new(&key, &value, expiration);
+        let entry = CacheEntry::new(key.clone(), value, expiration);
 
         if let Ok(data) = serde_json::to_string(&entry) {
             let result = if expiration.is_some() {
@@ -71,12 +72,12 @@ impl CacheStoreTrait for RedisStore {
                     .is_ok()
             } else {
                 client
-                    .set::<&String, String, bool>(&key, data)
+                    .set::<&String, String, bool>(&key.to_string(), data)
                     .await
                     .is_ok()
             };
 
-            self.tag_key(key.as_str(), tags).await;
+            self.tag_key(&key, tags).await;
 
             return result;
         }
@@ -86,28 +87,28 @@ impl CacheStoreTrait for RedisStore {
 
     async fn put_many(
         &self,
-        kv: &HashMap<String, String>,
+        kv: HashMap<String, serde_json::Value>,
         expiration: Option<i64>,
         tags: Option<&[String]>,
     ) -> bool {
         for entry in kv {
-            _ = self
-                .put(entry.0.clone(), entry.1.clone(), expiration, tags)
-                .await;
+            if !self.put(entry.0, entry.1.clone(), expiration, tags).await {
+                return false;
+            }
         }
 
-        false
+        true
     }
 
     async fn add(
         &self,
         key: String,
-        value: String,
+        value: serde_json::Value,
         expiration: Option<i64>,
         tags: Option<&[String]>,
     ) -> bool {
         let mut client = self.redis_client.write().await;
-        let entry = CacheEntry::new(&key, &value, expiration);
+        let entry = CacheEntry::new(key.clone(), value, expiration);
 
         if let Ok(data) = serde_json::to_string(&entry) {
             let options = if expiration.is_some() {
@@ -131,10 +132,10 @@ impl CacheStoreTrait for RedisStore {
         false
     }
 
-    async fn forget(&self, key: String) -> bool {
+    async fn forget(&self, key: &str) -> bool {
         let mut client = self.redis_client.write().await;
 
-        _ = client.unlink::<String, bool>(key).await;
+        _ = client.unlink::<String, bool>(key.to_string()).await;
 
         true
     }

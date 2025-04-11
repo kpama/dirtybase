@@ -1,9 +1,12 @@
 use dirtybase_contract::db_contract::TableEntityTrait;
 use dirtybase_contract::db_contract::base::manager::Manager;
+use dirtybase_contract::db_contract::types::FromColumnAndValue;
 
 mod cache_db_store_entity;
 mod cache_db_store_repository;
 mod cache_db_tag_store_entity;
+
+use crate::CacheEntry;
 
 pub use self::cache_db_tag_store_entity::CacheDbPivotEntity;
 pub use self::cache_db_tag_store_entity::CacheDbTagStoreEntity;
@@ -24,10 +27,10 @@ async fn setup_cache_db_store_table(manager: &Manager) {
                 .string(CacheDbStoreEntity::id_column().unwrap())
                 .set_is_unique(true);
             table
-                .text(CacheDbStoreEntity::col_name_for_content())
+                .text(CacheEntry::col_name_for_value())
                 .set_is_nullable(true);
             table
-                .integer(CacheDbStoreEntity::col_name_for_expiration())
+                .integer(CacheEntry::col_name_for_expiration())
                 .set_is_nullable(true);
         })
         .await;
@@ -63,7 +66,7 @@ async fn setup_catch_db_tag_entries_pivot(manager: &Manager) {
                 .set_is_nullable(false)
                 .references(
                     CacheDbStoreEntity::table_name(),
-                    CacheDbStoreEntity::col_name_for_key(),
+                    CacheEntry::col_name_for_key(),
                     true,
                 );
 

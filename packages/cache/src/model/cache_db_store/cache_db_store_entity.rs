@@ -2,32 +2,29 @@ use dirtybase_db_macro::DirtyTable;
 
 use crate::cache_manager::cache_entry::CacheEntry;
 
+type Content = serde_json::Value;
+
 #[derive(Debug, Clone, Default, DirtyTable)]
-#[dirty(table = "core_cache", id = "key")]
+#[dirty(table = "cache", id = "key")]
 pub struct CacheDbStoreEntity {
-    pub(crate) key: String,
-    pub(crate) content: String,
-    pub(crate) expiration: Option<i64>,
+    #[dirty(flatten)]
+    inner: CacheEntry,
 }
 
 impl From<CacheEntry> for CacheDbStoreEntity {
     fn from(value: CacheEntry) -> Self {
-        Self {
-            key: value.key,
-            content: value.value,
-            expiration: value.expiration,
-        }
+        Self { inner: value }
     }
 }
 
 impl From<CacheDbStoreEntity> for CacheEntry {
     fn from(value: CacheDbStoreEntity) -> Self {
-        Self::new(&value.key, &value.content, value.expiration)
+        value.inner
     }
 }
 
 impl From<&CacheDbStoreEntity> for CacheEntry {
     fn from(value: &CacheDbStoreEntity) -> Self {
-        Self::new(&value.key, &value.content, value.expiration)
+        value.inner.clone()
     }
 }

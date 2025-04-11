@@ -4,7 +4,7 @@ use dirtybase_contract::{
 
 use crate::{SessionConfig, SessionStorageResolver, storage};
 
-pub(crate) async fn register_resource_manager() {
+pub async fn register_resource_manager() {
     // register resolver for the various storage providers
     SessionStorageResolver::register(storage::database::NAME, storage::database::resolver).await;
     SessionStorageResolver::register(storage::dummy::NAME, storage::dummy::resolver).await;
@@ -45,7 +45,7 @@ pub(crate) async fn register_resource_manager() {
                     .await
             })
         },
-        |context| {
+        |_provider| {
             //
             Box::pin(async {
                 // TODO: Close the storage driver

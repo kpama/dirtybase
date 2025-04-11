@@ -5,6 +5,8 @@ use dirtybase_contract::db_contract::base::query::QueryBuilder;
 use dirtybase_contract::db_contract::{TableEntityTrait, field_values::FieldValue};
 use dirtybase_helper::time::now;
 
+use crate::CacheEntry;
+
 use super::{CacheDbPivotEntity, CacheDbStoreEntity, CacheDbTagStoreEntity};
 
 pub struct CacheDbStoreRepository {
@@ -23,7 +25,7 @@ impl CacheDbStoreRepository {
             }
 
             query.eq(
-                CacheDbStoreEntity::prefix_with_tbl(CacheDbStoreEntity::col_name_for_key()),
+                CacheDbStoreEntity::prefix_with_tbl(CacheEntry::col_name_for_key()),
                 key,
             );
         };
@@ -42,19 +44,16 @@ impl CacheDbStoreRepository {
     ) -> Option<Vec<CacheDbStoreEntity>> {
         let query_by_keys = |query: &mut QueryBuilder| {
             query.is_in(
-                CacheDbStoreEntity::prefix_with_tbl(CacheDbStoreEntity::col_name_for_key()),
+                CacheDbStoreEntity::prefix_with_tbl(CacheEntry::col_name_for_key()),
                 keys.iter().map(|s| s.to_string()).collect::<Vec<String>>(),
             );
 
             if !with_trashed {
                 query
                     .is_null(CacheDbStoreEntity::prefix_with_tbl(
-                        CacheDbStoreEntity::col_name_for_expiration(),
+                        CacheEntry::col_name_for_expiration(),
                     ))
-                    .or_le_or_eq(
-                        CacheDbStoreEntity::col_name_for_expiration(),
-                        now().timestamp(),
-                    );
+                    .or_le_or_eq(CacheEntry::col_name_for_expiration(), now().timestamp());
             }
         };
 
@@ -67,7 +66,7 @@ impl CacheDbStoreRepository {
 
     pub async fn update_many(
         &self,
-        kv: &HashMap<String, String>,
+        kv: HashMap<String, serde_json::Value>,
         expiration: Option<i64>,
         tags: Option<&[String]>,
     ) -> bool {
@@ -79,63 +78,62 @@ impl CacheDbStoreRepository {
 
     pub async fn update(
         &self,
-        key: &str,
-        data: &str,
+        key: String,
+        data: serde_json::Value,
         expiration: Option<i64>,
         tags: Option<&[String]>,
     ) -> bool {
-        let result = self.get(key, true).await;
-        if result.is_some() {
-            let payload = self.build_payload(key, data, expiration);
-            if self
-                .manager
-                .update(CacheDbStoreEntity::table_name(), payload, |query| {
-                    query.eq(
-                        CacheDbStoreEntity::prefix_with_tbl(CacheDbStoreEntity::col_name_for_key()),
-                        key,
-                    );
-                })
-                .await
-                .is_err()
-            {
-                return false;
-            }
-            self.tag_key(tags, key).await;
-            return true;
+        let payload = self.build_payload(key.clone(), data, expiration);
+        if self
+            .manager
+            .upsert(
+                CacheDbStoreEntity::table_name(),
+                payload,
+                &[
+                    CacheEntry::col_name_for_value(),
+                    CacheEntry::col_name_for_expiration(),
+                ],
+                &[CacheEntry::col_name_for_key()],
+            )
+            .await
+            .is_err()
+        {
+            return false;
         }
-        false
+        self.tag_key(tags, &key).await
     }
 
     pub async fn create(
         &self,
-        key: &str,
-        data: &str,
+        key: String,
+        data: serde_json::Value,
         expiration: Option<i64>,
         tags: Option<&[String]>,
     ) -> bool {
-        let result = self.update(key, data, expiration, tags).await;
-
-        if !result {
-            let payload = self.build_payload(key, data, expiration);
-            if self
-                .manager
-                .insert(CacheDbStoreEntity::table_name(), payload)
-                .await
-                .is_err()
-            {
-                return false;
-            }
-            self.tag_key(tags, key).await;
-            return true;
+        let payload = self.build_payload(key.clone(), data, expiration);
+        if self
+            .manager
+            .upsert(
+                CacheDbStoreEntity::table_name(),
+                payload,
+                &[
+                    CacheEntry::col_name_for_value(),
+                    CacheEntry::col_name_for_expiration(),
+                ],
+                &[CacheEntry::col_name_for_key()],
+            )
+            .await
+            .is_err()
+        {
+            return false;
         }
-
-        false
+        self.tag_key(tags, &key).await
     }
 
     pub async fn delete(&self, key: &str) -> bool {
         self.manager
             .delete(CacheDbStoreEntity::table_name(), |query| {
-                query.eq(CacheDbStoreEntity::col_name_for_key(), key);
+                query.eq(CacheEntry::col_name_for_key(), key);
             })
             .await
             .is_ok()
@@ -149,7 +147,7 @@ impl CacheDbStoreRepository {
                     query
                         .left_join_table::<CacheDbPivotEntity, CacheDbStoreEntity>(
                             CacheDbPivotEntity::col_name_for_core_cache_key(),
-                            CacheDbStoreEntity::col_name_for_key(),
+                            CacheEntry::col_name_for_key(),
                         )
                         .is_in(
                             CacheDbPivotEntity::prefix_with_tbl(
@@ -176,38 +174,18 @@ impl CacheDbStoreRepository {
         _ = self
             .manager
             .delete(CacheDbStoreEntity::table_name(), |query| {
-                query.gt_or_eq(
-                    CacheDbStoreEntity::col_name_for_expiration(),
-                    now().timestamp(),
-                );
+                query.gt_or_eq(CacheEntry::col_name_for_expiration(), now().timestamp());
             })
             .await;
     }
 
     fn build_payload(
         &self,
-        key: &str,
-        data: &str,
+        key: String,
+        data: serde_json::Value,
         expiration: Option<i64>,
-    ) -> HashMap<String, FieldValue> {
-        let mut payload = HashMap::new();
-        payload.insert(CacheDbStoreEntity::col_name_for_key().into(), key.into());
-
-        if !data.is_empty() {
-            payload.insert(
-                CacheDbStoreEntity::col_name_for_content().to_string(),
-                data.into(),
-            );
-        }
-
-        if let Some(exp) = expiration {
-            payload.insert(
-                CacheDbStoreEntity::col_name_for_expiration().to_string(),
-                exp.into(),
-            );
-        }
-
-        payload
+    ) -> CacheDbStoreEntity {
+        CacheEntry::new(key, data, expiration).into()
     }
 
     async fn insert_tags(&self, tags: Option<&[String]>) -> bool {

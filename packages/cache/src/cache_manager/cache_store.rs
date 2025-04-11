@@ -12,7 +12,7 @@ use super::cache_entry::CacheEntry;
 
 #[async_trait]
 pub trait CacheStoreTrait: Send + Sync {
-    async fn get(&self, key: String) -> Option<CacheEntry>;
+    async fn get(&self, key: &str) -> Option<CacheEntry>;
 
     async fn many(&self, keys: &[String]) -> Option<Vec<CacheEntry>>;
 
@@ -20,14 +20,14 @@ pub trait CacheStoreTrait: Send + Sync {
     async fn put(
         &self,
         key: String,
-        value: String,
+        value: serde_json::Value,
         expiration: Option<i64>,
         tags: Option<&[String]>,
     ) -> bool;
 
     async fn put_many(
         &self,
-        kv: &HashMap<String, String>,
+        kv: HashMap<String, serde_json::Value>,
         expiration: Option<i64>,
         tags: Option<&[String]>,
     ) -> bool;
@@ -36,13 +36,13 @@ pub trait CacheStoreTrait: Send + Sync {
     async fn add(
         &self,
         key: String,
-        value: String,
+        value: serde_json::Value,
         expiration: Option<i64>,
         tags: Option<&[String]>,
     ) -> bool;
 
     // Delete an entry
-    async fn forget(&self, key: String) -> bool;
+    async fn forget(&self, key: &str) -> bool;
 
     // Delete all entries
     async fn flush(&self, tags: Option<&[String]>) -> bool;

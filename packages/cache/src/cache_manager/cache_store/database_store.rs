@@ -18,16 +18,16 @@ impl CacheStoreTrait for DatabaseStore {
     async fn put(
         &self,
         key: String,
-        value: String,
+        value: serde_json::Value,
         expiration: Option<i64>,
         tags: Option<&[String]>,
     ) -> bool {
-        self.repo.create(&key, &value, expiration, tags).await
+        self.repo.create(key, value, expiration, tags).await
     }
 
     async fn put_many(
         &self,
-        kv: &HashMap<String, String>,
+        kv: HashMap<String, serde_json::Value>,
         expiration: Option<i64>,
         tags: Option<&[String]>,
     ) -> bool {
@@ -38,15 +38,15 @@ impl CacheStoreTrait for DatabaseStore {
     async fn add(
         &self,
         key: String,
-        value: String,
+        value: serde_json::Value,
         expiration: Option<i64>,
         tags: Option<&[String]>,
     ) -> bool {
-        self.repo.update(&key, &value, expiration, tags).await
+        self.repo.update(key, value, expiration, tags).await
     }
 
-    async fn get(&self, key: String) -> Option<CacheEntry> {
-        let result = self.repo.get(&key, false).await;
+    async fn get(&self, key: &str) -> Option<CacheEntry> {
+        let result = self.repo.get(key, false).await;
         result.map(CacheEntry::from)
     }
 
@@ -58,8 +58,8 @@ impl CacheStoreTrait for DatabaseStore {
     }
 
     // Delete an entry
-    async fn forget(&self, key: String) -> bool {
-        self.repo.delete(&key).await
+    async fn forget(&self, key: &str) -> bool {
+        self.repo.delete(key).await
     }
 
     // Delete all entries

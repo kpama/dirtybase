@@ -7,38 +7,9 @@ use std::{
 };
 use tokio::sync::RwLock;
 
-#[derive(Debug, Default)]
-struct Entry {
-    expiration: Option<i64>,
-    content: String,
-    key: String,
-}
-
-impl From<Entry> for CacheEntry {
-    fn from(value: Entry) -> Self {
-        Self::new(&value.key, &value.content, value.expiration)
-    }
-}
-
-impl From<&Entry> for CacheEntry {
-    fn from(value: &Entry) -> Self {
-        Self::new(&value.key, &value.content, value.expiration)
-    }
-}
-
-impl From<CacheEntry> for Entry {
-    fn from(value: CacheEntry) -> Self {
-        Self {
-            key: value.key,
-            expiration: value.expiration,
-            content: value.value,
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct MemoryStore {
-    storage: Arc<RwLock<HashMap<String, Entry>>>,
+    storage: Arc<RwLock<HashMap<String, CacheEntry>>>,
     tags: Arc<RwLock<HashMap<String, HashSet<String>>>>,
 }
 
@@ -65,7 +36,7 @@ impl MemoryStore {
             for a_tag in list {
                 if let Some(set) = lock.get_mut(a_tag) {
                     for an_entry in set.iter() {
-                        self.forget(an_entry.clone()).await;
+                        self.forget(&an_entry).await;
                     }
                 }
             }
@@ -79,51 +50,42 @@ impl CacheStoreTrait for MemoryStore {
     async fn put(
         &self,
         key: String,
-        content: String,
+        content: serde_json::Value,
         expiration: Option<i64>,
         tags: Option<&[String]>,
     ) -> bool {
+        let data = CacheEntry::new(key.clone(), content, expiration);
         let mut lock = self.storage.write().await;
-        lock.insert(
-            key.clone(),
-            Entry {
-                expiration,
-                content,
-                key: key.clone(),
-            },
-        );
+        lock.insert(key.clone(), data);
 
-        self.tag_key(tags, key).await;
+        self.tag_key(tags, key.to_string()).await;
 
-        return true;
+        true
     }
 
     async fn put_many(
         &self,
-        kv: &HashMap<String, String>,
+        kv: HashMap<String, serde_json::Value>,
         duration: Option<i64>,
         tags: Option<&[String]>,
     ) -> bool {
         for entry in kv {
-            self.put(entry.0.clone(), entry.1.clone(), duration, tags)
-                .await;
+            if !self.put(entry.0, entry.1, duration, tags).await {
+                return false;
+            }
         }
         true
     }
 
-    async fn get(&self, key: String) -> Option<CacheEntry> {
-        let lock = self.storage.read().await;
-        if let Some(entry) = lock.get(&key) {
-            return Some(entry.into());
-        }
-
-        None
+    async fn get(&self, key: &str) -> Option<CacheEntry> {
+        let r_lock = self.storage.read().await;
+        r_lock.get(key).cloned()
     }
 
     async fn many(&self, keys: &[String]) -> Option<Vec<CacheEntry>> {
         let mut results = Vec::<CacheEntry>::new();
         for a_key in keys {
-            if let Some(entry) = self.get(a_key.into()).await {
+            if let Some(entry) = self.get(&a_key).await {
                 results.push(entry);
             }
         }
@@ -139,22 +101,15 @@ impl CacheStoreTrait for MemoryStore {
     async fn add(
         &self,
         key: String,
-        content: String,
+        content: serde_json::Value,
         expiration: Option<i64>,
         tags: Option<&[String]>,
     ) -> bool {
         let mut lock = self.storage.write().await;
-        self.tag_key(tags, key.clone()).await;
+        self.tag_key(tags, key.to_string()).await;
 
         if !lock.contains_key(&key) {
-            lock.insert(
-                key.clone(),
-                Entry {
-                    expiration,
-                    content,
-                    key,
-                },
-            );
+            lock.insert(key.to_string(), CacheEntry::new(key, content, expiration));
             return true;
         }
 
@@ -162,9 +117,9 @@ impl CacheStoreTrait for MemoryStore {
     }
 
     // Delete an entry
-    async fn forget(&self, key: String) -> bool {
+    async fn forget(&self, key: &str) -> bool {
         let mut lock = self.storage.write().await;
-        lock.remove(&key);
+        lock.remove(key);
         true
     }
 

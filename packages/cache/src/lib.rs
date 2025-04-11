@@ -2,6 +2,8 @@ use config::CacheConfig;
 
 mod cache_dirtybase_entry;
 mod cache_manager;
+mod cache_storage_resolver;
+mod resource_manager;
 
 pub mod config;
 pub mod model;
@@ -9,7 +11,9 @@ pub mod model;
 pub use cache_dirtybase_entry::*;
 pub use cache_manager::CacheManager;
 pub use cache_manager::cache_entry::CacheEntry;
+pub use cache_storage_resolver::*;
 use dirtybase_contract::app_contract::Context;
+pub use resource_manager::*;
 
 pub async fn setup(context: &Context) -> cache_manager::CacheManager {
     let cache_config = context
