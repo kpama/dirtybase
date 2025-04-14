@@ -1,3 +1,5 @@
+use crate::CacheStorageResolver;
+
 use super::CacheEntry;
 use super::CacheStoreTrait;
 use async_trait::async_trait;
@@ -14,6 +16,12 @@ pub struct MemoryStore {
 }
 
 impl MemoryStore {
+    pub fn new() -> Self {
+        Self {
+            storage: Default::default(),
+            tags: Default::default(),
+        }
+    }
     async fn tag_key(&self, tags: Option<&[String]>, key: String) {
         let mut lock = self.tags.write().await;
         if let Some(list) = tags {
@@ -41,6 +49,16 @@ impl MemoryStore {
                 }
             }
         }
+    }
+
+    pub async fn register() {
+        CacheStorageResolver::register("memory", |mut resolver| {
+            Box::pin(async {
+                resolver.set_storage(MemoryStore::new());
+                resolver
+            })
+        })
+        .await;
     }
 }
 

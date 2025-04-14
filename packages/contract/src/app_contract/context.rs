@@ -85,11 +85,7 @@ impl Context {
         if let Ok(dirty_config) = self.get::<DirtyConfig>().await {
             return C::from_config(&dirty_config, self).await;
         }
-
-        Err(anyhow!(
-            "could not resolve configuration for: {}",
-            std::any::type_name::<C>()
-        ))
+        C::from_config(&DirtyConfig::new(), self).await
     }
 
     pub fn container(&self) -> Arc<busybody::ServiceContainer> {

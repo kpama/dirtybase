@@ -1,17 +1,14 @@
-use std::time::Duration;
-
-use dirtybase_cache::{CacheManager, config::CacheConfig};
-use dirtybase_contract::{
-    app_contract::Context,
-    config_contract::{DirtyConfig, TryFromDirtyConfig},
-};
+use dirtybase_cache::CacheManager;
+use dirtybase_contract::app_contract::Context;
 
 #[tokio::main]
 async fn main() {
-    let dty_config = DirtyConfig::default();
     let ctx = Context::make_global().await;
-    let config = CacheConfig::from_config(&dty_config, &ctx).await.unwrap();
-    let manager = CacheManager::new(&config).await;
+    dirtybase_cache::setup(&ctx).await;
+    let manager = ctx
+        .get::<CacheManager>()
+        .await
+        .expect("could not get cache manager");
 
     manager
         .add(
@@ -21,7 +18,5 @@ async fn main() {
         )
         .await;
 
-    dbg!("result: {:?}", manager.get::<String>("message").await);
-    let ts = Duration::from_secs(5);
-    println!("{}", ts.as_secs());
+    println!("result: {:?}", manager.get::<String>("message").await);
 }

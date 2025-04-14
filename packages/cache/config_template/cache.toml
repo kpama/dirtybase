@@ -1,0 +1,2 @@
+#options: memory, database, redis
+storage="memory"

@@ -1,3 +1,4 @@
+mod migration;
 use dirtybase_contract::{ExtensionSetup, app_contract::Context};
 
 #[derive(Debug, Default)]

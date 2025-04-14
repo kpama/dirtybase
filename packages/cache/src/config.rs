@@ -5,12 +5,16 @@ use dirtybase_contract::{
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct CacheConfig {
-    cache_store: Option<String>,
+    storage: String,
 }
 
 impl CacheConfig {
-    pub fn cache_store(&self) -> &String {
-        self.cache_store.as_ref().unwrap()
+    pub fn storage(&self) -> String {
+        self.storage.clone()
+    }
+
+    pub fn storage_ref(&self) -> &str {
+        &self.storage.as_str()
     }
 }
 
@@ -24,8 +28,8 @@ impl TryFromDirtyConfig for CacheConfig {
             .await?
             .try_deserialize()?;
 
-        if con.cache_store.is_none() {
-            con.cache_store = Some("memory".to_string());
+        if con.storage.is_empty() {
+            con.storage = "memory".to_string();
         }
 
         Ok(con)

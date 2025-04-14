@@ -1,48 +1,26 @@
-use crate::config::CacheConfig;
+use crate::CacheStorageProvider;
 
-use self::cache_store::{CacheStoreTrait, MemoryStore};
+use self::cache_store::CacheStoreTrait;
 use std::collections::HashMap;
 use std::future::Future;
-use std::sync::Arc;
 
 use dirtybase_helper::time::{Time, now};
 
 pub mod cache_entry;
 pub mod cache_store;
 
-type StoreDriver = Arc<Box<dyn CacheStoreTrait + Send + Sync>>;
-
 #[derive(Clone)]
 pub struct CacheManager {
-    store: StoreDriver,
+    store: CacheStorageProvider,
     prefix: Option<String>,
     tags: Vec<String>,
 }
 
 impl CacheManager {
-    // TODO: remove this code
-    async fn get_store(_store_name: &str) -> StoreDriver {
-        Arc::new(Box::new(
-            busybody::helpers::get_type::<MemoryStore>().await.unwrap(),
-        ))
-        // match store_name {
-        //     _ if store_name == DatabaseStore::store_name() => {
-        //         Arc::new(Box::new(provide::<DatabaseStore>().await))
-        //     }
-        //     _ if store_name == RedisStore::store_name() => {
-        //         Arc::new(Box::new(provide::<RedisStore>().await))
-        //     }
-        //     _ => Arc::new(Box::new(provide::<MemoryStore>().await)),
-        // }
-    }
-
-    pub async fn new(_config: &CacheConfig) -> Self {
-        // TODO: The store must be passed as an argument
+    pub fn new(storage: CacheStorageProvider, prefix: Option<String>) -> Self {
         Self {
-            store: Arc::new(Box::new(
-                busybody::helpers::get_type::<MemoryStore>().await.unwrap(),
-            )),
-            prefix: None,
+            prefix,
+            store: storage,
             tags: Vec::new(),
         }
     }
@@ -52,14 +30,6 @@ impl CacheManager {
             store: self.store.clone(),
             prefix: Some(prefix.to_string()),
             tags: Vec::new(),
-        }
-    }
-
-    pub async fn store(&self, store_name: &str) -> Self {
-        Self {
-            store: Self::get_store(store_name).await,
-            prefix: self.prefix.clone(),
-            tags: self.tags.clone(),
         }
     }
 
