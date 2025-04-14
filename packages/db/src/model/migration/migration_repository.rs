@@ -56,8 +56,6 @@ impl MigrationRepository {
             .fetch_one_to::<MigrationEntity>()
             .await
         {
-            tracing::debug!("last migration {:?}", &last);
-
             if let Ok(Some(collection)) = self
                 .manager
                 .select_from_table(TABLE_NAME, |q| {
@@ -92,8 +90,8 @@ impl MigrationRepository {
     ) -> Result<Option<MigrationEntity>, anyhow::Error> {
         let mut kv = HashMap::new();
 
-        kv.insert("name".to_owned(), name.to_string().into());
-        kv.insert("batch".to_owned(), batch.into());
+        kv.insert(NAME_COLUMN.to_string(), name.to_string().into());
+        kv.insert(BATCH_COLUMN.to_string(), batch.into());
 
         _ = self.manager.insert(TABLE_NAME, kv).await;
 

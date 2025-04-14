@@ -10,11 +10,11 @@ use crate::model::migration::MigrationRepository;
 
 #[derive(Debug, Clone)]
 pub enum MigrateAction {
-    Up = 0,
-    Down = 1,
-    Refresh = 2,
-    Reset = 3,
-    Unknown = 4,
+    Up,
+    Down,
+    Refresh,
+    Reset,
+    Unknown,
 }
 
 pub struct Migrator {
@@ -126,10 +126,7 @@ impl From<(String, ArgMatches)> for MigrateAction {
             "down" => MigrateAction::Down,
             "refresh" => MigrateAction::Refresh,
             "reset" => MigrateAction::Reset,
-            v => {
-                tracing::error!("{} is not a migration action", v);
-                MigrateAction::Unknown
-            }
+            v => MigrateAction::Unknown,
         }
     }
 }

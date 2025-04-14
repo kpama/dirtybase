@@ -8,7 +8,6 @@ pub(crate) const BATCH_COLUMN: &str = "batch";
 pub(crate) const CREATED_AT_COLUMN: &str = "created_at";
 
 #[derive(Debug, Default, Clone)]
-// #[dirty(table = "core_migration", id = "id")]
 pub struct MigrationEntity {
     pub(crate) id: InternalIdField,
     pub(crate) name: StringField,

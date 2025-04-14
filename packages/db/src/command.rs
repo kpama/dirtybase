@@ -52,7 +52,6 @@ pub(crate) fn setup_commands(mut manager: CliCommandManager) -> CliCommandManage
                             MigrateAction::Refresh => return migrator.refresh(&db_manager).await,
                             MigrateAction::Unknown => {
                                 eprintln!("unknown action");
-                                tracing::error!("could not get database manager");
                                 return Err(anyhow!("unknown action"));
                             }
                         }

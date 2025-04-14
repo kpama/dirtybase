@@ -1,7 +1,5 @@
 use dirtybase_db::{
-    TableEntityTrait,
-    config::ConnectionConfig,
-    connector::postgres::make_postgres_manager,
+    TableEntityTrait, config::ConnectionConfig, connector::postgres::make_postgres_manager,
     types::IntegerField,
 };
 use dirtybase_db_macro::DirtyTable;
@@ -14,7 +12,7 @@ async fn main() -> anyhow::Result<()> {
         .try_init()
         .expect("could not setup tracing");
 
-    dirtybase_db::setup_handlers().await;
+    dirtybase_db::setup_pool_reslovers().await;
 
     let base_config = ConnectionConfig {
         url: "postgres://dbuser:dbpassword@postgres/dirtybase".to_string(),
