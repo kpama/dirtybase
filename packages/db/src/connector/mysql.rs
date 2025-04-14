@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
-use mysql_pool_manager::MySqlPoolManagerRegisterer;
+use mysql_pool_manager::resolve;
 use mysql_schema_manager::MYSQL_KIND;
 
 use crate::{
-    ConnectionPoolRegisterTrait,
     base::{manager::Manager, schema::DatabaseKind},
     config::{ConfigSet, ConnectionConfig},
     make_manager,
@@ -18,10 +17,7 @@ pub async fn make_mysql_manager(base: ConnectionConfig) -> Manager {
     let mut config_set = ConfigSet::new();
     let kind: DatabaseKind = MYSQL_KIND.into();
     config_set.insert(base.client_type, base);
-    let pools = MySqlPoolManagerRegisterer
-        .register(&config_set)
-        .await
-        .unwrap();
+    let pools = resolve(&config_set).await.unwrap();
     let mut connections = HashMap::new();
     connections.insert(kind.clone(), pools);
 

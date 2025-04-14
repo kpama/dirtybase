@@ -7,6 +7,12 @@ pub const NAME: &str = "dummy";
 #[derive(Default)]
 pub struct DummyStorage;
 
+impl DummyStorage {
+    pub async fn register() {
+        SessionStorageResolver::register(NAME, resolver).await;
+    }
+}
+
 #[async_trait::async_trait]
 impl SessionStorage for DummyStorage {
     async fn store(&self, _id: SessionId, _value: SessionData) {

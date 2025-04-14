@@ -1130,6 +1130,7 @@ dependencies = [
  "orsomafo",
  "serde",
  "serde_json",
+ "simple-middleware",
  "sqlx",
  "tokio",
  "tokio-stream",

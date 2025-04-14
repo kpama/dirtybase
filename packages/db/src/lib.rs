@@ -1,49 +1,28 @@
 pub mod config;
-pub mod connection_bus;
 pub mod connector;
+pub mod pool_manager_resolver;
 
 mod command;
 mod dirtybase_entry;
 mod model;
 mod resource_manager;
 
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use base::schema::DatabaseKind;
 use config::ConfigSet;
-use connection_bus::MakePoolManagerCommand;
 use connector::{
-    mariadb::{
-        mariadb_pool_manager::MariadbPoolManagerRegisterer, mariadb_schema_manager::MARIADB_KIND,
-    },
-    mysql::{mysql_pool_manager::MySqlPoolManagerRegisterer, mysql_schema_manager::MYSQL_KIND},
-    postgres::{
-        postgres_pool_manager::PostgresPoolManagerRegisterer,
-        postgres_schema_manager::POSTGRES_KIND,
-    },
-    sqlite::{
-        sqlite_pool_manager::SqlitePoolManagerRegisterer, sqlite_schema_manager::SQLITE_KIND,
-    },
+    mariadb::mariadb_pool_manager::MariadbPoolManager, mysql::mysql_pool_manager::MysqlPoolManager,
+    postgres::postgres_pool_manager::PostgresPoolManager,
+    sqlite::sqlite_pool_manager::SqlitePoolManager,
 };
-use dirtybase_contract::db_contract::base::{
-    connection::ConnectionPoolTrait, manager::Manager, schema::ClientType,
-};
+use dirtybase_contract::db_contract::base::{manager::Manager, schema::ClientType};
 pub use dirtybase_contract::db_contract::*;
 pub use dirtybase_entry::*;
-
-use busstop::DispatchableQuery;
 
 pub use anyhow;
 
 pub const USER_TABLE: &str = "core_user";
-
-#[async_trait::async_trait]
-pub trait ConnectionPoolRegisterTrait: Send {
-    async fn register(
-        &self,
-        config: &ConfigSet,
-    ) -> Result<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>, anyhow::Error>;
-}
 
 pub fn make_manager(
     connections: DatabaseKindPoolCollection,
@@ -69,44 +48,9 @@ pub fn make_manager(
     )
 }
 
-pub async fn setup_handlers() {
-    MakePoolManagerCommand::query_middleware(|dispatched, next| {
-        Box::pin(async {
-            if let Some(query) = dispatched.the_query::<MakePoolManagerCommand>() {
-                match query.kind().as_str() {
-                    MYSQL_KIND => {
-                        let mysql_pool_registerer = MySqlPoolManagerRegisterer;
-                        let r = mysql_pool_registerer.register(query.config_set_ref()).await;
-                        query.set_result(&dispatched, r);
-                        return dispatched;
-                    }
-                    MARIADB_KIND => {
-                        let mariadb_pool_manager = MariadbPoolManagerRegisterer;
-                        let r = mariadb_pool_manager.register(query.config_set_ref()).await;
-                        query.set_result(&dispatched, r);
-                        return dispatched;
-                    }
-                    POSTGRES_KIND => {
-                        let postgres_pool_registerer = PostgresPoolManagerRegisterer;
-                        let r = postgres_pool_registerer
-                            .register(query.config_set_ref())
-                            .await;
-                        query.set_result(&dispatched, r);
-                        return dispatched;
-                    }
-                    SQLITE_KIND => {
-                        let sqlite_pool_registerer = SqlitePoolManagerRegisterer;
-                        let r = sqlite_pool_registerer
-                            .register(query.config_set_ref())
-                            .await;
-                        query.set_result(&dispatched, r);
-                        return dispatched;
-                    }
-                    _ => return next.call(dispatched).await,
-                }
-            }
-            next.call(dispatched).await
-        })
-    })
-    .await;
+pub async fn setup_pool_reslovers() {
+    MariadbPoolManager::register().await;
+    MysqlPoolManager::register().await;
+    PostgresPoolManager::register().await;
+    SqlitePoolManager::register().await;
 }

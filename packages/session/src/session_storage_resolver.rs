@@ -66,14 +66,8 @@ impl SessionStorageResolver {
                 let cb = callback.clone();
                 let name = arc_name.clone();
                 Box::pin(async move {
-                    if let Ok(config) = resolver
-                        .context_ref()
-                        .get_config::<SessionConfig>("session")
-                        .await
-                    {
-                        if config.storage_ref() == *name.as_ref() {
-                            resolver = (cb)(resolver).await;
-                        }
+                    if resolver.config_ref().storage_ref() == *name.as_ref() {
+                        resolver = (cb)(resolver).await;
                     }
 
                     if !resolver.has_provider() {

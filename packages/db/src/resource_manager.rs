@@ -2,9 +2,11 @@ use dirtybase_contract::{
     app_contract::ContextResourceManager, db_contract::base::manager::Manager,
 };
 
-use crate::{config::DbConfig, connection_bus::MakePoolManagerCommand};
+use crate::{config::DbConfig, pool_manager_resolver::DbPoolManagerResolver};
 
 pub(crate) async fn register_resource_manager() {
+    super::setup_pool_reslovers().await;
+
     ContextResourceManager::<Manager>::register(
         |context| {
             Box::pin(async move {
@@ -27,7 +29,9 @@ pub(crate) async fn register_resource_manager() {
                 let default_set = config
                     .default_set()
                     .expect("could not get default db config set");
-                MakePoolManagerCommand::make(default_set).await
+                DbPoolManagerResolver::new(context, default_set)
+                    .get_manager()
+                    .await
             })
         },
         move |manager| {

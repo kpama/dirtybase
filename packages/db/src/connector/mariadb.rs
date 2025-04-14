@@ -3,13 +3,12 @@ pub mod mariadb_schema_manager;
 
 use std::collections::HashMap;
 
-use mariadb_pool_manager::MariadbPoolManagerRegisterer;
+use mariadb_pool_manager::resolve;
 use mariadb_schema_manager::MARIADB_KIND;
 
 const LOG_TARGET: &str = "mariadb_db_driver";
 
 use crate::{
-    ConnectionPoolRegisterTrait,
     base::{manager::Manager, schema::DatabaseKind},
     config::{ConfigSet, ConnectionConfig},
     make_manager,
@@ -20,10 +19,7 @@ pub async fn make_mariadb_manager(base: ConnectionConfig) -> Manager {
     let mut config_set = ConfigSet::new();
     let kind: DatabaseKind = MARIADB_KIND.into();
     config_set.insert(base.client_type, base);
-    let pools = MariadbPoolManagerRegisterer
-        .register(&config_set)
-        .await
-        .unwrap();
+    let pools = resolve(&config_set).await.unwrap();
     let mut connections = HashMap::new();
     connections.insert(kind.clone(), pools);
 

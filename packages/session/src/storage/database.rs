@@ -1,9 +1,7 @@
-use std::collections::HashMap;
-
 use dirtybase_contract::{
     db_contract::{
+        TableEntityTrait,
         base::manager::Manager,
-        field_values::FieldValue,
         types::{
             JsonField, OptionalDateTimeField, OptionalStringField, OptionalTimestampField,
             TimestampField,
@@ -24,49 +22,31 @@ impl DatabaseStorage {
     pub fn new(manager: Manager) -> Self {
         Self { manager }
     }
+
+    pub async fn register() {
+        SessionStorageResolver::register(NAME, resolver).await;
+    }
 }
 
 #[async_trait::async_trait]
 impl SessionStorage for DatabaseStorage {
     async fn store(&self, id: SessionId, value: SessionData) {
-        // 1. Try to update existing data
-        if let Ok(Some(_)) = self
-            .manager
-            .select_from::<SessionTable>(|q| {
-                q.eq("id", id.clone().to_string());
-            })
-            .fetch_one_to::<SessionTable>()
-            .await
-        {
-            // let result = self
-            //     .manager
-            //     .delete_from_table::<SessionTable>(|q| {
-            //         q.eq(SessionTable::col_name_for_id(), id.clone().to_string());
-            //     })
-            //     .await;
-            let mut data = HashMap::new();
-            let model: SessionTable = value.into();
-            data.insert(
-                SessionTable::col_name_for_expires().to_string(),
-                FieldValue::from(model.expires),
-            );
-            data.insert(
-                SessionTable::col_name_for_data().to_string(),
-                FieldValue::from(model.data),
-            );
+        let mut model = SessionTable::from(value);
+        model.id = Some(id.to_string());
 
-            let result = self
-                .manager
-                .update_table::<SessionTable>(data, |q| {
-                    //
-                    q.eq("id", id.to_string());
-                })
-                .await;
-        } else {
-            let mut model: SessionTable = value.into();
-            model.id = Some(id.to_string());
-            let result = self.manager.insert_into::<SessionTable>(model).await;
-        }
+        let resullt = self
+            .manager
+            .upsert(
+                SessionTable::table_name(),
+                model,
+                &[
+                    SessionTable::col_name_for_data(),
+                    SessionTable::col_name_for_expires(),
+                ],
+                &["id"],
+            )
+            .await;
+        tracing::trace!("session store data: {:?}", resullt);
     }
 
     async fn get(&self, id: &SessionId) -> SessionData {

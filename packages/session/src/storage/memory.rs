@@ -13,6 +13,12 @@ pub struct MemoryStorage {
     storage: Arc<RwLock<HashMap<SessionId, SessionData>>>,
 }
 
+impl MemoryStorage {
+    pub async fn register() {
+        SessionStorageResolver::register(NAME, resolver).await;
+    }
+}
+
 #[async_trait]
 impl SessionStorage for MemoryStorage {
     async fn store(&self, id: SessionId, value: SessionData) {

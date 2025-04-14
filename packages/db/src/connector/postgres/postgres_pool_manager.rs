@@ -5,51 +5,31 @@ use async_trait::async_trait;
 use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
 
 use crate::{
-    ConnectionPoolRegisterTrait,
     base::{
         connection::ConnectionPoolTrait,
         schema::{ClientType, DatabaseKind, SchemaManagerTrait},
     },
     config::{ConfigSet, ConnectionConfig},
+    pool_manager_resolver::DbPoolManagerResolver,
 };
 
 use super::postgres_schema_manager::{POSTGRES_KIND, PostgresSchemaManager};
 
-pub struct PostgresPoolManagerRegisterer;
-
-#[async_trait]
-impl ConnectionPoolRegisterTrait for PostgresPoolManagerRegisterer {
-    async fn register(
-        &self,
-        config_set: &ConfigSet,
-    ) -> Result<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>, anyhow::Error> {
-        let mut pools: HashMap<ClientType, Box<dyn ConnectionPoolTrait>> = HashMap::new();
-        for (client_type, config) in config_set.iter() {
-            if config.kind_ref().as_str() == POSTGRES_KIND && config.enable {
-                match db_connect(config).await {
-                    Ok(db_pool) => {
-                        pools.insert(
-                            *client_type,
-                            Box::new(PostgresPoolManager {
-                                db_pool: Arc::new(db_pool),
-                            }),
-                        );
-                    }
-                    Err(e) => return Err(e),
-                }
-            }
-        }
-        if pools.is_empty() {
-            Err(anyhow!("could not create any pool manager for postgresql"))
-        } else {
-            Ok(pools)
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct PostgresPoolManager {
     db_pool: Arc<Pool<Postgres>>,
+}
+
+impl PostgresPoolManager {
+    pub async fn register() {
+        DbPoolManagerResolver::register(POSTGRES_KIND, |mut resolver| {
+            Box::pin(async {
+                resolver.set_pool_manager(resolve(resolver.config_ref()).await);
+                resolver
+            })
+        })
+        .await;
+    }
 }
 
 #[async_trait]
@@ -63,6 +43,35 @@ impl ConnectionPoolTrait for PostgresPoolManager {
 
     async fn close(&self) {
         self.db_pool.close().await;
+    }
+}
+
+pub async fn resolve(
+    config_set: &ConfigSet,
+) -> Result<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>, anyhow::Error> {
+    let mut pools: HashMap<ClientType, Box<dyn ConnectionPoolTrait>> = HashMap::new();
+    for (client_type, config) in config_set.iter() {
+        if POSTGRES_KIND == config.kind_ref().as_str() && config.enable {
+            match db_connect(config).await {
+                Ok(db_pool) => {
+                    pools.insert(
+                        *client_type,
+                        Box::new(PostgresPoolManager {
+                            db_pool: Arc::new(db_pool),
+                        }),
+                    );
+                }
+                Err(e) => {
+                    return Err(e);
+                }
+            }
+        }
+    }
+
+    if pools.is_empty() {
+        Err(anyhow!("could not create any pool manager for postgres"))
+    } else {
+        Ok(pools)
     }
 }
 

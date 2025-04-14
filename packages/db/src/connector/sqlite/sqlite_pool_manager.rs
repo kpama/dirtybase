@@ -1,12 +1,12 @@
 use std::{collections::HashMap, str::FromStr, sync::Arc, time::Duration};
 
 use crate::{
-    ConnectionPoolRegisterTrait,
     base::{
         connection::ConnectionPoolTrait,
         schema::{ClientType, DatabaseKind},
     },
     config::{ConfigSet, ConnectionConfig},
+    pool_manager_resolver::DbPoolManagerResolver,
 };
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -18,42 +18,21 @@ use sqlx::{
 
 use super::sqlite_schema_manager::{SQLITE_KIND, SqliteSchemaManager};
 
-pub struct SqlitePoolManagerRegisterer;
-
-#[async_trait]
-impl ConnectionPoolRegisterTrait for SqlitePoolManagerRegisterer {
-    async fn register(
-        &self,
-        config_set: &ConfigSet,
-    ) -> Result<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>, anyhow::Error> {
-        let mut pools: HashMap<ClientType, Box<dyn ConnectionPoolTrait>> = HashMap::new();
-        for (client_type, config) in config_set.iter() {
-            if SQLITE_KIND == config.kind().as_str() && config.enable {
-                match db_connect(config).await {
-                    Ok(db_pool) => {
-                        pools.insert(
-                            *client_type,
-                            Box::new(SqlitePoolManager {
-                                db_pool: Arc::new(db_pool),
-                            }),
-                        );
-                    }
-                    Err(e) => return Err(e),
-                }
-            }
-        }
-
-        if pools.is_empty() {
-            Err(anyhow!("could not create any pool manager for sqlite"))
-        } else {
-            Ok(pools)
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct SqlitePoolManager {
     db_pool: Arc<Pool<Sqlite>>,
+}
+
+impl SqlitePoolManager {
+    pub async fn register() {
+        DbPoolManagerResolver::register(SQLITE_KIND, |mut resolver| {
+            Box::pin(async {
+                resolver.set_pool_manager(resolve(resolver.config_ref()).await);
+                resolver
+            })
+        })
+        .await;
+    }
 }
 
 #[async_trait]
@@ -68,6 +47,35 @@ impl ConnectionPoolTrait for SqlitePoolManager {
 
     async fn close(&self) {
         self.db_pool.close().await;
+    }
+}
+
+pub async fn resolve(
+    config_set: &ConfigSet,
+) -> Result<HashMap<ClientType, Box<dyn ConnectionPoolTrait>>, anyhow::Error> {
+    let mut pools: HashMap<ClientType, Box<dyn ConnectionPoolTrait>> = HashMap::new();
+    for (client_type, config) in config_set.iter() {
+        if SQLITE_KIND == config.kind_ref().as_str() && config.enable {
+            match db_connect(config).await {
+                Ok(db_pool) => {
+                    pools.insert(
+                        *client_type,
+                        Box::new(SqlitePoolManager {
+                            db_pool: Arc::new(db_pool),
+                        }),
+                    );
+                }
+                Err(e) => {
+                    return Err(e);
+                }
+            }
+        }
+    }
+
+    if pools.is_empty() {
+        return Err(anyhow!("could not create any pool manager for mariadb"));
+    } else {
+        Ok(pools)
     }
 }
 

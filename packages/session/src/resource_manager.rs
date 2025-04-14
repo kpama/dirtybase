@@ -2,13 +2,14 @@ use dirtybase_contract::{
     app_contract::ContextResourceManager, session_contract::SessionStorageProvider,
 };
 
-use crate::{SessionConfig, SessionStorageResolver, storage};
+use crate::{
+    SessionConfig, SessionStorageResolver,
+    storage::{database::DatabaseStorage, dummy::DummyStorage, memory::MemoryStorage},
+};
 
 pub async fn register_resource_manager() {
     // register resolver for the various storage providers
-    SessionStorageResolver::register(storage::database::NAME, storage::database::resolver).await;
-    SessionStorageResolver::register(storage::dummy::NAME, storage::dummy::resolver).await;
-    SessionStorageResolver::register(storage::memory::NAME, storage::memory::resolver).await;
+    register_storages().await;
 
     ContextResourceManager::<SessionStorageProvider>::register(
         |context| {
@@ -53,4 +54,10 @@ pub async fn register_resource_manager() {
         },
     )
     .await;
+}
+
+async fn register_storages() {
+    DatabaseStorage::register().await;
+    DummyStorage::register().await;
+    MemoryStorage::register().await;
 }
