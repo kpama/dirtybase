@@ -1097,6 +1097,7 @@ dependencies = [
 name = "dirtybase_cron"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "busstop",
  "busybody",
  "chrono",

@@ -87,8 +87,12 @@ impl JobConfig {
         self
     }
 
-    pub fn id(&self) -> &JobId {
+    pub fn id_ref(&self) -> &JobId {
         &self.id
+    }
+
+    pub fn id(&self) -> JobId {
+        self.id.clone()
     }
 
     pub fn schedule(&self) -> &str {

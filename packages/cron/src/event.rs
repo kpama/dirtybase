@@ -1,11 +1,23 @@
 use serde::{Deserialize, Serialize};
 
+use crate::JobId;
+
 #[derive(Clone, Serialize, Deserialize)]
 pub enum CronJobState {
-    Running { id: String },
-    Completed { id: String },
-    Failed { id: String, reason: String },
+    Running { id: JobId },
+    Completed { id: JobId },
+    Failed { id: JobId, reason: String },
 }
 
-#[busstop::async_trait]
+#[derive(Clone, Serialize, Deserialize)]
+pub enum CronJobCommand {
+    Stop,
+    Run,
+    Exit,
+}
+
+#[orsomafo::async_trait]
 impl orsomafo::Dispatchable for CronJobState {}
+
+#[orsomafo::async_trait]
+impl orsomafo::Dispatchable for CronJobCommand {}

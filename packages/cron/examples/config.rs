@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use dirtybase_contract::config_contract::DirtyConfig;
-use dirtybase_cron::config::CronConfig;
+use dirtybase_cron::{JobId, config::CronConfig};
 #[tokio::main]
 async fn main() {
     // 1. Setup the configuration using the default config template
@@ -18,7 +18,8 @@ async fn main() {
     let mut manager = dirtybase_cron::setup_using(config).await;
 
     // 3. register a job
-    manager.register("foo::job", |_ctx| {
+    let id = "foo::job".try_into().unwrap();
+    manager.register(id, |_ctx| {
         Box::pin(async {
             println!(">>>>>>>> running foo::bar......");
         })

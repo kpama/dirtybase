@@ -1,8 +1,9 @@
 use dirtybase_contract::{
     app_contract::{CtxExt, RequestContext},
     auth_contract::{AuthUser, AuthUserPayload, LoginCredential},
-    axum::response::Html,
-    http_contract::{HttpContext, api::ApiResponse, named_routes_axum, prelude::*},
+    axum::response::{Html, Redirect},
+    http_contract::{HttpContext, api::ApiResponse, axum, named_routes_axum, prelude::*},
+    prelude::axum_extra::headers,
     session_contract::Session,
 };
 use dirtybase_helper::{hash::sha256, security::random_bytes_hex};
@@ -34,7 +35,7 @@ pub(crate) async fn handle_login_request(
     RequestContext(ctx): RequestContext,
     CtxExt(http_ctx): CtxExt<HttpContext>,
     Form(cred): Form<LoginCredential>,
-) -> impl IntoResponse {
+) -> Response<Body> {
     // TODO: This will use the auth service in the future
     let storage = StorageResolver::new(ctx.clone())
         .get_provider()
@@ -57,6 +58,10 @@ pub(crate) async fn handle_login_request(
             // 2. generate auth hash
             let hash = random_bytes_hex(16);
             // 3. store hash in the session and cookie
+            let previous_path = session
+                .get::<String>("_auth_prev_path")
+                .await
+                .unwrap_or_default();
             session = session.invalidate().await;
             ctx.set(session.clone()).await;
             session.put("auth_hash", &hash).await;
@@ -65,14 +70,28 @@ pub(crate) async fn handle_login_request(
             let cookie = session.make_session_cookie(&cookie_key, hash); // FIXME: Build the cookie instance!!!!
             http_ctx.set_cookie(cookie).await;
 
-            return Html(format!(
-                "Welcome: {}, session id in cookie",
-                user.username_ref(),
-            ));
+            let bdy = Body::empty();
+
+            let mut response = bdy.into_response();
+
+            response.headers_mut().append(
+                header::LOCATION,
+                header::HeaderValue::from_str(&previous_path).unwrap(),
+            );
+            *response.status_mut() = StatusCode::SEE_OTHER;
+            return response;
+
+            // return Html(format!(
+            //     "Welcome: {}, session id in cookie",
+            //     user.username_ref(),
+            // ));
         }
     }
 
-    Html("Auth failed".to_string())
+    // Html("Auth failed".to_string()).into_response()
+    // Response::new(Body::from(Html("".to_string())))
+    let bdy = Body::empty();
+    bdy.into_response()
 }
 
 pub(crate) async fn handle_get_auth_token(

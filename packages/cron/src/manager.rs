@@ -1,5 +1,6 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, fmt::Display, sync::Arc};
 
+use anyhow::anyhow;
 use futures::future::BoxFuture;
 
 use crate::{CronJob, JobContext, config::CronConfig};
@@ -13,8 +14,8 @@ pub struct JobManager {
     cron_config: CronConfig,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, serde::Deserialize)]
-pub struct JobId(String); // job id must be in the format "namespace::name"
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub struct JobId(Arc<String>); // job id must be in the format "namespace::name"
 
 impl JobId {
     pub fn new(id: &str) -> Self {
@@ -22,29 +23,39 @@ impl JobId {
             panic!("Cron job ID must be in the format namespace::name");
         }
 
-        Self(id.replace(" ", "").to_ascii_lowercase())
+        Self(Arc::new(id.replace(" ", "")))
     }
 
-    pub fn id(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         &self.0
     }
-}
 
-impl ToString for JobId {
-    fn to_string(&self) -> String {
-        self.0.clone()
+    pub fn validate(inner: &str) -> Result<Self, anyhow::Error> {
+        if !inner.contains("::") {
+            return Err(anyhow!("Cron job ID must be in the format namespace::name"));
+        }
+
+        Ok(Self(Arc::new(inner.replace(" ", ""))))
     }
 }
 
-impl From<&str> for JobId {
-    fn from(value: &str) -> Self {
-        JobId::new(value)
+impl TryFrom<String> for JobId {
+    type Error = anyhow::Error;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::validate(&value)
     }
 }
 
-impl From<String> for JobId {
-    fn from(value: String) -> Self {
-        JobId::new(&value)
+impl TryFrom<&str> for JobId {
+    type Error = anyhow::Error;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::validate(value)
+    }
+}
+
+impl Display for JobId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
     }
 }
 
@@ -59,10 +70,10 @@ impl JobManager {
 
     pub fn register(
         &mut self,
-        id: &str,
-        job: impl FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        id: JobId,
+        worker: impl FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     ) {
-        self.jobs.insert(id.into(), Box::new(job));
+        self.jobs.insert(id, Box::new(worker));
     }
 
     pub async fn run(&mut self) {
@@ -71,13 +82,13 @@ impl JobManager {
         }
 
         for config in self.cron_config.jobs().values() {
-            if let Some(job) = self.jobs.remove(config.id()) {
-                match CronJob::register(config.schedule(), job, config.id().id()).await {
+            if let Some(job) = self.jobs.remove(config.id_ref()) {
+                match CronJob::register(config.schedule(), job, config.id()).await {
                     Ok(context) => {
                         self.contexts.insert(config.id().clone(), context);
                     }
                     Err(e) => {
-                        panic!("could not start cron job: {:?}", e);
+                        tracing::error!("could not start cron job: {:?}", e);
                     }
                 }
             }

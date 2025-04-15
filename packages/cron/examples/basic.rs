@@ -14,6 +14,7 @@ async fn main() {
     dirtybase_cron::start().await;
 
     // 2. Register a job
+    let id = "example::hi".try_into().unwrap();
     let _ctx = dirtybase_cron::CronJob::register(
         "every 5 seconds",
         |_ctx| {
@@ -21,11 +22,12 @@ async fn main() {
                 println!("hi from 5 seconds job");
             })
         },
-        "example::hi",
+        id,
     )
     .await;
 
     // 3
+    let id = "example::hi2".try_into().unwrap();
     let _ctx = dirtybase_cron::CronJob::register(
         "0/10 * * * * ? *",
         |_ctx| {
@@ -33,7 +35,7 @@ async fn main() {
                 println!("hi from 10 seconds job");
             })
         },
-        "example::hi2",
+        id,
     )
     .await;
 

@@ -2,23 +2,27 @@ use std::sync::Arc;
 
 use orsomafo::Dispatchable;
 
-use crate::event::CronJobState;
+use crate::{JobId, event::CronJobState};
 
 #[derive(Clone)]
 pub struct JobContext {
-    id: String,
+    id: JobId,
     container: Arc<busybody::ServiceContainer>,
 }
 
 impl JobContext {
-    pub(crate) fn new(id: &str) -> Self {
+    pub(crate) fn new(id: JobId) -> Self {
         Self {
-            id: id.to_string(),
+            id,
             container: Arc::new(busybody::ServiceContainer::proxy()),
         }
     }
 
-    pub fn id(&self) -> &str {
+    pub fn id(&self) -> JobId {
+        self.id.clone()
+    }
+
+    pub fn id_ref(&self) -> &JobId {
         &self.id
     }
 

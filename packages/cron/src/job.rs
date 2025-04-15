@@ -1,5 +1,6 @@
 use std::{str::FromStr, sync::Arc};
 
+use anyhow::anyhow;
 use busstop::DispatchableCommand;
 use chrono::Utc;
 use cron::Schedule;
@@ -8,7 +9,7 @@ use futures::future::BoxFuture;
 use orsomafo::Dispatchable;
 use tokio::time::Instant;
 
-use crate::{JobContext, event::CronJobState};
+use crate::{JobContext, JobId, event::CronJobState};
 
 type JobHandler = Box<dyn FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync>;
 
@@ -20,10 +21,10 @@ pub struct CronJob {
 
 impl CronJob {
     pub fn new(
-        id: &str,
+        id: JobId,
         schedule: &str,
         handler: impl FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync + 'static,
-    ) -> Result<Self, String> {
+    ) -> Result<Self, anyhow::Error> {
         match Schedule::from_str(schedule) {
             Ok(scheduler) => {
                 tracing::debug!("job '{}' scheduled to run '{}'", id, schedule);
@@ -36,7 +37,7 @@ impl CronJob {
             _ => {
                 let s = str_cron_syntax(schedule);
                 if s.is_err() {
-                    return Err(s.err().unwrap().to_string());
+                    return Err(anyhow!(s.unwrap_err()));
                 }
                 match Schedule::from_str(s.as_ref().unwrap()) {
                     Ok(s) => {
@@ -52,7 +53,7 @@ impl CronJob {
                             context: Arc::new(JobContext::new(id)),
                         })
                     }
-                    Err(e) => Err(e.to_string()),
+                    Err(e) => Err(anyhow!(e)),
                 }
             }
         }
@@ -61,8 +62,8 @@ impl CronJob {
     pub async fn register(
         schedule: &str,
         handler: impl FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync + 'static,
-        id: &str,
-    ) -> Result<Arc<JobContext>, String> {
+        id: JobId,
+    ) -> Result<Arc<JobContext>, anyhow::Error> {
         let job = Self::new(id, schedule, handler)?;
         let context = job.context();
         job.dispatch_command().await;
@@ -83,7 +84,7 @@ impl CronJob {
                 let until = next - Utc::now();
                 tokio::time::sleep_until(Instant::now() + until.to_std().unwrap()).await;
                 CronJobState::Running {
-                    id: self.context.id().to_string(),
+                    id: self.context.id(),
                 }
                 .dispatch_event();
                 tokio::task::block_in_place(|| async {

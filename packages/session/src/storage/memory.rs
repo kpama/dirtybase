@@ -64,6 +64,7 @@ pub async fn resolver(mut resolver: SessionStorageResolver) -> SessionStorageRes
     resolver.set_storage(storage);
 
     let lifetime = resolver.config_ref().lifetime();
+    let id = "session::storage".try_into().unwrap();
     let _ctx = dirtybase_cron::CronJob::register(
         "every 5 minutes",
         move |_| {
@@ -74,7 +75,7 @@ pub async fn resolver(mut resolver: SessionStorageResolver) -> SessionStorageRes
                 }
             })
         },
-        "session::memory-storage",
+        id,
     )
     .await;
 

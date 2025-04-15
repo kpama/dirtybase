@@ -52,6 +52,9 @@ pub async fn authorize(mut resolver: GuardResolver) -> GuardResolver {
             }
         };
 
+        session
+            .put("_auth_prev_path", http_context.full_path())
+            .await;
         resolver.set_response(
             named_routes_axum::helpers::redirect(&auth_config.signin_form_route()).into_response(),
         );
