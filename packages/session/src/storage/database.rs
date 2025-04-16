@@ -50,8 +50,6 @@ impl SessionStorage for DatabaseStorage {
     }
 
     async fn get(&self, id: &SessionId) -> SessionData {
-        println!("select * from sessions where id = '{}'", id);
-
         match self
             .manager
             .select_from::<SessionTable>(|query| {
@@ -68,13 +66,25 @@ impl SessionStorage for DatabaseStorage {
         }
     }
 
-    async fn remove(&self, _id: &SessionId) -> Option<SessionData> {
-        log::debug!("db session storage remove");
+    async fn remove(&self, id: &SessionId) -> Option<SessionData> {
+        let old = self.get(id).await;
 
-        None
+        _ = self
+            .manager
+            .delete_from_table::<SessionTable>(|q| {
+                q.eq(SessionTable::col_name_for_id(), id.to_string());
+            })
+            .await;
+
+        Some(old)
     }
-    async fn gc(&self, _lifetime: i64) {
-        log::debug!("db session storage clean expired");
+    async fn gc(&self, lifetime: i64) {
+        _ = self
+            .manager
+            .delete_from_table::<SessionTable>(|q| {
+                q.gt_or_eq(SessionTable::col_name_for_expires(), lifetime);
+            })
+            .await;
     }
 }
 
