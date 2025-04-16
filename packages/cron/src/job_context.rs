@@ -1,20 +1,26 @@
 use std::sync::Arc;
 
 use orsomafo::Dispatchable;
+use tokio::sync::mpsc::error::SendError;
 
-use crate::{JobId, event::CronJobState};
+use crate::{
+    JobId,
+    event::{CronJobCommand, CronJobState},
+};
 
 #[derive(Clone)]
 pub struct JobContext {
     id: JobId,
     container: Arc<busybody::ServiceContainer>,
+    sender: tokio::sync::mpsc::Sender<CronJobCommand>,
 }
 
 impl JobContext {
-    pub(crate) fn new(id: JobId) -> Self {
+    pub(crate) fn new(id: JobId, sender: tokio::sync::mpsc::Sender<CronJobCommand>) -> Self {
         Self {
             id,
             container: Arc::new(busybody::ServiceContainer::proxy()),
+            sender,
         }
     }
 
@@ -28,6 +34,10 @@ impl JobContext {
 
     pub fn service_container(&self) -> &Arc<busybody::ServiceContainer> {
         &self.container
+    }
+
+    pub async fn send(&self, cmd: CronJobCommand) -> Result<(), SendError<CronJobCommand>> {
+        self.sender.send(cmd).await
     }
 
     pub fn fail(&self, reason: &str) {

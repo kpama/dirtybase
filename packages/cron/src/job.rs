@@ -9,7 +9,10 @@ use futures::future::BoxFuture;
 use orsomafo::Dispatchable;
 use tokio::time::Instant;
 
-use crate::{JobContext, JobId, event::CronJobState};
+use crate::{
+    JobContext, JobId,
+    event::{CronJobCommand, CronJobState},
+};
 
 type JobHandler = Box<dyn FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync>;
 
@@ -17,6 +20,7 @@ pub struct CronJob {
     scheduler: cron::Schedule,
     handler: JobHandler,
     context: Arc<JobContext>,
+    receiver: tokio::sync::mpsc::Receiver<CronJobCommand>,
 }
 
 impl CronJob {
@@ -25,13 +29,15 @@ impl CronJob {
         schedule: &str,
         handler: impl FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     ) -> Result<Self, anyhow::Error> {
+        let (tx, rx) = tokio::sync::mpsc::channel(100);
         match Schedule::from_str(schedule) {
             Ok(scheduler) => {
                 tracing::debug!("job '{}' scheduled to run '{}'", id, schedule);
                 Ok(Self {
                     scheduler,
                     handler: Box::new(handler),
-                    context: Arc::new(JobContext::new(id)),
+                    context: Arc::new(JobContext::new(id, tx)),
+                    receiver: rx,
                 })
             }
             _ => {
@@ -50,7 +56,8 @@ impl CronJob {
                         Ok(Self {
                             scheduler: s,
                             handler: Box::new(handler),
-                            context: Arc::new(JobContext::new(id)),
+                            context: Arc::new(JobContext::new(id, tx)),
+                            receiver: rx,
                         })
                     }
                     Err(e) => Err(anyhow!(e)),
@@ -74,26 +81,65 @@ impl CronJob {
         self.context.clone()
     }
 
-    pub(crate) async fn spawn(mut self) {
-        tokio::spawn(async move { self.run().await });
+    pub fn context_ref(&self) -> &Arc<JobContext> {
+        &self.context
     }
 
     async fn run(&mut self) {
+        let mut run = true;
         loop {
-            for next in self.scheduler.upcoming(Utc).take(1) {
-                let until = next - Utc::now();
-                tokio::time::sleep_until(Instant::now() + until.to_std().unwrap()).await;
-                CronJobState::Running {
-                    id: self.context.id(),
+            let recv = self.receiver.recv();
+            let until = self.scheduler.upcoming(Utc).next().unwrap() - Utc::now();
+            let next_run = tokio::time::sleep_until(Instant::now() + until.to_std().unwrap());
+
+            tokio::select! {
+                _ = next_run => {
+                    if run {
+                        CronJobState::Running {
+                            id: self.context.id(),
+                        }.dispatch_event();
+
+                        tokio::task::block_in_place(|| async {
+                            (self.handler)(self.context.clone()).await;
+                            self.context.done().await;
+                        }).await;
+                    }
+                },
+               Some(cmd) = recv  => {
+                    match cmd {
+                        CronJobCommand::Run => {
+                            run = true;
+                            tracing::debug!("cron job cmd 'run': {}", self.context_ref().id());
+                        },
+                        CronJobCommand::Stop => {
+                            run = false;
+                            tracing::debug!("cron job cmd 'stop': {} ", self.context_ref().id());
+                        },
+                        CronJobCommand::Exit=> {
+                            tracing::debug!("cron job cmd 'ext': {}", self.context_ref().id());
+                            return;
+                        },
+                    }
                 }
-                .dispatch_event();
-                tokio::task::block_in_place(|| async {
-                    (self.handler)(self.context.clone()).await;
-                    self.context.done().await;
-                })
-                .await;
             }
+            // for next in self.scheduler.upcoming(Utc).take(1) {
+            //     let until = next - Utc::now();
+            //     tokio::time::sleep_until(Instant::now() + until.to_std().unwrap()).await;
+            //     CronJobState::Running {
+            //         id: self.context.id(),
+            //     }
+            //     .dispatch_event();
+            //     tokio::task::block_in_place(|| async {
+            //         (self.handler)(self.context.clone()).await;
+            //         self.context.done().await;
+            //     })
+            //     .await;
+            // }
         }
+    }
+
+    pub(crate) async fn spawn(mut self) {
+        tokio::spawn(async move { self.run().await });
     }
 }
 

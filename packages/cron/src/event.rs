@@ -9,7 +9,7 @@ pub enum CronJobState {
     Failed { id: JobId, reason: String },
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum CronJobCommand {
     Stop,
     Run,

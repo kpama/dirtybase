@@ -15,7 +15,7 @@ async fn main() {
 
     // 2. Register a job
     let id = "example::hi".try_into().unwrap();
-    let _ctx = dirtybase_cron::CronJob::register(
+    let ctx_result = dirtybase_cron::CronJob::register(
         "every 5 seconds",
         |_ctx| {
             Box::pin(async {
@@ -38,6 +38,16 @@ async fn main() {
         id,
     )
     .await;
+
+    if let Ok(ctx) = ctx_result {
+        for _ in 0..20 {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            _ = ctx.send(dirtybase_cron::event::CronJobCommand::Run).await;
+        }
+        _ = ctx.send(dirtybase_cron::event::CronJobCommand::Stop).await;
+        tokio::time::sleep(Duration::from_secs(6)).await;
+        ctx.send(dirtybase_cron::event::CronJobCommand::Run).await;
+    }
 
     // 4. Wait for 60 seconds before completing
     tokio::time::sleep(Duration::from_secs(60)).await;

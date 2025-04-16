@@ -45,8 +45,6 @@ impl ExtensionSetup for Extension {
         cookie: CookieJar,
         context: Context,
     ) -> (Response, CookieJar) {
-        
-
         self.add_session_id_to_cookie(resp, cookie, context).await
     }
 

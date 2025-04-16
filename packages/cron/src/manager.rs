@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt::Display, sync::Arc};
 use anyhow::anyhow;
 use futures::future::BoxFuture;
 
-use crate::{CronJob, JobContext, config::CronConfig};
+use crate::{CronJob, JobContext, config::CronConfig, event::CronJobCommand};
 
 pub struct JobManager {
     jobs: HashMap<
@@ -94,4 +94,6 @@ impl JobManager {
             }
         }
     }
+
+    pub async fn send(&self, id: JobId, cmd: CronJobCommand) {}
 }

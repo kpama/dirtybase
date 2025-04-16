@@ -11,8 +11,9 @@ impl busstop::CommandHandler for CronJobCommandHandler {
         &self,
         mut dc: busstop::DispatchedCommand,
     ) -> busstop::DispatchedCommand {
-        let job = dc.take_command::<CronJob>().unwrap();
-        job.spawn().await;
+        if let Some(job) = dc.take_command::<CronJob>() {
+            job.spawn().await;
+        }
 
         dc
     }
