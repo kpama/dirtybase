@@ -94,6 +94,4 @@ impl JobManager {
             }
         }
     }
-
-    pub async fn send(&self, id: JobId, cmd: CronJobCommand) {}
 }

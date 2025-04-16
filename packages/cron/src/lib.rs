@@ -1,3 +1,4 @@
+mod cli;
 pub(crate) mod command_handler;
 pub mod config;
 mod dirtybase_entry;

@@ -46,7 +46,7 @@ async fn main() {
         }
         _ = ctx.send(dirtybase_cron::event::CronJobCommand::Stop).await;
         tokio::time::sleep(Duration::from_secs(6)).await;
-        ctx.send(dirtybase_cron::event::CronJobCommand::Run).await;
+        _ = ctx.send(dirtybase_cron::event::CronJobCommand::Run).await;
     }
 
     // 4. Wait for 60 seconds before completing
