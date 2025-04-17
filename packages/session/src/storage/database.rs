@@ -7,7 +7,7 @@ use dirtybase_contract::{
             TimestampField,
         },
     },
-    session_contract::{SessionData, SessionId, SessionStorage},
+    session_contract::{SessionData, SessionId, SessionStorage, SessionStorageProvider},
 };
 
 use crate::SessionStorageResolver;
@@ -115,9 +115,9 @@ impl From<SessionData> for SessionTable {
     }
 }
 
-pub async fn resolver(mut resolver: SessionStorageResolver) -> SessionStorageResolver {
-    if let Ok(manager) = resolver.context_ref().get::<Manager>().await {
-        resolver.set_storage(DatabaseStorage::new(manager));
-    }
-    resolver
+pub async fn resolver(
+    resolver: SessionStorageResolver,
+) -> Result<SessionStorageProvider, anyhow::Error> {
+    let manager = resolver.context_ref().get::<Manager>().await?;
+    Ok(SessionStorageProvider::new(DatabaseStorage::new(manager)))
 }

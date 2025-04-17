@@ -78,6 +78,13 @@ impl SessionStorage for SessionStorageProvider {
 }
 
 impl SessionStorageProvider {
+    pub fn new<S>(storage: S) -> Self
+    where
+        S: SessionStorage + 'static,
+    {
+        Self(Arc::new(Box::new(storage)))
+    }
+
     pub fn from<S>(storage: S) -> Self
     where
         S: SessionStorage + 'static,

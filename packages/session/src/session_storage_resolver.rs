@@ -1,31 +1,18 @@
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use dirtybase_contract::{
-    app_contract::Context,
-    session_contract::{SessionStorage, SessionStorageProvider},
-};
+use dirtybase_contract::{app_contract::Context, session_contract::SessionStorageProvider};
 
 use crate::SessionConfig;
 
 pub struct SessionStorageResolver {
     context: Context,
-    provider: Option<SessionStorageProvider>,
     config: SessionConfig,
 }
 
 impl SessionStorageResolver {
     pub fn new(context: Context, config: SessionConfig) -> Self {
-        Self {
-            provider: None,
-            context,
-            config,
-        }
-    }
-
-    /// Checks if a provider has been set
-    pub fn has_provider(&self) -> bool {
-        self.provider.is_some()
+        Self { context, config }
     }
 
     /// Returns a reference to the current application's context
@@ -42,50 +29,49 @@ impl SessionStorageResolver {
         self.context.clone()
     }
 
-    pub fn set_storage(&mut self, storage: impl SessionStorage + 'static) {
-        self.provider = Some(SessionStorageProvider::from(storage));
-    }
-
     pub async fn get_provider(self) -> Result<SessionStorageProvider, anyhow::Error> {
-        match Self::get_middleware().await.send(self).await.provider {
-            Some(p) => Ok(p),
-            None => Err(anyhow!("could not resolve the session storage provider")),
-        }
+        let storage = Self::get_middleware().await.send(self).await?;
+        Ok(SessionStorageProvider::from(storage))
     }
 
     pub async fn register<F, Fut>(name: &str, callback: F)
     where
         F: Clone + Fn(Self) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Self> + Send + 'static,
+        Fut: Future<Output = Result<SessionStorageProvider, anyhow::Error>> + Send + 'static,
     {
         let resolvers = Self::get_middleware().await;
 
         let arc_name = Arc::new(name.to_string());
         resolvers
-            .next(move |mut resolver, next| {
+            .next(move |resolver, next| {
                 let cb = callback.clone();
                 let name = arc_name.clone();
                 Box::pin(async move {
                     if resolver.config_ref().storage_ref() == *name.as_ref() {
-                        resolver = (cb)(resolver).await;
+                        return (cb)(resolver).await;
                     }
 
-                    if !resolver.has_provider() {
-                        next.call(resolver).await
-                    } else {
-                        resolver
-                    }
+                    next.call(resolver).await
                 })
             })
             .await;
     }
 
-    async fn get_middleware() -> Arc<simple_middleware::Manager<Self, Self>> {
+    async fn get_middleware()
+    -> Arc<simple_middleware::Manager<Self, Result<SessionStorageProvider, anyhow::Error>>> {
         if let Some(r) = busybody::helpers::service_container().get().await {
             r
         } else {
-            let manager = simple_middleware::Manager::<Self, Self>::last(|resolver, _| {
-                Box::pin(async move { resolver })
+            let manager = simple_middleware::Manager::<
+                Self,
+                Result<SessionStorageProvider, anyhow::Error>,
+            >::last(|resolver, _| {
+                Box::pin(async move {
+                    Err(anyhow!(
+                        "could not get storage provider for: {}",
+                        resolver.config_ref().storage_ref()
+                    ))
+                })
             })
             .await;
             busybody::helpers::service_container()

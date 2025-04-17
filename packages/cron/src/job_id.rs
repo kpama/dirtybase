@@ -1,0 +1,70 @@
+use std::{fmt::Display, sync::Arc};
+
+use anyhow::anyhow;
+use dirtybase_contract::cli_contract::clap::parser::MatchesError;
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub struct JobId(Arc<String>); // job id must be in the format "namespace::name"
+
+impl JobId {
+    pub fn new(id: &str) -> Self {
+        if !id.contains("::") {
+            panic!("Cron job ID must be in the format namespace::name");
+        }
+
+        Self(Arc::new(id.replace(" ", "")))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn validate(inner: &str) -> Result<Self, anyhow::Error> {
+        if !inner.contains("::") {
+            return Err(anyhow!("Cron job ID must be in the format namespace::name"));
+        }
+
+        Ok(Self(Arc::new(inner.replace(" ", ""))))
+    }
+}
+
+impl TryFrom<String> for JobId {
+    type Error = anyhow::Error;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::validate(&value)
+    }
+}
+
+impl TryFrom<&str> for JobId {
+    type Error = anyhow::Error;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::validate(value)
+    }
+}
+
+impl TryFrom<Option<&String>> for JobId {
+    type Error = anyhow::Error;
+
+    fn try_from(value: Option<&String>) -> Result<Self, Self::Error> {
+        if let Some(id) = value {
+            return Self::validate(id);
+        }
+        Err(anyhow!("ID string is empty."))
+    }
+}
+
+impl TryFrom<Result<Option<&String>, MatchesError>> for JobId {
+    type Error = anyhow::Error;
+    fn try_from(value: Result<Option<&String>, MatchesError>) -> Result<Self, Self::Error> {
+        if let Ok(inner) = value {
+            return Self::try_from(inner);
+        }
+        Err(anyhow!("ID string is empty"))
+    }
+}
+
+impl Display for JobId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}

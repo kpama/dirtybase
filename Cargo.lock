@@ -1107,6 +1107,7 @@ dependencies = [
  "futures",
  "orsomafo",
  "serde",
+ "simple-middleware",
  "tokio",
  "tracing",
  "tracing-subscriber",

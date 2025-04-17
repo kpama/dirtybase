@@ -1,7 +1,9 @@
 use std::{collections::HashMap, sync::Arc};
 
 use busybody::async_trait;
-use dirtybase_contract::session_contract::{SessionData, SessionId, SessionStorage};
+use dirtybase_contract::session_contract::{
+    SessionData, SessionId, SessionStorage, SessionStorageProvider,
+};
 use tokio::sync::RwLock;
 
 use crate::SessionStorageResolver;
@@ -58,11 +60,13 @@ impl SessionStorage for MemoryStorage {
     }
 }
 
-pub async fn resolver(mut resolver: SessionStorageResolver) -> SessionStorageResolver {
+pub async fn resolver(
+    resolver: SessionStorageResolver,
+) -> Result<SessionStorageProvider, anyhow::Error> {
     let storage = MemoryStorage::default();
     let storage2 = storage.clone();
-    resolver.set_storage(storage);
 
+    // FIXME: This should cover all storage types
     let lifetime = resolver.config_ref().lifetime();
     let id = "session::storage".try_into().unwrap();
     let _ctx = dirtybase_cron::CronJob::register(
@@ -79,5 +83,5 @@ pub async fn resolver(mut resolver: SessionStorageResolver) -> SessionStorageRes
     )
     .await;
 
-    resolver
+    Ok(SessionStorageProvider::new(storage))
 }

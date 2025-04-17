@@ -139,7 +139,7 @@ impl ExtensionManager {
         EXTENSIONS_READY.get().is_some()
     }
 
-    pub async fn setup_boot_run(context: &Context) {
+    pub async fn setup(context: &Context) {
         if EXTENSIONS_READY.get().is_some() {
             return;
         }
@@ -154,6 +154,16 @@ impl ExtensionManager {
             }
         }
 
+        _ = EXTENSIONS_READY.set(true);
+    }
+
+    pub async fn boot(context: &Context) {
+        if EXTENSIONS_READY.get().is_some() {
+            return;
+        }
+
+        Self::init();
+
         // boot
         if let Some(list) = EXTENSION_COLLECTION.get() {
             let mut w_lock = list.write().await;
@@ -161,6 +171,14 @@ impl ExtensionManager {
                 ext.boot(context).await;
             }
         }
+    }
+
+    pub async fn run(context: &Context) {
+        if EXTENSIONS_READY.get().is_some() {
+            return;
+        }
+
+        Self::init();
 
         // run
         if let Some(list) = EXTENSION_COLLECTION.get() {
@@ -169,8 +187,6 @@ impl ExtensionManager {
                 ext.run(context).await;
             }
         }
-
-        _ = EXTENSIONS_READY.set(true);
     }
 
     pub async fn shutdown(context: &Context) {

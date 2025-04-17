@@ -1,4 +1,7 @@
-use dirtybase_contract::session_contract::{SessionData, SessionId, SessionStorage};
+use anyhow::Ok;
+use dirtybase_contract::session_contract::{
+    SessionData, SessionId, SessionStorage, SessionStorageProvider,
+};
 
 use crate::SessionStorageResolver;
 
@@ -32,7 +35,8 @@ impl SessionStorage for DummyStorage {
     }
 }
 
-pub async fn resolver(mut resolver: SessionStorageResolver) -> SessionStorageResolver {
-    resolver.set_storage(DummyStorage);
-    resolver
+pub async fn resolver(
+    _resolver: SessionStorageResolver,
+) -> Result<SessionStorageProvider, anyhow::Error> {
+    Ok(SessionStorageProvider::new(DummyStorage))
 }
