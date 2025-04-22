@@ -427,15 +427,15 @@ impl PostgresSchemaManager {
         // column type
         match column.column_type {
             ColumnType::AutoIncrementId => the_type.push_str("BIGSERIAL PRIMARY KEY"),
-            ColumnType::Boolean => the_type.push_str("boolean"),
-            ColumnType::Char(_) => the_type.push_str("varchar"),
-            ColumnType::Timestamp | ColumnType::Datetime => the_type.push_str("timestamptz"),
-            ColumnType::Integer => the_type.push_str("bigint"),
-            ColumnType::Json => the_type.push_str("jsonb"),
-            ColumnType::Number | ColumnType::Float => the_type.push_str("double precision"),
+            ColumnType::Boolean => the_type.push_str("BOOLEAN"),
+            ColumnType::Char(_) => the_type.push_str("VARCHAR"),
+            ColumnType::Timestamp | ColumnType::Datetime => the_type.push_str("TIMESTAMPTZ"),
+            ColumnType::Integer => the_type.push_str("BIGINT"),
+            ColumnType::Json => the_type.push_str("JSONB"),
+            ColumnType::Number | ColumnType::Float => the_type.push_str("DOUBLE PRECISION"),
             ColumnType::Binary => the_type.push_str("BYTEA"),
             ColumnType::String(length) => {
-                let q = format!("varchar({})", length);
+                let q = format!("VARCHAR({})", length);
                 the_type.push_str(q.as_str());
             }
             ColumnType::Text => the_type.push_str("TEXT"),
@@ -448,11 +448,11 @@ impl PostgresSchemaManager {
                         .collect::<Vec<String>>()
                         .join(",");
                     the_type.push_str(&format!(
-                        "varchar(255) CONSTRAINT {0}_chk check (\"{0}\" in ({1}))",
+                        "VARCHAR(255) CONSTRAINT {0}_chk check (\"{0}\" in ({1}))",
                         column.name, list
                     ));
                 } else {
-                    the_type.push_str("varchar(255)"); // the check will be added below
+                    the_type.push_str("VARCHAR(255)"); // the check will be added below
                 }
             }
         };
@@ -798,6 +798,13 @@ impl PostgresSchemaManager {
                         this_row.insert(name, v.into());
                     } else if let Ok(v) = row.try_get::<String, &str>(col.name()) {
                         this_row.insert(name, v.into());
+                    }
+                }
+                "UUID" => {
+                    if let Ok(v) = row.try_get::<sqlx::types::Uuid, &str>(col.name()) {
+                        this_row.insert(name, v.into());
+                    } else {
+                        this_row.insert(name, sqlx::types::Uuid::nil().into());
                     }
                 }
                 _ => {
