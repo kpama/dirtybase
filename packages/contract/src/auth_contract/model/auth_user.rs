@@ -137,6 +137,7 @@ impl AuthUser {
 
     pub fn generate_token(&self) -> Option<String> {
         if self.id.is_none() {
+            tracing::debug!("cannot generate user token. ID empty");
             None
         } else {
             Some(ParseToken::generate_token(

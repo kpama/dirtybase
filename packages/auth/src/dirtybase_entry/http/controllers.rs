@@ -1,9 +1,8 @@
 use dirtybase_contract::{
     app_contract::{CtxExt, RequestContext},
     auth_contract::{AuthUser, AuthUserPayload, LoginCredential},
-    axum::response::{Html, Redirect},
-    http_contract::{HttpContext, api::ApiResponse, axum, named_routes_axum, prelude::*},
-    prelude::axum_extra::headers,
+    axum::response::Html,
+    http_contract::{HttpContext, api::ApiResponse, named_routes_axum, prelude::*},
     session_contract::Session,
 };
 use dirtybase_helper::{hash::sha256, security::random_bytes_hex};
@@ -155,11 +154,17 @@ pub(crate) async fn handle_register_request(
     // FIXME: Send email for verification
     payload.verified_at = Some(dirtybase_helper::time::current_datetime());
 
+    let mut token = String::new();
     if let Ok(user) = storage.store(payload).await {
-        format!("token: {}", user.generate_token().unwrap())
-    } else {
-        "token: ".to_string()
+        match user.generate_token() {
+            Some(t) => token = t,
+            None => {
+                tracing::error!("did not get back user token: {:?}", user.id())
+            }
+        }
     }
+
+    format!("token: {}", token)
 }
 
 pub(crate) async fn handle_api_register_request(
