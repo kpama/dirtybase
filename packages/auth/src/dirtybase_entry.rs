@@ -9,10 +9,7 @@ use dirtybase_contract::{
 };
 use middlewares::setup_middlewares;
 
-use crate::{
-    AuthConfig, DATABASE_STORAGE, guards::register_guards, register_storages,
-    setup_context_managers,
-};
+use crate::{AuthConfig, DATABASE_STORAGE, guards::register_guards, register_storages};
 
 #[derive(Debug, Default)]
 pub struct Extension {
@@ -40,7 +37,6 @@ impl ExtensionSetup for Extension {
 
         register_storages().await;
         register_guards().await;
-        setup_context_managers().await;
     }
 
     fn migrations(&self, _global_context: &Context) -> Option<ExtensionMigrations> {

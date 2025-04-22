@@ -7,9 +7,9 @@ use crate::{CronJob, JobContext, JobId, config::CronConfig};
 pub struct CronJobManager {
     jobs: HashMap<
         JobId,
-        Box<dyn FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync + 'static>,
+        Box<dyn FnMut(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static>,
     >,
-    contexts: HashMap<JobId, Arc<JobContext>>,
+    contexts: HashMap<JobId, JobContext>,
     cron_config: CronConfig,
 }
 
@@ -22,11 +22,10 @@ impl CronJobManager {
         }
     }
 
-    pub fn register(
-        &mut self,
-        id: JobId,
-        worker: impl FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync + 'static,
-    ) {
+    pub fn register<W>(&mut self, id: JobId, worker: W)
+    where
+        W: FnMut(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+    {
         self.jobs.insert(id, Box::new(worker));
     }
 

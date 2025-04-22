@@ -6,8 +6,17 @@ use futures::future::BoxFuture;
 
 use crate::{JobContext, JobId, config::CronConfig};
 
-pub type JobHandler =
-    Box<dyn FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync + 'static>;
+pub struct JobHandlerWrapper(Box<dyn FnMut(JobContext) -> BoxFuture<'static, ()> + Send + 'static>);
+
+impl JobHandlerWrapper {
+    pub fn new(handler: impl FnMut(JobContext) -> BoxFuture<'static, ()> + Send + 'static) -> Self {
+        Self(Box::new(handler))
+    }
+
+    pub fn inner(self) -> Box<dyn FnMut(JobContext) -> BoxFuture<'static, ()> + Send + 'static> {
+        self.0
+    }
+}
 
 pub struct CronJobRegisterer {
     context: Context,
@@ -34,14 +43,13 @@ impl CronJobRegisterer {
         self.config.clone()
     }
 
-    pub async fn get_handler(self, job_id: JobId) -> Result<JobHandler, anyhow::Error> {
+    pub async fn get_handler(self, job_id: JobId) -> JobHandlerWrapper {
         Self::get_middleware().await.send((self, job_id)).await
     }
 
-    pub async fn register<F, Fut>(job_id: JobId, callback: F)
+    pub async fn register<F>(job_id: JobId, callback: F)
     where
-        F: Clone + Fn(&Self) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<JobHandler, anyhow::Error>> + Send + 'static,
+        F: Clone + Fn(Self) -> JobHandlerWrapper + Send + 'static,
     {
         let middleware = Self::get_middleware().await;
 
@@ -52,7 +60,7 @@ impl CronJobRegisterer {
 
                 Box::pin(async move {
                     if params.1 == id {
-                        return (cb)(&params.0).await;
+                        return (cb)(params.0);
                     }
 
                     next.call(params).await
@@ -61,14 +69,13 @@ impl CronJobRegisterer {
             .await;
     }
 
-    async fn get_middleware()
-    -> Arc<simple_middleware::Manager<(Self, JobId), Result<JobHandler, anyhow::Error>>> {
-        if let Some(r) = busybody::helpers::service_container().get().await {
-            r
+    async fn get_middleware() -> Arc<simple_middleware::Manager<(Self, JobId), JobHandlerWrapper>> {
+        if let Some(manager) = busybody::helpers::service_container().get().await {
+            manager
         } else {
             let manager = simple_middleware::Manager::<
                 (Self, JobId),
-                Result<JobHandler, anyhow::Error>,
+                Result<JobHandlerWrapper, anyhow::Error>,
             >::last(|(_, job_id), _| {
                 Box::pin(async move { Err(anyhow!("No handler for cron job: {}", &job_id)) })
             })

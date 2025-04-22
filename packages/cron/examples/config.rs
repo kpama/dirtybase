@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use dirtybase_contract::config_contract::DirtyConfig;
-use dirtybase_cron::{JobId, config::CronConfig};
+use dirtybase_cron::config::CronConfig;
 #[tokio::main]
 async fn main() {
     // 1. Setup the configuration using the default config template

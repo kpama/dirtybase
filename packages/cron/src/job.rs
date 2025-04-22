@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc};
+use std::str::FromStr;
 
 use anyhow::anyhow;
 use busstop::DispatchableCommand;
@@ -14,12 +14,12 @@ use crate::{
     event::{CronJobCommand, CronJobState},
 };
 
-type JobHandler = Box<dyn FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync>;
+type JobHandler = Box<dyn FnMut(JobContext) -> BoxFuture<'static, ()> + Send + Sync>;
 
 pub struct CronJob {
     scheduler: cron::Schedule,
     handler: JobHandler,
-    context: Arc<JobContext>,
+    context: JobContext,
     receiver: tokio::sync::mpsc::Receiver<CronJobCommand>,
 }
 
@@ -27,7 +27,7 @@ impl CronJob {
     pub fn new(
         id: JobId,
         schedule: &str,
-        handler: impl FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        handler: impl FnMut(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     ) -> Result<Self, anyhow::Error> {
         let (tx, rx) = tokio::sync::mpsc::channel(100);
         match Schedule::from_str(schedule) {
@@ -36,7 +36,7 @@ impl CronJob {
                 Ok(Self {
                     scheduler,
                     handler: Box::new(handler),
-                    context: Arc::new(JobContext::new(id, tx)),
+                    context: JobContext::new(id, tx),
                     receiver: rx,
                 })
             }
@@ -56,7 +56,7 @@ impl CronJob {
                         Ok(Self {
                             scheduler: s,
                             handler: Box::new(handler),
-                            context: Arc::new(JobContext::new(id, tx)),
+                            context: JobContext::new(id, tx),
                             receiver: rx,
                         })
                     }
@@ -68,20 +68,20 @@ impl CronJob {
 
     pub async fn register(
         schedule: &str,
-        handler: impl FnMut(Arc<JobContext>) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        handler: impl FnMut(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static,
         id: JobId,
-    ) -> Result<Arc<JobContext>, anyhow::Error> {
+    ) -> Result<JobContext, anyhow::Error> {
         let job = Self::new(id, schedule, handler)?;
         let context = job.context();
         job.dispatch_command().await;
         Ok(context)
     }
 
-    pub fn context(&self) -> Arc<JobContext> {
+    pub fn context(&self) -> JobContext {
         self.context.clone()
     }
 
-    pub fn context_ref(&self) -> &Arc<JobContext> {
+    pub fn context_ref(&self) -> &JobContext {
         &self.context
     }
 
