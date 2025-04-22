@@ -1,10 +1,16 @@
 use std::{fmt::Display, sync::Arc};
 
 use anyhow::anyhow;
-use dirtybase_contract::cli_contract::clap::parser::MatchesError;
+use dirtybase_contract::{cli_contract::clap::parser::MatchesError, db_contract::base::helper};
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct JobId(Arc<String>); // job id must be in the format "namespace::name"
+
+impl Default for JobId {
+    fn default() -> Self {
+        Self(Arc::new(format!("auto::{}", helper::generate_ulid())))
+    }
+}
 
 impl JobId {
     pub fn new(id: &str) -> Self {

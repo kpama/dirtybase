@@ -4,17 +4,31 @@ use anyhow::anyhow;
 use dirtybase_contract::prelude::Context;
 use futures::future::BoxFuture;
 
-use crate::{JobContext, JobId, config::CronConfig};
+use crate::{CronJob, JobContext, JobId, config::CronConfig};
 
-pub struct JobHandlerWrapper(Box<dyn FnMut(JobContext) -> BoxFuture<'static, ()> + Send + 'static>);
+pub struct JobHandlerWrapper {
+    handler: Box<dyn FnMut(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static>,
+    id: Option<JobId>,
+}
 
 impl JobHandlerWrapper {
-    pub fn new(handler: impl FnMut(JobContext) -> BoxFuture<'static, ()> + Send + 'static) -> Self {
-        Self(Box::new(handler))
+    pub fn new(
+        handler: impl FnMut(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            handler: Box::new(handler),
+            id: None,
+        }
     }
 
-    pub fn inner(self) -> Box<dyn FnMut(JobContext) -> BoxFuture<'static, ()> + Send + 'static> {
-        self.0
+    pub fn inner(
+        self,
+    ) -> Box<dyn FnMut(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static> {
+        self.handler
+    }
+
+    pub async fn schedule(self, schedule: &str) -> Result<JobContext, anyhow::Error> {
+        CronJob::register(schedule, self.handler, self.id.unwrap_or_default()).await
     }
 }
 
@@ -43,7 +57,7 @@ impl CronJobRegisterer {
         self.config.clone()
     }
 
-    pub async fn get_handler(self, job_id: JobId) -> JobHandlerWrapper {
+    pub async fn get_handler(self, job_id: JobId) -> Result<JobHandlerWrapper, anyhow::Error> {
         Self::get_middleware().await.send((self, job_id)).await
     }
 
@@ -60,7 +74,9 @@ impl CronJobRegisterer {
 
                 Box::pin(async move {
                     if params.1 == id {
-                        return (cb)(params.0);
+                        let mut wrapper = (cb)(params.0);
+                        wrapper.id = Some(id);
+                        return Ok(wrapper);
                     }
 
                     next.call(params).await
@@ -69,7 +85,9 @@ impl CronJobRegisterer {
             .await;
     }
 
-    async fn get_middleware() -> Arc<simple_middleware::Manager<(Self, JobId), JobHandlerWrapper>> {
+    async fn get_middleware()
+    -> Arc<simple_middleware::Manager<(Self, JobId), Result<JobHandlerWrapper, anyhow::Error>>>
+    {
         if let Some(manager) = busybody::helpers::service_container().get().await {
             manager
         } else {
