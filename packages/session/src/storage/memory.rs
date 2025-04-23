@@ -69,7 +69,7 @@ pub async fn resolver(
     // FIXME: This should cover all storage types
     let lifetime = resolver.config_ref().lifetime();
     let id = "session::storage".try_into().unwrap();
-    let _ctx = dirtybase_cron::CronJob::register(
+    let _ctx = dirtybase_cron::CronJob::schedule(
         "every 5 minutes",
         move |_| {
             Box::pin({

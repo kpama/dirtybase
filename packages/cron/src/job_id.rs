@@ -14,11 +14,7 @@ impl Default for JobId {
 
 impl JobId {
     pub fn new(id: &str) -> Self {
-        if !id.contains("::") {
-            panic!("Cron job ID must be in the format namespace::name");
-        }
-
-        Self(Arc::new(id.replace(" ", "")))
+        Self(Arc::new(id.replace(" ", "").to_lowercase()))
     }
 
     pub fn as_str(&self) -> &str {
@@ -30,21 +26,19 @@ impl JobId {
             return Err(anyhow!("Cron job ID must be in the format namespace::name"));
         }
 
-        Ok(Self(Arc::new(inner.replace(" ", ""))))
+        Ok(Self::new(inner))
     }
 }
 
-impl TryFrom<String> for JobId {
-    type Error = anyhow::Error;
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Self::validate(&value)
+impl From<String> for JobId {
+    fn from(value: String) -> Self {
+        Self::new(&value)
     }
 }
 
-impl TryFrom<&str> for JobId {
-    type Error = anyhow::Error;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Self::validate(value)
+impl From<&str> for JobId {
+    fn from(value: &str) -> Self {
+        Self::new(value)
     }
 }
 

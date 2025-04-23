@@ -34,7 +34,7 @@ impl SessionStorage for DatabaseStorage {
         let mut model = SessionTable::from(value);
         model.id = Some(id.to_string());
 
-        let resullt = self
+        let result = self
             .manager
             .upsert(
                 SessionTable::table_name(),
@@ -46,7 +46,7 @@ impl SessionStorage for DatabaseStorage {
                 &["id"],
             )
             .await;
-        tracing::trace!("session store data: {:?}", resullt);
+        tracing::trace!("session store data: {:?}", result);
     }
 
     async fn get(&self, id: &SessionId) -> SessionData {

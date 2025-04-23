@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use anyhow::anyhow;
-use busstop::DispatchableCommand;
 use chrono::Utc;
 use cron::Schedule;
 use english_to_cron::str_cron_syntax;
@@ -66,14 +65,15 @@ impl CronJob {
         }
     }
 
-    pub async fn register(
+    pub async fn schedule(
         schedule: &str,
         handler: impl FnMut(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static,
         id: JobId,
     ) -> Result<JobContext, anyhow::Error> {
         let job = Self::new(id, schedule, handler)?;
         let context = job.context();
-        job.dispatch_command().await;
+        // job.dispatch_command().await;
+        job.spawn().await;
         Ok(context)
     }
 
@@ -105,6 +105,7 @@ impl CronJob {
                         }).await;
                     }
                 },
+
                Some(cmd) = recv  => {
                     match cmd {
                         CronJobCommand::Run => {
@@ -122,19 +123,6 @@ impl CronJob {
                     }
                 }
             }
-            // for next in self.scheduler.upcoming(Utc).take(1) {
-            //     let until = next - Utc::now();
-            //     tokio::time::sleep_until(Instant::now() + until.to_std().unwrap()).await;
-            //     CronJobState::Running {
-            //         id: self.context.id(),
-            //     }
-            //     .dispatch_event();
-            //     tokio::task::block_in_place(|| async {
-            //         (self.handler)(self.context.clone()).await;
-            //         self.context.done().await;
-            //     })
-            //     .await;
-            // }
         }
     }
 
@@ -142,6 +130,3 @@ impl CronJob {
         tokio::spawn(async move { self.run().await });
     }
 }
-
-#[busstop::async_trait]
-impl busstop::DispatchableCommand for CronJob {}

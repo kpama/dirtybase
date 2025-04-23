@@ -122,5 +122,5 @@ async fn test_cookie_handler(
 }
 
 async fn index_request_handler() -> impl IntoResponse {
-    Html("Index page")
+    Html("<h1>Index page</h1>")
 }

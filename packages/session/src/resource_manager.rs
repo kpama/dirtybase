@@ -25,11 +25,7 @@ pub async fn register_resource_manager() {
                     .expect("could not get tenant")
                     .id()
                     .to_string();
-                let duration = if config.storage_ref() == "memory" {
-                    0
-                } else {
-                    0 // FIXME: Use the right duration time
-                };
+                let duration = if context.is_global() { 0 } else { 5 };
                 context.set(config).await;
                 (name, duration)
             })

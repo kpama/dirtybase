@@ -44,13 +44,16 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         TableBlueprint::new(name)
     }
     async fn has_table(&self, name: &str) -> bool {
-        let query = "SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_name = ?";
-
-        let _database = self.db_pool.connect_options().get_database();
+        let query = "SELECT EXISTS ( SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1);";
 
         let result = sqlx::query(query)
             .bind(name)
-            .map(|_row| true)
+            .map(|row: PgRow| {
+                if let Ok(exists) = row.try_get::<bool, &str>("exists") {
+                    return exists;
+                }
+                false
+            })
             .fetch_one(self.db_pool.as_ref())
             .await;
 
