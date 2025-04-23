@@ -21,7 +21,7 @@ pub async fn authenticate(mut resolver: GuardResolver) -> GuardResolver {
             if token.contains("|") {
                 if let Ok(token) = ParseToken::try_from(token) {
                     let result = resolver.storage_ref().find_by_id(token.id()).await;
-                    // TODO: check if this user is varified. May via nother middleware...
+                    // TODO: check if this user is verified. May have via another middleware...
                     resolver.set_user(result);
                     return resolver;
                 }

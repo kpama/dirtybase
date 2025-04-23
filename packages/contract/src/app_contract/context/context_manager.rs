@@ -89,10 +89,8 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
             collection: ContextCollection::default(),
         };
 
-        // FIXME: look into a deadlock situation happening when we drop the instace of this struct
-        // instance.handle_shutdown_signal().await
-
-        instance
+        // FIXME: look into a deadlock situation happening when we drop the instance of this struct
+        instance.handle_shutdown_signal().await
     }
 
     pub async fn register<S, F, C>(setup_fn: S, resolver_fn: F, drop_fn: C)
@@ -208,14 +206,10 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
         lock.contains_key(name)
     }
 
-    async fn drop_all(&self) {
-        tracing::trace!(
-            "shutting down resource context manager: {}",
-            self.name_of_t()
-        );
-        let list = Arc::clone(&self.collection);
+    async fn _drop_all(&self) {
+        tracing::trace!("shutting down manager: {}", self.name_of_t());
         let clean_up_fn = self.drop_fn.clone();
-        let mut write_lock = list.write().await;
+        let mut write_lock = self.collection.write().await;
         for (_, wrapper) in write_lock.drain().into_iter() {
             let mut clean_fn_lock = clean_up_fn.write().await;
             (clean_fn_lock)(wrapper.resource()).await;
@@ -251,12 +245,14 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
 
             tokio::select! {
                 _ = ctrl_c => {
-                    tracing::error!("shutting down due to ctr+c");
-                    // this_manager.drop_all().await;
+                    tracing::debug!("shutting down due to ctr+c");
+                    //  this_manager.drop_all().await;
+                    drop(this_manager);
                 },
                 _ = terminate => {
-                    tracing::error!("shutting down for other reason");
+                    tracing::debug!("shutting down for other reason");
                     // this_manager.drop_all().await;
+                    drop(this_manager);
                 },
             }
         });
@@ -270,7 +266,15 @@ impl<T: Clone + Send + Sync + 'static> Drop for ContextResourceManager<T> {
         // FIXME: use something else other than block_on
         //        block_on does not work for db over tcp connection
 
-        // futures::executor::block_on(self.drop_all());
+        futures::executor::block_on(async {
+            tracing::debug!("shutting down ctx manager: {}", self.name_of_t());
+            let clean_up_fn = self.drop_fn.clone();
+            let mut write_lock = self.collection.write().await;
+            for (_, wrapper) in write_lock.drain().into_iter() {
+                let mut clean_fn_lock = clean_up_fn.write().await;
+                (clean_fn_lock)(wrapper.resource()).await;
+            }
+        });
     }
 }
 

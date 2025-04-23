@@ -117,7 +117,7 @@ pub async fn authenticate(ctx: Context, cred: LoginCredential) -> bool {
             }
             false
         }
-        (false, Ok(Some(user))) => {
+        (false, Ok(Some(_user))) => {
             // log failed attempt
             false
         }

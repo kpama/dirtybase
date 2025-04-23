@@ -22,7 +22,7 @@ pub async fn register_resource_manager() {
             //
             Box::pin(async move {
                 let config = context.get_config::<CacheConfig>("cache").await.unwrap();
-                let name = context
+                let _name = context
                     .tenant()
                     .await
                     .expect("could not get tenant")

@@ -1,5 +1,3 @@
-// use clap::{ArgMatches, Subcommand};
-
 use anyhow::Ok;
 use dirtybase_contract::{
     ExtensionManager, ExtensionMigrations, cli_contract::clap::ArgMatches,
@@ -126,7 +124,7 @@ impl From<(String, ArgMatches)> for MigrateAction {
             "down" => MigrateAction::Down,
             "refresh" => MigrateAction::Refresh,
             "reset" => MigrateAction::Reset,
-            v => MigrateAction::Unknown,
+            _ => MigrateAction::Unknown,
         }
     }
 }

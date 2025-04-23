@@ -197,12 +197,9 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
             tracing::dispatcher::get_default(|dispatch| {
                 if let Some(id) = span.id() {
-                    log::error!("tracing span id: {:?}", &id);
                     if let Some(current) = dispatch.current_span().id() {
                         dispatch.record_follows_from(&id, current)
                     }
-                } else {
-                    log::error!("tracing has not being setup"); // FIXME: translation
                 }
             });
 
@@ -260,7 +257,6 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 let http_context = context.get::<HttpContext>().await.unwrap();
                 // The cookie must be setting via the http context
                 let mut cookie_jar = http_context.cookie_jar().await;
-                // CookieJar::from_headers(response.headers());
 
                 response.extensions_mut().insert(context.clone());
 

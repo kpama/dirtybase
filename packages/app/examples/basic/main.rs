@@ -72,19 +72,3 @@ async fn my_world() -> impl IntoResponse {
 async fn another_one() -> impl IntoResponse {
     "This works!!!!!"
 }
-
-#[derive(Debug, Default, Clone)]
-struct MyAppState {
-    counts: Arc<AtomicU64>,
-}
-
-impl MyAppState {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn increment(&self) -> u64 {
-        self.counts
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-    }
-}

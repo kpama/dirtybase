@@ -3,8 +3,8 @@ use std::{collections::HashMap, sync::RwLock};
 #[derive(Default)]
 pub struct ContextMetadata {
     data: RwLock<HashMap<String, String>>,
-    hidden: RwLock<HashMap<String, String>>,
-    stack: RwLock<Vec<String>>,
+    _hidden: RwLock<HashMap<String, String>>,
+    _stack: RwLock<Vec<String>>,
 }
 
 impl ContextMetadata {

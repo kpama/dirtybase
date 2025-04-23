@@ -22,16 +22,6 @@ pub trait AdapterTrait: Send + Sync + 'static {
     }
 }
 
-pub struct AdapterManager;
-
-impl AdapterManager {
-    pub async fn register(name: &str, adapter: Box<dyn AdapterTrait>) {
-        let lock = REGISTERED_ADAPTERS.get_or_init(|| RwLock::new(HashMap::new()));
-        let mut adapters = lock.write().await;
-        adapters.insert(name.to_string(), adapter);
-    }
-}
-
 pub async fn register_adapter(adapter: Box<dyn AdapterTrait>) {
     let lock = REGISTERED_ADAPTERS.get_or_init(|| RwLock::new(HashMap::new()));
     let mut adapters = lock.write().await;

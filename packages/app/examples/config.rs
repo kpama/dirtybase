@@ -17,13 +17,13 @@ async fn main() -> anyhow::Result<()> {
 
 #[derive(Debug, serde::Deserialize)]
 struct Conf {
-    name: String,
-    age: i32,
+    _name: String,
+    _age: i32,
 }
 
 #[derive(Debug, serde::Deserialize)]
 struct DbConfigurations {
-    clients: HashMap<String, ConnectionConfig>,
+    _clients: HashMap<String, ConnectionConfig>,
 }
 
 impl DbConfigurations {
@@ -38,7 +38,7 @@ impl DbConfigurations {
 
         // dbg!(&configs);
         Self {
-            clients: HashMap::new(),
+            _clients: HashMap::new(),
         }
     }
 }

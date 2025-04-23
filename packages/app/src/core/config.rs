@@ -243,16 +243,7 @@ impl Config {
 
     pub async fn try_from_config(config: &DirtyConfig) -> ConfigResult<Self> {
         let builder = config
-            .load_optional_file_fn("app.toml", Some("DTY_APP"), |ev| {
-                // env entries where the values are Vec<T>
-                ev.list_separator(",")
-                    .with_list_parse_key("web_middleware.global")
-                    .with_list_parse_key("web_middleware.general_route")
-                    .with_list_parse_key("web_middleware.api_route")
-                    .with_list_parse_key("web_middleware.insecure_api_route")
-                    .with_list_parse_key("web_middleware.admin_route")
-                    .with_list_parse_key("web_middleware.dev_route")
-            })
+            .load_optional_file_fn("app.toml", Some("DTY_APP"), |ev| ev)
             .build()
             .await?;
 

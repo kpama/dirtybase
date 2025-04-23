@@ -4,15 +4,15 @@ use super::{AuthUser, AuthUserStorageProvider};
 
 #[derive(Clone)]
 pub struct AuthService {
-    storage: AuthUserStorageProvider,
-    user: OnceLock<AuthUser>,
+    _storage: AuthUserStorageProvider,
+    _user: OnceLock<AuthUser>,
 }
 
 impl AuthService {
     pub fn new(storage: AuthUserStorageProvider) -> Self {
         Self {
-            storage,
-            user: OnceLock::default(),
+            _storage: storage,
+            _user: OnceLock::default(),
         }
     }
 }

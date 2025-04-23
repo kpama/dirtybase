@@ -2,8 +2,6 @@ use dirtybase_db_macro::DirtyTable;
 
 use crate::cache_manager::cache_entry::CacheEntry;
 
-type Content = serde_json::Value;
-
 #[derive(Debug, Clone, Default, DirtyTable)]
 #[dirty(table = "cache", id = "key")]
 pub struct CacheDbStoreEntity {

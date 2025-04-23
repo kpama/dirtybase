@@ -1,7 +1,4 @@
 mod auth_middleware;
-mod basic_auth_middleware;
-mod jwt_auth_middleware;
-mod normal_auth_middleware;
 
 use auth_middleware::handle_auth_middleware;
 use dirtybase_contract::http_contract::WebMiddlewareManager;

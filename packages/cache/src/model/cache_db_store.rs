@@ -1,6 +1,5 @@
 use dirtybase_contract::db_contract::TableEntityTrait;
 use dirtybase_contract::db_contract::base::manager::Manager;
-use dirtybase_contract::db_contract::types::FromColumnAndValue;
 
 mod cache_db_store_entity;
 mod cache_db_store_repository;

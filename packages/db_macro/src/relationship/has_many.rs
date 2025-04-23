@@ -4,7 +4,7 @@ use quote::{format_ident, quote};
 
 use crate::attribute_type::{DirtybaseAttributes, RelationAttribute};
 
-pub(crate) fn generate_method(
+pub(crate) fn _generate_method(
     column: &DirtybaseAttributes,
     attribute: &RelationAttribute,
     _base_name: &Ident,

@@ -240,7 +240,6 @@ impl PostgresSchemaManager {
                     }
 
                     sql = format!("{} DO UPDATE SET {}", sql, update_values.join(","));
-                    println!("sql generated: {} ", &sql);
                 }
             }
 

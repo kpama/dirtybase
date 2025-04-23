@@ -16,8 +16,8 @@ type RegistererFn = Box<
 
 pub struct Registerer {
     wrapper: simple_middleware::Manager<(String, clap::ArgMatches, Context), ()>,
-    name: Arc<String>,
-    params: Option<HashMap<String, String>>,
+    _name: Arc<String>,
+    _params: Option<HashMap<String, String>>,
 }
 
 impl Registerer {
@@ -30,7 +30,7 @@ impl Registerer {
         Fut: Future<Output = ()> + Send + Sync + 'static,
     {
         self.wrapper
-            .next(move |(a, b, c), next| {
+            .next(move |(a, b, c), _next| {
                 //
                 let x = (handler)(a, b, c, None);
                 Box::pin(x)

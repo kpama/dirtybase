@@ -59,10 +59,7 @@ impl SessionStorage for DatabaseStorage {
             .await
         {
             Ok(Some(data)) => SessionData::from(data),
-            _ => {
-                tracing::error!("we should have the session in storage");
-                SessionData::new()
-            }
+            _ => SessionData::new(),
         }
     }
 

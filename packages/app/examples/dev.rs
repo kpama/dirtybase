@@ -9,12 +9,13 @@ use dirtybase_contract::{
 };
 use dirtybase_db::base::manager::Manager;
 use dirtybase_db::types::{ArcUuid7, IntoColumnAndValue};
-use tracing::Level;
+use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_max_level(Level::ERROR)
+        .with_env_filter(EnvFilter::from_default_env())
+        // .with_max_level(Level::DEBUG)
         .try_init()
         .expect("could not setup tracing");
 
@@ -44,23 +45,13 @@ impl ExtensionSetup for App {
         .await;
     }
 
-    fn register_cli_middlewares(&self, mut manager: CliMiddlewareManager) -> CliMiddlewareManager {
-        manager.register("say_hi", |middleware| {
-            middleware.next(|v, n| {
-                Box::pin(async {
-                    println!("I am saying hi from say_hi middleware");
-                    n.call(v).await
-                })
-            });
-
-            middleware
-        });
+    fn register_cli_middlewares(&self, manager: CliMiddlewareManager) -> CliMiddlewareManager {
         manager
     }
 
     fn register_routes(&self, manager: &mut RouterManager) {
         manager.general(None, |router| {
-            let router = router.get("/", index_request_handler, "index-page");
+            router.get("/", index_request_handler, "index-page");
             // middleware_manager.apply(router, ["auth::jwt"])
         });
 
@@ -117,13 +108,13 @@ impl ExtensionSetup for App {
     async fn on_web_request(&self, req: Request, context: Context, _cookie: &CookieJar) -> Request {
         let tenant = context.tenant().await.unwrap();
 
-        let id = tenant.id().to_string();
+        let _id = tenant.id().to_string();
         req
     }
 }
 
 async fn test_cookie_handler(
-    jar: CookieJar,
+    _jar: CookieJar,
     CtxExt(session): CtxExt<Session>,
     _req: Request,
 ) -> impl IntoResponse {
@@ -131,5 +122,5 @@ async fn test_cookie_handler(
 }
 
 async fn index_request_handler() -> impl IntoResponse {
-    "Index page"
+    Html("Index page")
 }

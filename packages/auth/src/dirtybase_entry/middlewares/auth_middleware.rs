@@ -25,7 +25,7 @@ pub async fn handle_auth_middleware(
             .cloned()
             .unwrap_or_default();
 
-        tracing::error!("current guard name: {}", &guard_name);
+        tracing::debug!("current auth guard: {}", &guard_name);
 
         if let Some(storage) = StorageResolver::new(context.clone()).get_provider().await {
             let guard = GuardResolver::new(req, storage, &guard_name).guard().await;
@@ -37,7 +37,6 @@ pub async fn handle_auth_middleware(
                 return response;
             }
 
-            println!(">>>>>>>>>>>>>>>. here <<<<<<<<<<<l");
             if let Some(Err(err)) = guard.user {
                 tracing::error!("authentication error: {}", err.to_string());
             }

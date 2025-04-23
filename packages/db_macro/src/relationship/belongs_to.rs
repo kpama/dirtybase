@@ -4,17 +4,17 @@ use quote::{format_ident, quote};
 
 use crate::attribute_type::{DirtybaseAttributes, RelationAttribute};
 
-pub(crate) fn generate_method(
+pub(crate) fn _generate_method(
     column: &DirtybaseAttributes,
     attribute: &RelationAttribute,
     _base_name: &Ident,
-    table_name: &str,
+    _table_name: &str,
     prop_name: &Ident,
     method_name: &Ident,
     the_type: &Ident,
     postfix: &str,
     default_id_column: &str,
-    default_fk_column: &str,
+    _default_fk_column: &str,
 ) -> TokenStream {
     let parent_model = format_ident!("{}{}", &column.the_type, postfix);
 
