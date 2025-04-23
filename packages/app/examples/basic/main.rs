@@ -1,5 +1,3 @@
-use std::sync::{Arc, atomic::AtomicU64};
-
 use axum::{
     body::Body,
     response::{Html, IntoResponse, Response},
