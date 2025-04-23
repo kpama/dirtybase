@@ -92,7 +92,7 @@ impl AuthUser {
     }
 
     pub fn username_ref(&self) -> &str {
-        return self.username.as_ref();
+        self.username.as_ref()
     }
 
     pub fn status(&self) -> AuthUserStatus {
