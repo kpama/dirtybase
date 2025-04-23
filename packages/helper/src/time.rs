@@ -25,6 +25,12 @@ impl Time {
 
         Self { now }
     }
+    pub fn subtract_weeks(self, weeks: i64) -> Self {
+        let mut now = self.now;
+        now -= Duration::weeks(weeks);
+
+        Self { now }
+    }
 
     // days
     pub fn add_days(self, days: i64) -> Self {
@@ -34,10 +40,24 @@ impl Time {
         Self { now }
     }
 
+    pub fn subtract_days(self, days: i64) -> Self {
+        let mut now = self.now;
+        now -= Duration::days(days);
+
+        Self { now }
+    }
+
     // hours
     pub fn add_hours(self, hours: i64) -> Self {
         let mut now = self.now;
         now += Duration::hours(hours);
+
+        Self { now }
+    }
+
+    pub fn subtract_hours(self, hours: i64) -> Self {
+        let mut now = self.now;
+        now -= Duration::hours(hours);
 
         Self { now }
     }
@@ -64,11 +84,23 @@ impl Time {
 
         Self { now }
     }
+    pub fn subtract_seconds(self, seconds: i64) -> Self {
+        let mut now = self.now;
+        now -= Duration::seconds(seconds);
+
+        Self { now }
+    }
 
     // milliseconds
     pub fn add_milliseconds(self, milliseconds: i64) -> Self {
         let mut now = self.now;
         now += Duration::milliseconds(milliseconds);
+
+        Self { now }
+    }
+    pub fn subtract_milliseconds(self, milliseconds: i64) -> Self {
+        let mut now = self.now;
+        now -= Duration::milliseconds(milliseconds);
 
         Self { now }
     }
@@ -81,9 +113,23 @@ impl Time {
         Self { now }
     }
 
+    pub fn subtract_microseconds(self, microseconds: i64) -> Self {
+        let mut now = self.now;
+        now -= Duration::microseconds(microseconds);
+
+        Self { now }
+    }
+
     pub fn add_nanoseconds(self, nanoseconds: i64) -> Self {
         let mut now = self.now;
         now += Duration::nanoseconds(nanoseconds);
+
+        Self { now }
+    }
+
+    pub fn subtract_nanoseconds(self, nanoseconds: i64) -> Self {
+        let mut now = self.now;
+        now -= Duration::nanoseconds(nanoseconds);
 
         Self { now }
     }
