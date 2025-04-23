@@ -46,7 +46,7 @@ pub async fn register_resource_manager() {
                     let lifetime = config.lifetime();
                     let id = "session::storage".try_into().unwrap();
                     let _ctx = dirtybase_cron::CronJob::schedule(
-                        "every 5 minutes",
+                        "every 25 minutes",
                         move |_| {
                             Box::pin({
                                 let storage = storage.clone();

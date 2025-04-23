@@ -3,11 +3,10 @@ use controllers::{
     handle_register_request, login_form_handler, register_form_handler,
 };
 use dirtybase_contract::{
-    db_contract::{base::manager::Manager, types::ArcUuid7},
+    db_contract::types::ArcUuid7,
     http_contract::{RouterManager, api::ApiResponse},
-    prelude::{AuthUser, CtxExt, Path, RequestContext, StatusCode},
+    prelude::{AuthUser, Path, RequestContext},
 };
-use dirtybase_helper::uuid;
 
 use crate::StorageResolver;
 

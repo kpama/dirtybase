@@ -2,13 +2,11 @@ use dirtybase_contract::{
     db_contract::{
         TableEntityTrait,
         base::manager::Manager,
-        types::{
-            JsonField, OptionalDateTimeField, OptionalStringField, OptionalTimestampField,
-            TimestampField,
-        },
+        types::{JsonField, OptionalDateTimeField, OptionalStringField},
     },
     session_contract::{SessionData, SessionId, SessionStorage, SessionStorageProvider},
 };
+use dirtybase_helper::time::now_ts;
 
 use crate::SessionStorageResolver;
 
@@ -79,7 +77,9 @@ impl SessionStorage for DatabaseStorage {
         _ = self
             .manager
             .delete_from_table::<SessionTable>(|q| {
-                q.gt_or_eq(SessionTable::col_name_for_expires(), lifetime);
+                let mut now = dirtybase_helper::time::Time::now();
+                now = now.subtract_minutes(lifetime);
+                q.le_or_eq(SessionTable::col_name_for_expires(), now.timestamp());
             })
             .await;
     }
@@ -92,12 +92,12 @@ pub struct SessionTable {
     data: JsonField,
     #[dirty(skip_insert)]
     created_at: OptionalDateTimeField,
-    expires: OptionalTimestampField,
+    expires: Option<i64>,
 }
 
 impl From<SessionTable> for SessionData {
     fn from(value: SessionTable) -> Self {
-        SessionData::new_from(value.data, value.expires.unwrap_or_default().timestamp())
+        SessionData::new_from(value.data, value.expires.unwrap_or(now_ts()))
     }
 }
 
@@ -107,7 +107,7 @@ impl From<SessionData> for SessionTable {
             id: None,
             data: value.all(),
             created_at: None,
-            expires: TimestampField::from_timestamp(value.expires(), 0),
+            expires: Some(value.expires()),
         }
     }
 }

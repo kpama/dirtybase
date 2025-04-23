@@ -61,10 +61,7 @@ impl SessionStorage for MemoryStorage {
 }
 
 pub async fn resolver(
-    resolver: SessionStorageResolver,
+    _resolver: SessionStorageResolver,
 ) -> Result<SessionStorageProvider, anyhow::Error> {
-    let storage = MemoryStorage::default();
-    let storage2 = storage.clone();
-
-    Ok(SessionStorageProvider::new(storage))
+    Ok(SessionStorageProvider::new(MemoryStorage::default()))
 }

@@ -50,6 +50,13 @@ impl Time {
         Self { now }
     }
 
+    pub fn subtract_minutes(self, minutes: i64) -> Self {
+        let mut now = self.now;
+        now -= Duration::minutes(minutes);
+
+        Self { now }
+    }
+
     // seconds
     pub fn add_seconds(self, seconds: i64) -> Self {
         let mut now = self.now;

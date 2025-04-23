@@ -5,7 +5,6 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use serde::ser::Error;
 
 #[derive(Debug, serde::Serialize)]
 pub struct ApiResponse<D: serde::Serialize = ()> {
