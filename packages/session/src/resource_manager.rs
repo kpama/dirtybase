@@ -1,5 +1,6 @@
 use dirtybase_contract::{
-    app_contract::ContextResourceManager, session_contract::SessionStorageProvider,
+    app_contract::ContextResourceManager,
+    session_contract::{SessionStorage, SessionStorageProvider},
 };
 
 use crate::{
@@ -37,9 +38,29 @@ pub async fn register_resource_manager() {
                     .get_config::<SessionConfig>("session")
                     .await
                     .unwrap();
-                SessionStorageResolver::new(context, config)
+                let provider = SessionStorageResolver::new(context.clone(), config)
                     .get_provider()
-                    .await
+                    .await?;
+                let storage = provider.clone();
+                if let Ok(config) = context.get_config::<SessionConfig>("session").await {
+                    let lifetime = config.lifetime();
+                    let id = "session::storage".try_into().unwrap();
+                    let _ctx = dirtybase_cron::CronJob::schedule(
+                        "every 5 minutes",
+                        move |_| {
+                            Box::pin({
+                                let storage = storage.clone();
+                                async move {
+                                    storage.gc(lifetime).await;
+                                }
+                            })
+                        },
+                        id,
+                    )
+                    .await;
+                }
+
+                Ok(provider)
             })
         },
         |_provider| {

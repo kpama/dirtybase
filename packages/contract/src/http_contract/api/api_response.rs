@@ -5,6 +5,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use serde::ser::Error;
 
 #[derive(Debug, serde::Serialize)]
 pub struct ApiResponse<D: serde::Serialize = ()> {
@@ -146,6 +147,22 @@ impl From<&str> for ApiError {
 impl From<anyhow::Error> for ApiError {
     fn from(value: anyhow::Error) -> Self {
         value.to_string().into()
+    }
+}
+
+impl<D: serde::Serialize, E> From<Result<Option<D>, E>> for ApiResponse<D>
+where
+    E: Into<ApiError>,
+{
+    fn from(value: Result<Option<D>, E>) -> Self {
+        match value {
+            Ok(Some(data)) => ApiResponse::success(data),
+            Ok(None) => ApiResponse::error_with_status("resource not found", StatusCode::NOT_FOUND),
+            _ => ApiResponse::error_with_status(
+                "server process your request",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+        }
     }
 }
 
