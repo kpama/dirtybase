@@ -42,7 +42,7 @@ impl From<FieldValue> for AuthUserStatus {
                 AUTH_USER_STATUS_ACTIVE => Self::Active,
                 AUTH_USER_STATUS_INACTIVE => Self::Inactive,
                 AUTH_USER_STATUS_SUSPENDED => Self::Suspended,
-                AUTH_USER_STATUS_UNKNOWN => Self::Pending,
+                AUTH_USER_STATUS_PENDING => Self::Pending,
                 _ => Self::Unknown,
             },
             _ => Self::Unknown,
