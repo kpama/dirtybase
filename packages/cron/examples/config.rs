@@ -1,9 +1,17 @@
 use std::time::Duration;
 
-use dirtybase_contract::config_contract::DirtyConfig;
-use dirtybase_cron::config::CronConfig;
+use dirtybase_contract::{config_contract::DirtyConfig, prelude::Context};
+use dirtybase_cron::{CronJobManager, CronJobRegisterer, JobHandlerWrapper, config::CronConfig};
+use tracing::Level;
+
 #[tokio::main]
 async fn main() {
+    // for logging purposes
+    tracing_subscriber::fmt()
+        .with_max_level(Level::DEBUG)
+        .try_init()
+        .expect("could not setup tracing");
+
     // 1. Setup the configuration using the default config template
     let base_config = DirtyConfig::new();
     let config = base_config
@@ -14,19 +22,19 @@ async fn main() {
         .try_deserialize::<CronConfig>()
         .unwrap();
 
-    // 2. Setup cron manager
-    let mut manager = dirtybase_cron::setup_using(config).await;
-
     // 3. register a job
-    let id = "foo::job".try_into().unwrap();
-    manager.register(id, |_ctx| {
-        Box::pin(async {
-            println!(">>>>>>>> running foo::bar......");
+    CronJobRegisterer::register("foo::job", |_reg| {
+        JobHandlerWrapper::new(|_ctx| {
+            Box::pin(async {
+                println!(">>>>>>>> running foo::bar......");
+            })
         })
-    });
+    })
+    .await;
 
     // 4. Run the enabled jobs
-    manager.run().await;
+    let manager = CronJobManager::new();
+    manager.run(config, Context::make_global().await).await;
 
     // 5. This line is added just for testing purposes
     //    Usually, your program keep running due to the fact that it is accepting connection

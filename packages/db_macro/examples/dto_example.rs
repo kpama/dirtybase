@@ -13,14 +13,14 @@ struct User {
 async fn main() {
     let manager = make_sqlite_in_memory_manager().await;
 
-    manager
+    _ = manager
         .create_table_schema(User::table_name(), |table| {
             table.string(User::col_name_for_name());
         })
         .await;
 
     for name in ["a", "b", "c", "d"] {
-        manager
+        _ = manager
             .insert(
                 User::table_name(),
                 User {

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use busstop::async_trait;
 use dirtybase_contract::{
@@ -59,8 +59,9 @@ impl TryFromDirtyConfig for CronConfig {
 pub struct JobConfig {
     enable: bool,
     id: JobId,
-    schedule: String,
-    description: Option<String>,
+    schedule: Arc<String>,
+    description: Option<Arc<String>>,
+    _args: Option<Arc<Vec<String>>>,
 }
 
 impl JobConfig {
@@ -68,13 +69,23 @@ impl JobConfig {
         id: impl Into<JobId>,
         schedule: T,
         enable: bool,
+        _args: Option<Vec<String>>,
         description: Option<String>,
     ) -> Self {
         Self {
             id: id.into(),
-            schedule: schedule.to_string(),
+            schedule: Arc::new(schedule.to_string()),
             enable,
-            description,
+            description: if description.is_some() {
+                Some(Arc::new(description.unwrap()))
+            } else {
+                None
+            },
+            _args: if _args.is_some() {
+                Some(Arc::new(_args.unwrap()))
+            } else {
+                None
+            },
         }
     }
 
@@ -99,13 +110,18 @@ impl JobConfig {
         &self.schedule
     }
 
-    pub fn description(&self) -> Option<String> {
+    pub fn description(&self) -> Option<Arc<String>> {
         self.description.clone()
     }
 
+    pub fn description_ref(&self) -> Option<&Arc<String>> {
+        self.description.as_ref()
+    }
+
     pub fn set_schedule<T: ToString>(&mut self, schedule: T) -> &mut Self {
-        self.schedule =
-            str_cron_syntax(&schedule.to_string()).unwrap_or_else(|_| schedule.to_string());
+        self.schedule = Arc::new(
+            str_cron_syntax(&schedule.to_string()).unwrap_or_else(|_| schedule.to_string()),
+        );
         self
     }
 }

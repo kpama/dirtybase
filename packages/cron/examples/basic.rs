@@ -10,12 +10,9 @@ async fn main() {
         .try_init()
         .expect("could not setup tracing");
 
-    // 1. Initiate the job dispatcher
-    dirtybase_cron::start().await;
-
-    // 2. Register a job
+    // 1. Register a job
     let id = "example::hi".try_into().unwrap();
-    let ctx_result = dirtybase_cron::CronJob::register(
+    let ctx_result = dirtybase_cron::CronJob::schedule(
         "every 5 seconds",
         |_ctx| {
             Box::pin(async {
@@ -28,7 +25,7 @@ async fn main() {
 
     // 3
     let id = "example::hi2".try_into().unwrap();
-    let _ctx = dirtybase_cron::CronJob::register(
+    let _ctx = dirtybase_cron::CronJob::schedule(
         "0/10 * * * * ? *",
         |_ctx| {
             Box::pin(async {

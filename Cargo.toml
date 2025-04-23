@@ -19,7 +19,7 @@ anyhow = "1.0"
 clap = { version = "4", features = ["derive", "unstable-doc"] }
 dotenv = "0.15"
 serde = { version = "1.0", features = ["derive", "rc"] }
-serde_json = {version = "1", features=["raw_value"]}
+serde_json = { version = "1", features = ["raw_value"] }
 toml = "0.8"
 sqlx = { version = "0.8", features = [
 	"runtime-tokio",
@@ -58,7 +58,7 @@ busybody = { version = "0.5" }
 orsomafo = { version = "0.5" }
 fama = { version = "0.4" }
 busstop = { version = "0.2" }
-redis = { version = "0.29", features = [
+redis = { version = "0.30", features = [
 	"tokio-comp",
 	"aio",
 	# "tls-native-tls",

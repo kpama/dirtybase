@@ -1,44 +1,44 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
-use futures::future::BoxFuture;
+use dirtybase_contract::prelude::Context;
+use tokio::sync::RwLock;
 
-use crate::{CronJob, JobContext, JobId, config::CronConfig};
+use crate::{CronJobRegisterer, JobContext, JobId, config::CronConfig};
 
+#[derive(Clone)]
 pub struct CronJobManager {
-    jobs: HashMap<
-        JobId,
-        Box<dyn FnMut(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static>,
-    >,
-    contexts: HashMap<JobId, JobContext>,
-    cron_config: CronConfig,
+    contexts: Arc<RwLock<HashMap<JobId, JobContext>>>,
 }
 
 impl CronJobManager {
-    pub fn new(cron_config: CronConfig) -> Self {
+    pub fn new() -> Self {
         Self {
-            jobs: Default::default(),
             contexts: Default::default(),
-            cron_config,
         }
     }
 
-    pub fn register<W>(&mut self, id: JobId, worker: W)
-    where
-        W: FnMut(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static,
-    {
-        self.jobs.insert(id, Box::new(worker));
-    }
-
-    pub async fn run(&mut self) {
-        if !self.cron_config.enable() {
+    pub async fn run(&self, cron_config: CronConfig, context: Context) {
+        if !cron_config.enable() {
             return;
         }
 
-        for config in self.cron_config.jobs().values() {
-            if let Some(job) = self.jobs.remove(config.id_ref()) {
-                match CronJob::register(config.schedule(), job, config.id()).await {
+        self.end().await;
+
+        let mut w_lock = self.contexts.write().await;
+        w_lock.drain();
+
+        for config in cron_config.jobs().values() {
+            if !config.is_enable() {
+                continue;
+            }
+
+            if let Ok(wrapper) = CronJobRegisterer::new(context.clone(), config.clone())
+                .get_handler()
+                .await
+            {
+                match wrapper.schedule().await {
                     Ok(context) => {
-                        self.contexts.insert(config.id().clone(), context);
+                        w_lock.insert(config.id().clone(), context);
                     }
                     Err(e) => {
                         tracing::error!("could not start cron job: {:?}", e);
@@ -46,5 +46,20 @@ impl CronJobManager {
                 }
             }
         }
+    }
+
+    pub async fn stop(&self) {
+        let r_lock = self.contexts.read().await;
+        for (_, ctx) in r_lock.iter() {
+            _ = ctx.send(crate::event::CronJobCommand::Stop).await;
+        }
+    }
+
+    pub async fn end(&self) {
+        let mut w_lock = self.contexts.write().await;
+        for (_, ctx) in w_lock.iter() {
+            _ = ctx.send(crate::event::CronJobCommand::Exit).await;
+        }
+        w_lock.drain();
     }
 }

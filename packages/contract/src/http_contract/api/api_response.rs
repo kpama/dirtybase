@@ -149,6 +149,22 @@ impl From<anyhow::Error> for ApiError {
     }
 }
 
+impl<D: serde::Serialize, E> From<Result<Option<D>, E>> for ApiResponse<D>
+where
+    E: Into<ApiError>,
+{
+    fn from(value: Result<Option<D>, E>) -> Self {
+        match value {
+            Ok(Some(data)) => ApiResponse::success(data),
+            Ok(None) => ApiResponse::error_with_status("resource not found", StatusCode::NOT_FOUND),
+            _ => ApiResponse::error_with_status(
+                "server process your request",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ),
+        }
+    }
+}
+
 impl<D: serde::Serialize> IntoResponse for ApiResponse<D> {
     fn into_response(self) -> axum::response::Response {
         if self.has_data() {

@@ -25,6 +25,6 @@
     "VARBINARY"
   ],
   "rust-analyzer.cargo.features": [
-    "full"
+    // "full"
   ]
 }

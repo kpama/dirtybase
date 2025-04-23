@@ -61,27 +61,7 @@ impl SessionStorage for MemoryStorage {
 }
 
 pub async fn resolver(
-    resolver: SessionStorageResolver,
+    _resolver: SessionStorageResolver,
 ) -> Result<SessionStorageProvider, anyhow::Error> {
-    let storage = MemoryStorage::default();
-    let storage2 = storage.clone();
-
-    // FIXME: This should cover all storage types
-    let lifetime = resolver.config_ref().lifetime();
-    let id = "session::storage".try_into().unwrap();
-    let _ctx = dirtybase_cron::CronJob::register(
-        "every 5 minutes",
-        move |_| {
-            Box::pin({
-                let storage = storage2.clone();
-                async move {
-                    storage.gc(lifetime).await;
-                }
-            })
-        },
-        id,
-    )
-    .await;
-
-    Ok(SessionStorageProvider::new(storage))
+    Ok(SessionStorageProvider::new(MemoryStorage::default()))
 }

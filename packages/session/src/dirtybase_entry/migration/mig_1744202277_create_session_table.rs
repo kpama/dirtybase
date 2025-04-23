@@ -20,7 +20,7 @@ impl Migration for Mig1744202277CreateSessionTable {
                     .default_is_empty_object();
                 table.created_at();
                 table
-                    .timestamp(SessionTable::col_name_for_expires())
+                    .integer(SessionTable::col_name_for_expires())
                     .set_is_nullable(true);
             })
             .await

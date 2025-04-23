@@ -1,5 +1,6 @@
 use dirtybase_contract::{
-    app_contract::ContextResourceManager, session_contract::SessionStorageProvider,
+    app_contract::ContextResourceManager,
+    session_contract::{SessionStorage, SessionStorageProvider},
 };
 
 use crate::{
@@ -25,11 +26,7 @@ pub async fn register_resource_manager() {
                     .expect("could not get tenant")
                     .id()
                     .to_string();
-                let duration = if config.storage_ref() == "memory" {
-                    0
-                } else {
-                    0 // FIXME: Use the right duration time
-                };
+                let duration = if context.is_global() { 0 } else { 5 };
                 context.set(config).await;
                 (name, duration)
             })
@@ -41,9 +38,29 @@ pub async fn register_resource_manager() {
                     .get_config::<SessionConfig>("session")
                     .await
                     .unwrap();
-                SessionStorageResolver::new(context, config)
+                let provider = SessionStorageResolver::new(context.clone(), config)
                     .get_provider()
-                    .await
+                    .await?;
+                let storage = provider.clone();
+                if let Ok(config) = context.get_config::<SessionConfig>("session").await {
+                    let lifetime = config.lifetime();
+                    let id = "session::storage".try_into().unwrap();
+                    let _ctx = dirtybase_cron::CronJob::schedule(
+                        "every 25 minutes",
+                        move |_| {
+                            Box::pin({
+                                let storage = storage.clone();
+                                async move {
+                                    storage.gc(lifetime).await;
+                                }
+                            })
+                        },
+                        id,
+                    )
+                    .await;
+                }
+
+                Ok(provider)
             })
         },
         |_provider| {
