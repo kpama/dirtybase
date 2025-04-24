@@ -392,7 +392,12 @@ impl PostgresSchemaManager {
                                 "CREATE INDEX IF NOT EXISTS '{}' ON {} ({})",
                                 index.name(),
                                 &table.name,
-                                index.concat_columns()
+                                index
+                                    .columns()
+                                    .iter()
+                                    .map(|col| { format!("\"{}\"", col) })
+                                    .collect::<Vec<String>>()
+                                    .join(",")
                             );
                         }
                     }
@@ -404,7 +409,12 @@ impl PostgresSchemaManager {
                                 "CREATE UNIQUE  INDEX IF NOT EXISTS \"{}\" ON \"{}\" ({})",
                                 index.name(),
                                 &table.name,
-                                index.concat_columns()
+                                index
+                                    .columns()
+                                    .iter()
+                                    .map(|col| { format!("\"{}\"", col) })
+                                    .collect::<Vec<String>>()
+                                    .join(",")
                             );
                         }
                     }
