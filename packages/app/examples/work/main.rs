@@ -1,7 +1,6 @@
 mod models;
 mod setup;
 
-
 use setup::*;
 
 use dirtybase_contract::db_contract::{
@@ -11,10 +10,7 @@ use dirtybase_contract::db_contract::{
         RelationMany, RelationOne, RelationQueryBuilder,
     },
 };
-use dirtybase_db::{
-    config::ConnectionConfig,
-    connector::mariadb::make_mariadb_manager,
-};
+use dirtybase_db::{config::ConnectionConfig, connector::mariadb::make_mariadb_manager};
 use models::{
     Address, Company, Customer, Image, Inventory, Invoice, Product, SalesOrder, Warehouse,
 };

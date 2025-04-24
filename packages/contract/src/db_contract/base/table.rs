@@ -169,6 +169,21 @@ impl TableBlueprint {
             }
         })
     }
+    pub fn ulid_fk_as(
+        &mut self,
+        foreign_table: &str,
+        name: &str,
+        cascade_delete: bool,
+        foreign_column: Option<&str>,
+    ) -> &mut ColumnBlueprint {
+        self.column_fk_as(
+            foreign_table,
+            name,
+            cascade_delete,
+            foreign_column,
+            ColumnType::Char(ULID_STRING_LENGTH),
+        )
+    }
 
     pub fn uuid_fk(&mut self, foreign_table: &str, cascade_delete: bool) -> &mut ColumnBlueprint {
         let name = to_fk_column(foreign_table, None);
@@ -179,6 +194,46 @@ impl TableBlueprint {
                 column.references_with_cascade_delete(foreign_table, ID_FIELD);
             } else {
                 column.references_without_cascade_delete(foreign_table, ID_FIELD);
+            }
+        })
+    }
+
+    pub fn uuid_fk_as(
+        &mut self,
+        foreign_table: &str,
+        name: &str,
+        cascade_delete: bool,
+        foreign_column: Option<&str>,
+    ) -> &mut ColumnBlueprint {
+        self.column_fk_as(
+            foreign_table,
+            name,
+            cascade_delete,
+            foreign_column,
+            ColumnType::Uuid,
+        )
+    }
+
+    pub fn column_fk_as(
+        &mut self,
+        foreign_table: &str,
+        name: &str,
+        cascade_delete: bool,
+        foreign_column: Option<&str>,
+        column_type: ColumnType,
+    ) -> &mut ColumnBlueprint {
+        self.column_string(name.to_string(), |column| {
+            column.set_type(column_type);
+            if cascade_delete {
+                column.references_with_cascade_delete(
+                    foreign_table,
+                    foreign_column.unwrap_or(ID_FIELD),
+                );
+            } else {
+                column.references_without_cascade_delete(
+                    foreign_table,
+                    foreign_column.unwrap_or(ID_FIELD),
+                );
             }
         })
     }
@@ -217,6 +272,22 @@ impl TableBlueprint {
                 column.references_without_cascade_delete(foreign_table, id);
             }
         })
+    }
+
+    pub fn id_fk_as(
+        &mut self,
+        foreign_table: &str,
+        name: &str,
+        cascade_delete: bool,
+        foreign_column: Option<&str>,
+    ) -> &mut ColumnBlueprint {
+        self.column_fk_as(
+            foreign_table,
+            name,
+            cascade_delete,
+            foreign_column,
+            ColumnType::Integer,
+        )
     }
 
     pub fn id_table_fk<F: TableEntityTrait>(

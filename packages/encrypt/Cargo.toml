@@ -4,6 +4,8 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+dirtybase_contract = { path = "../contract" }
+anyhow = { workspace = true }
 aes-gcm = { workspace = true }
 crypto = { workspace = true }
 base64ct = { workspace = true }

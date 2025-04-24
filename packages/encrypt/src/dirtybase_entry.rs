@@ -1,8 +1,12 @@
-use anyhow::anyhow;
 use dirtybase_contract::{
-    cli::clap::{self, Arg, ArgAction},
+    cli_contract::{
+        CliCommandManager,
+        clap::{self, Arg, ArgAction},
+    },
     prelude::*,
 };
+
+use crate::Encrypter;
 
 #[derive(Debug, Default)]
 pub struct Extension;
@@ -24,22 +28,23 @@ impl ExtensionSetup for Extension {
                     )
                     .about("generate encryption key"),
             );
-        manager.register(command, |name, matches, context| {
+        manager.register(command, |_name, matches, _context| {
             Box::pin(async move {
-                if name.to_lowercase() == "encrypt" {
-                    if let Some((name, arg)) = matches.subcommand() {
-                        if name == "keygen" {
-                            if arg.get_flag("print") {
-                                println!(">>>>>>>>>>>>>> generate and printing encryption key");
-                            } else {
-                                println!(">>>>>>>>>>>>>> generate encryption key");
-                            }
+                if let Some((name, arg)) = matches.subcommand() {
+                    if name == "keygen" {
+                        // generate the random bytes
+                        // base64 encode it
+                        let key = format!("base64:{}", Encrypter::generate_aes256gcm_key_string());
+                        if arg.get_flag("print") {
+                            println!("{}", key);
+                        } else {
+                            // TODO: WRITE THIS KEY TO THE .ENV FILE
+                            //       If there is an existing key, move it to the list of previous keys
+                            println!("{}", key);
                         }
                     }
-                    return Ok(());
                 }
-
-                Err(anyhow!("unknown command"))
+                return Ok(());
             })
         });
         manager

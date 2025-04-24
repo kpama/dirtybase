@@ -401,9 +401,9 @@ impl PostgresSchemaManager {
                             sql = format!("DROP INDEX IF EXISTS {}.{}", &table.name, index.name());
                         } else {
                             sql = format!(
-                                "CREATE UNIQUE  INDEX IF NOT EXISTS '{}' ON {} ({})",
-                                &table.name,
+                                "CREATE UNIQUE  INDEX IF NOT EXISTS \"{}\" ON \"{}\" ({})",
                                 index.name(),
+                                &table.name,
                                 index.concat_columns()
                             );
                         }

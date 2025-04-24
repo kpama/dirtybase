@@ -1162,8 +1162,10 @@ name = "dirtybase_encrypt"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
+ "anyhow",
  "base64ct",
  "crypto",
+ "dirtybase_contract",
  "serde",
  "serde_json",
  "tracing",
