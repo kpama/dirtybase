@@ -19,6 +19,7 @@ generate-end:
   echo "\n\n" >> .env.defaults
   cat packages/session/config_template/session.env.defaults >>  .env.defaults
   echo "\n\n" >> .env.defaults
+  cp .env.defaults bin/cli/src/stubs/.env.defaults.stub.txt
 
 
 

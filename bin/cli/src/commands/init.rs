@@ -24,7 +24,7 @@ fn register_entry_file(path_buf: &PathBuf) {
         if full_path.exists() {
             if let Ok(mut content) = std::fs::read_to_string(&full_path) {
                 if !content.contains("mod dirtybase_entry") {
-                    content.insert_str(0, "pub mod dirtybase_entry;\r\n");
+                    content.insert_str(0, "pub mod dirtybase_entry;\n\r");
                     _ = std::fs::write(&full_path, content);
                 }
             }

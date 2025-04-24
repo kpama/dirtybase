@@ -22,14 +22,11 @@ impl dirtybase_contract::ExtensionSetup for Extension {
 
     fn register_routes(
         &self,
-        mut manager: RouterManager,
-        _middleware: &WebMiddlewareManager,
-    ) -> RouterManager {
+        manager: &mut RouterManager,
+    ){
         let prefix = format!("/{}", env!("CARGO_PKG_NAME"));
         manager.general(Some(&prefix), |router| {
-             router.get_x("/", || async { "Be awesome" })
+             router.get_x("/", || async { "Be awesome" });
         });
-
-        manager
     }
 }

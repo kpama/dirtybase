@@ -5,12 +5,12 @@ pub struct struct_name;
 
 #[dirtybase_contract::async_trait]
 impl Migration for struct_name {
-  async fn up(&self, manager: &Manager)-> Result<(), anyhow::Error> {
+  async fn up(&self, _manager: &Manager)-> Result<(), anyhow::Error> {
      println!("going up: {}", "struct_name");
      Ok(())
   }
 
-  async fn down(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+  async fn down(&self, _manager: &Manager) -> Result<(), anyhow::Error> {
      println!("going down: {}", "struct_name");
      Ok(())
   }

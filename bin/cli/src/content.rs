@@ -11,6 +11,7 @@ pub(crate) fn directories() -> &'static [&'static str] {
         "dirtybase_entry/model",
     ]
 }
+
 pub(crate) fn files() -> &'static [&'static str] {
     &[
         // migration
@@ -30,6 +31,8 @@ pub(crate) fn files() -> &'static [&'static str] {
         "dirtybase_entry/model.rs",
         // setup,
         "dirtybase_entry.rs",
+        // .env.defaults
+        "../.env.defaults",
     ]
 }
 
@@ -55,6 +58,11 @@ pub(crate) fn stubs<'a>() -> HashMap<&'a str, &'a str> {
         include_str!("./stubs/new_migration.stub.txt"),
     );
 
+    file_content.insert(
+        "../.env.defaults",
+        include_str!("./stubs/.env.defaults.stub.txt"),
+    );
+
     file_content
 }
 
@@ -64,6 +72,13 @@ pub(crate) fn make_directories(path_buf: &PathBuf) {
         if !path.exists() {
             _ = std::fs::create_dir_all(path);
         }
+    }
+}
+
+pub(crate) fn make_entry_directory(path_buf: &PathBuf) {
+    let path = path_buf.join("dirtybase_entry");
+    if !path.exists() {
+        _ = std::fs::create_dir_all(path);
     }
 }
 
