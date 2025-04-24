@@ -29,6 +29,10 @@ impl IndexProp {
         self.columns.join(",")
     }
 
+    pub fn columns(&self) -> &Vec<String> {
+        &self.columns
+    }
+
     pub fn delete_index(&self) -> bool {
         self.to_delete
     }
