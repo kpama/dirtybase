@@ -235,12 +235,12 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 let app = context.get::<AppService>().await.unwrap();
                 let app_config = app.config_ref();
                 let cookie_config = app_config.web_cookie_ref();
-                let encryptor = dirtybase_encrypt::Encrypter::new(
+                let encrypter = dirtybase_encrypt::Encrypter::new(
                     app_config.key_ref(),
                     app_config.previous_keys(),
                 );
 
-                decrypt_cookies(cookie_jar, &encryptor, cookie_config, &mut req);
+                decrypt_cookies(cookie_jar, &encrypter, cookie_config, &mut req);
 
                 // Add the request context
                 context
@@ -267,7 +267,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                         .await;
                 }
 
-                cookie_jar = encrypt_cookies(cookie_jar, &encryptor, cookie_config);
+                cookie_jar = encrypt_cookies(cookie_jar, &encrypter, cookie_config);
 
                 (cookie_jar, response)
             }

@@ -73,7 +73,6 @@ impl App {
     }
 
     pub async fn shutdown(&self) {
-        log::info!("Shutting down");
         ExtensionManager::shutdown(&self.global_context().await).await;
     }
 
