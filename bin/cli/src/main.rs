@@ -14,11 +14,14 @@ fn main() {
         Commands::Init => {
             commands::init::init(args.package.as_ref());
         }
-        Commands::Make { what } => {
-            if let MakeSubcommand::Migration { name } = what {
+        Commands::Make { what } => match what {
+            MakeSubcommand::Migration { name } => {
                 commands::make_migration::make(args.package.as_ref(), name);
             }
-        }
+            MakeSubcommand::Seeder { name } => {
+                commands::make_seeder::make(args.package.as_ref(), name);
+            }
+        },
     }
 }
 
@@ -52,12 +55,9 @@ enum MakeSubcommand {
         /// Migration name
         name: String,
     },
-    /// HTTP request handler
-    Controller,
-    /// Event
-    Event,
-    /// Event handler
-    Handler,
-    /// Database table entity
-    Entity,
+    /// Database seeder
+    Seeder {
+        /// Seeder name
+        name: String,
+    },
 }

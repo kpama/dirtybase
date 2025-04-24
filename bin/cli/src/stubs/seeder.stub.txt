@@ -1,0 +1,5 @@
+use dirtybase_contract::db_contract::SeederRegisterer;
+
+pub(crate) async fn register_seeders() {
+  //
+}

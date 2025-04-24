@@ -3,9 +3,9 @@ use anyhow::anyhow;
 use dirtybase_contract::{
     cli_contract::{
         CliCommandManager,
-        clap::{self, ArgMatches},
+        clap::{self, Arg, ArgAction, ArgMatches},
     },
-    db_contract::base::manager::Manager,
+    db_contract::{SeederRegisterer, base::manager::Manager},
 };
 use migrator::{MigrateAction, Migrator};
 
@@ -64,5 +64,24 @@ pub(crate) fn setup_commands(mut manager: CliCommandManager) -> CliCommandManage
             }
         })
     });
+
+    // Seeding
+    let seed = clap::Command::new("seed")
+        .about("Seed the database with dummy data")
+        .arg_required_else_help(true)
+        .arg(Arg::new("name").short('n').action(ArgAction::Set));
+
+    manager.register(seed, |_, matches, context| {
+        Box::pin(async move {
+            if let Some(name) = matches.get_one::<String>("name") {
+                if let Ok(manager) = context.get::<Manager>().await {
+                    let seeder = SeederRegisterer::new(name, manager);
+                    seeder.seed().await;
+                }
+            }
+            Ok(())
+        })
+    });
+
     manager
 }

@@ -3,6 +3,7 @@ mod event_handler;
 mod http;
 mod migration;
 mod model;
+mod seeder;
 
 use dirtybase_contract::prelude::*;
 
@@ -29,4 +30,10 @@ impl dirtybase_contract::ExtensionSetup for Extension {
              router.get_x("/", || async { "Be awesome" });
         });
     }
+
+    async fn run(&mut self, _global_context: &Context) {
+        // --
+        seeder::register_seeders().await;
+    }
+
 }

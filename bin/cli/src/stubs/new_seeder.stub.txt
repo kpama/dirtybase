@@ -1,0 +1,6 @@
+use dirtybase_contract::db_contract::base::manager::Manager;
+
+
+pub(crate) async fn seed(_manager: Manager) {
+    tracing::info!("running seeder: seeder_name");
+}

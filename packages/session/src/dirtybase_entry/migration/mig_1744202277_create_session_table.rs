@@ -27,7 +27,7 @@ impl Migration for Mig1744202277CreateSessionTable {
     }
 
     async fn down(&self, manager: &Manager) -> Result<(), anyhow::Error> {
-        manager.drop_table("session").await;
+        manager.drop_table(SessionTable::table_name()).await;
         Ok(())
     }
 }
