@@ -83,7 +83,6 @@ impl Migrator {
     }
 
     pub async fn refresh(&self, manager: &Manager) -> Result<(), anyhow::Error> {
-        // Migrate everything down
         self.down(manager).await?;
         self.up(manager).await
     }
