@@ -444,6 +444,7 @@ impl PostgresSchemaManager {
             ColumnType::Boolean => the_type.push_str("BOOLEAN"),
             ColumnType::Char(_) => the_type.push_str("VARCHAR"),
             ColumnType::Timestamp | ColumnType::Datetime => the_type.push_str("TIMESTAMPTZ"),
+            ColumnType::Date => the_type.push_str("DATE"),
             ColumnType::Integer => the_type.push_str("BIGINT"),
             ColumnType::Json => the_type.push_str("JSONB"),
             ColumnType::Number | ColumnType::Float => the_type.push_str("DOUBLE PRECISION"),

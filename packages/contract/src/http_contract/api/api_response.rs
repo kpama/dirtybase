@@ -5,6 +5,9 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use serde::Serialize;
+
+type MoreErrorData = serde_json::map::Map<String, serde_json::Value>;
 
 #[derive(Debug, serde::Serialize)]
 pub struct ApiResponse<D: serde::Serialize = ()> {
@@ -115,14 +118,27 @@ pub struct ApiError {
     pub code: String,
     pub message: String,
     pub short_message: String,
+    pub more: Option<MoreErrorData>,
 }
 
 impl ApiError {
-    pub fn new(code: &str, message: &str, short_message: &str) -> Self {
+    pub fn new<T>(code: &str, message: &str, short_message: &str, more: Option<T>) -> Self
+    where
+        T: Serialize,
+    {
         Self {
             code: code.into(),
             message: message.into(),
             short_message: short_message.into(),
+            more: if let Some(m) = more {
+                if let Ok(m) = serde_json::value::to_value(m) {
+                    m.as_object().cloned()
+                } else {
+                    None
+                }
+            } else {
+                None
+            },
         }
     }
 }
@@ -133,6 +149,7 @@ impl From<String> for ApiError {
             code: value.clone().replace(' ', "_").to_lowercase(),
             message: value.clone(),
             short_message: value.clone(),
+            more: None,
         }
     }
 }

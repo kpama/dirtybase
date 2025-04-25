@@ -283,7 +283,7 @@ impl Manager {
         self.read_schema_manager().has_table(name).await
     }
 
-    pub async fn drop_table(&self, table_name: &str) -> bool {
+    pub async fn drop_table(&self, table_name: &str) -> Result<(), anyhow::Error> {
         let _query = QueryBuilder::new(table_name, super::query::QueryAction::DropTable);
         self.write_schema_manager().drop_table(table_name).await
     }

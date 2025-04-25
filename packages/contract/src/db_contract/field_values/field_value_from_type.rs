@@ -1,12 +1,18 @@
 use std::{collections::HashMap, sync::Arc};
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 
 use super::FieldValue;
 
 impl From<DateTime<Utc>> for FieldValue {
     fn from(value: DateTime<Utc>) -> Self {
         Self::DateTime(value)
+    }
+}
+
+impl From<NaiveDate> for FieldValue {
+    fn from(value: NaiveDate) -> Self {
+        Self::Date(value)
     }
 }
 

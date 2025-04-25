@@ -434,6 +434,7 @@ impl MariadbSchemaManager {
                 the_type.push_str(&format!("char({}) COLLATE 'utf8mb4_unicode_ci'", length))
             }
             ColumnType::Datetime => the_type.push_str("datetime"),
+            ColumnType::Date => the_type.push_str("DATE"),
             ColumnType::Timestamp => the_type.push_str("timestamp"),
             ColumnType::Integer => the_type.push_str("bigint(20)"),
             ColumnType::Json => the_type.push_str("json"),

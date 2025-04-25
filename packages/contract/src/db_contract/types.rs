@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 
 use super::field_values::FieldValue;
 use std::{collections::HashMap, sync::Arc};
@@ -47,6 +47,8 @@ pub type OptionalJsonValueField = Option<serde_json::Value>;
 pub type OptionalJsonField = Option<serde_json::Map<String, serde_json::value::Value>>;
 pub type CreatedAtField = Option<DateTime<Utc>>;
 pub type UpdatedAtField = Option<DateTime<Utc>>;
+pub type DateField = NaiveDate;
+pub type OptionalDateField = Option<NaiveDate>;
 
 pub trait IntoColumnAndValue {
     fn into_column_value(&self) -> ColumnAndValue;

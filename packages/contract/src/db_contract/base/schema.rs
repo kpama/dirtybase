@@ -150,7 +150,7 @@ pub trait SchemaManagerTrait: Send + Sync {
     // checks if a table exist in the database
     async fn has_table(&self, name: &str) -> bool;
 
-    async fn drop_table(&self, name: &str) -> bool;
+    async fn drop_table(&self, name: &str) -> Result<()>;
 
     async fn rename_table(&self, old: &str, new: &str) -> Result<()> {
         self.execute(QueryBuilder::new(

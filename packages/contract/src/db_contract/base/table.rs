@@ -83,6 +83,12 @@ impl TableBlueprint {
         })
     }
 
+    pub fn date(&mut self, name: &str) -> &mut ColumnBlueprint {
+        self.column(name, |column| {
+            column.set_type(ColumnType::Date);
+        })
+    }
+
     pub fn timestamp(&mut self, name: &str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
             column.set_type(ColumnType::Timestamp);

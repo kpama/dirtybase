@@ -463,6 +463,7 @@ impl SqliteSchemaManager {
             ColumnType::Boolean => the_type.push_str("BOOLEAN"),
             ColumnType::Char(length) => the_type.push_str(&format!("VARCHAR({})", length)),
             ColumnType::Datetime => the_type.push_str("datetime"),
+            ColumnType::Date => the_type.push_str("DATE"),
             ColumnType::Timestamp => the_type.push_str("timestamp"),
             ColumnType::Float => the_type.push_str("double"),
             ColumnType::Integer => the_type.push_str("INTEGER"),

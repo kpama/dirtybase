@@ -435,6 +435,7 @@ impl MySqlSchemaManager {
             }
             ColumnType::Datetime => the_type.push_str("datetime"),
             ColumnType::Timestamp => the_type.push_str("timestamp"),
+            ColumnType::Date => the_type.push_str("DATE"),
             ColumnType::Integer => the_type.push_str("bigint(20)"),
             ColumnType::Json => the_type.push_str("json"),
             ColumnType::Number | ColumnType::Float => the_type.push_str("double"),
