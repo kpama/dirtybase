@@ -10,6 +10,7 @@ use dirtybase_contract::{
 use dirtybase_db::base::manager::Manager;
 use dirtybase_db::types::{ArcUuid7, IntoColumnAndValue};
 use tracing_subscriber::EnvFilter;
+use validator::Validate;
 
 #[tokio::main]
 async fn main() {
