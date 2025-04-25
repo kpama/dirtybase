@@ -257,10 +257,11 @@ impl PostgresSchemaManager {
                 }
                 sql = format!("UPDATE \"{}\" SET ", query.table());
                 for entry in columns.iter().enumerate() {
+                    let index = entry.0 + 1;
                     if entry.0 > 0 {
-                        sql = format!("{}, \"{}\" = ${} ", sql, *entry.1, entry.0);
+                        sql = format!("{}, \"{}\" = ${} ", sql, *entry.1, index);
                     } else {
-                        sql = format!("{} \"{}\" = ${} ", sql, *entry.1, entry.0);
+                        sql = format!("{} \"{}\" = ${} ", sql, *entry.1, index);
                     }
                 }
 
