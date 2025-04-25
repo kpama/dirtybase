@@ -84,14 +84,7 @@ impl Migrator {
 
     pub async fn refresh(&self, manager: &Manager) -> Result<(), anyhow::Error> {
         // Migrate everything down
-        for entry in &self.migrations {
-            tracing::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
-            let result = entry.down(manager).await;
-            if result.is_err() {
-                return result;
-            }
-        }
-
+        self.down(manager).await?;
         self.up(manager).await
     }
 
