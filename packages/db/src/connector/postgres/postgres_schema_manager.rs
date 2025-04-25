@@ -86,12 +86,13 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         }
     }
 
-    async fn drop_table(&self, name: &str) -> bool {
+    async fn drop_table(&self, name: &str) -> Result<(), anyhow::Error> {
         if self.has_table(name).await {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
-            return self.execute(query).await.is_ok();
+            return self.execute(query).await;
         }
-        false
+
+        Err(anyhow!("could not drop the table"))
     }
 
     async fn apply(&self, table: TableBlueprint) {

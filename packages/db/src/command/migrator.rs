@@ -4,7 +4,7 @@ use dirtybase_contract::{
     db_contract::base::manager::Manager,
 };
 
-use crate::model::migration::MigrationRepository;
+use crate::model::migration::{MigrationRepository, TABLE_NAME};
 
 #[derive(Debug, Clone)]
 pub enum MigrateAction {
@@ -89,15 +89,19 @@ impl Migrator {
     }
 
     pub async fn reset(&self, manager: &Manager) -> Result<(), anyhow::Error> {
-        let _repo = self.repo(manager).await;
-        for entry in &self.migrations {
-            tracing::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
-            let result = entry.down(manager).await;
+        loop {
+            let repo = self.repo(manager).await;
+            let collection = repo.get_last_batch().await;
+            if collection.is_empty() {
+                break;
+            }
+            let result = self.down(manager).await;
             if result.is_err() {
                 return result;
             }
         }
-        Ok(())
+
+        manager.drop_table(TABLE_NAME).await
     }
 
     async fn repo(&self, manager: &Manager) -> MigrationRepository {
