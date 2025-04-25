@@ -1,4 +1,3 @@
-use anyhow::Ok;
 use dirtybase_contract::db_contract::TableEntityTrait;
 use dirtybase_contract::db_contract::base::manager::Manager;
 use dirtybase_contract::db_contract::migration::Migration;
@@ -27,7 +26,6 @@ impl Migration for Mig1744202277CreateSessionTable {
     }
 
     async fn down(&self, manager: &Manager) -> Result<(), anyhow::Error> {
-        manager.drop_table(SessionTable::table_name()).await;
-        Ok(())
+        manager.drop_table(SessionTable::table_name()).await
     }
 }

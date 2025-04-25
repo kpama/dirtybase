@@ -1,4 +1,3 @@
-use anyhow::anyhow;
 use dirtybase_contract::auth_contract::AuthUserStatus;
 use dirtybase_contract::db_contract::base::manager::Manager;
 use dirtybase_contract::db_contract::migration::Migration;
@@ -31,9 +30,6 @@ impl Migration for Mig1740151519CreateAuthUserTable {
     }
 
     async fn down(&self, manager: &Manager) -> Result<(), anyhow::Error> {
-        if manager.drop_table(AUTH_USER_TABLE).await {
-            return Ok(());
-        }
-        Err(anyhow!("could not drop: {}", AUTH_USER_TABLE))
+        manager.drop_table(AUTH_USER_TABLE).await
     }
 }
