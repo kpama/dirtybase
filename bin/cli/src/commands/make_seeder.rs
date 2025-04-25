@@ -46,11 +46,14 @@ pub fn make(package: Option<&String>, name: &str) {
     module = module.replace("register_seeders(){", &seed_function);
     module = module.replace("register_seeders()\n{", &seed_function);
 
-    _ = std::fs::write(&mod_path, format!("mod {}; \n{}", &module_name, module));
+    _ = std::fs::write(
+        &mod_path,
+        format!("pub(crate) mod {}; \n{}", &module_name, module),
+    );
     _ = std::fs::write(&path, built);
 
     if let Ok(mut entry_content) = read_entry_file(&path_buf) {
-        if !entry_content.contains("mod seeder;") {
+        if !entry_content.contains("pub(crate) mod seeder;") {
             entry_content.insert_str(0, "mod seeder;\r\n");
             _ = update_entry_file(&path_buf, entry_content);
         }
