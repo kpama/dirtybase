@@ -11,6 +11,7 @@ pub mod queue_contract;
 pub mod session_contract;
 pub mod user;
 
+pub use anyhow;
 pub use async_trait::async_trait;
 pub use axum;
 pub use busybody;
