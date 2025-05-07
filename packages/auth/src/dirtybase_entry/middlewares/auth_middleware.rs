@@ -27,7 +27,11 @@ pub async fn handle_auth_middleware(
 
         tracing::debug!("current auth guard: {}", &guard_name);
 
-        if let Some(storage) = StorageResolver::new(context.clone()).get_provider().await {
+        if let Some(storage) = StorageResolver::from_context(context.clone())
+            .await
+            .get_provider()
+            .await
+        {
             let guard = GuardResolver::new(req, storage, &guard_name).guard().await;
             if let Some(Ok(Some(user))) = guard.user {
                 context.set(user).await;

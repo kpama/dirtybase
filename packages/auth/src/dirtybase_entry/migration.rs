@@ -1,4 +1,4 @@
-mod mig_1740151519_create_auth_user_table;
+pub mod mig_1740151519_create_auth_user_table;
 
 /**
  * The following function is automatically modified

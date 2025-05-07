@@ -9,14 +9,16 @@ pub use axum;
 pub use busstop;
 pub use busybody;
 pub use clap;
+pub use dirtybase_auth as auth;
 pub use dirtybase_contract as contract;
-use dirtybase_contract::cli_contract::setup_cli_command_manager;
 pub use dirtybase_contract::config_contract;
 pub use dirtybase_db as db;
 pub use dirtybase_db_macro as db_macro;
 pub use dirtybase_helper as helper;
 pub use dirtybase_mail as mail;
 pub use orsomafo;
+
+use dirtybase_contract::cli_contract::setup_cli_command_manager;
 
 /// Setup database application using configs in .env files
 pub async fn setup() -> anyhow::Result<AppService> {

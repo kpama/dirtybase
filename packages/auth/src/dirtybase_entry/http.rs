@@ -49,6 +49,10 @@ async fn get_user_by_id(
     Path(id): Path<ArcUuid7>,
     RequestContext(context): RequestContext,
 ) -> ApiResponse<AuthUser> {
-    let storage = StorageResolver::new(context).get_provider().await.unwrap();
+    let storage = StorageResolver::from_context(context)
+        .await
+        .get_provider()
+        .await
+        .unwrap();
     storage.find_by_id(id).await.into()
 }

@@ -129,7 +129,11 @@ pub async fn login_and_verify(
     ctx: Context,
     cred: LoginCredential,
 ) -> (bool, Result<Option<AuthUser>, anyhow::Error>) {
-    let storage = match StorageResolver::new(ctx).get_provider().await {
+    let storage = match StorageResolver::from_context(ctx)
+        .await
+        .get_provider()
+        .await
+    {
         Some(s) => s,
         None => {
             tracing::error!("could not fetch auth storage");

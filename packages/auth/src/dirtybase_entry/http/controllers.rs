@@ -36,7 +36,8 @@ pub(crate) async fn handle_login_request(
     Form(cred): Form<LoginCredential>,
 ) -> Response<Body> {
     // TODO: This will use the auth service in the future
-    let storage = StorageResolver::new(ctx.clone())
+    let storage = StorageResolver::from_context(ctx.clone())
+        .await
         .get_provider()
         .await
         .unwrap();
@@ -98,7 +99,11 @@ pub(crate) async fn handle_get_auth_token(
     Json(cred): Json<LoginCredential>,
 ) -> impl IntoResponse {
     // TODO: This will use the auth service in the future
-    let storage = StorageResolver::new(ctx).get_provider().await.unwrap();
+    let storage = StorageResolver::from_context(ctx)
+        .await
+        .get_provider()
+        .await
+        .unwrap();
 
     let result = if cred.username().is_some() {
         storage
@@ -143,7 +148,11 @@ pub(crate) async fn handle_register_request(
     Form(mut payload): Form<AuthUserPayload>,
 ) -> impl IntoResponse {
     // FIXME: This will use the auth service in the future
-    let storage = StorageResolver::new(ctx).get_provider().await.unwrap();
+    let storage = StorageResolver::from_context(ctx)
+        .await
+        .get_provider()
+        .await
+        .unwrap();
 
     payload.rotate_salt = true;
     payload.status = match payload.status {
@@ -172,7 +181,11 @@ pub(crate) async fn handle_api_register_request(
     Json(mut payload): Json<AuthUserPayload>,
 ) -> ApiResponse<String> {
     // This will use the auth service in the future
-    let storage = StorageResolver::new(ctx).get_provider().await.unwrap();
+    let storage = StorageResolver::from_context(ctx)
+        .await
+        .get_provider()
+        .await
+        .unwrap();
 
     payload.rotate_salt = true;
     let mut resp = ApiResponse::<String>::default();

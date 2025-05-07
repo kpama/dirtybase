@@ -10,14 +10,28 @@ use crate::AuthConfig;
 #[derive(Clone)]
 pub struct StorageResolver {
     context: Context,
+    name: Arc<String>,
     provider: Option<AuthUserStorageProvider>,
 }
 
 impl StorageResolver {
     /// Creates a new instance of this struct
-    pub fn new(context: Context) -> Self {
+    pub fn new(context: Context, name: &str) -> Self {
         Self {
             provider: None,
+            name: Arc::new(name.to_string()),
+            context,
+        }
+    }
+
+    pub async fn from_context(context: Context) -> Self {
+        Self {
+            provider: None,
+            name: context
+                .get_config::<AuthConfig>("auth")
+                .await
+                .unwrap()
+                .storage(),
             context,
         }
     }
@@ -52,21 +66,15 @@ impl StorageResolver {
         Fut: Future<Output = Self> + Send + 'static,
     {
         let resolvers = Self::get_middleware().await;
-
         let arc_name = Arc::new(name.to_string());
+
         resolvers
             .next(move |mut resolver, next| {
                 let cb = callback.clone();
                 let name = arc_name.clone();
                 Box::pin(async move {
-                    if let Ok(config) = resolver
-                        .context_ref()
-                        .get_config::<AuthConfig>("auth")
-                        .await
-                    {
-                        if config.storage_as_str() == *name.as_ref() {
-                            resolver = (cb)(resolver).await;
-                        }
+                    if resolver.name_rf() == *name.as_ref() {
+                        resolver = (cb)(resolver).await;
                     }
 
                     if !resolver.has_provider() {
@@ -94,5 +102,9 @@ impl StorageResolver {
                 .await
                 .unwrap() // should never failed as we just registered the instance
         }
+    }
+
+    fn name_rf(&self) -> &str {
+        &self.name
     }
 }

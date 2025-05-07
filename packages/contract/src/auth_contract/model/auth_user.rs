@@ -339,6 +339,13 @@ impl AuthUserPayload {
 
         payload
     }
+
+    pub fn for_update(id: ArcUuid7) -> Self {
+        let mut payload = Self::default();
+        payload.id = Some(id);
+
+        payload
+    }
 }
 
 impl IntoColumnAndValue for AuthUserPayload {

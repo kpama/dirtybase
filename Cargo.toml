@@ -7,15 +7,21 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace.metadata.publish]
-order = ["dirtybase_contract", "dirtybase_helper", "dirtybase_encrypt"]
+order = [
+	"dirtybase_contract",
+	"dirtybase_helper",
+	"dirtybase_encrypt",
+	"dirtybase_db",
+	"dirtybase_db_macro",
+]
 
 [workspace.dependencies]
 axum = { version = "0.8", features = ["ws", "multipart"] }
-aes-gcm = "0.10.3"
+aes-gcm = { version = "0.10.3" }
 crypto = { version = "0.5.1", features = ["aead", "password-hash", "digest"] }
 argon2 = { version = "*" }
 dashmap = { version = "6" }
-anyhow = "1.0"
+anyhow = { version = "1.0" }
 clap = { version = "4", features = ["derive", "unstable-doc"] }
 dotenv = "0.15"
 serde = { version = "1.0", features = ["derive", "rc"] }

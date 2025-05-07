@@ -78,3 +78,9 @@ impl AuthUserStorage for AuthUserDatabaseStorage {
             .await
     }
 }
+
+impl From<Manager> for AuthUserDatabaseStorage {
+    fn from(manager: Manager) -> Self {
+        Self::new(manager)
+    }
+}

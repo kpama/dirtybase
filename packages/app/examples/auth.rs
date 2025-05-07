@@ -15,7 +15,8 @@ async fn main() {
     app_service.init().await;
 
     let global_context = app_service.global_context().await;
-    let storage = StorageResolver::new(global_context.clone())
+    let storage = StorageResolver::from_context(global_context.clone())
+        .await
         .get_provider()
         .await
         .unwrap();

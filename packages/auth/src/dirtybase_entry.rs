@@ -1,6 +1,6 @@
 mod http;
 mod middlewares;
-mod migration;
+pub mod migration;
 
 use dirtybase_contract::{
     ExtensionMigrations, ExtensionSetup,
