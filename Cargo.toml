@@ -115,3 +115,4 @@ uuid25 = { version = "0.3", features = ["gen", "serde", "uuid"] }
 snowflaker = { version = "0.3", features = ["dynamic"] }
 ipnet = { version = "2" }
 cookie = { version = "0.18" }
+tera = { version = "1" }
