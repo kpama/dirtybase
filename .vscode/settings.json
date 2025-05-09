@@ -21,6 +21,7 @@
     "sadd",
     "smembers",
     "sqlx",
+    "tera",
     "TINYINT",
     "VARBINARY"
   ],
