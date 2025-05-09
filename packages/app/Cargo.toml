@@ -16,7 +16,7 @@ dirtybase_cron = { path = "../cron", version = "*" }
 dirtybase_auth = { path = "../auth", version = "*" }
 dirtybase_session = { path = "../session", version = "*" }
 dirtybase_multitenant = { path = "../multitenant", version = "*", optional = true }
-dirtybase_encrypt = { path ="../encrypt", version = "*" }
+dirtybase_encrypt = { path = "../encrypt", version = "*" }
 simple-middleware = { workspace = true }
 anyhow = { workspace = true }
 validator = { workspace = true }
@@ -51,14 +51,17 @@ mime = { workspace = true }
 axum = { workspace = true }
 busstop = { workspace = true }
 tower-service = { workspace = true }
-tower-http= { workspace = true }
+tower-http = { workspace = true }
 named_routes_axum = { workspace = true }
 axum-extra = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+tera = { workspace = true, optional = true }
 
 
 [features]
 multitenant = ["dep:dirtybase_multitenant"]
-full = ["multitenant"]
+template = ["dep:tera"]
+embed_template = ["template"]
+full = ["multitenant", "template"]
 default = ["full"]
