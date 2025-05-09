@@ -18,6 +18,9 @@ use crate::{SessionConfig, resource_manager::register_resource_manager};
 #[derive(Default)]
 pub struct Extension;
 
+#[derive(Clone)]
+struct SessionAccessed(()); // flag used to send session ID in cookie
+
 #[async_trait]
 impl ExtensionSetup for Extension {
     async fn setup(&mut self, global_context: &Context) {
@@ -58,34 +61,45 @@ impl Extension {
         &self,
         req: Request,
         context: Context,
-        cookie: &CookieJar,
+        _cookie: &CookieJar,
     ) -> Request {
-        if let Ok(config) = context.get_config::<SessionConfig>("session").await {
-            if let Ok(provider) = context.get::<SessionStorageProvider>().await {
-                let request_session_id = cookie.get(config.cookie_id_ref());
+        context
+            .container()
+            .resolver::<Session>(move |_| {
+                let context = context.clone();
+                Box::pin(async move {
+                    if let Ok(config) = context.get_config::<SessionConfig>("session").await {
+                        if let Ok(provider) = context.get::<SessionStorageProvider>().await {
+                            let h_context = context.get::<HttpContext>().await.unwrap();
+                            let cookie = h_context.cookie_jar().await;
 
-                let id = match request_session_id {
-                    Some(c) => {
-                        // check the cookie
-                        SessionId::from_str(c.value()).unwrap_or_default()
-                    }
-                    None => SessionId::new(),
-                };
+                            let id = match cookie.get(config.cookie_id_ref()) {
+                                Some(c) => SessionId::from_str(c.value()).unwrap_or_default(),
+                                None => SessionId::new(),
+                            };
 
-                if let Ok(h_context) = context.get::<HttpContext>().await {
-                    let session =
-                        Session::init(id, provider, config.lifetime(), &h_context.fingerprint())
+                            let session = Session::init(
+                                id,
+                                provider,
+                                config.lifetime(),
+                                &h_context.fingerprint(),
+                            )
                             .await;
 
-                    tracing::trace!("adding session {} to request", session.id().to_string());
+                            tracing::trace!(
+                                "adding session {} to request",
+                                session.id().to_string()
+                            );
 
-                    context.set(session).await;
-                    context.set(config).await;
-                }
-            }
-        } else {
-            tracing::error!("could not setup request session")
-        }
+                            context.set(SessionAccessed(())).await;
+                            return session;
+                        }
+                    }
+                    tracing::error!("could not setup request session");
+                    panic!("could not setup session")
+                })
+            })
+            .await;
 
         req
     }
@@ -96,12 +110,13 @@ impl Extension {
         mut cookie: CookieJar,
         context: Context,
     ) -> (Response, CookieJar) {
+        if context.get::<SessionAccessed>().await.is_err() {
+            return (resp, cookie); // we don't need to set the session's ID cookie
+        }
+
         if let Ok(session) = context.get::<Session>().await {
             if let Ok(config) = context.get::<SessionConfig>().await {
-                println!(
-                    "context instance still exist: session Id: {:?}",
-                    session.id()
-                );
+                tracing::trace!("session id: {}", session.id());
                 let mut entry =
                     Cookie::new(config.cookie_id().to_string(), session.id().to_string());
 
