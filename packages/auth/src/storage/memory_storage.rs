@@ -37,6 +37,17 @@ impl AuthUserStorage for AuthUserMemoryStorage {
             return Ok(new_user);
         }
     }
+    async fn exists_by_username(&self, username: &str) -> bool {
+        let result = self.find_by_username(username).await;
+
+        match result {
+            Ok(option) => match option {
+                Some(_) => true,
+                None => false,
+            },
+            Err(_) => false,
+        }
+    }
     async fn find_by_id(&self, id: ArcUuid7) -> Result<Option<AuthUser>, anyhow::Error> {
         let r_lock = self.storage.read().await;
         if let Some(user) = r_lock.get(&id) {
