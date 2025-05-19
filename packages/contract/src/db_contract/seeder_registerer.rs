@@ -1,5 +1,7 @@
 use std::{future::Future, sync::Arc};
 
+use crate::prelude::Context;
+
 use super::base::manager::Manager;
 
 pub struct SeederRegisterer {
@@ -9,9 +11,11 @@ pub struct SeederRegisterer {
 
 impl SeederRegisterer {
     pub fn new(name: &str, manager: Manager) -> Self {
+    pub fn new(name: &str, manager: Manager, context: Context) -> Self {
         Self {
             cmd_name: name.to_string(),
             manager,
+            context,
         }
     }
 
@@ -21,7 +25,7 @@ impl SeederRegisterer {
 
     pub async fn register<F, Fut>(name: &str, callback: F)
     where
-        F: Clone + Fn(Manager) -> Fut + Send + Sync + 'static,
+        F: Clone + Fn(Manager, Context) -> Fut + Send + Sync + 'static,
         Fut: Future<Output = ()> + Send + 'static,
     {
         let registerer = Self::get_middleware().await;
@@ -32,7 +36,7 @@ impl SeederRegisterer {
                 let name = arc_name.clone();
                 Box::pin(async move {
                     if *reg.cmd_name == *name.as_ref() || &reg.cmd_name == "all" {
-                        (cb)(reg.manager.clone()).await;
+                        (cb)(reg.manager.clone(), reg.context.clone()).await;
                         if &reg.cmd_name != "all" {
                             return;
                         }

@@ -1,6 +1,7 @@
+use dirtybase_contract::app_contract::Context;
 use dirtybase_contract::db_contract::base::manager::Manager;
 
 
-pub(crate) async fn seed(_manager: Manager) {
+pub(crate) async fn seed(_manager: Manager, _context: Context) {
     println!("running seeder: seeder_name");
 }

@@ -35,8 +35,8 @@ pub fn make(package: Option<&String>, name: &str) {
     let mut module = std::fs::read_to_string(&mod_path).unwrap();
     let seed_function = format!(
         r#"register_seeders() {{
-           SeederRegisterer::register("{}", |manager| {{
-                Box::pin(async move {{ {}::seed(manager).await }})
+           SeederRegisterer::register("{}", |manager, context| {{
+                Box::pin(async move {{ {}::seed(manager, context).await }})
     }}).await;
         "#,
         name, module_name
