@@ -7,10 +7,10 @@ use super::base::manager::Manager;
 pub struct SeederRegisterer {
     cmd_name: String,
     manager: Manager,
+    context: Context,
 }
 
 impl SeederRegisterer {
-    pub fn new(name: &str, manager: Manager) -> Self {
     pub fn new(name: &str, manager: Manager, context: Context) -> Self {
         Self {
             cmd_name: name.to_string(),
