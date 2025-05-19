@@ -57,6 +57,28 @@ impl AuthUserStorage for AuthUserDatabaseStorage {
             Err(_) => false,
         }
     }
+    async fn exists_by_id(&self, id: ArcUuid7) -> bool {
+        let result = self.find_by_id(id).await;
+
+        match result {
+            Ok(option) => match option {
+                Some(_) => true,
+                None => false,
+            },
+            Err(_) => false,
+        }
+    }
+    async fn exists_by_email_hash(&self, hash: &str) -> bool {
+        let result = self.find_by_email_hash(hash).await;
+
+        match result {
+            Ok(option) => match option {
+                Some(_) => true,
+                None => false,
+            },
+            Err(_) => false,
+        }
+    }
     async fn find_by_id(&self, id: ArcUuid7) -> Result<Option<AuthUser>, anyhow::Error> {
         self.manager
             .select_from_table(AUTH_USER_TABLE, |q| {
