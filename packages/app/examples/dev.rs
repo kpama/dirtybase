@@ -53,7 +53,7 @@ impl ExtensionSetup for App {
     fn register_routes(&self, manager: &mut RouterManager) {
         manager.general(None, |router| {
             router.get("/", index_request_handler, "index-page");
-            // middleware_manager.apply(router, ["auth::jwt"])
+            // manager.apply(router, ["auth::jwt"])
         });
 
         manager.api(None, |router| {
@@ -66,9 +66,9 @@ impl ExtensionSetup for App {
                 .get_x("/form", || async move {
                     let form = r#"<form action='/do-login', method='post'>
                     <label>Username</label><br/>
-                    <input type='text' name='username' placeholer='Username' /> <br/>
+                    <input type='text' name='username' placeholder='Username' /> <br/>
                     <label>Password</label><br/>
-                    <input type='password' name='password' placeholer='Pasword' /> <br/>
+                    <input type='password' name='password' placeholder='Password' /> <br/>
                     <input type='submit' value='Login'/>
                     </form>"#;
                     Html(form)

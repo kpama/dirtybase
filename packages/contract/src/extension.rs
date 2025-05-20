@@ -115,7 +115,7 @@ pub trait ExtensionSetup: Send + Sync {
         ExtensionManager::register(self).await;
     }
 
-    fn global_container(&self) -> Arc<busybody::ServiceContainer> {
+    fn global_container(&self) -> busybody::ServiceContainer {
         busybody::helpers::service_container()
     }
 }

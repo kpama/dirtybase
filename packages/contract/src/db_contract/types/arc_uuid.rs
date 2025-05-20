@@ -131,7 +131,7 @@ impl<'de> Deserialize<'de> for ArcUuid7 {
     where
         D: serde::Deserializer<'de>,
     {
-        let value = Uuid::deserialize(deserializer).expect("Require a value that can be stringify");
+        let value = Uuid::deserialize(deserializer)?;
         Ok(value.into())
     }
 }

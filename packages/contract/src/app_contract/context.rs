@@ -24,7 +24,7 @@ use crate::db_contract::types::ArcUuid7;
 pub struct Context {
     id: ArcUuid7,
     is_global: bool,
-    sc: Arc<busybody::ServiceContainer>,
+    sc: busybody::ServiceContainer,
 }
 
 impl Default for Context {
@@ -32,7 +32,8 @@ impl Default for Context {
         let instance = Self {
             id: ArcUuid7::default(),
             is_global: false,
-            sc: Arc::new(busybody::helpers::make_proxy()),
+            sc: busybody::helpers::make_task_proxy()
+                .unwrap_or_else(|_| busybody::helpers::make_proxy()),
         };
 
         instance
@@ -88,11 +89,11 @@ impl Context {
         C::from_config(&DirtyConfig::new(), self).await
     }
 
-    pub fn container(&self) -> Arc<busybody::ServiceContainer> {
+    pub fn container(&self) -> busybody::ServiceContainer {
         self.sc.clone()
     }
 
-    pub fn container_ref(&self) -> &Arc<busybody::ServiceContainer> {
+    pub fn container_ref(&self) -> &busybody::ServiceContainer {
         &self.sc
     }
 
