@@ -1,4 +1,6 @@
+mod http_bind;
 mod http_context;
+mod path_value;
 mod router_builder;
 mod router_manager;
 mod web_middleware_manager;
@@ -8,6 +10,7 @@ pub mod axum;
 
 use std::sync::Arc;
 
+pub use http_bind::*;
 pub use http_context::*;
 pub use named_routes_axum;
 pub use router_builder::*;

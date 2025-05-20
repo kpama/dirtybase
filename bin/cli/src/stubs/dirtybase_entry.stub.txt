@@ -26,10 +26,7 @@ impl dirtybase_contract::ExtensionSetup for Extension {
         &self,
         manager: &mut RouterManager,
     ){
-        let prefix = format!("/{}", env!("CARGO_PKG_NAME"));
-        manager.general(Some(&prefix), |router| {
-             router.get_x("/", || async { "Be awesome" });
-        });
+        http::register_routes(manager);
     }
 
 

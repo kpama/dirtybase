@@ -121,7 +121,7 @@ impl Extension {
                     Cookie::new(config.cookie_id().to_string(), session.id().to_string());
 
                 let mut ts = cookie::time::OffsetDateTime::now_utc();
-                ts += cookie::time::Duration::minutes(config.lifetime());
+                ts += cookie::time::Duration::minutes(config.lifetime() * 2);
                 entry.set_expires(ts);
                 entry.set_path("/");
                 cookie = cookie.add(entry);

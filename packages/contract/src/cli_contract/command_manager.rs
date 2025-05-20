@@ -86,19 +86,6 @@ impl CliCommandManager {
         I: IntoIterator<Item = T>,
         T: Into<String>,
     {
-        let context = Context::default();
-        let token = CancellationToken::new();
-        let cloned_token = token.clone();
-        let cloned_context = context.clone();
-
-        let handler = tokio::spawn(async move {
-            tokio::select! {
-                _ = cloned_token.cancelled() => {
-                    ExtensionManager::shutdown(&cloned_context).await;
-                }
-            }
-        });
-
         let mut command = command!()
             .propagate_version(true)
             .subcommand_required(true)
@@ -117,7 +104,20 @@ impl CliCommandManager {
             None => command.get_matches(),
         };
 
-        tokio::spawn(async move {
+        let task = tokio::spawn(async move {
+            let context = Context::default();
+            let token = CancellationToken::new();
+            let cloned_token = token.clone();
+            let cloned_context = context.clone();
+
+            let handler = tokio::spawn(async move {
+                tokio::select! {
+                    _ = cloned_token.cancelled() => {
+                        ExtensionManager::shutdown(&cloned_context).await;
+                    }
+                }
+            });
+
             if let Some((name, mut command)) = matches.remove_subcommand() {
                 for ext in ExtensionManager::list().read().await.iter() {
                     command = ext
@@ -137,8 +137,9 @@ impl CliCommandManager {
                     }
                 }
             }
+            _ = handler.await;
         });
 
-        _ = handler.await;
+        _ = task.await;
     }
 }

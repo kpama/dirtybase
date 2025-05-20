@@ -44,7 +44,7 @@ impl dirtybase_app::contract::ExtensionSetup for MyApp {
     }
 
     fn register_web_middlewares(&self, mut manager: WebMiddlewareManager) -> WebMiddlewareManager {
-        manager.register("example1", |req, mut next, _params| async move {
+        manager.register("example1", |req, _params, mut next| async move {
             println!(">>>>> we are in the basic example middleware");
             next.call(req).await
         });

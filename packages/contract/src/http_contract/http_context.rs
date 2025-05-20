@@ -7,12 +7,15 @@ use std::{
 };
 
 use axum::{
-    extract::{ConnectInfo, Request},
+    extract::{rejection::PathRejection, ConnectInfo, Path, Request},
     http::{header::USER_AGENT, HeaderMap, HeaderValue, Uri},
 };
 use axum_extra::extract::{cookie::Cookie, CookieJar};
 use dirtybase_helper::hash::sha256;
-use tokio::sync::RwLock;
+use serde::de::DeserializeOwned;
+use tokio::sync::{Mutex, RwLock};
+
+use super::path_value::PathValue;
 
 #[derive(Clone)]
 pub struct HttpContext {
@@ -21,6 +24,7 @@ pub struct HttpContext {
     ip: Option<IpAddr>,
     info: Option<ConnectInfo<SocketAddr>>,
     cookie_jar: Arc<RwLock<Option<CookieJar>>>,
+    path_value: Arc<Mutex<PathValue>>,
 }
 
 impl HttpContext {
@@ -29,13 +33,34 @@ impl HttpContext {
         trusted_headers: H,
         trusted_ips: &[TrustedIp],
     ) -> Self {
-        let mut instance = Self::from(req);
+        let mut instance = Self::from_request(req);
+
         instance.ip = instance.ip_from_headers(trusted_headers, trusted_ips);
 
         instance
     }
+
+    pub fn from_request<T>(req: &Request<T>) -> Self {
+        Self {
+            uri: req.uri().clone(),
+            path_value: Arc::new(Mutex::new(PathValue::from_request(req))),
+            headers: req.headers().clone(),
+            ip: None,
+            info: req.extensions().get::<ConnectInfo<_>>().cloned(),
+            cookie_jar: Arc::new(RwLock::new(Some(CookieJar::from_headers(req.headers())))),
+        }
+    }
+
     pub fn path(&self) -> &str {
         self.uri.path()
+    }
+
+    pub async fn get_path<T>(&self) -> Result<Path<T>, PathRejection>
+    where
+        T: DeserializeOwned + Send,
+    {
+        let mut lock = self.path_value.lock().await;
+        lock.get().await
     }
 
     pub fn user_agent(&self) -> Option<HeaderValue> {
@@ -225,18 +250,6 @@ impl HttpContext {
     }
 }
 
-impl<T> From<&Request<T>> for HttpContext {
-    fn from(req: &Request<T>) -> Self {
-        HttpContext {
-            uri: req.uri().clone(),
-            headers: req.headers().clone(),
-            ip: None,
-            info: req.extensions().get::<ConnectInfo<_>>().cloned(),
-            cookie_jar: Arc::new(RwLock::new(Some(CookieJar::from_headers(req.headers())))),
-        }
-    }
-}
-
 impl Display for HttpContext {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let ip = if let Some(ip) = self.ip() {
@@ -305,17 +318,17 @@ impl TrustedIp {
 
 #[cfg(test)]
 mod test {
-    use axum::http::Request;
+    use axum::{body::Body, http::Request};
 
     use super::*;
 
-    #[test]
-    fn test_path() {
-        let req = Request::builder()
+    #[tokio::test]
+    async fn test_path() {
+        let mut req = Request::builder()
             .uri("https://yahoo.com/path1/path2?query1=value1&query2=value2")
-            .body(())
+            .body(Body::empty())
             .unwrap();
-        let ctx = HttpContext::from(&req);
+        let ctx = HttpContext::from_request(&mut req);
 
         assert_eq!(ctx.path(), "/path1/path2");
         assert_eq!(
@@ -324,37 +337,37 @@ mod test {
         );
     }
 
-    #[test]
-    fn test_query() {
-        let req = Request::builder()
+    #[tokio::test]
+    async fn test_query() {
+        let mut req = Request::builder()
             .uri("https://yahoo.com/path1/path2?query1=value1&query2=value2")
-            .body(())
+            .body(Body::empty())
             .unwrap();
-        let ctx = HttpContext::from(&req);
+        let ctx = HttpContext::from_request(&mut req);
         assert_eq!(ctx.query(), Some("query1=value1&query2=value2".to_string()));
         assert_eq!(ctx.query_as_map().is_some(), true);
         assert_eq!(ctx.query_as_map().unwrap().len(), 2)
     }
 
-    #[test]
-    fn test_host() {
-        let req = Request::builder()
+    #[tokio::test]
+    async fn test_host() {
+        let mut req = Request::builder()
             .uri("https://yahoo.com/path1/path2?query1=value1&query2=value2")
-            .body(())
+            .body(Body::empty())
             .unwrap();
-        let ctx = HttpContext::from(&req);
+        let ctx = HttpContext::from_request(&mut req);
         assert_eq!(ctx.host().is_some(), true);
         assert_eq!(ctx.host().unwrap(), "yahoo.com");
     }
 
-    #[test]
-    fn test_ip_from_forwarded_for1() {
+    #[tokio::test]
+    async fn test_ip_from_forwarded_for1() {
         let req = Request::builder()
             .uri("https://yahoo.com/path1/path2?query1=value1&query2=value2")
             .header("X-FORWARDED-FOR", "192.168.0.100")
             .header("X-FORWARDED-FOR", "192.168.0.8")
             // .header("X-FORWARDED-FOR", "192.168.0.5, 192.168.0.44, 192.168.3.6")
-            .body(())
+            .body(Body::empty())
             .unwrap();
 
         let trusted = TrustedIp::form_collection(["192.168.0.5/24"]);
@@ -365,14 +378,14 @@ mod test {
         assert_eq!(result, ip);
     }
 
-    #[test]
-    fn test_ip_from_forwarded_for2() {
+    #[tokio::test]
+    async fn test_ip_from_forwarded_for2() {
         let req = Request::builder()
             .uri("https://yahoo.com/path1/path2?query1=value1&query2=value2")
             .header("X-FORWARDED-FOR", "192.168.0.100")
             .header("X-FORWARDED-FOR", "192.168.0.8")
             // .header("X-FORWARDED-FOR", "192.168.0.5, 192.168.0.44, 192.168.3.6")
-            .body(())
+            .body(Body::empty())
             .unwrap();
 
         let trusted = TrustedIp::form_collection(["192.168.1.5/24"]);

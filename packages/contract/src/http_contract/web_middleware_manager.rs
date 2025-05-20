@@ -13,28 +13,23 @@ type RegistererFn = Box<dyn Fn(Registerer) -> Registerer + Send + Sync>;
 
 pub struct Registerer {
     wrapper: WrappedRouter,
-    name: Arc<String>,
-    params: Option<HashMap<String, String>>,
+    param: MiddlewareParam,
 }
 
 impl Registerer {
     /// Register a middleware
     pub fn middleware<F, Fut, Out>(mut self, mut handler: F) -> Self
     where
-        F: FnMut(Request, Next, Option<HashMap<String, String>>) -> Fut
-            + Clone
-            + Send
-            + Sync
-            + 'static,
+        F: FnMut(Request, MiddlewareParam, Next) -> Fut + Clone + Send + Sync + 'static,
         Fut: Future<Output = Out> + Send + 'static,
         Out: IntoResponse + 'static,
     {
-        let name = self.name.clone();
-        let params = self.params.take();
+        let name = self.param.name();
+        let params = self.param.clone();
         self.wrapper = self.wrapper.middleware(move |req, next| {
             //
             let name = name.clone();
-            let result = (handler)(req, next, params.clone());
+            let result = (handler)(req, params.clone(), next);
             async move {
                 tracing::trace!("calling middleware: {}", name.clone());
                 let resp = result.await;
@@ -48,23 +43,19 @@ impl Registerer {
     /// Register a middleware with a state
     pub fn middleware_with_state<F, Fut, Out, ST>(mut self, mut handler: F, state: ST) -> Self
     where
-        F: FnMut(State<ST>, Request, Next, Option<HashMap<String, String>>) -> Fut
-            + Clone
-            + Send
-            + Sync
-            + 'static,
+        F: FnMut(State<ST>, Request, MiddlewareParam, Next) -> Fut + Clone + Send + Sync + 'static,
         Fut: Future<Output = Out> + Send + 'static,
         Out: IntoResponse + 'static,
         ST: Clone + Send + Sync + 'static,
     {
-        let name = self.name.clone();
-        let params = self.params.take();
+        let name = self.param.name();
+        let params = self.param.clone();
 
         self.wrapper = self.wrapper.middleware_with_state(
             move |state, req, next| {
                 //
                 let name = name.clone();
-                let result = (handler)(state, req, next, params.clone());
+                let result = (handler)(state, req, params.clone(), next);
                 async move {
                     tracing::trace!("calling middleware: {}", name.clone());
                     let resp = result.await;
@@ -98,11 +89,7 @@ impl WebMiddlewareManager {
 
     pub fn register<F, Fut, Out>(&mut self, name: &str, handler: F) -> &mut Self
     where
-        F: FnMut(Request, Next, Option<HashMap<String, String>>) -> Fut
-            + Clone
-            + Send
-            + Sync
-            + 'static,
+        F: FnMut(Request, MiddlewareParam, Next) -> Fut + Clone + Send + Sync + 'static,
         Fut: Future<Output = Out> + Send + 'static,
         Out: IntoResponse + 'static,
     {
@@ -123,11 +110,7 @@ impl WebMiddlewareManager {
         state: ST,
     ) -> &mut Self
     where
-        F: FnMut(State<ST>, Request, Next, Option<HashMap<String, String>>) -> Fut
-            + Clone
-            + Send
-            + Sync
-            + 'static,
+        F: FnMut(State<ST>, Request, MiddlewareParam, Next) -> Fut + Clone + Send + Sync + 'static,
         Fut: Future<Output = Out> + Send + 'static,
         Out: IntoResponse + 'static,
         ST: Clone + Send + Sync + 'static,
@@ -157,41 +140,82 @@ impl WebMiddlewareManager {
             if name.is_empty() {
                 continue;
             }
-            let (key, params) = self.split_name_and_param(name);
-            if let Some(m) = self.0.get(&key) {
+            let param = MiddlewareParam::from(name);
+            if let Some(m) = self.0.get(param.name_ref()) {
                 let mut reg = Registerer {
                     wrapper: router,
-                    name: Arc::new(key),
-                    params,
+                    param,
                 };
                 reg = (m)(reg);
                 router = reg.inner();
             } else {
                 // FIXME: Add translation
-                tracing::error!("could not find web middleware: {}", &key);
+                tracing::error!("could not find web middleware: {}", param.name_ref());
             }
         }
 
         router
     }
+}
 
-    fn split_name_and_param(&self, subject: String) -> (String, Option<HashMap<String, String>>) {
-        let mut pieces = subject.split("::"); // name and params separator
-        let name = pieces.next().unwrap_or_default().to_string();
-        let mut params = None;
-        if let Some(arg) = pieces.next() {
-            params = Some(
-                arg.split(":") // params separator
-                    .map(|e| {
-                        let mut p = e.split("="); // param and value separator
-                        (
-                            p.next().unwrap_or_default().to_owned(),
-                            p.next().unwrap_or_default().to_owned(),
-                        )
-                    })
-                    .collect::<HashMap<String, String>>(),
-            )
+#[derive(Debug, Clone)]
+pub struct MiddlewareParam {
+    name: Arc<String>,
+    kind: Arc<String>,
+    args: Arc<HashMap<String, String>>,
+}
+
+impl MiddlewareParam {
+    pub fn new(name: String, kind: String, args: HashMap<String, String>) -> Self {
+        Self {
+            name: Arc::new(name),
+            kind: Arc::new(kind),
+            args: Arc::new(args),
         }
-        (name, params)
+    }
+
+    pub fn kind_ref(&self) -> &str {
+        self.kind.as_str()
+    }
+    pub fn kind(&self) -> Arc<String> {
+        self.kind.clone()
+    }
+
+    pub fn name_ref(&self) -> &str {
+        self.name.as_str()
+    }
+
+    pub fn name(&self) -> Arc<String> {
+        self.name.clone()
+    }
+
+    pub fn arg(&self, name: &str) -> Option<String> {
+        self.args.get(name).cloned()
+    }
+
+    pub fn has(&self, name: &str) -> bool {
+        self.args.contains_key(name)
+    }
+}
+
+// parses "name::kind>arg1=v1,arg2=v2" to an Instance
+impl From<String> for MiddlewareParam {
+    fn from(subject: String) -> Self {
+        let (name, rest) = subject.split_once("::").unwrap_or_default();
+        let (kind, args_str) = rest.split_once(">").unwrap_or((rest, ""));
+        let args = args_str
+            .split(",")
+            .map(|e| e.split_once("=").unwrap_or_default())
+            .filter(|x| !x.0.is_empty() && !x.1.is_empty())
+            .map(|(k, v)| (k.trim().to_string(), v.trim().to_string()))
+            .collect::<HashMap<String, String>>();
+
+        MiddlewareParam::new(name.trim().to_string(), kind.trim().to_string(), args)
+    }
+}
+
+impl From<&str> for MiddlewareParam {
+    fn from(value: &str) -> Self {
+        value.to_string().into()
     }
 }
