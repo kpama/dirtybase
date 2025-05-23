@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use std::{future::Future, sync::Arc};
 
 use busybody::ServiceContainer;
@@ -7,11 +9,23 @@ use super::GateResponse;
 #[derive(Debug, Clone)]
 pub(crate) struct GateAfterMiddleware {
     pub(crate) sc: ServiceContainer,
+    ability: Arc<String>,
 }
 
 impl GateAfterMiddleware {
-    pub(crate) fn new(sc: ServiceContainer) -> Self {
-        Self { sc }
+    pub(crate) fn new(sc: ServiceContainer, ability: &str) -> Self {
+        Self {
+            sc,
+            ability: Arc::new(ability.to_string()),
+        }
+    }
+
+    pub fn ability_ref(&self) -> &str {
+        self.ability.as_str()
+    }
+
+    pub fn ability(&self) -> Arc<String> {
+        self.ability.clone()
     }
 
     pub async fn handle(self) -> Option<GateResponse> {

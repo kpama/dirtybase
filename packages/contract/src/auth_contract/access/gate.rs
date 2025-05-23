@@ -5,7 +5,7 @@ use std::{
 
 use busybody::{Handler, Resolver, ServiceContainer};
 use futures::future::BoxFuture;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 
 use crate::prelude::Context;
 
@@ -114,7 +114,9 @@ impl Gate {
     }
 
     pub async fn response(&self, name: &str) -> GateResponse {
-        let result = GateBeforeMiddleware::new(self.sc.clone()).handle().await;
+        let result = GateBeforeMiddleware::new(self.sc.clone(), name)
+            .handle()
+            .await;
         if result.is_some() {
             return result.unwrap();
         }
@@ -128,7 +130,9 @@ impl Gate {
             }
         }
 
-        let result = GateAfterMiddleware::new(self.sc.clone()).handle().await;
+        let result = GateAfterMiddleware::new(self.sc.clone(), name)
+            .handle()
+            .await;
         if result.is_some() {
             return result.unwrap();
         }
