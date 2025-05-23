@@ -5,7 +5,7 @@ use std::{
 
 use busybody::{Handler, Resolver, ServiceContainer};
 use futures::future::BoxFuture;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 
 use crate::prelude::Context;
 
@@ -45,7 +45,7 @@ impl Gate {
     }
 
     /// Register a new permission handler
-    pub async fn define<F, R, Args>(name: &str, handler: F)
+    pub async fn define<F, R, Args>(ability: &str, handler: F)
     where
         F: Clone + Handler<Args, Output = Option<R>> + Send + Sync + 'static,
         Args: Clone + Resolver + 'static + Send,
@@ -55,7 +55,7 @@ impl Gate {
         let rw_lock = GATE_COLLECTION.get_or_init(|| RwLock::default());
         let mut w_lock = rw_lock.write().await;
         w_lock.insert(
-            name.to_string(),
+            ability.to_string(),
             Arc::new(Box::new(move |c| {
                 let cc = c.clone();
                 let h = handler.clone();
@@ -113,14 +113,16 @@ impl Gate {
         .await;
     }
 
-    pub async fn response(&self, name: &str) -> GateResponse {
-        let result = GateBeforeMiddleware::new(self.sc.clone()).handle().await;
+    pub async fn response(&self, ability: &str) -> GateResponse {
+        let result = GateBeforeMiddleware::new(self.sc.clone(), ability)
+            .handle()
+            .await;
         if result.is_some() {
             return result.unwrap();
         }
         if let Some(rw_lock) = GATE_COLLECTION.get() {
             let r_lock = rw_lock.read().await;
-            if let Some(callback) = r_lock.get(name) {
+            if let Some(callback) = r_lock.get(ability) {
                 let result = callback(self.sc.clone()).await;
                 if result.is_some() {
                     return result.unwrap();
@@ -128,7 +130,9 @@ impl Gate {
             }
         }
 
-        let result = GateAfterMiddleware::new(self.sc.clone()).handle().await;
+        let result = GateAfterMiddleware::new(self.sc.clone(), ability)
+            .handle()
+            .await;
         if result.is_some() {
             return result.unwrap();
         }
@@ -138,7 +142,7 @@ impl Gate {
 
     pub async fn response_when<P: Clone + Send + Sync + 'static>(
         &self,
-        name: &str,
+        ability: &str,
         params: P,
     ) -> GateResponse {
         let sc = if self.sc.is_task_proxy() {
@@ -150,36 +154,36 @@ impl Gate {
             self.sc.clone()
         };
 
-        let result = Gate::from(sc).response(name).await;
+        let result = Gate::from(sc).response(ability).await;
         self.sc.forget::<P>().await;
 
         result
     }
 
-    pub async fn allows(&self, name: &str) -> bool {
-        self.response(name).await == true
+    pub async fn allows(&self, ability: &str) -> bool {
+        self.response(ability).await == true
     }
 
-    pub async fn can(&self, name: &str) -> bool {
-        self.allows(name).await
+    pub async fn can(&self, ability: &str) -> bool {
+        self.allows(ability).await
     }
 
-    pub async fn cannot(&self, name: &str) -> bool {
-        !self.allows(name).await
+    pub async fn cannot(&self, ability: &str) -> bool {
+        !self.allows(ability).await
     }
 
-    pub async fn all(&self, names: &[&str]) -> bool {
-        for name in names {
-            if !self.allows(*name).await {
+    pub async fn all(&self, abilities: &[&str]) -> bool {
+        for ability in abilities {
+            if !self.allows(*ability).await {
                 return false;
             }
         }
         true
     }
 
-    pub async fn any(&self, names: &[&str]) -> bool {
-        for name in names {
-            if self.allows(*name).await {
+    pub async fn any(&self, abilities: &[&str]) -> bool {
+        for ability in abilities {
+            if self.allows(*ability).await {
                 return true;
             }
         }
@@ -187,48 +191,48 @@ impl Gate {
     }
     pub async fn any_when<P: Clone + Send + Sync + 'static>(
         &self,
-        names: &[&str],
+        abilities: &[&str],
         params: P,
     ) -> bool {
-        for name in names {
-            if self.allows_when(*name, params.clone()).await {
+        for ability in abilities {
+            if self.allows_when(*ability, params.clone()).await {
                 return true;
             }
         }
         false
     }
 
-    pub async fn denies(&self, name: &str) -> bool {
-        self.allows(name).await == false
+    pub async fn denies(&self, ability: &str) -> bool {
+        self.allows(ability).await == false
     }
 
     pub async fn denies_when<P: Clone + Send + Sync + 'static>(
         &self,
-        name: &str,
+        ability: &str,
         params: P,
     ) -> bool {
-        !self.allows_when(name, params).await
+        !self.allows_when(ability, params).await
     }
 
-    pub async fn check(&self, names: &[&str]) -> bool {
-        self.all(names).await
+    pub async fn check(&self, abilities: &[&str]) -> bool {
+        self.all(abilities).await
     }
 
     pub async fn check_when<P: Clone + Send + Sync + 'static>(
         &self,
-        names: &[&str],
+        abilities: &[&str],
         params: P,
     ) -> bool {
-        self.all_when(names, params).await
+        self.all_when(abilities, params).await
     }
 
     pub async fn all_when<P: Clone + Send + Sync + 'static>(
         &self,
-        names: &[&str],
+        abilities: &[&str],
         params: P,
     ) -> bool {
-        for name in names {
-            if !self.allows_when(name, params.clone()).await {
+        for ability in abilities {
+            if !self.allows_when(ability, params.clone()).await {
                 return false;
             }
         }
@@ -238,10 +242,10 @@ impl Gate {
 
     pub async fn allows_when<P: Clone + Send + Sync + 'static>(
         &self,
-        name: &str,
+        ability: &str,
         params: P,
     ) -> bool {
-        self.response_when(name, params).await == true
+        self.response_when(ability, params).await == true
     }
 
     pub async fn set<T: Clone + Send + Sync + 'static>(&self, value: T) -> &Self {

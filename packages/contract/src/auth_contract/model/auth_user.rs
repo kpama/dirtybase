@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 use crate::{
-    auth_contract::{auth_user_status::AuthUserStatus, generate_salt},
+    auth_contract::{auth_user_status::AuthUserStatus, generate_salt, Gate, GateResponse},
     db_contract::{
         base::helper::generate_ulid,
         types::{
@@ -202,6 +202,117 @@ impl AuthUser {
         if !cv.is_empty() {
             panic!("not handling all of the auth payload when transforming to `auth user`");
         }
+    }
+
+    pub async fn authorise(&self, ability: &str) -> GateResponse {
+        Gate::new().set(self.clone()).await.response(ability).await
+    }
+
+    pub async fn authorise_when<P: Clone + Send + Sync + 'static>(
+        &self,
+        ability: &str,
+        params: P,
+    ) -> GateResponse {
+        Gate::new()
+            .set(self.clone())
+            .await
+            .response_when(ability, params)
+            .await
+    }
+
+    pub async fn allows(&self, ability: &str) -> bool {
+        Gate::new().set(self.clone()).await.allows(ability).await
+    }
+
+    pub async fn can(&self, ability: &str) -> bool {
+        Gate::new().set(self.clone()).await.can(ability).await
+    }
+
+    pub async fn cannot(&self, ability: &str) -> bool {
+        Gate::new().set(self.clone()).await.cannot(ability).await
+    }
+
+    pub async fn all(&self, abilities: &[&str]) -> bool {
+        Gate::new().set(self.clone()).await.all(abilities).await
+    }
+
+    pub async fn any(&self, abilities: &[&str]) -> bool {
+        Gate::new().set(self.clone()).await.any(abilities).await
+    }
+
+    pub async fn any_when<P: Clone + Send + Sync + 'static>(
+        &self,
+        abilities: &[&str],
+        params: P,
+    ) -> bool {
+        Gate::new()
+            .set(self.clone())
+            .await
+            .any_when(abilities, params)
+            .await
+    }
+
+    pub async fn denies(&self, ability: &str) -> bool {
+        Gate::new().set(self.clone()).await.denies(ability).await
+    }
+
+    pub async fn denies_when<P: Clone + Send + Sync + 'static>(
+        &self,
+        ability: &str,
+        params: P,
+    ) -> bool {
+        Gate::new()
+            .set(self.clone())
+            .await
+            .denies_when(ability, params)
+            .await
+    }
+
+    pub async fn check(&self, abilities: &[&str]) -> bool {
+        Gate::new().set(self.clone()).await.check(abilities).await
+    }
+
+    pub async fn check_when<P: Clone + Send + Sync + 'static>(
+        &self,
+        abilities: &[&str],
+        params: P,
+    ) -> bool {
+        Gate::new()
+            .set(self.clone())
+            .await
+            .check_when(abilities, params)
+            .await
+    }
+
+    pub async fn all_when<P: Clone + Send + Sync + 'static>(
+        &self,
+        abilities: &[&str],
+        params: P,
+    ) -> bool {
+        Gate::new()
+            .set(self.clone())
+            .await
+            .all_when(abilities, params)
+            .await
+    }
+
+    pub async fn allows_when<P: Clone + Send + Sync + 'static>(
+        &self,
+        ability: &str,
+        params: P,
+    ) -> bool {
+        Gate::new()
+            .set(self.clone())
+            .await
+            .allows_when(ability, params)
+            .await
+    }
+
+    pub async fn gate(&self) -> Gate {
+        let gate = Gate::new();
+        gate.set(self.clone()).await;
+
+        gate
     }
 
     pub(crate) fn hash_password(raw_password: &str) -> anyhow::Result<String> {
