@@ -20,7 +20,7 @@ impl AuthUserMemoryStorage {
 
 #[async_trait]
 impl AuthUserStorage for AuthUserMemoryStorage {
-    async fn store(&self, payload: AuthUserPayload) -> Result<AuthUser, anyhow::Error> {
+    async fn store(&self, mut payload: AuthUserPayload) -> Result<AuthUser, anyhow::Error> {
         let existing_id = payload.id.clone();
         let id = existing_id.unwrap_or_default();
         let mut w_lock = self.storage.write().await;
@@ -30,6 +30,7 @@ impl AuthUserStorage for AuthUserMemoryStorage {
             return Ok(existing.clone());
         } else {
             let mut new_user = AuthUser::default();
+            payload.id = Some(id.clone());
             new_user.update(payload);
             new_user.touch_created_at();
             new_user.touch_updated_at();

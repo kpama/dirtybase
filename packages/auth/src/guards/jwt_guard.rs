@@ -1,17 +1,14 @@
 use dirtybase_contract::{
-    auth_contract::ParseToken,
-    http_contract::api::ApiResponse,
-    prelude::{Credentials, StatusCode, axum_extra},
+    auth_contract::{GuardResolver, GuardResponse, ParseToken},
+    prelude::{Credentials, axum_extra},
 };
-
-use crate::GuardResolver;
 
 pub const JWT_GUARD: &str = "jwt";
 
-pub async fn authenticate(mut resolver: GuardResolver) -> GuardResolver {
+pub async fn authenticate(resolver: GuardResolver) -> GuardResponse {
     tracing::info!(">>>> In JWT Authentication guard");
 
-    if let Some(header) = resolver.request_ref().headers().get("authorization") {
+    if let Some(header) = resolver.headers_ref().get("authorization") {
         let bearer = axum_extra::headers::authorization::Bearer::decode(header);
 
         if let Some(cred) = bearer {
@@ -22,17 +19,13 @@ pub async fn authenticate(mut resolver: GuardResolver) -> GuardResolver {
                 if let Ok(token) = ParseToken::try_from(token) {
                     let result = resolver.storage_ref().find_by_id(token.id()).await;
                     // TODO: check if this user is verified. May have via another middleware...
-                    resolver.set_user(result);
-                    return resolver;
+                    if let Ok(Some(user)) = result {
+                        return GuardResponse::success(user);
+                    }
                 }
             }
         }
     }
 
-    resolver.set_response(
-        ApiResponse::<String>::error_with_status("wrong credential", StatusCode::UNAUTHORIZED)
-            .into(),
-    );
-
-    resolver
+    GuardResponse::unauthorized()
 }

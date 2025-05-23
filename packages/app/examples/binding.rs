@@ -1,11 +1,7 @@
 use std::collections::HashMap;
 
-use axum::{
-    RequestExt,
-    extract::{FromRequest, FromRequestParts, Path},
-    response::IntoResponse,
-};
-use dirtybase_contract::{http_contract::Bind, prelude::CtxExt};
+use axum::{Json, extract::Path, http::StatusCode, response::IntoResponse};
+use dirtybase_contract::http_contract::Bind;
 
 #[tokio::main]
 async fn main() {
@@ -16,42 +12,45 @@ async fn main() {
           middleware.bind("post", )
         */
         route.general(None, |router| {
-            router.get_x_with_middleware(
-                "/posts/{post}",
-                get_post,
-                [
-                    "bind::posts>path=post,field=id",
-                    // "bind::user_finder>path=user,field=id",
-                ], // use the bind middleware, call the "post_finder", pass everything after the equal to it
-            );
+            router.get_x("/posts/{post}", get_post);
         });
 
         route
     })
     .await;
 
-    Bind::<Post>::resolver(|res| async {
+    Bind::<Post>::resolver(|mut res| async move {
         //
         println!(">>> resolver got called <<< ");
-        Some(
-            Post {
-                id: 43,
-                name: "works...".to_string(),
+        let mut repo = HashMap::new();
+        for id in 1..=100 {
+            repo.insert(
+                id,
+                Post {
+                    id,
+                    name: format!("post {}", id),
+                },
+            );
+        }
+
+        if let Ok(Path(id)) = res.get_path::<i32>().await {
+            if let Some(post) = repo.get(&id).cloned() {
+                return Some(post.into());
             }
-            .into(),
-        )
+        }
+        None
     })
     .await;
 
     _ = dirtybase_app::run(app).await;
 }
 
-async fn get_post(Path(post_id): Path<i32>, Bind(post): Bind<Post>) -> impl IntoResponse {
-    println!("{:#?}", post);
-    format!("post id: {}", post_id)
+async fn get_post(Path(post_id): Path<i32>, Bind(post): Bind<Post>) -> Json<Post> {
+    println!("{:#?}", &post);
+    Json(post)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 struct Post {
     id: i32,
     name: String,

@@ -21,19 +21,19 @@ async fn main() -> anyhow::Result<()> {
     pretty_env_logger::init();
 
     // sqlite
-    // let base_config = ConnectionConfig {
-    //     url: "packages/app/examples/work/data/database.db".to_string(),
-    //     ..Default::default()
-    // };
+    let base_config = ConnectionConfig {
+        url: "packages/app/examples/work/data/database.db".to_string(),
+        ..Default::default()
+    };
 
     // let manager = make_sqlite_manager(base_config).await;
 
     // mariadb
-    let base_config = ConnectionConfig {
-        url: "mariadb://root:dbpassword@db/work".to_string(),
-        kind: "mariadb".into(),
-        ..Default::default()
-    };
+    // let base_config = ConnectionConfig {
+    //     url: "mariadb://root:dbpassword@db/work".to_string(),
+    //     kind: "mariadb".into(),
+    //     ..Default::default()
+    // };
 
     let manager = make_mariadb_manager(base_config).await;
 

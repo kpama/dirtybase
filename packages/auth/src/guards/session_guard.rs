@@ -1,6 +1,6 @@
 use dirtybase_contract::{
     app_contract::Context,
-    auth_contract::{AuthUser, AuthUserStatus, LoginCredential},
+    auth_contract::{AuthUser, AuthUserStatus, GuardResolver, GuardResponse, LoginCredential},
     db_contract::types::ArcUuid7,
     http_contract::{HttpContext, named_routes_axum},
     prelude::IntoResponse,
@@ -8,7 +8,7 @@ use dirtybase_contract::{
 };
 use dirtybase_helper::{hash::sha256, security::random_bytes_hex};
 
-use crate::{AuthConfig, GuardResolver, StorageResolver};
+use crate::{AuthConfig, helpers::get_auth_storage};
 
 /// Session guard ID
 pub const SESSION_GUARD: &str = "session";
@@ -33,34 +33,34 @@ pub const AUTH_USER_ID_KEY: &str = "auth_user_id";
 /// - 5. If the hash from the cookie matches the hash from the session, we try to get the user.
 /// - 6. If the user is retrieved successfully, an instance of the user record is given to the `resolver`.
 ///      If fetching the user fails for any reason, we invalidate the session and redirect to the login page.
-pub async fn authorize(mut resolver: GuardResolver) -> GuardResolver {
+pub async fn authorize(resolver: GuardResolver) -> GuardResponse {
+    let auth_config = match resolver
+        .context_ref()
+        .get_config::<AuthConfig>("auth")
+        .await
+    {
+        Ok(config) => config,
+        Err(e) => {
+            tracing::error!("could not get auth config: {}", e);
+            return GuardResponse::unauthorized();
+        }
+    };
+    let redirect =
+        named_routes_axum::helpers::redirect(&auth_config.signin_form_route()).into_response();
+    let fail_resp = GuardResponse::fail_resp(redirect);
+
     if let Ok(session) = resolver.context_ref().get::<Session>().await {
         let http_context = resolver.context_ref().get::<HttpContext>().await.unwrap();
         let cookie_key_result = session.get::<String>(AUTH_COOKIE_KEY).await;
         let auth_hash_result = session.get::<String>(AUTH_HASH_KEY).await;
         let user_id_result = session.get::<String>(AUTH_USER_ID_KEY).await;
 
-        let auth_config = match resolver
-            .context_ref()
-            .get_config::<AuthConfig>("auth")
-            .await
-        {
-            Ok(config) => config,
-            Err(e) => {
-                tracing::error!("could not get auth config: {}", e);
-                return resolver;
-            }
-        };
-
         session
             .put("_auth_prev_path", http_context.full_path())
             .await;
-        resolver.set_response(
-            named_routes_axum::helpers::redirect(&auth_config.signin_form_route()).into_response(),
-        );
 
         if cookie_key_result.is_none() || auth_hash_result.is_none() || user_id_result.is_none() {
-            return resolver;
+            return fail_resp;
         }
 
         let hash = auth_hash_result.unwrap();
@@ -69,7 +69,7 @@ pub async fn authorize(mut resolver: GuardResolver) -> GuardResolver {
             Ok(id) => id,
             Err(e) => {
                 tracing::error!("{}", e);
-                return resolver;
+                return fail_resp;
             }
         };
 
@@ -77,18 +77,18 @@ pub async fn authorize(mut resolver: GuardResolver) -> GuardResolver {
             if cookie.value() == hash {
                 match resolver.storage_ref().find_by_id(user_id).await {
                     Ok(Some(user)) => {
-                        resolver.clear_response();
-                        resolver.set_user(Ok(Some(user)));
+                        return GuardResponse::success(user);
                     }
                     _ => {
                         resolver.context_ref().set(session.invalidate().await).await;
+                        return fail_resp;
                     }
                 }
             }
         }
     }
 
-    resolver
+    fail_resp
 }
 
 pub async fn authenticate(ctx: Context, cred: LoginCredential) -> bool {
@@ -129,13 +129,9 @@ pub async fn login_and_verify(
     ctx: Context,
     cred: LoginCredential,
 ) -> (bool, Result<Option<AuthUser>, anyhow::Error>) {
-    let storage = match StorageResolver::from_context(ctx)
-        .await
-        .get_provider()
-        .await
-    {
-        Some(s) => s,
-        None => {
+    let storage = match get_auth_storage(ctx.clone(), None).await {
+        Ok(s) => s,
+        Err(_) => {
             tracing::error!("could not fetch auth storage");
             return (false, Err(anyhow::anyhow!("could not fetch auth storage")));
         }
