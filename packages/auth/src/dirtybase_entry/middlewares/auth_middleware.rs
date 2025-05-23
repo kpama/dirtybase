@@ -1,6 +1,10 @@
-use dirtybase_contract::{app_contract::Context, http_contract::prelude::*};
+use dirtybase_contract::{
+    app_contract::Context,
+    auth_contract::{GuardResolver, GuardResponse, StorageResolver},
+    http_contract::prelude::*,
+};
 
-use crate::{GuardResolver, StorageResolver, guards::session_guard::SESSION_GUARD};
+use crate::{AuthConfig, guards::session_guard::SESSION_GUARD};
 
 pub async fn handle_auth_middleware(
     req: Request,
@@ -21,22 +25,25 @@ pub async fn handle_auth_middleware(
 
     tracing::debug!("current auth guard: {}", &guard_name);
 
-    if let Some(storage) = StorageResolver::from_context(context.clone())
-        .await
-        .get_provider()
-        .await
-    {
-        let guard = GuardResolver::new(req, storage, &guard_name).guard().await;
-        if let Some(Ok(Some(user))) = guard.user {
-            context.set(user).await;
-            return next.run(guard.req).await;
-        }
-        if let Some(response) = guard.resp {
-            return response;
-        }
+    if let Ok(config) = context.get_config::<AuthConfig>("auth").await {
+        if let Some(storage) = StorageResolver::from_context(context.clone())
+            .await
+            .get_provider(&config.storage_ref())
+            .await
+        {
+            let result =
+                GuardResolver::new(req.headers().clone(), context.clone(), storage.clone())
+                    .guard(&guard_name)
+                    .await;
 
-        if let Some(Err(err)) = guard.user {
-            tracing::error!("authentication error: {}", err.to_string());
+            if !result.is_success() {
+                return result.response().unwrap_or_else(|| {
+                    //
+                    GuardResponse::unauthorized().response().unwrap()
+                });
+            }
+
+            return next.run(req).await;
         }
     }
 

@@ -156,6 +156,10 @@ impl AuthUser {
         self.salt = SaltString::generate(&mut OsRng).to_string().into();
     }
 
+    pub fn is_guest(&self) -> bool {
+        self.id.is_none()
+    }
+
     pub fn update(&mut self, payload: AuthUserPayload) {
         let mut cv = payload.into_column_value();
 
@@ -236,7 +240,7 @@ impl Display for AuthUser {
         let id = if self.id.is_some() {
             self.id.as_ref().unwrap().to_string()
         } else {
-            format!("-- guest user--")
+            format!("-- guest user --")
         };
         write!(f, "{}", id)
     }

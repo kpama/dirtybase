@@ -7,7 +7,7 @@ use dirtybase_contract::{
 };
 use dirtybase_helper::{hash::sha256, security::random_bytes_hex};
 
-use crate::{AuthConfig, StorageResolver};
+use crate::{AuthConfig, helpers::get_auth_storage};
 
 pub(crate) async fn login_form_handler(
     RequestContext(context): RequestContext,
@@ -36,11 +36,13 @@ pub(crate) async fn handle_login_request(
     Form(cred): Form<LoginCredential>,
 ) -> Response<Body> {
     // TODO: This will use the auth service in the future
-    let storage = StorageResolver::from_context(ctx.clone())
-        .await
-        .get_provider()
-        .await
-        .unwrap();
+    let storage = if let Ok(s) = get_auth_storage(ctx.clone(), None).await {
+        s
+    } else {
+        let bdy = Body::empty();
+        return bdy.into_response();
+    };
+
     let mut session = ctx.get::<Session>().await.unwrap();
 
     let result = if cred.username().is_some() {
@@ -99,11 +101,11 @@ pub(crate) async fn handle_get_auth_token(
     Json(cred): Json<LoginCredential>,
 ) -> impl IntoResponse {
     // TODO: This will use the auth service in the future
-    let storage = StorageResolver::from_context(ctx)
-        .await
-        .get_provider()
-        .await
-        .unwrap();
+    let storage = if let Ok(s) = get_auth_storage(ctx.clone(), None).await {
+        s
+    } else {
+        return ApiResponse::<String>::error("could not resolve storage");
+    };
 
     let result = if cred.username().is_some() {
         storage
@@ -148,11 +150,11 @@ pub(crate) async fn handle_register_request(
     Form(mut payload): Form<AuthUserPayload>,
 ) -> impl IntoResponse {
     // FIXME: This will use the auth service in the future
-    let storage = StorageResolver::from_context(ctx)
-        .await
-        .get_provider()
-        .await
-        .unwrap();
+    let storage = if let Ok(s) = get_auth_storage(ctx.clone(), None).await {
+        s
+    } else {
+        return format!("token:");
+    };
 
     payload.rotate_salt = true;
     payload.status = match payload.status {
@@ -181,11 +183,13 @@ pub(crate) async fn handle_api_register_request(
     Json(mut payload): Json<AuthUserPayload>,
 ) -> ApiResponse<String> {
     // This will use the auth service in the future
-    let storage = StorageResolver::from_context(ctx)
-        .await
-        .get_provider()
-        .await
-        .unwrap();
+    let storage = if let Ok(s) = get_auth_storage(ctx.clone(), None).await {
+        s
+    } else {
+        let mut resp = ApiResponse::<String>::default();
+        resp.set_error("could not register user");
+        return resp;
+    };
 
     payload.rotate_salt = true;
     let mut resp = ApiResponse::<String>::default();

@@ -185,12 +185,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
 
 [[package]]
-name = "arc-swap"
-version = "1.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69f7f8c3906b62b754cd5326047894316021dcfe5a194c8ea52bdd94934a3457"
-
-[[package]]
 name = "argon2"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -501,6 +495,8 @@ dependencies = [
 [[package]]
 name = "busybody"
 version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a362b8d768ce4d15154385c49cc0c918fe251f56bc97e1f2d5cde4b324707d49"
 dependencies = [
  "async-trait",
  "futures",
@@ -951,12 +947,12 @@ dependencies = [
 
 [[package]]
 name = "deadpool-redis"
-version = "0.20.0"
+version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c136f185b3ca9d1f4e4e19c11570e1002f4bfdd592d589053e225716d613851f"
+checksum = "667d186d69c8b4dd7f8cf1ac71bec88b312e1752f2d1a63028aa9ea124c3f191"
 dependencies = [
  "deadpool",
- "redis 0.29.5",
+ "redis",
  "serde",
 ]
 
@@ -1016,7 +1012,7 @@ dependencies = [
  "deadpool",
  "deadpool-redis",
  "log 0.4.27",
- "redis 0.31.0",
+ "redis",
  "tokio",
 ]
 
@@ -1059,7 +1055,7 @@ dependencies = [
  "orsomafo",
  "pretty_env_logger",
  "rand 0.9.1",
- "redis 0.31.0",
+ "redis",
  "serde",
  "serde_json",
  "sha2",
@@ -1113,7 +1109,7 @@ dependencies = [
  "dirtybase_db_macro",
  "dirtybase_helper",
  "log 0.4.27",
- "redis 0.31.0",
+ "redis",
  "serde",
  "serde_json",
  "simple-middleware",
@@ -1392,9 +1388,15 @@ dependencies = [
 
 [[package]]
 name = "english-to-cron"
+<<<<<<< HEAD
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e26fb7377cbec9a94f60428e6e6afbe10c699a14639b4d3d4b67b25c0bbe0806"
+=======
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05c9b24870748470cd279c8feba2a3a3946489ced55f888157410f2661a1c178"
+>>>>>>> dev
 dependencies = [
  "regex 1.11.1",
 ]
@@ -2766,6 +2768,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 
 [[package]]
+name = "permission"
+version = "0.1.0"
+
+[[package]]
 name = "pest"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3086,27 +3092,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
 dependencies = [
  "getrandom 0.3.3",
-]
-
-[[package]]
-name = "redis"
-version = "0.29.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bc42f3a12fd4408ce64d8efef67048a924e543bd35c6591c0447fda9054695f"
-dependencies = [
- "arc-swap",
- "bytes",
- "combine",
- "futures-util",
- "itoa",
- "num-bigint",
- "percent-encoding",
- "pin-project-lite",
- "ryu",
- "socket2",
- "tokio",
- "tokio-util",
- "url",
 ]
 
 [[package]]

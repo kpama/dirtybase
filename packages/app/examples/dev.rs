@@ -1,6 +1,7 @@
 use axum::response::Html;
 use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
+use dirtybase_contract::auth_contract::{AuthUserPayload, LoginCredential};
 use dirtybase_contract::cli_contract::CliMiddlewareManager;
 use dirtybase_contract::{
     app_contract::{Context, ContextResourceManager, CtxExt},

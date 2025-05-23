@@ -201,7 +201,11 @@ impl MiddlewareParam {
 // parses "name::kind>arg1=v1,arg2=v2" to an Instance
 impl From<String> for MiddlewareParam {
     fn from(subject: String) -> Self {
-        let (name, rest) = subject.split_once("::").unwrap_or_default();
+        let (name, rest) = if subject.contains("::") {
+            subject.split_once("::").unwrap_or_default()
+        } else {
+            (subject.as_str(), "")
+        };
         let (kind, args_str) = rest.split_once(">").unwrap_or((rest, ""));
         let args = args_str
             .split(",")

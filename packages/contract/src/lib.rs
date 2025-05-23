@@ -7,6 +7,7 @@ pub mod config_contract;
 pub mod db_contract;
 pub mod http_contract;
 pub mod multitenant_contract;
+pub mod perm_contract;
 pub mod queue_contract;
 pub mod session_contract;
 
@@ -39,13 +40,14 @@ macro_rules! register_migration {
 
 pub mod prelude {
     pub use super::app_contract::*;
-    pub use super::auth_contract::prelude::*;
+    pub use super::auth_contract::prelude;
     pub use super::cli_contract;
     pub use super::config_contract::*;
     pub use super::extension::ExtensionManager;
     pub use super::extension::ExtensionMigrations;
     pub use super::extension::ExtensionSetup;
     pub use super::http_contract::prelude::*;
+    pub use super::perm_contract;
     pub use chrono::*;
 
     pub use anyhow;

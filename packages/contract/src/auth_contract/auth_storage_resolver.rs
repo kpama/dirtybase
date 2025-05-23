@@ -1,25 +1,20 @@
 use std::{future::Future, sync::Arc};
 
-use dirtybase_contract::{
-    app_contract::Context,
-    auth_contract::{AuthUserStorage, AuthUserStorageProvider},
-};
+use crate::prelude::Context;
 
-use crate::AuthConfig;
+use super::{AuthUserStorage, AuthUserStorageProvider};
 
 #[derive(Clone)]
 pub struct StorageResolver {
     context: Context,
-    name: Arc<String>,
     provider: Option<AuthUserStorageProvider>,
 }
 
 impl StorageResolver {
     /// Creates a new instance of this struct
-    pub fn new(context: Context, name: &str) -> Self {
+    pub fn new(context: Context) -> Self {
         Self {
             provider: None,
-            name: Arc::new(name.to_string()),
             context,
         }
     }
@@ -27,11 +22,6 @@ impl StorageResolver {
     pub async fn from_context(context: Context) -> Self {
         Self {
             provider: None,
-            name: context
-                .get_config::<AuthConfig>("auth")
-                .await
-                .unwrap()
-                .storage(),
             context,
         }
     }
@@ -56,8 +46,12 @@ impl StorageResolver {
         self.provider = Some(AuthUserStorageProvider::new(storage));
     }
 
-    pub async fn get_provider(self) -> Option<AuthUserStorageProvider> {
-        Self::get_middleware().await.send(self).await.provider
+    pub async fn get_provider(self, name: &str) -> Option<AuthUserStorageProvider> {
+        Self::get_middleware()
+            .await
+            .send((self, name.to_string()))
+            .await
+            .provider
     }
 
     pub async fn register<F, Fut>(name: &str, callback: F)
@@ -69,16 +63,16 @@ impl StorageResolver {
         let arc_name = Arc::new(name.to_string());
 
         resolvers
-            .next(move |mut resolver, next| {
+            .next(move |(mut resolver, store), next| {
                 let cb = callback.clone();
                 let name = arc_name.clone();
                 Box::pin(async move {
-                    if resolver.name_rf() == *name.as_ref() {
+                    if store == *name.as_ref() {
                         resolver = (cb)(resolver).await;
                     }
 
                     if !resolver.has_provider() {
-                        next.call(resolver).await
+                        next.call((resolver, store)).await
                     } else {
                         resolver
                     }
@@ -87,14 +81,15 @@ impl StorageResolver {
             .await;
     }
 
-    async fn get_middleware() -> Arc<simple_middleware::Manager<Self, Self>> {
+    async fn get_middleware() -> Arc<simple_middleware::Manager<(Self, String), Self>> {
         if let Some(r) = busybody::helpers::service_container().get().await {
             r
         } else {
-            let manager = simple_middleware::Manager::<Self, Self>::last(|resolver, _| {
-                Box::pin(async move { resolver })
-            })
-            .await;
+            let manager =
+                simple_middleware::Manager::<(Self, String), Self>::last(|(resolver, _), _| {
+                    Box::pin(async move { resolver })
+                })
+                .await;
             busybody::helpers::service_container()
                 .set(manager)
                 .await
@@ -102,9 +97,5 @@ impl StorageResolver {
                 .await
                 .unwrap() // should never failed as we just registered the instance
         }
-    }
-
-    fn name_rf(&self) -> &str {
-        &self.name
     }
 }

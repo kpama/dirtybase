@@ -2,11 +2,10 @@ pub mod jwt_guard;
 pub mod session_guard;
 pub mod token_guard;
 
+use dirtybase_contract::auth_contract::GuardResolver;
 use jwt_guard::JWT_GUARD;
 use session_guard::SESSION_GUARD;
 use token_guard::TOKEN_GUARD;
-
-use crate::GuardResolver;
 
 pub(crate) async fn register_guards() {
     // JWT guard

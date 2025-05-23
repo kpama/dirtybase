@@ -3,12 +3,11 @@ use controllers::{
     handle_register_request, login_form_handler, register_form_handler,
 };
 use dirtybase_contract::{
+    auth_contract::{AuthUser, AuthUserStorageProvider},
     db_contract::types::ArcUuid7,
     http_contract::{RouterManager, api::ApiResponse},
-    prelude::{AuthUser, Path, RequestContext},
+    prelude::{CtxExt, Path},
 };
-
-use crate::StorageResolver;
 
 pub(crate) mod controllers;
 
@@ -47,12 +46,7 @@ pub(crate) fn register_routes(manager: &mut RouterManager) {
 
 async fn get_user_by_id(
     Path(id): Path<ArcUuid7>,
-    RequestContext(context): RequestContext,
+    CtxExt(storage): CtxExt<AuthUserStorageProvider>,
 ) -> ApiResponse<AuthUser> {
-    let storage = StorageResolver::from_context(context)
-        .await
-        .get_provider()
-        .await
-        .unwrap();
     storage.find_by_id(id).await.into()
 }

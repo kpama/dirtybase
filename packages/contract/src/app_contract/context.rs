@@ -7,16 +7,15 @@ use serde::de::DeserializeOwned;
 mod app_context;
 mod context_manager;
 mod context_metadata;
-mod user_context;
 
 use crate::{
+    auth_contract::AuthUser,
     config_contract::{DirtyConfig, TryFromDirtyConfig},
     multitenant_contract::*,
 };
 pub use app_context::*;
 pub use context_manager::*;
 pub use context_metadata::*;
-pub use user_context::*;
 
 use crate::db_contract::types::ArcUuid7;
 
@@ -46,6 +45,8 @@ impl Context {
         busybody::helpers::set_type(AppContext::make_global()).await;
         // tenant
         busybody::helpers::set_type(TenantContext::make_global()).await;
+        // user
+        busybody::helpers::set_type(AuthUser::default()).await;
 
         let instance = Self {
             id: ArcUuid7::default(),
@@ -57,8 +58,8 @@ impl Context {
         instance
     }
 
-    pub async fn set_user(&self, user: UserContext) -> &Self {
-        self.set(Arc::new(user)).await
+    pub async fn set_user(&self, user: AuthUser) -> &Self {
+        self.set(user).await
     }
 
     pub async fn set_tenant(&self, tenant: TenantContext) -> &Self {
@@ -97,7 +98,7 @@ impl Context {
         &self.sc
     }
 
-    pub async fn user(&self) -> Option<UserContext> {
+    pub async fn user(&self) -> Option<AuthUser> {
         self.get().await.ok()
     }
 
