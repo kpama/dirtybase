@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use axum::{Json, extract::Path, http::StatusCode, response::IntoResponse};
+use axum::{Json, extract::Path};
 use dirtybase_contract::http_contract::Bind;
 
 #[tokio::main]
@@ -45,7 +45,7 @@ async fn main() {
     _ = dirtybase_app::run(app).await;
 }
 
-async fn get_post(Path(post_id): Path<i32>, Bind(post): Bind<Post>) -> Json<Post> {
+async fn get_post(Path(_post_id): Path<i32>, Bind(post): Bind<Post>) -> Json<Post> {
     println!("{:#?}", &post);
     Json(post)
 }
