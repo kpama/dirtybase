@@ -835,54 +835,7 @@ impl PostgresSchemaManager {
     }
 
     fn field_value_to_args(&self, field: &FieldValue, params: &mut PgArguments) {
-        match field {
-            FieldValue::DateTime(dt) => {
-                _ = Arguments::add(params, dt);
-            }
-            FieldValue::Timestamp(dt) => {
-                _ = Arguments::add(params, dt);
-            }
-            FieldValue::Date(d) => {
-                _ = Arguments::add(params, d);
-            }
-            FieldValue::Binary(d) => {
-                _ = Arguments::add(params, d);
-            }
-            FieldValue::Uuid(d) => {
-                _ = Arguments::add(params, d);
-            }
-            FieldValue::Object(d) => {
-                _ = Arguments::add(params, sqlx::types::Json(d));
-            }
-            FieldValue::F64(v) => {
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::I64(v) => {
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::String(v) => {
-                _ = Arguments::add(params, sqlx::types::Text(v));
-            }
-            FieldValue::Array(v) => {
-                for entry in v {
-                    self.field_value_to_args(entry, params);
-                }
-            }
-            FieldValue::Boolean(v) => {
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::Time(t) => {
-                _ = Arguments::add(params, t);
-            }
-            FieldValue::U64(v) => {
-                let v = *v as i64;
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::Null => {
-                _ = Arguments::add(params, "NULL");
-            }
-            FieldValue::NotSet => (),
-        }
+        build_field_value_to_args(field, params);
     }
 
     fn build_insert_data(
@@ -923,5 +876,56 @@ impl PostgresSchemaManager {
         }
 
         sql
+    }
+}
+
+fn build_field_value_to_args(field: &FieldValue, params: &mut PgArguments) {
+    match field {
+        FieldValue::DateTime(dt) => {
+            _ = Arguments::add(params, dt);
+        }
+        FieldValue::Timestamp(dt) => {
+            _ = Arguments::add(params, dt);
+        }
+        FieldValue::Date(d) => {
+            _ = Arguments::add(params, d);
+        }
+        FieldValue::Binary(d) => {
+            _ = Arguments::add(params, d);
+        }
+        FieldValue::Uuid(d) => {
+            _ = Arguments::add(params, d);
+        }
+        FieldValue::Object(d) => {
+            _ = Arguments::add(params, sqlx::types::Json(d));
+        }
+        FieldValue::F64(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I64(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::String(v) => {
+            _ = Arguments::add(params, sqlx::types::Text(v));
+        }
+        FieldValue::Array(v) => {
+            for entry in v {
+                build_field_value_to_args(entry, params);
+            }
+        }
+        FieldValue::Boolean(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::Time(t) => {
+            _ = Arguments::add(params, t);
+        }
+        FieldValue::U64(v) => {
+            let v = *v as i64;
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::Null => {
+            _ = Arguments::add(params, "NULL");
+        }
+        FieldValue::NotSet => (),
     }
 }

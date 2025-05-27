@@ -12,12 +12,11 @@ pub struct Session {
 
 impl Session {
     pub(crate) async fn new(id: SessionId, storage: SessionStorageProvider) -> Self {
-        let instance = Self {
+        Self {
             id,
             storage,
             lifetime: 60,
-        };
-        instance
+        }
     }
 
     pub async fn init(
@@ -31,11 +30,7 @@ impl Session {
         let is_valid = if fingerprint.is_empty() || fingerprint != session.fingerprint().await {
             false
         } else {
-            if session.has_expired(lifetime).await {
-                false
-            } else {
-                true
-            }
+            !(session.has_expired(lifetime).await)
         };
 
         if is_valid {

@@ -10,6 +10,12 @@ pub struct CronJobManager {
     contexts: Arc<RwLock<HashMap<JobId, JobContext>>>,
 }
 
+impl Default for CronJobManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CronJobManager {
     pub fn new() -> Self {
         Self {

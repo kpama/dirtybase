@@ -1,6 +1,6 @@
-use crate::{attribute_type::DirtybaseAttributes, relationship::process_relation_attribute};
+use crate::attribute_type::DirtybaseAttributes;
 use proc_macro2::TokenStream;
-use quote::{ToTokens, format_ident, quote};
+use quote::{format_ident, quote};
 use std::collections::HashMap;
 use syn::{Data, DeriveInput, GenericArgument, Meta, MetaList, PathArguments, TypePath};
 
@@ -83,15 +83,6 @@ pub(crate) fn attribute_to_attribute_type(
     let mut include = true;
     if let Some(key) = walker.next() {
         match key.to_string().as_str() {
-            "rel" => {
-                if let Some(tree) = walker.next() {
-                    include = process_relation_attribute(
-                        field,
-                        dirty_attribute,
-                        tree.into_token_stream(),
-                    );
-                }
-            }
             "col" => {
                 _ = walker.next();
                 dirty_attribute.name = walker.next().unwrap().to_string().replace('\"', "");

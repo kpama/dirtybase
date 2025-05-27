@@ -74,7 +74,7 @@ impl Extension {
                             let cookie = h_context.cookie_jar().await;
 
                             let id = match cookie.get(config.cookie_id_ref()) {
-                                Some(c) => SessionId::from_str(c.value()).unwrap_or_default(),
+                                Some(c) => SessionId::from_str_ref(c.value()).unwrap_or_default(),
                                 None => SessionId::new(),
                             };
 

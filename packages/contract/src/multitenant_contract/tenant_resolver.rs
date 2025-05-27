@@ -88,7 +88,7 @@ pub trait TenantResolverTrait: Send + Sync {
     /// Try decoding the ID received from the web
     async fn url_decode_id(&self, id: &str) -> Option<ArcUuid7> {
         match Uuid25::from_str(id) {
-            Ok(u25) => ArcUuid7::try_from(u25).ok(),
+            Ok(u25) => Some(ArcUuid7::from(u25)),
             Err(e) => {
                 if let Ok(id) = ArcUuid7::try_from(id) {
                     return Some(id);

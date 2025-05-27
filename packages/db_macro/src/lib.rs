@@ -6,7 +6,6 @@ use syn::{DeriveInput, parse_macro_input};
 
 mod attribute_type;
 mod helpers;
-mod relationship;
 
 #[proc_macro_derive(DirtyTable, attributes(dirty, dirty_rel))]
 pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
