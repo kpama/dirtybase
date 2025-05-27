@@ -50,7 +50,7 @@ impl<T: TableEntityTrait + 'static> Bind<T> {
         from: &str,
         to: Option<&str>,
     ) {
-        let field_name = Arc::new(to.clone().unwrap_or_else(|| "id").to_string());
+        let field_name = Arc::new(to.unwrap_or("id").to_string());
         let path_name = Arc::new(from.to_string());
 
         ModelBindResolver::register(std::any::type_name::<T>(), move |resolver| {

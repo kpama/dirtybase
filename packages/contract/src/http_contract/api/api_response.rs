@@ -99,8 +99,8 @@ impl<D: serde::Serialize> ApiResponse<D> {
 
 impl<D: serde::Serialize + Debug, E: Debug> From<Result<D, E>> for ApiResponse<D> {
     fn from(value: Result<D, E>) -> Self {
-        if value.is_ok() {
-            Self::success(value.unwrap())
+        if let Ok(v) = value {
+            Self::success(v)
         } else {
             Self::error(format!("{:?}", value.unwrap_err()))
         }

@@ -103,7 +103,7 @@ impl HttpContext {
 
         // foo.com or 127.0.0.1
         if let Some(host) = self.uri.host() {
-            full_path.push_str(&host);
+            full_path.push_str(host);
         }
 
         // /home or /home?a=1&b=2
@@ -115,10 +115,7 @@ impl HttpContext {
     }
 
     pub fn query(&self) -> Option<String> {
-        match self.uri.query() {
-            Some(q) => Some(q.to_string()),
-            None => None,
-        }
+        self.uri.query().map(|q| q.to_string())
     }
 
     pub fn host(&self) -> Option<&str> {
@@ -127,7 +124,7 @@ impl HttpContext {
 
     pub async fn get_cookie(&self, name: &str) -> Option<Cookie> {
         let r_lock = self.cookie_jar.read().await;
-        return r_lock.as_ref().unwrap().get(name).cloned();
+        r_lock.as_ref().unwrap().get(name).cloned()
     }
 
     pub async fn set_cookie(&self, cookie: Cookie<'static>) {
@@ -137,7 +134,7 @@ impl HttpContext {
 
     pub async fn cookie_jar(&self) -> CookieJar {
         let r_lock = self.cookie_jar.read().await;
-        return r_lock.as_ref().unwrap().clone();
+        r_lock.as_ref().unwrap().clone()
     }
 
     pub async fn set_cookie_kv<V>(&self, name: &str, value: V)
@@ -162,7 +159,7 @@ impl HttpContext {
                 })
                 .filter(|kv| !kv.0.is_empty())
                 .collect::<HashMap<String, String>>();
-            if map.len() > 0 {
+            if !map.is_empty() {
                 return Some(map);
             }
         }
@@ -171,7 +168,7 @@ impl HttpContext {
     }
 
     pub fn ip(&self) -> Option<IpAddr> {
-        self.ip.clone()
+        self.ip
     }
 
     fn ip_from_headers<H: IntoIterator<Item = I>, I: ToString>(
@@ -197,7 +194,7 @@ impl HttpContext {
         for a_name in &names {
             match a_name.to_lowercase().as_ref() {
                 "x-forwarded-for" => {
-                    if trusted.len() == 0 {
+                    if trusted.is_empty() {
                         continue;
                     }
                     if let Some(mut values) = self.x_forwarded_ips() {
@@ -206,7 +203,7 @@ impl HttpContext {
                             continue;
                         }
 
-                        if values.len() > 0 && ip.is_some() {
+                        if !values.is_empty() && ip.is_some() {
                             for forwarded_ip in &values {
                                 for trusted_ip in trusted {
                                     if !trusted_ip.passes(forwarded_ip) {
@@ -219,7 +216,7 @@ impl HttpContext {
                     }
                 }
                 _ => {
-                    if let Some(last) = self.headers.get_all(a_name).iter().last() {
+                    if let Some(last) = self.headers.get_all(a_name).iter().next_back() {
                         let pieces = last
                             .to_str()
                             .unwrap()
@@ -229,9 +226,7 @@ impl HttpContext {
 
                         let mut values = pieces
                             .iter()
-                            .map(|entry| IpAddr::from_str(entry.trim()))
-                            .filter(|e| e.is_ok())
-                            .map(|e| e.unwrap())
+                            .flat_map(|entry| IpAddr::from_str(entry.trim()))
                             .collect::<VecDeque<IpAddr>>();
                         if pieces.len() == values.len() {
                             ip = values.pop_front();
@@ -256,9 +251,7 @@ impl HttpContext {
 
             let values = pieces
                 .iter()
-                .map(|entry| IpAddr::from_str(entry.trim()))
-                .filter(|e| e.is_ok())
-                .map(|e| e.unwrap())
+                .flat_map(|entry| IpAddr::from_str(entry.trim()))
                 .collect::<VecDeque<IpAddr>>();
             if pieces.len() != values.len() {
                 return None;
@@ -330,9 +323,7 @@ impl TrustedIp {
     {
         value
             .into_iter()
-            .map(|e| Self::from_str(e.as_ref()))
-            .filter(|e| e.is_ok())
-            .map(|e| e.unwrap())
+            .flat_map(|e| Self::from_str(e.as_ref()))
             .collect::<Vec<TrustedIp>>()
     }
 }
