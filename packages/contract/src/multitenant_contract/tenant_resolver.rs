@@ -43,7 +43,7 @@ pub trait TenantResolverTrait: Send + Sync {
         req: &Request<Body>,
         id_location: TenantIdLocation,
     ) -> Option<String> {
-        return match id_location {
+        match id_location {
             TenantIdLocation::Subdomain => {
                 if let Some(domain) = crate::http_contract::axum::host_from_request(req) {
                     if let Some(id) = domain.split(".").next() {
@@ -66,7 +66,7 @@ pub trait TenantResolverTrait: Send + Sync {
                     .get(TENANT_ID_QUERY_STRING)
                     .cloned()
             }
-        };
+        }
     }
     /// Try plucking the tenant's ID from the request
     ///

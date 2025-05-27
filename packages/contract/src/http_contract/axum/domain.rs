@@ -10,7 +10,7 @@ pub fn full_request_url(req: &Request<Body>) -> String {
     }
 
     if let Some(domain) = host_from_request(req) {
-        return format!("{}{}", domain, req.uri().to_string()); // domain.com/path?query
+        return format!("{}{}", domain, req.uri()); // domain.com/path?query
     }
 
     "/".to_string()
@@ -21,7 +21,7 @@ pub fn full_request_url(req: &Request<Body>) -> String {
 /// Most of the log here was taken from: Axum-extra "Host" extension
 pub fn host_from_request(req: &Request<Body>) -> Option<String> {
     // logic taken from "axum-extra/src/extract/host.rst"
-    if let Some(host) = parse_forwarded(&req.headers()) {
+    if let Some(host) = parse_forwarded(req.headers()) {
         return Some(host.to_string());
     }
 
@@ -56,7 +56,7 @@ fn parse_forwarded(headers: &HeaderMap) -> Option<&str> {
     let forwarded_values = headers.get(http::header::FORWARDED)?.to_str().ok()?;
 
     // get the first set of values
-    let first_value = forwarded_values.split(',').nth(0)?;
+    let first_value = forwarded_values.split(',').next()?;
 
     // find the value of the `host` field
     first_value.split(';').find_map(|pair| {

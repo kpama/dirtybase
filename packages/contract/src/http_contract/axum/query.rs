@@ -3,8 +3,7 @@ use std::collections::HashMap;
 pub fn query_to_kv(query: &str) -> HashMap<String, String> {
     query
         .split('&')
-        .into_iter()
-        .map(|entry| {
+        .flat_map(|entry| {
             let key;
             let mut value = String::new();
             let mut pieces = entry.split('=');
@@ -26,7 +25,5 @@ pub fn query_to_kv(query: &str) -> HashMap<String, String> {
 
             Some((key, value))
         })
-        .filter(|e| e.is_some())
-        .map(|e| e.unwrap())
         .collect::<HashMap<String, String>>()
 }
