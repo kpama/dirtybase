@@ -195,6 +195,17 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 data = field::Empty
             );
 
+            //---
+
+            let mut r = Request::new(());
+            *r.version_mut() = req.version();
+            *r.method_mut() = req.method().clone();
+            *r.uri_mut() = req.uri().clone();
+            *r.headers_mut() = req.headers().clone();
+            *r.extensions_mut() = req.extensions().clone();
+
+            // end ---
+
             tracing::dispatcher::get_default(|dispatch| {
                 if let Some(id) = span.id() {
                     if let Some(current) = dispatch.current_span().id() {
@@ -244,11 +255,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
                 // Add the request context
                 context
-                    .set(HttpContext::new(
-                        &req,
-                        trusted_headers.as_ref(),
-                        &trusted_ips,
-                    ))
+                    .set(HttpContext::new(&r, trusted_headers.as_ref(), &trusted_ips).await)
                     .await;
 
                 // pass the request

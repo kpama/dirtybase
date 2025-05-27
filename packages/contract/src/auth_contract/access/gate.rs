@@ -27,6 +27,8 @@ type GateCollection = HashMap<
 >;
 
 pub(crate) static GATE_COLLECTION: OnceLock<RwLock<GateCollection>> = OnceLock::new();
+
+#[derive(Debug, Clone)]
 pub struct Gate {
     sc: ServiceContainer,
 }

@@ -25,25 +25,35 @@ pub struct HttpContext {
     info: Option<ConnectInfo<SocketAddr>>,
     cookie_jar: Arc<RwLock<Option<CookieJar>>>,
     path_value: Arc<Mutex<PathValue>>,
+    raw_path_value: Arc<HashMap<String, serde_json::Value>>,
 }
 
 impl HttpContext {
-    pub fn new<T, H: IntoIterator<Item = I>, I: ToString>(
+    pub async fn new<T, H: IntoIterator<Item = I>, I: ToString>(
         req: &Request<T>,
         trusted_headers: H,
         trusted_ips: &[TrustedIp],
     ) -> Self {
-        let mut instance = Self::from_request(req);
+        let mut instance = Self::from_request(req).await;
 
         instance.ip = instance.ip_from_headers(trusted_headers, trusted_ips);
 
         instance
     }
 
-    pub fn from_request<T>(req: &Request<T>) -> Self {
+    pub async fn from_request<T>(req: &Request<T>) -> Self {
+        let mut path_value = PathValue::from_request(req);
+        let raw_path_value =
+            if let Ok(Path(v)) = path_value.get::<HashMap<String, serde_json::Value>>().await {
+                v
+            } else {
+                HashMap::new()
+            };
+
         Self {
             uri: req.uri().clone(),
-            path_value: Arc::new(Mutex::new(PathValue::from_request(req))),
+            path_value: Arc::new(Mutex::new(path_value)),
+            raw_path_value: Arc::new(raw_path_value),
             headers: req.headers().clone(),
             ip: None,
             info: req.extensions().get::<ConnectInfo<_>>().cloned(),
@@ -61,6 +71,17 @@ impl HttpContext {
     {
         let mut lock = self.path_value.lock().await;
         lock.get().await
+    }
+
+    pub fn get_a_path_by<T>(&self, name: &str) -> Option<T>
+    where
+        T: DeserializeOwned + Send,
+    {
+        if let Some(value) = self.raw_path_value.get(name).cloned() {
+            return serde_json::from_value::<T>(value).ok();
+        }
+
+        None
     }
 
     pub fn user_agent(&self) -> Option<HeaderValue> {
@@ -328,7 +349,7 @@ mod test {
             .uri("https://yahoo.com/path1/path2?query1=value1&query2=value2")
             .body(Body::empty())
             .unwrap();
-        let ctx = HttpContext::from_request(&mut req);
+        let ctx = HttpContext::from_request(&mut req).await;
 
         assert_eq!(ctx.path(), "/path1/path2");
         assert_eq!(
@@ -343,7 +364,7 @@ mod test {
             .uri("https://yahoo.com/path1/path2?query1=value1&query2=value2")
             .body(Body::empty())
             .unwrap();
-        let ctx = HttpContext::from_request(&mut req);
+        let ctx = HttpContext::from_request(&mut req).await;
         assert_eq!(ctx.query(), Some("query1=value1&query2=value2".to_string()));
         assert_eq!(ctx.query_as_map().is_some(), true);
         assert_eq!(ctx.query_as_map().unwrap().len(), 2)
@@ -355,7 +376,7 @@ mod test {
             .uri("https://yahoo.com/path1/path2?query1=value1&query2=value2")
             .body(Body::empty())
             .unwrap();
-        let ctx = HttpContext::from_request(&mut req);
+        let ctx = HttpContext::from_request(&mut req).await;
         assert_eq!(ctx.host().is_some(), true);
         assert_eq!(ctx.host().unwrap(), "yahoo.com");
     }
@@ -371,7 +392,7 @@ mod test {
             .unwrap();
 
         let trusted = TrustedIp::form_collection(["192.168.0.5/24"]);
-        let ctx = HttpContext::new(&req, &["x-forwarded-for"], &trusted);
+        let ctx = HttpContext::new(&req, &["x-forwarded-for"], &trusted).await;
 
         let result = ctx.ip().unwrap();
         let ip = IpAddr::from_str("192.168.0.100").unwrap();
@@ -389,10 +410,26 @@ mod test {
             .unwrap();
 
         let trusted = TrustedIp::form_collection(["192.168.1.5/24"]);
-        let ctx = HttpContext::new(&req, &["x-forwarded-for"], &trusted);
+        let ctx = HttpContext::new(&req, &["x-forwarded-for"], &trusted).await;
 
         let result = ctx.ip();
         assert_eq!(result.is_none(), true);
+    }
+
+    #[tokio::test]
+    async fn test_raw_path() {
+        let req = Request::builder()
+            .uri("https://yahoo.com/path1/path2?query1=value1&query2=value2")
+            .header("X-FORWARDED-FOR", "192.168.0.100")
+            .header("X-FORWARDED-FOR", "192.168.0.8")
+            // .header("X-FORWARDED-FOR", "192.168.0.5, 192.168.0.44, 192.168.3.6")
+            .body(Body::empty())
+            .unwrap();
+
+        let trusted = TrustedIp::form_collection(["192.168.1.5/24"]);
+        let ctx = HttpContext::new(&req, &["x-forwarded-for"], &trusted).await;
+
+        println!("{:?}", ctx.get_a_path_by::<String>("path1"));
     }
 
     #[test]

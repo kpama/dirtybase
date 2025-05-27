@@ -14,7 +14,7 @@ impl CacheConfig {
     }
 
     pub fn storage_ref(&self) -> &str {
-        &self.storage.as_str()
+        self.storage.as_str()
     }
 }
 

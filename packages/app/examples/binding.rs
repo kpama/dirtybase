@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use axum::{Json, extract::Path};
-use dirtybase_contract::http_contract::Bind;
+use dirtybase_contract::{auth_contract::Gate, http_contract::Bind, prelude::CtxExt};
 
 #[tokio::main]
 async fn main() {
@@ -12,10 +12,16 @@ async fn main() {
           middleware.bind("post", )
         */
         route.general(None, |router| {
-            router.get_x("/posts/{post}", get_post);
+            router.get_x_with_middleware("/posts/{post}", get_post, &["can:view_posts"]);
         });
 
         route
+    })
+    .await;
+
+    Gate::define("view_posts", || async {
+        //--
+        return Some(true);
     })
     .await;
 
@@ -45,7 +51,7 @@ async fn main() {
     _ = dirtybase_app::run(app).await;
 }
 
-async fn get_post(Path(_post_id): Path<i32>, Bind(post): Bind<Post>) -> Json<Post> {
+async fn get_post(Path(_post_id): Path<i32>, CtxExt(post): CtxExt<Post>) -> Json<Post> {
     println!("{:#?}", &post);
     Json(post)
 }

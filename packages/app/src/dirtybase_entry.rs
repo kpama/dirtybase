@@ -1,4 +1,4 @@
-use dirtybase_contract::cli_contract::CliCommandManager;
+use dirtybase_contract::{cli_contract::CliCommandManager, prelude::WebMiddlewareManager};
 
 mod commands_setup;
 
@@ -9,5 +9,9 @@ pub struct Extension;
 impl dirtybase_contract::ExtensionSetup for Extension {
     fn register_cli_commands(&self, manager: CliCommandManager) -> CliCommandManager {
         commands_setup::register(manager)
+    }
+
+    fn register_web_middlewares(&self, manager: WebMiddlewareManager) -> WebMiddlewareManager {
+        dirtybase_contract::http_contract::middlewares::setup_middlewares(manager)
     }
 }

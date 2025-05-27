@@ -7,6 +7,7 @@ mod web_middleware_manager;
 
 pub mod api;
 pub mod axum;
+pub mod middlewares;
 
 use std::sync::Arc;
 

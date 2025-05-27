@@ -30,7 +30,7 @@ pub fn make(package: Option<&String>, name: &str) {
     let built = stubs()
         .get("new_seeder")
         .unwrap()
-        .replace("seeder_name", &name);
+        .replace("seeder_name", name);
 
     let mut module = std::fs::read_to_string(&mod_path).unwrap();
     let seed_function = format!(

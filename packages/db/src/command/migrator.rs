@@ -43,10 +43,7 @@ impl Migrator {
             let name = entry.id();
             if !repo.exist(&name).await {
                 tracing::debug!(target: LOG_TARGET, "migrating {} up", entry.id());
-                let result = entry.up(manager).await;
-                if result.is_err() {
-                    return result;
-                }
+                entry.up(manager).await?;
 
                 if let Err(e) = repo.create(&name, batch).await {
                     tracing::error!(target: LOG_TARGET,"could not create migration entry: {:?}", e);
@@ -68,10 +65,7 @@ impl Migrator {
             for entry in &self.migrations {
                 if entry.id() == *name {
                     tracing::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
-                    let result = entry.down(manager).await;
-                    if result.is_err() {
-                        return result;
-                    }
+                    entry.down(manager).await?;
                 }
             }
         }
@@ -94,10 +88,7 @@ impl Migrator {
             if collection.is_empty() {
                 break;
             }
-            let result = self.down(manager).await;
-            if result.is_err() {
-                return result;
-            }
+            self.down(manager).await?;
         }
 
         manager.drop_table(TABLE_NAME).await
