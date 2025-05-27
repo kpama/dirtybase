@@ -83,7 +83,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
         while let Ok(result) = rows.try_next().await {
             if let Some(row) = result {
                 if let Err(e) = sender.send(self.row_to_column_value(&row)).await {
-                    log::error!(target: LOG_TARGET, "could not send mpsc stream: {}", e.to_string());
+                    log::error!(target: LOG_TARGET, "could not send mpsc stream: {}", e);
                 }
             } else {
                 break;
@@ -229,7 +229,7 @@ impl MariadbSchemaManager {
                 to_update,
             } => {
                 sql = format!("INSERT INTO {}", query.table());
-                sql = self.build_insert_data(&mut params, &rows, sql);
+                sql = self.build_insert_data(&mut params, rows, sql);
 
                 if !unique.is_empty() && !to_update.is_empty() {
                     let mut update_values = Vec::new();
@@ -413,7 +413,7 @@ impl MariadbSchemaManager {
                     Ok(_) => log::info!("table index created"),
                     Err(e) => {
                         log::error!(target: LOG_TARGET, "{}", &sql);
-                        log::error!(target: LOG_TARGET, "could not create table index: {}", e.to_string())
+                        log::error!(target: LOG_TARGET, "could not create table index: {}", e)
                     }
                 }
             }
@@ -817,7 +817,7 @@ impl MariadbSchemaManager {
             }
             FieldValue::Array(v) => {
                 for entry in v {
-                    self.field_value_to_args(&entry, params);
+                    self.field_value_to_args(entry, params);
                 }
             }
             FieldValue::Boolean(v) => {

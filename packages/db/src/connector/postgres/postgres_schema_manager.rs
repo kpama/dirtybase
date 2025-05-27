@@ -78,7 +78,7 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         while let Ok(result) = rows.try_next().await {
             if let Some(row) = result {
                 if let Err(e) = sender.send(self.row_to_column_value(&row)).await {
-                    log::error!(target: LOG_TARGET, "could not send mpsc stream: {}", e.to_string());
+                    log::error!(target: LOG_TARGET, "could not send mpsc stream: {}", e);
                 }
             } else {
                 break;
@@ -225,7 +225,7 @@ impl PostgresSchemaManager {
                 to_update,
             } => {
                 sql = format!("INSERT INTO {}", query.table());
-                sql = self.build_insert_data(&mut params, &rows, sql);
+                sql = self.build_insert_data(&mut params, rows, sql);
 
                 if !unique.is_empty() && !to_update.is_empty() {
                     sql = format!(
@@ -427,7 +427,7 @@ impl PostgresSchemaManager {
                     Ok(_) => log::info!("table index created"),
                     Err(e) => {
                         log::error!("postgres: {}", &sql);
-                        log::error!("could not create table index: {}", e.to_string())
+                        log::error!("could not create table index: {}", e)
                     }
                 }
             }
@@ -865,7 +865,7 @@ impl PostgresSchemaManager {
             }
             FieldValue::Array(v) => {
                 for entry in v {
-                    self.field_value_to_args(&entry, params);
+                    self.field_value_to_args(entry, params);
                 }
             }
             FieldValue::Boolean(v) => {
