@@ -44,7 +44,7 @@ pub async fn register_resource_manager() {
                 let storage = provider.clone();
                 if let Ok(config) = context.get_config::<SessionConfig>("session").await {
                     let lifetime = config.lifetime();
-                    let id = "session::storage".try_into().unwrap();
+                    let id = "session::storage".into();
                     let _ctx = dirtybase_cron::CronJob::schedule(
                         "every 25 minutes",
                         move |_| {
