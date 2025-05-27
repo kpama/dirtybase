@@ -12,7 +12,7 @@ async fn main() {
           middleware.bind("post", )
         */
         route.general(None, |router| {
-            router.get_x_with_middleware("/posts/{post}", get_post, &["can:view_posts"]);
+            router.get_x_with_middleware("/posts/{post}", get_post, ["can:view_posts"]);
         });
 
         route
@@ -21,7 +21,7 @@ async fn main() {
 
     Gate::define("view_posts", || async {
         //--
-        return Some(true);
+        Some(true)
     })
     .await;
 

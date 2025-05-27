@@ -11,7 +11,7 @@ async fn main() {
         .expect("could not setup tracing");
 
     // 1. Register a job
-    let id = "example::hi".try_into().unwrap();
+    let id = "example::hi".into();
     let ctx_result = dirtybase_cron::CronJob::schedule(
         "every 5 seconds",
         |_ctx| {
@@ -24,7 +24,7 @@ async fn main() {
     .await;
 
     // 3
-    let id = "example::hi2".try_into().unwrap();
+    let id = "example::hi2".into();
     let _ctx = dirtybase_cron::CronJob::schedule(
         "0/10 * * * * ? *",
         |_ctx| {
