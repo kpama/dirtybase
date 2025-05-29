@@ -17,6 +17,7 @@ use tokio::sync::{Mutex, RwLock};
 
 use super::path_value::PathValue;
 
+/// Provides common HTTP attributes for the current request
 #[derive(Clone)]
 pub struct HttpContext {
     uri: Uri,
@@ -61,10 +62,12 @@ impl HttpContext {
         }
     }
 
+    /// The request URI's path
     pub fn path(&self) -> &str {
         self.uri.path()
     }
 
+    /// Tries to return the dynamic path(s) in the URI
     pub async fn get_path<T>(&self) -> Result<Path<T>, PathRejection>
     where
         T: DeserializeOwned + Send,
@@ -73,6 +76,9 @@ impl HttpContext {
         lock.get().await
     }
 
+    /// Tries to return the dynamic path with the specified
+    ///
+    /// This is useful when you want just a path from the URI
     pub fn get_a_path_by<T>(&self, name: &str) -> Option<T>
     where
         T: DeserializeOwned + Send,
@@ -84,15 +90,23 @@ impl HttpContext {
         None
     }
 
+    /// Returns all the dynamic path names in the URI
+    pub fn get_path_names(&self) -> Vec<String> {
+        self.raw_path_value.keys().cloned().collect()
+    }
+
+    /// The current request client's user agent
     pub fn user_agent(&self) -> Option<HeaderValue> {
         self.headers.get(USER_AGENT).cloned()
     }
 
+    /// The generated fingerprint for the current request
     pub fn fingerprint(&self) -> String {
         let id = self.to_string();
         sha256::hash_str(&id)
     }
 
+    /// Returns the full URL for the current request
     pub fn full_path(&self) -> String {
         let mut full_path = String::new();
 

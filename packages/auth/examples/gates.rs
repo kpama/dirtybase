@@ -49,7 +49,7 @@ async fn main() {
         context.set(user).await;
         context.set((Arc::new(Post::default()),)).await;
 
-        let gate = Gate::new();
+        let gate = Gate::from(&context);
         if gate
             .all_when(&["update-post"], (Arc::new(Post::default()), 55))
             .await

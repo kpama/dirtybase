@@ -33,17 +33,9 @@ pub struct Gate {
     sc: ServiceContainer,
 }
 
-impl Default for Gate {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl Gate {
-    pub fn new() -> Self {
-        Self {
-            sc: busybody::helpers::make_task_proxy_or_fallback(),
-        }
+    pub fn new(sc: ServiceContainer) -> Self {
+        Self { sc }
     }
 
     /// Register a new permission handler
@@ -273,5 +265,17 @@ impl Gate {
 impl From<busybody::ServiceContainer> for Gate {
     fn from(sc: busybody::ServiceContainer) -> Self {
         Self { sc: sc }
+    }
+}
+
+impl From<Context> for Gate {
+    fn from(value: Context) -> Self {
+        Self::new(value.container())
+    }
+}
+
+impl From<&Context> for Gate {
+    fn from(value: &Context) -> Self {
+        Self::new(value.container())
     }
 }

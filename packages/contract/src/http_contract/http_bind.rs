@@ -10,6 +10,8 @@ use crate::{
 
 use super::{HttpContext, MiddlewareParam};
 
+/// Binds a type to a URI path
+///
 #[derive(Clone)]
 pub struct Bind<T>(pub T);
 
@@ -28,6 +30,9 @@ impl<T> From<T> for Bind<T> {
 
 impl<T: std::any::Any + Clone + Send + Sync> Bind<T> {
     /// Register a resolver for the type `T`
+    ///
+    /// When a request handler requires an instance of `T`,
+    /// this resolver will be called.
     pub async fn resolver<F, Fut>(callback: F)
     where
         F: Clone + Fn(ModelBindResolver) -> Fut + Send + Sync + 'static,
@@ -36,14 +41,17 @@ impl<T: std::any::Any + Clone + Send + Sync> Bind<T> {
         ModelBindResolver::register(std::any::type_name::<T>(), callback).await
     }
 
-    /// Register a alias for the type `T`
+    /// Register an alias for the type `T`
+    ///
+    /// When a URI is requested that has this alias, the resolver will be called
     pub async fn alias(alias: &str) {
         ModelBindResolver::alias::<T>(alias).await;
     }
 }
 
+/// Implement a general resolver for types that implements `TableEntityTrait`
 impl<T: TableEntityTrait + 'static> Bind<T> {
-    /// Binds a uri `path` to a table `column`
+    /// Binds a URI `path` to a table `column`
     ///
     /// If the table column is None, the `id` column will be used
     pub async fn from_to<F: DeserializeOwned + Into<FieldValue> + Send + Sync + 'static>(
@@ -78,6 +86,7 @@ impl<T: TableEntityTrait + 'static> Bind<T> {
     }
 }
 
+/// An instance of this struct is passed to your registered resolver
 #[derive(Clone)]
 pub struct ModelBindResolver {
     pub(crate) context: Context,
@@ -94,18 +103,22 @@ impl ModelBindResolver {
         }
     }
 
+    /// Returns the current request context
     pub fn context(&self) -> Context {
         self.context.clone()
     }
 
+    /// The middleware parameter instance
     pub fn args(&self) -> &MiddlewareParam {
         &self.args
     }
 
+    /// Returns a reference of the request context instead of a "clone"
     pub fn context_ref(&self) -> &Context {
         &self.context
     }
 
+    /// Returns a references of the current http context
     pub fn http_context_ref(&self) -> &HttpContext {
         &self.http_ctx
     }
@@ -147,11 +160,26 @@ impl ModelBindResolver {
             .await;
     }
 
-    pub(crate) async fn inject_alias(self, alias: &str) -> Result<(), anyhow::Error> {
+    pub(crate) async fn inject_alias(self, alias: &str) -> Result<bool, anyhow::Error> {
         Self::get_alias_middleware()
             .await
             .send((self, alias.to_string()))
             .await
+    }
+
+    pub(crate) async fn inject_all_bindings(self) -> Result<bool, anyhow::Error> {
+        for alias in self.http_ctx.get_path_names() {
+            if let Ok(val) = Self::get_alias_middleware()
+                .await
+                .send((self.clone(), alias.to_string()))
+                .await
+            {
+                if !val {
+                    return Ok(false);
+                }
+            }
+        }
+        Ok(true)
     }
 
     pub(crate) async fn get_middleware<T: 'static>(
@@ -196,8 +224,9 @@ impl ModelBindResolver {
                         );
                         if let Ok(Some(Bind(value))) = resolver.clone().bind::<T>().await {
                             resolver.context_ref().set(value).await;
-                            return Ok(());
+                            return Ok(true);
                         }
+                        return Ok(false);
                     }
                     next.call((resolver, name)).await
                 })
@@ -206,12 +235,12 @@ impl ModelBindResolver {
     }
 
     pub(crate) async fn get_alias_middleware(
-    ) -> Arc<simple_middleware::Manager<(Self, String), Result<(), anyhow::Error>>> {
+    ) -> Arc<simple_middleware::Manager<(Self, String), Result<bool, anyhow::Error>>> {
         if let Some(m) = busybody::helpers::service_container().get().await {
             m
         } else {
             let manager =
-                simple_middleware::Manager::<(Self, String), Result<(), anyhow::Error>>::last(
+                simple_middleware::Manager::<(Self, String), Result<bool, anyhow::Error>>::last(
                     |(_, _), _| {
                         Box::pin(async move {
                             //

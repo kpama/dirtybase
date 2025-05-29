@@ -28,7 +28,7 @@ pub async fn register_resource_manager() {
                     .to_string();
                 let duration = if context.is_global() { 0 } else { 5 };
                 context.set(config).await;
-                (name, duration)
+                (name, duration).into()
             })
         },
         |context| {

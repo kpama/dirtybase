@@ -12,7 +12,7 @@ mod context_manager;
 mod context_metadata;
 
 use crate::{
-    auth_contract::AuthUser,
+    auth_contract::{AuthUser, Gate},
     config_contract::{DirtyConfig, TryFromDirtyConfig},
     http_contract::{Bind, ModelBindResolver},
     multitenant_contract::*,
@@ -35,8 +35,7 @@ impl Default for Context {
         let instance = Self {
             id: ArcUuid7::default(),
             is_global: false,
-            sc: busybody::helpers::make_task_proxy()
-                .unwrap_or_else(|_| busybody::helpers::make_proxy()),
+            sc: busybody::helpers::make_proxy(),
         };
 
         instance
@@ -58,6 +57,13 @@ impl Context {
             sc: busybody::helpers::service_container(),
         };
 
+        busybody::helpers::resolver::<Gate>(|sc| {
+            Box::pin(async {
+                //..
+                Gate::new(sc)
+            })
+        })
+        .await;
         busybody::helpers::set_type(instance.clone()).await;
         instance
     }

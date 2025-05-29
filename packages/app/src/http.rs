@@ -9,6 +9,7 @@ use axum_extra::extract::CookieJar;
 use dirtybase_contract::{
     ExtensionManager,
     app_contract::Context,
+    auth_contract::Gate,
     http_contract::{HttpContext, RouteType, TrustedIp},
 };
 
@@ -215,6 +216,16 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             });
 
             async move {
+                // context
+                //     .container()
+                //     .resolver::<Gate>(|sc| {
+                //         Box::pin(async {
+                //             //..
+                //             Gate::new(sc)
+                //         })
+                //     })
+                //     .await;
+
                 log::trace!("uri: {}", req.uri());
                 log::trace!(
                     "full url: : {}",

@@ -35,7 +35,12 @@ struct App;
 impl ExtensionSetup for App {
     async fn setup(&mut self, _context: &Context) {
         busybody::helpers::register_service(ContextResourceManager::<i32>::new(
-            |_| Box::pin(async { ("global points".to_string(), 50) }),
+            |_| {
+                Box::pin(async {
+                    //
+                    ("global points".to_string(), 50).into()
+                })
+            },
             |_| {
                 Box::pin(async {
                     tracing::error!(">>>>>>>>>>>>>>>>>>>>>>>  making new i32");

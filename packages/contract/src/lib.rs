@@ -8,6 +8,7 @@ pub mod db_contract;
 pub mod http_contract;
 pub mod multitenant_contract;
 pub mod perm_contract;
+pub mod permission_contract;
 pub mod queue_contract;
 pub mod session_contract;
 
