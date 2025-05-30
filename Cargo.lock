@@ -1388,15 +1388,9 @@ dependencies = [
 
 [[package]]
 name = "english-to-cron"
-<<<<<<< HEAD
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e26fb7377cbec9a94f60428e6e6afbe10c699a14639b4d3d4b67b25c0bbe0806"
-=======
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05c9b24870748470cd279c8feba2a3a3946489ced55f888157410f2661a1c178"
->>>>>>> dev
 dependencies = [
  "regex 1.11.1",
 ]
