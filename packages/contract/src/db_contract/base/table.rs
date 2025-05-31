@@ -1,4 +1,4 @@
-use crate::db_contract::{TableEntityTrait, USER_TABLE};
+use crate::db_contract::TableEntityTrait;
 
 use super::{
     column::{ColumnBlueprint, ColumnType},
@@ -373,20 +373,13 @@ impl TableBlueprint {
     }
 
     pub fn timestamps(&mut self) {
-        let mut _created_at = self.created_at();
-        let mut _updated_at = self.updated_at();
+        self.created_at();
+        self.updated_at();
     }
 
     pub fn blame(&mut self) {
-        let mut _creator = self
-            .ulid(CREATOR_FIELD)
-            .set_is_nullable(false)
-            .references_without_cascade_delete(USER_TABLE, ID_FIELD);
-
-        let mut _editor = self
-            .ulid(EDITOR_FIELD)
-            .set_is_nullable(true)
-            .references_without_cascade_delete(USER_TABLE, ID_FIELD);
+        self.ulid(CREATOR_FIELD).set_is_nullable(false);
+        self.ulid(EDITOR_FIELD).set_is_nullable(true);
     }
 
     pub fn soft_deletable(&mut self) -> &mut ColumnBlueprint {

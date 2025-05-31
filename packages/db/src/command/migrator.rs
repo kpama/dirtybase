@@ -1,7 +1,7 @@
 use anyhow::Ok;
 use dirtybase_contract::{
     ExtensionManager, ExtensionMigrations, cli_contract::clap::ArgMatches,
-    db_contract::base::manager::Manager,
+    db_contract::base::manager::Manager, prelude::Context,
 };
 
 use crate::model::migration::{MigrationRepository, TABLE_NAME};
@@ -22,9 +22,13 @@ pub struct Migrator {
 const LOG_TARGET: &str = "db::migrator";
 
 impl Migrator {
-    pub async fn new() -> Self {
+    pub async fn new(context: Option<Context>) -> Self {
         let mut migrations = Vec::new();
-        let context = dirtybase_contract::app_contract::global_context().await;
+        let context = if let Some(ctx) = context {
+            ctx
+        } else {
+            dirtybase_contract::app_contract::global_context().await
+        };
         ExtensionManager::extensions(|ext| {
             if let Some(m) = ext.migrations(&context) {
                 migrations.extend(m);

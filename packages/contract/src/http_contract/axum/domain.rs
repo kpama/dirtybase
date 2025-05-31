@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::{
     body::Body,
     http::{self, uri::Authority, HeaderMap, Request},
@@ -19,10 +21,10 @@ pub fn full_request_url(req: &Request<Body>) -> String {
 /// Given the request, this function will try to pluck out the current host
 ///
 /// Most of the log here was taken from: Axum-extra "Host" extension
-pub fn host_from_request(req: &Request<Body>) -> Option<String> {
+pub fn host_from_request<T>(req: &Request<T>) -> Option<Arc<String>> {
     // logic taken from "axum-extra/src/extract/host.rst"
     if let Some(host) = parse_forwarded(req.headers()) {
-        return Some(host.to_string());
+        return Some(Arc::new(host.to_string()));
     }
 
     // check x-forward header
@@ -31,7 +33,7 @@ pub fn host_from_request(req: &Request<Body>) -> Option<String> {
         .get("X-Forwarded-Host")
         .and_then(|h| h.to_str().ok())
     {
-        return Some(host.to_string());
+        return Some(Arc::new(host.to_string()));
     }
 
     if let Some(host) = req
@@ -39,12 +41,12 @@ pub fn host_from_request(req: &Request<Body>) -> Option<String> {
         .get(http::header::HOST)
         .and_then(|h| h.to_str().ok())
     {
-        return Some(host.to_string());
+        return Some(Arc::new(host.to_string()));
     }
 
     // logic taken from "axum-extra/src/extract/host.rst"
     if let Some(authority) = req.uri().authority() {
-        return Some(parse_authority(authority).to_string());
+        return Some(Arc::new(parse_authority(authority).to_string()));
     }
 
     None

@@ -9,13 +9,13 @@ use axum_extra::extract::CookieJar;
 use dirtybase_contract::{
     ExtensionManager,
     app_contract::Context,
-    auth_contract::Gate,
-    http_contract::{HttpContext, RouteType, TrustedIp},
+    http_contract::{HttpContext, RouteType, TrustedIp, axum::clone_request},
 };
 
 #[cfg(feature = "multitenant")]
 use dirtybase_contract::multitenant_contract::{
-    TenantIdLocation, TenantResolverProvider, TenantResolverTrait, TenantStorageProvider,
+    RequestTenantResolverProvider, RequestTenantResolverTrait, TenantIdLocation,
+    TenantStorageProvider,
 };
 
 use dirtybase_encrypt::Encrypter;
@@ -180,7 +180,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
         // proxy container
         // this should be the last middleware registered.
-        // It sets up the current request specific context
+        // It sets up the current request specific context, tenant ID if the feature is enabled
         let trusted_headers = Arc::new(app.config_ref().web_proxy_trusted_headers());
         let trusted_ips = Arc::new(TrustedIp::form_collection(
             app.config_ref().web_trusted_proxies(),
@@ -196,17 +196,8 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 data = field::Empty
             );
 
-            //---
-
-            let mut r = Request::new(());
-            *r.version_mut() = req.version();
-            *r.method_mut() = req.method().clone();
-            *r.uri_mut() = req.uri().clone();
-            *r.headers_mut() = req.headers().clone();
-            *r.extensions_mut() = req.extensions().clone();
-
-            // end ---
-
+            // light copy of the request without the "body"
+            let r = clone_request(&req);
             tracing::dispatcher::get_default(|dispatch| {
                 if let Some(id) = span.id() {
                     if let Some(current) = dispatch.current_span().id() {
@@ -216,31 +207,18 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             });
 
             async move {
-                // context
-                //     .container()
-                //     .resolver::<Gate>(|sc| {
-                //         Box::pin(async {
-                //             //..
-                //             Gate::new(sc)
-                //         })
-                //     })
-                //     .await;
+                let http_ctx = HttpContext::new(&r, trusted_headers.as_ref(), &trusted_ips).await;
 
                 log::trace!("uri: {}", req.uri());
-                log::trace!(
-                    "full url: : {}",
-                    dirtybase_contract::http_contract::axum::full_request_url(&req)
-                );
-                tracing::trace!(
-                    "host: {:?}",
-                    dirtybase_contract::http_contract::axum::host_from_request(&req)
-                );
+                log::trace!("full url: : {}", http_ctx.full_path());
+                tracing::trace!("host: {:?}", http_ctx.host());
 
                 // 1. Find the tenant
                 #[cfg(feature = "multitenant")]
-                if let Ok(manager) = context.get::<TenantResolverProvider>().await {
-                    if let Some(raw_id) =
-                        manager.pluck_id_str_from_request(&req, TenantIdLocation::Subdomain)
+                if let Ok(manager) = context.get::<RequestTenantResolverProvider>().await {
+                    if let Some(raw_id) = manager
+                        .pluck_id_str_from_request(&http_ctx, TenantIdLocation::Subdomain)
+                        .await
                     {
                         tracing::trace!("current tenant Id: {}", &raw_id);
                         if let Ok(_manager) = context.get::<TenantStorageProvider>().await {
@@ -265,9 +243,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 decrypt_cookies(cookie_jar, &encrypter, cookie_config, &mut req);
 
                 // Add the request context
-                context
-                    .set(HttpContext::new(&r, trusted_headers.as_ref(), &trusted_ips).await)
-                    .await;
+                context.set(http_ctx).await;
 
                 // pass the request
                 let mut response = next.run(req).await;

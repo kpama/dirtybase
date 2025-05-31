@@ -1,6 +1,5 @@
 mod http_bind;
 mod http_context;
-mod path_value;
 mod router_builder;
 mod router_manager;
 mod web_middleware_manager;

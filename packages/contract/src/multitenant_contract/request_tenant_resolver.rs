@@ -1,9 +1,8 @@
 use std::{str::FromStr, sync::Arc};
 
-use axum::{body::Body, http::Request};
 use dirtybase_helper::uuid::Uuid25;
 
-use crate::db_contract::types::ArcUuid7;
+use crate::{db_contract::types::ArcUuid7, http_contract::HttpContext};
 
 pub const TENANT_ID_HEADER: &str = "X-Tenant-ID";
 pub const TENANT_ID_QUERY_STRING: &str = "tenant-id";
@@ -36,47 +35,37 @@ impl Default for TenantIdLocation {
 }
 
 #[async_trait::async_trait]
-pub trait TenantResolverTrait: Send + Sync {
+pub trait RequestTenantResolverTrait: Send + Sync {
     /// Try finding the raw (string) tenant ID from the request
-    fn pluck_id_str_from_request(
+    async fn pluck_id_str_from_request(
         &self,
-        req: &Request<Body>,
+        http_ctx: &HttpContext,
         id_location: TenantIdLocation,
     ) -> Option<String> {
         match id_location {
-            TenantIdLocation::Subdomain => {
-                if let Some(domain) = crate::http_contract::axum::host_from_request(req) {
-                    if let Some(id) = domain.split(".").next() {
-                        return Some(id.to_string());
-                    }
-                }
-                None
-            }
-            TenantIdLocation::Domain => None,
+            TenantIdLocation::Subdomain => http_ctx.subdomain().map(|x| x.to_string()),
+            TenantIdLocation::Domain => http_ctx.host(),
             TenantIdLocation::Header => {
-                if let Some(id) = req.headers().get(TENANT_ID_HEADER) {
+                if let Some(id) = http_ctx.header(TENANT_ID_HEADER) {
                     if let Ok(s) = id.to_str() {
                         return Some(s.to_string());
                     }
                 }
                 None
             }
-            TenantIdLocation::Query => {
-                crate::http_contract::axum::query_to_kv(req.uri().query().unwrap_or_default())
-                    .get(TENANT_ID_QUERY_STRING)
-                    .cloned()
-            }
+            TenantIdLocation::Query => http_ctx.get_a_query_by::<String>(TENANT_ID_QUERY_STRING),
         }
     }
     /// Try plucking the tenant's ID from the request
     ///
     /// Usually as this stage the user has not being authenticated
-    fn id_from_request(
+    async fn id_from_request(
         &self,
-        req: &Request<Body>,
+        http_ctx: &HttpContext,
         id_location: TenantIdLocation,
     ) -> Option<ArcUuid7> {
-        self.pluck_id_str_from_request(req, id_location)
+        self.pluck_id_str_from_request(http_ctx, id_location)
+            .await
             .and_then(|id| ArcUuid7::try_from(id.as_str()).ok())
     }
 
@@ -102,29 +91,31 @@ pub trait TenantResolverTrait: Send + Sync {
 }
 
 #[derive(Debug, Clone)]
-pub struct TenantResolver;
+pub struct RequestTenantResolver;
 
 #[async_trait::async_trait]
-impl TenantResolverTrait for TenantResolver {}
+impl RequestTenantResolverTrait for RequestTenantResolver {}
 
 #[derive(Clone)]
-pub struct TenantResolverProvider(Arc<Box<dyn TenantResolverTrait>>);
+pub struct RequestTenantResolverProvider(Arc<Box<dyn RequestTenantResolverTrait>>);
 
 #[async_trait::async_trait]
-impl TenantResolverTrait for TenantResolverProvider {
-    fn pluck_id_str_from_request(
+impl RequestTenantResolverTrait for RequestTenantResolverProvider {
+    async fn pluck_id_str_from_request(
         &self,
-        req: &Request<Body>,
+        http_ctx: &HttpContext,
         id_location: TenantIdLocation,
     ) -> Option<String> {
-        self.0.pluck_id_str_from_request(req, id_location)
+        self.0
+            .pluck_id_str_from_request(http_ctx, id_location)
+            .await
     }
-    fn id_from_request(
+    async fn id_from_request(
         &self,
-        req: &Request<Body>,
+        http_ctx: &HttpContext,
         id_location: TenantIdLocation,
     ) -> Option<ArcUuid7> {
-        self.0.id_from_request(req, id_location)
+        self.0.id_from_request(http_ctx, id_location).await
     }
 
     async fn url_encode_id(&self, id: ArcUuid7) -> String {
@@ -136,20 +127,20 @@ impl TenantResolverTrait for TenantResolverProvider {
     }
 }
 
-impl Default for TenantResolverProvider {
+impl Default for RequestTenantResolverProvider {
     fn default() -> Self {
-        Self(Arc::new(Box::new(TenantResolver)))
+        Self(Arc::new(Box::new(RequestTenantResolver)))
     }
 }
 
-impl TenantResolverProvider {
-    pub fn new(inner: impl TenantResolverTrait + 'static) -> Self {
+impl RequestTenantResolverProvider {
+    pub fn new(inner: impl RequestTenantResolverTrait + 'static) -> Self {
         Self(Arc::new(Box::new(inner)))
     }
 
     pub fn from<T>(inner: T) -> Self
     where
-        T: TenantResolverTrait + 'static,
+        T: RequestTenantResolverTrait + 'static,
     {
         Self::new(inner)
     }
@@ -165,8 +156,9 @@ mod test {
     use dirtybase_helper::uuid::Uuid25;
 
     use crate::db_contract::types::ArcUuid7;
-    use crate::multitenant_contract::{TenantResolver, TENANT_ID_HEADER};
-    use crate::multitenant_contract::{TenantResolverTrait, TENANT_ID_QUERY_STRING};
+    use crate::http_contract::HttpContext;
+    use crate::multitenant_contract::{RequestTenantResolver, TENANT_ID_HEADER};
+    use crate::multitenant_contract::{RequestTenantResolverTrait, TENANT_ID_QUERY_STRING};
 
     #[tokio::test]
     async fn test_wrong_uuid7_from_subdomain() {
@@ -183,13 +175,16 @@ mod test {
             .body(Body::empty())
             .unwrap();
 
-        let resolver = TenantResolver;
+        let resolver = RequestTenantResolver;
+        let http_ctx = HttpContext::from_request(&req).await;
 
         assert_eq!(
-            resolver.id_from_request(
-                &req,
-                crate::multitenant_contract::TenantIdLocation::Subdomain
-            ),
+            resolver
+                .id_from_request(
+                    &http_ctx,
+                    crate::multitenant_contract::TenantIdLocation::Subdomain
+                )
+                .await,
             None
         );
     }
@@ -210,13 +205,16 @@ mod test {
             .body(Body::empty())
             .unwrap();
 
-        let resolver = TenantResolver;
+        let resolver = RequestTenantResolver;
+        let http_ctx = HttpContext::from_request(&req).await;
 
         assert_eq!(
-            resolver.id_from_request(
-                &req,
-                crate::multitenant_contract::TenantIdLocation::Subdomain
-            ),
+            resolver
+                .id_from_request(
+                    &http_ctx,
+                    crate::multitenant_contract::TenantIdLocation::Subdomain
+                )
+                .await,
             ArcUuid7::try_from(id).ok()
         );
     }
@@ -237,12 +235,14 @@ mod test {
             .body(Body::empty())
             .unwrap();
 
-        let resolver = TenantResolver;
+        let resolver = RequestTenantResolver;
+        let http_ctx = HttpContext::from_request(&req).await;
         let uuid = resolver
             .id_from_request(
-                &req,
+                &http_ctx,
                 crate::multitenant_contract::TenantIdLocation::Subdomain,
             )
+            .await
             .unwrap();
 
         let uuid25_string = resolver.url_encode_id(uuid).await;
@@ -254,7 +254,7 @@ mod test {
     async fn test_decoding_uuid7_str() {
         let id = "0194ddfb-ed23-77af-ba48-cee803fbb0b5";
         let uuid = ArcUuid7::try_from(id).expect("could not decode uuid7 string");
-        let resolver = TenantResolver;
+        let resolver = RequestTenantResolver;
 
         assert_eq!(resolver.url_decode_id(id).await.unwrap(), uuid);
     }
@@ -265,7 +265,7 @@ mod test {
         let uuid = ArcUuid7::try_from(id).expect("could not decode uuid7 string");
         let uuid25_str = Uuid25::from_str(id).unwrap().to_string();
 
-        let resolver = TenantResolver;
+        let resolver = RequestTenantResolver;
         assert_eq!(
             resolver.url_decode_id(uuid25_str.as_str()).await.unwrap(),
             uuid
@@ -288,10 +288,16 @@ mod test {
             .body(Body::empty())
             .unwrap();
 
-        let resolver = TenantResolver;
+        let resolver = RequestTenantResolver;
+        let http_ctx = HttpContext::from_request(&req).await;
 
         assert_eq!(
-            resolver.id_from_request(&req, crate::multitenant_contract::TenantIdLocation::Header),
+            resolver
+                .id_from_request(
+                    &http_ctx,
+                    crate::multitenant_contract::TenantIdLocation::Header
+                )
+                .await,
             None
         );
     }
@@ -313,10 +319,16 @@ mod test {
             .body(Body::empty())
             .unwrap();
 
-        let resolver = TenantResolver;
+        let resolver = RequestTenantResolver;
+        let http_ctx = HttpContext::from_request(&req).await;
 
         assert_eq!(
-            resolver.id_from_request(&req, crate::multitenant_contract::TenantIdLocation::Header),
+            resolver
+                .id_from_request(
+                    &http_ctx,
+                    crate::multitenant_contract::TenantIdLocation::Header
+                )
+                .await,
             ArcUuid7::try_from(id).ok()
         );
     }
@@ -336,10 +348,16 @@ mod test {
             .body(Body::empty())
             .unwrap();
 
-        let resolver = TenantResolver;
+        let resolver = RequestTenantResolver;
+        let http_ctx = HttpContext::from_request(&req).await;
 
         assert_eq!(
-            resolver.id_from_request(&req, crate::multitenant_contract::TenantIdLocation::Query),
+            resolver
+                .id_from_request(
+                    &http_ctx,
+                    crate::multitenant_contract::TenantIdLocation::Query
+                )
+                .await,
             None
         );
     }
@@ -361,10 +379,16 @@ mod test {
             .body(Body::empty())
             .unwrap();
 
-        let resolver = TenantResolver;
+        let resolver = RequestTenantResolver;
+        let http_ctx = HttpContext::from_request(&req).await;
 
         assert_eq!(
-            resolver.id_from_request(&req, crate::multitenant_contract::TenantIdLocation::Query),
+            resolver
+                .id_from_request(
+                    &http_ctx,
+                    crate::multitenant_contract::TenantIdLocation::Query
+                )
+                .await,
             ArcUuid7::try_from(id).ok()
         );
     }

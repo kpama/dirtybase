@@ -7,26 +7,31 @@ use std::{
 };
 
 use axum::{
-    extract::{rejection::PathRejection, ConnectInfo, Path, Request},
-    http::{header::USER_AGENT, HeaderMap, HeaderValue, Uri},
+    extract::{
+        rejection::{PathRejection, QueryRejection},
+        ConnectInfo, FromRequestParts, Path, Query, Request,
+    },
+    http::{header::USER_AGENT, request::Parts, HeaderMap, HeaderValue, Uri},
 };
 use axum_extra::extract::{cookie::Cookie, CookieJar};
 use dirtybase_helper::hash::sha256;
 use serde::de::DeserializeOwned;
 use tokio::sync::{Mutex, RwLock};
 
-use super::path_value::PathValue;
+use super::axum::clone_request;
 
 /// Provides common HTTP attributes for the current request
 #[derive(Clone)]
 pub struct HttpContext {
     uri: Uri,
-    headers: HeaderMap<HeaderValue>,
+    headers: Arc<HeaderMap<HeaderValue>>,
+    parts: Arc<Mutex<Parts>>,
     ip: Option<IpAddr>,
     info: Option<ConnectInfo<SocketAddr>>,
     cookie_jar: Arc<RwLock<Option<CookieJar>>>,
-    path_value: Arc<Mutex<PathValue>>,
     raw_path_value: Arc<HashMap<String, serde_json::Value>>,
+    raw_query_value: Arc<HashMap<String, serde_json::Value>>,
+    subdomain: Option<Arc<String>>,
 }
 
 impl HttpContext {
@@ -43,19 +48,44 @@ impl HttpContext {
     }
 
     pub async fn from_request<T>(req: &Request<T>) -> Self {
-        let mut path_value = PathValue::from_request(req);
-        let raw_path_value =
-            if let Ok(Path(v)) = path_value.get::<HashMap<String, serde_json::Value>>().await {
-                v
+        let mut p = clone_request(req).into_parts().0;
+
+        let raw_path_value = if let Ok(Path(v)) =
+            Path::<HashMap<String, serde_json::Value>>::from_request_parts(&mut p, &()).await
+        {
+            Arc::new(v)
+        } else {
+            Arc::new(HashMap::new())
+        };
+
+        let raw_query_value = if let Ok(Query(v)) =
+            Query::<HashMap<String, serde_json::Value>>::from_request_parts(&mut p, &()).await
+        {
+            Arc::new(v)
+        } else {
+            Arc::new(HashMap::new())
+        };
+
+        let parts = Arc::new(Mutex::new(p));
+
+        let subdomain = if let Some(host) = req.uri().host() {
+            let pieces = host.split(".").map(String::from).collect::<Vec<String>>();
+            if pieces.len() > 1 {
+                pieces.first().cloned().map(|x| Arc::new(x))
             } else {
-                HashMap::new()
-            };
+                None
+            }
+        } else {
+            None
+        };
 
         Self {
             uri: req.uri().clone(),
-            path_value: Arc::new(Mutex::new(path_value)),
-            raw_path_value: Arc::new(raw_path_value),
-            headers: req.headers().clone(),
+            parts,
+            raw_query_value,
+            raw_path_value,
+            subdomain,
+            headers: Arc::new(req.headers().clone()),
             ip: None,
             info: req.extensions().get::<ConnectInfo<_>>().cloned(),
             cookie_jar: Arc::new(RwLock::new(Some(CookieJar::from_headers(req.headers())))),
@@ -72,8 +102,17 @@ impl HttpContext {
     where
         T: DeserializeOwned + Send,
     {
-        let mut lock = self.path_value.lock().await;
-        lock.get().await
+        let mut lock = self.parts.lock().await;
+        Path::<T>::from_request_parts(&mut lock, &()).await
+    }
+
+    /// Tries to return the query value in the URi
+    pub async fn get_query<T>(&self) -> Result<Query<T>, QueryRejection>
+    where
+        T: DeserializeOwned + Send,
+    {
+        let mut lock = self.parts.lock().await;
+        Query::<T>::from_request_parts(&mut lock, &()).await
     }
 
     /// Tries to return the dynamic path with the specified
@@ -90,14 +129,37 @@ impl HttpContext {
         None
     }
 
+    /// Tries to return a query value
+    ///
+    /// Useful when you want to pluck just a value
+    pub fn get_a_query_by<T>(&self, name: &str) -> Option<T>
+    where
+        T: DeserializeOwned + Send,
+    {
+        if let Some(value) = self.raw_query_value.get(name).cloned() {
+            return serde_json::from_value::<T>(value).ok();
+        }
+
+        None
+    }
+
     /// Returns all the dynamic path names in the URI
     pub fn get_path_names(&self) -> Vec<String> {
         self.raw_path_value.keys().cloned().collect()
     }
 
+    /// Returns all the query string names
+    pub fn get_query_names(&self) -> Vec<String> {
+        self.raw_query_value.keys().cloned().collect()
+    }
+
     /// The current request client's user agent
     pub fn user_agent(&self) -> Option<HeaderValue> {
         self.headers.get(USER_AGENT).cloned()
+    }
+
+    pub fn header(&self, name: &str) -> Option<HeaderValue> {
+        self.headers.get(name).cloned()
     }
 
     /// The generated fingerprint for the current request
@@ -132,8 +194,16 @@ impl HttpContext {
         self.uri.query().map(|q| q.to_string())
     }
 
-    pub fn host(&self) -> Option<&str> {
-        self.uri.host()
+    pub fn host(&self) -> Option<String> {
+        if let Some(host) = self.uri.host() {
+            return Some(host.to_string());
+        }
+
+        None
+    }
+
+    pub fn subdomain(&self) -> Option<Arc<String>> {
+        self.subdomain.clone()
     }
 
     pub async fn get_cookie(&self, name: &str) -> Option<Cookie> {

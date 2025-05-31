@@ -39,9 +39,6 @@ async fn main() {
         .expect("could not resolve the auth storage provider");
 
     let mut payload = AuthUserPayload::new();
-    // payload.email = "foo@bar.com".to_string().into();
-    // payload.password = "password".to_string().into();
-    // payload.username = "testuser".to_string().into();
     payload.status = AuthUserStatus::Active.into();
 
     if let Ok(user) = storage.store(payload).await {

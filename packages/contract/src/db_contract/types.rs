@@ -5,12 +5,16 @@ use std::{collections::HashMap, sync::Arc};
 
 mod arc_ulid;
 mod arc_uuid;
+mod label_field;
+mod name_field;
 mod snowflake;
 mod ulid;
 mod uuid;
 
 pub use arc_ulid::*;
 pub use arc_uuid::*;
+pub use label_field::*;
+pub use name_field::*;
 pub use snowflake::*;
 pub use ulid::*;
 pub type ColumnAndValue = HashMap<String, FieldValue>;
@@ -28,6 +32,7 @@ pub type UnsignedIntegerField = u64;
 pub type OptionalUnsignedIntegerField = Option<u64>;
 pub type FloatField = f64;
 pub type OptionalFloatField = Option<f64>;
+pub type OptionalNameField = Option<NameField>;
 pub type StringField = String;
 pub type OptionalStringField = Option<String>;
 pub type OptionalArcStringField = Option<Arc<String>>;
