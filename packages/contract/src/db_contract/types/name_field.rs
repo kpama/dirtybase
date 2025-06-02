@@ -14,10 +14,10 @@ pub struct NameField(Arc<String>);
 
 impl Validate for NameField {
     fn validate(&self) -> Result<(), validator::ValidationErrors> {
-        if self.0.len() < 3 || self.0.len() > 255 {
+        if self.0.trim().is_empty() || self.0.len() > 255 {
             let mut error = validator::ValidationErrors::new();
             let mut msg = ValidationError::new("length");
-            msg = msg.with_message("Length must be between 2 and 255".into());
+            msg = msg.with_message("Length must be between 1 and 255".into());
             error.add("inner", msg);
             return Err(error);
         }

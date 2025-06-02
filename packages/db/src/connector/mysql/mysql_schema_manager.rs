@@ -48,7 +48,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
     fn fetch_table_for_update(&self, name: &str) -> TableBlueprint {
         TableBlueprint::new(name)
     }
-    async fn has_table(&self, name: &str) -> bool {
+    async fn has_table(&self, name: &str) -> Result<bool, anyhow::Error> {
         let query = "SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_name = ? AND table_schema = ?";
 
         let database = self
@@ -66,16 +66,16 @@ impl SchemaManagerTrait for MySqlSchemaManager {
             .fetch_one(self.db_pool.as_ref())
             .await;
 
-        result.unwrap_or(false)
+        result.map_err(|e| anyhow::anyhow!(e))
     }
 
     async fn stream_result(
         &self,
         query_builder: &QueryBuilder,
         sender: tokio::sync::mpsc::Sender<ColumnAndValue>,
-    ) {
+    ) -> Result<(), anyhow::Error> {
         let mut params = MySqlArguments::default();
-        let statement = self.build_query(query_builder, &mut params);
+        let statement = self.build_query(query_builder, &mut params)?;
 
         let query = sqlx::query_with(&statement, params);
 
@@ -84,15 +84,18 @@ impl SchemaManagerTrait for MySqlSchemaManager {
             if let Some(row) = result {
                 if let Err(e) = sender.send(self.row_to_column_value(&row)).await {
                     log::error!(target: LOG_TARGET, "could not send mpsc stream: {}", e);
+                    return Err(anyhow::anyhow!(e));
                 }
             } else {
                 break;
             }
         }
+
+        Ok(())
     }
 
     async fn drop_table(&self, name: &str) -> Result<(), anyhow::Error> {
-        if self.has_table(name).await {
+        if self.has_table(name).await? {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
             return self.do_execute(query).await;
         }
@@ -100,7 +103,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         Err(anyhow!("could not drop the table"))
     }
 
-    async fn apply(&self, table: TableBlueprint) {
+    async fn apply(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         self.do_apply(table).await
     }
 
@@ -115,7 +118,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         let mut results = Vec::new();
 
         let mut params = MySqlArguments::default();
-        let statement = self.build_query(query_builder, &mut params);
+        let statement = self.build_query(query_builder, &mut params)?;
 
         let query = sqlx::query_with(&statement, params);
         let mut rows = query.fetch(self.db_pool.as_ref());
@@ -144,7 +147,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         query_builder: &QueryBuilder,
     ) -> Result<Option<ColumnAndValue>, anyhow::Error> {
         let mut params = MySqlArguments::default();
-        let statement = self.build_query(query_builder, &mut params);
+        let statement = self.build_query(query_builder, &mut params)?;
 
         let query = sqlx::query_with(&statement, params);
         return match query.fetch_optional(self.db_pool.as_ref()).await {
@@ -197,14 +200,14 @@ impl SchemaManagerTrait for MySqlSchemaManager {
 }
 
 impl MySqlSchemaManager {
-    async fn do_apply(&self, table: TableBlueprint) {
-        if table.view_query.is_some() {
+    async fn do_apply(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
+        return if table.view_query.is_some() {
             // working with view table
             self.create_or_replace_view(table).await
         } else {
             // working with real table
             self.apply_table_changes(table).await
-        }
+        };
     }
 
     async fn do_execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
@@ -221,7 +224,7 @@ impl MySqlSchemaManager {
                     if *do_soft_insert { "IGNORE" } else { "" },
                     query.table()
                 );
-                sql = self.build_insert_data(&mut params, rows, sql);
+                sql = self.build_insert_data(&mut params, rows, sql)?;
             }
             QueryAction::Upsert {
                 rows,
@@ -229,7 +232,7 @@ impl MySqlSchemaManager {
                 to_update,
             } => {
                 sql = format!("INSERT INTO {}", query.table());
-                sql = self.build_insert_data(&mut params, rows, sql);
+                sql = self.build_insert_data(&mut params, rows, sql)?;
 
                 if !unique.is_empty() && !to_update.is_empty() {
                     let mut update_values = Vec::new();
@@ -249,7 +252,7 @@ impl MySqlSchemaManager {
                 for entry in column_values {
                     if *entry.1 != FieldValue::NotSet {
                         columns.push(entry.0);
-                        self.field_value_to_args(entry.1, &mut params);
+                        self.field_value_to_args(entry.1, &mut params)?;
                     }
                 }
                 sql = format!("UPDATE `{}` SET ", query.table());
@@ -262,16 +265,16 @@ impl MySqlSchemaManager {
                 }
 
                 // joins
-                sql = format!("{} {}", sql, self.build_join(&query, &mut params));
+                sql = format!("{} {}", sql, self.build_join(&query, &mut params)?);
                 // where
-                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
+                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
             QueryAction::Delete => {
                 sql = format!("DELETE FROM {0} ", query.table());
                 // joins
-                sql = format!("{} {}", sql, self.build_join(&query, &mut params));
+                sql = format!("{} {}", sql, self.build_join(&query, &mut params)?);
                 // where
-                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
+                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
             QueryAction::DropTable => {
                 sql = format!("DROP TABLE IF EXISTS {}", query.table());
@@ -309,10 +312,10 @@ impl MySqlSchemaManager {
         }
     }
 
-    async fn create_or_replace_view(&self, table: TableBlueprint) {
+    async fn create_or_replace_view(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         if let Some(query) = &table.view_query {
             let mut params = MySqlArguments::default();
-            let sql = self.build_query(query, &mut params);
+            let sql = self.build_query(query, &mut params)?;
 
             let query = format!("CREATE OR REPLACE VIEW `{}` AS ({})", &table.name, sql);
 
@@ -327,14 +330,18 @@ impl MySqlSchemaManager {
                     log::error!(
                         "Could not create or replace view '{}': {:#?}",
                         &table.name,
-                        error
+                        &error
                     );
+
+                    return Err(anyhow::anyhow!(error));
                 }
             }
         }
+
+        Ok(())
     }
 
-    async fn apply_table_changes(&self, table: TableBlueprint) {
+    async fn apply_table_changes(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         let columns: Vec<String> = table
             .columns()
             .iter()
@@ -349,6 +356,39 @@ impl MySqlSchemaManager {
 
         if !columns.is_empty() {
             query = format!("{} ({})", query, columns.join(","));
+        }
+
+        query = format!("{} ENGINE='InnoDB';", query);
+
+        let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
+
+        match result {
+            Ok(_) => {
+                log::info!(
+                    "Table '{}' {} successfully",
+                    &table.name,
+                    if table.is_new() { "created" } else { "updated" }
+                );
+            }
+            Err(e) => {
+                let name;
+                let action;
+
+                if table.is_new() {
+                    action = "create";
+                    name = table.new_name.unwrap_or(table.name.clone())
+                } else {
+                    action = "update";
+                    name = table.name.clone();
+                }
+                log::error!("Could not {} table {}: {}", action, name, &e);
+                return Err(anyhow::anyhow!(
+                    "Could not {} table {}: {}",
+                    action,
+                    name,
+                    &e
+                ));
+            }
         }
 
         // create/update indexes
@@ -386,38 +426,14 @@ impl MySqlSchemaManager {
                     Ok(_) => log::info!("table index created"),
                     Err(e) => {
                         log::error!("mysql: {}", &sql);
-                        log::error!("could not create table index: {}", e)
+                        log::error!("could not create table index: {}", &e);
+                        return Err(anyhow::anyhow!(e));
                     }
                 }
             }
         }
 
-        query = format!("{} ENGINE='InnoDB';", query);
-
-        let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
-
-        match result {
-            Ok(_) => {
-                log::info!(
-                    "Table '{}' {} successfully",
-                    &table.name,
-                    if table.is_new() { "created" } else { "updated" }
-                );
-            }
-            Err(e) => {
-                let name;
-                let action;
-
-                if table.is_new() {
-                    action = "create";
-                    name = table.new_name.unwrap_or(table.name.clone())
-                } else {
-                    action = "update";
-                    name = table.name.clone();
-                }
-                log::error!("Could not {} table {}: {}", action, name, e);
-            }
-        }
+        Ok(())
     }
 
     fn create_column(&self, column: &ColumnBlueprint) -> String {
@@ -461,20 +477,20 @@ impl MySqlSchemaManager {
         // column is nullable
         if let Some(nullable) = column.is_nullable {
             if nullable {
-                the_type.push_str(" NULL");
+                the_type.push_str(" NULL ");
             } else {
-                the_type.push_str(" NOT NULL");
+                the_type.push_str(" NOT NULL ");
             }
         }
 
         // column is unique
         if column.is_unique {
-            the_type.push_str(" UNIQUE");
+            the_type.push_str(" UNIQUE ");
         }
 
         // primary key
         if column.is_primary {
-            the_type.push_str(" PRIMARY KEY");
+            the_type.push_str(" PRIMARY KEY ");
         }
 
         // column default
@@ -520,7 +536,11 @@ impl MySqlSchemaManager {
         entry
     }
 
-    fn build_query(&self, query: &QueryBuilder, params: &mut MySqlArguments) -> String {
+    fn build_query(
+        &self,
+        query: &QueryBuilder,
+        params: &mut MySqlArguments,
+    ) -> Result<String, anyhow::Error> {
         let mut sql = "SELECT".to_owned();
 
         // fields
@@ -545,10 +565,10 @@ impl MySqlSchemaManager {
         sql = format!("{} FROM {}", sql, query.table());
 
         // joins
-        sql = format!("{} {}", sql, self.build_join(query, params));
+        sql = format!("{} {}", sql, self.build_join(query, params)?);
 
         // wheres
-        sql = format!("{} {}", sql, self.build_where_clauses(query, params));
+        sql = format!("{} {}", sql, self.build_where_clauses(query, params)?);
 
         // group by
 
@@ -565,11 +585,16 @@ impl MySqlSchemaManager {
         }
 
         //  offset
+        // TODO: offset
 
-        sql
+        Ok(sql)
     }
 
-    fn build_join(&self, query: &QueryBuilder, _params: &mut MySqlArguments) -> String {
+    fn build_join(
+        &self,
+        query: &QueryBuilder,
+        _params: &mut MySqlArguments,
+    ) -> Result<String, anyhow::Error> {
         let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
             for a_join in joins {
@@ -583,15 +608,19 @@ impl MySqlSchemaManager {
             }
         }
 
-        sql
+        Ok(sql)
     }
 
-    fn build_where_clauses(&self, query: &QueryBuilder, params: &mut MySqlArguments) -> String {
+    fn build_where_clauses(
+        &self,
+        query: &QueryBuilder,
+        params: &mut MySqlArguments,
+    ) -> Result<String, anyhow::Error> {
         let mut wheres = "".to_owned();
         for where_join in query.where_clauses() {
             wheres = where_join.as_clause(
                 &wheres,
-                &self.transform_condition(where_join.condition(), params),
+                &self.transform_condition(where_join.condition(), params)?,
             );
         }
 
@@ -599,18 +628,27 @@ impl MySqlSchemaManager {
             wheres = format!("WHERE {}", wheres);
         }
 
-        wheres
+        Ok(wheres)
     }
 
     fn build_order_by(&self, query: &QueryBuilder) -> Option<String> {
         query.order_by().map(|order| order.to_string())
     }
 
-    fn transform_condition(&self, condition: &Condition, params: &mut MySqlArguments) -> String {
-        self.transform_value(condition.value(), params);
+    fn transform_condition(
+        &self,
+        condition: &Condition,
+        params: &mut MySqlArguments,
+    ) -> Result<String, anyhow::Error> {
+        let placeholder;
 
-        let placeholder =
-            if *condition.operator() == Operator::In || *condition.operator() == Operator::NotIn {
+        if let QueryValue::SubQuery(sub) = condition.value() {
+            placeholder = self.build_query(sub, params)?;
+        } else {
+            self.transform_value(condition.value(), params)?;
+            placeholder = if *condition.operator() == Operator::In
+                || *condition.operator() == Operator::NotIn
+            {
                 let length = match &condition.value() {
                     QueryValue::Field(FieldValue::Array(v)) => v.len(),
                     _ => 1,
@@ -622,19 +660,26 @@ impl MySqlSchemaManager {
             } else {
                 "?".to_owned()
             };
+        }
 
-        condition
+        Ok(condition
             .operator()
-            .as_clause(condition.column(), &placeholder)
+            .as_clause(condition.column(), &placeholder))
     }
 
-    fn transform_value(&self, value: &QueryValue, params: &mut MySqlArguments) {
+    fn transform_value(
+        &self,
+        value: &QueryValue,
+        params: &mut MySqlArguments,
+    ) -> Result<(), anyhow::Error> {
         match value {
             QueryValue::SubQuery(q) => {
-                self.build_query(q, params);
+                self.build_query(q, params)?;
             }
-            QueryValue::Field(field) => self.field_value_to_args(field, params),
+            QueryValue::Field(field) => self.field_value_to_args(field, params)?,
         }
+
+        Ok(())
     }
 
     fn row_to_column_value(&self, row: &MySqlRow) -> ColumnAndValue {
@@ -799,8 +844,12 @@ impl MySqlSchemaManager {
     //     }
     // }
 
-    fn field_value_to_args(&self, field: &FieldValue, params: &mut MySqlArguments) {
-        build_field_value_to_args(field, params);
+    fn field_value_to_args(
+        &self,
+        field: &FieldValue,
+        params: &mut MySqlArguments,
+    ) -> Result<(), anyhow::Error> {
+        build_field_value_to_args(field, params)
     }
 
     fn build_insert_data(
@@ -808,7 +857,7 @@ impl MySqlSchemaManager {
         params: &mut MySqlArguments,
         rows: &[ColumnAndValue],
         mut sql: String,
-    ) -> String {
+    ) -> Result<String, anyhow::Error> {
         if !rows.is_empty() {
             let keys = rows
                 .first()
@@ -827,30 +876,33 @@ impl MySqlSchemaManager {
             sql = format!("{} ({}) VALUES ", sql, columns);
 
             for a_row in rows.iter().enumerate() {
-                keys.iter().for_each(|col| {
+                for col in &keys {
                     let field = a_row.1.get(col).unwrap();
-                    self.field_value_to_args(field, params);
-                });
+                    self.field_value_to_args(field, params)?;
+                }
                 let separator = if a_row.0 > 0 { "," } else { "" };
 
                 sql = format!("{} {} ({})", sql, separator, &placeholders);
             }
         }
 
-        sql
+        Ok(sql)
     }
 }
 
-fn build_field_value_to_args(field: &FieldValue, params: &mut MySqlArguments) {
+fn build_field_value_to_args(
+    field: &FieldValue,
+    params: &mut MySqlArguments,
+) -> Result<(), anyhow::Error> {
     match field {
         FieldValue::DateTime(dt) => {
-            _ = Arguments::add(params, dt); // format!("{}", dt.format("%F %T")));
+            _ = Arguments::add(params, dt);
         }
         FieldValue::Timestamp(dt) => {
-            _ = Arguments::add(params, dt); //format!("{}", dt.format("%F %T")));
+            _ = Arguments::add(params, dt);
         }
         FieldValue::Date(d) => {
-            _ = Arguments::add(params, d); //format!("{}", d.format("%F")));
+            _ = Arguments::add(params, d);
         }
         FieldValue::Binary(d) => {
             _ = Arguments::add(params, d);
@@ -873,7 +925,7 @@ fn build_field_value_to_args(field: &FieldValue, params: &mut MySqlArguments) {
         }
         FieldValue::Array(v) => {
             for entry in v {
-                build_field_value_to_args(entry, params);
+                build_field_value_to_args(entry, params)?;
             }
         }
         FieldValue::Boolean(v) => {
@@ -881,7 +933,6 @@ fn build_field_value_to_args(field: &FieldValue, params: &mut MySqlArguments) {
         }
         FieldValue::Time(t) => {
             _ = Arguments::add(params, t);
-            // format!("{}", t.format("%T"))
         }
         FieldValue::U64(v) => {
             let v = *v as i64;
@@ -891,5 +942,13 @@ fn build_field_value_to_args(field: &FieldValue, params: &mut MySqlArguments) {
             _ = Arguments::add(params, "NULL");
         }
         FieldValue::NotSet => (),
+        FieldValue::Failable { field, error } => {
+            if error.is_some() {
+                return Err(anyhow::anyhow!(error.clone().unwrap()));
+            }
+            build_field_value_to_args(&field, params)?
+        }
     }
+
+    Ok(())
 }

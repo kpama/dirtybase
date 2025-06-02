@@ -28,6 +28,11 @@ pub enum FieldValue {
     Timestamp(chrono::DateTime<chrono::Utc>),
     Date(chrono::NaiveDate),
     Time(chrono::NaiveTime),
+    #[serde(skip)]
+    Failable {
+        field: Box<FieldValue>,
+        error: Option<String>,
+    },
 }
 
 impl Default for FieldValue {
@@ -106,6 +111,13 @@ impl Display for FieldValue {
             Self::Date(v) => write!(f, "{}", v),
             Self::Time(v) => write!(f, "{}", v),
             Self::NotSet => write!(f, ""),
+            Self::Failable { field, error } => {
+                if error.is_some() {
+                    write!(f, "")
+                } else {
+                    Display::fmt(&field, f)
+                }
+            }
         }
     }
 }

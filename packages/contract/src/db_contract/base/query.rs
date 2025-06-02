@@ -659,12 +659,52 @@ impl QueryBuilder {
         self.where_operator(column, Operator::In, value, None)
     }
 
+    pub fn is_in_sub<F, C: ToString>(
+        &mut self,
+        column: C,
+        table: &str,
+        mut callback: F,
+    ) -> &mut Self
+    where
+        F: FnMut(&mut QueryBuilder),
+    {
+        let mut query_builder = Self::new(table, QueryAction::Query { columns: None });
+
+        callback(&mut query_builder);
+        self.where_operator(
+            column,
+            Operator::In,
+            QueryValue::SubQuery(Box::new(query_builder)),
+            None,
+        )
+    }
+
     pub fn and_is_in<T: Into<FieldValue> + IntoIterator, C: ToString>(
         &mut self,
         column: C,
         value: T,
     ) -> &mut Self {
         self.where_operator(column, Operator::In, value, Some(WhereJoin::And))
+    }
+
+    pub fn and_is_in_sub<F, C: ToString>(
+        &mut self,
+        column: C,
+        table: &str,
+        mut callback: F,
+    ) -> &mut Self
+    where
+        F: FnMut(&mut QueryBuilder),
+    {
+        let mut query_builder = Self::new(table, QueryAction::Query { columns: None });
+
+        callback(&mut query_builder);
+        self.where_operator(
+            column,
+            Operator::In,
+            QueryValue::SubQuery(Box::new(query_builder)),
+            Some(WhereJoin::And),
+        )
     }
 
     pub fn or_is_in<T: Into<FieldValue> + IntoIterator, C: ToString>(
@@ -675,12 +715,52 @@ impl QueryBuilder {
         self.where_operator(column, Operator::In, value, Some(WhereJoin::Or))
     }
 
+    pub fn or_is_in_sub<F, C: ToString>(
+        &mut self,
+        column: C,
+        table: &str,
+        mut callback: F,
+    ) -> &mut Self
+    where
+        F: FnMut(&mut QueryBuilder),
+    {
+        let mut query_builder = Self::new(table, QueryAction::Query { columns: None });
+
+        callback(&mut query_builder);
+        self.where_operator(
+            column,
+            Operator::In,
+            QueryValue::SubQuery(Box::new(query_builder)),
+            Some(WhereJoin::Or),
+        )
+    }
+
     pub fn is_not_in<T: Into<FieldValue> + IntoIterator, C: ToString>(
         &mut self,
         column: C,
         value: T,
     ) -> &mut Self {
         self.where_operator(column, Operator::NotIn, value, None)
+    }
+
+    pub fn is_not_in_sub<F, C: ToString>(
+        &mut self,
+        column: C,
+        table: &str,
+        mut callback: F,
+    ) -> &mut Self
+    where
+        F: FnMut(&mut QueryBuilder),
+    {
+        let mut query_builder = Self::new(table, QueryAction::Query { columns: None });
+
+        callback(&mut query_builder);
+        self.where_operator(
+            column,
+            Operator::NotIn,
+            QueryValue::SubQuery(Box::new(query_builder)),
+            None,
+        )
     }
 
     pub fn and_is_not_in<T: Into<FieldValue> + IntoIterator, C: ToString>(
@@ -691,12 +771,52 @@ impl QueryBuilder {
         self.where_operator(column, Operator::NotIn, value, Some(WhereJoin::And))
     }
 
+    pub fn and_is_not_in_sub<F, C: ToString>(
+        &mut self,
+        column: C,
+        table: &str,
+        mut callback: F,
+    ) -> &mut Self
+    where
+        F: FnMut(&mut QueryBuilder),
+    {
+        let mut query_builder = Self::new(table, QueryAction::Query { columns: None });
+
+        callback(&mut query_builder);
+        self.where_operator(
+            column,
+            Operator::NotIn,
+            QueryValue::SubQuery(Box::new(query_builder)),
+            Some(WhereJoin::And),
+        )
+    }
+
     pub fn or_is_not_in<T: Into<FieldValue> + IntoIterator, C: ToString>(
         &mut self,
         column: C,
         value: T,
     ) -> &mut Self {
         self.where_operator(column, Operator::NotIn, value, Some(WhereJoin::Or))
+    }
+
+    pub fn or_is_not_in_sub<F, C: ToString>(
+        &mut self,
+        column: C,
+        table: &str,
+        mut callback: F,
+    ) -> &mut Self
+    where
+        F: FnMut(&mut QueryBuilder),
+    {
+        let mut query_builder = Self::new(table, QueryAction::Query { columns: None });
+
+        callback(&mut query_builder);
+        self.where_operator(
+            column,
+            Operator::NotIn,
+            QueryValue::SubQuery(Box::new(query_builder)),
+            Some(WhereJoin::Or),
+        )
     }
 
     pub fn between<T: Into<FieldValue>, C: ToString>(
@@ -772,7 +892,7 @@ impl QueryBuilder {
         }
     }
 
-    pub fn where_operator<T: Into<FieldValue>, C: ToString>(
+    pub fn where_operator<T: Into<QueryValue>, C: ToString>(
         &mut self,
         column: C,
         operator: Operator,
@@ -808,17 +928,6 @@ impl QueryBuilder {
     fn and_where(&mut self, condition: Condition) -> &mut Self {
         self.where_(WhereJoinOperator::And(condition))
     }
-
-    // pub fn with_creator<L: TableEntityTrait>(&mut self, prefix: Option<&str>) -> &mut Self {
-    //     if let Some(field) = L::creator_id_column() {
-    //         self.left_join_table_and_select::<UserEntity, L>(
-    //             UserEntity::id_column().unwrap(),
-    //             &L::prefix_with_tbl(field),
-    //             prefix,
-    //         );
-    //     }
-    //     self
-    // }
 
     pub fn join<T: ToString>(
         &mut self,
@@ -1039,7 +1148,7 @@ impl QueryBuilder {
 pub struct EntityQueryBuilder<T: FromColumnAndValue + Send + Sync + 'static> {
     query_builder: QueryBuilder,
     inner: Box<dyn SchemaManagerTrait>,
-    phathom: PhantomData<T>,
+    phantom: PhantomData<T>,
 }
 
 impl<T: FromColumnAndValue + Send + Sync + 'static> EntityQueryBuilder<T> {
@@ -1047,7 +1156,7 @@ impl<T: FromColumnAndValue + Send + Sync + 'static> EntityQueryBuilder<T> {
         Self {
             query_builder,
             inner,
-            phathom: PhantomData,
+            phantom: PhantomData,
         }
     }
 
@@ -1117,7 +1226,8 @@ impl<T: FromColumnAndValue + Send + Sync + 'static> EntityQueryBuilder<T> {
         });
 
         tokio::spawn(async move {
-            self.inner
+            _ = self
+                .inner
                 .stream_result(&self.query_builder, inner_sender)
                 .await;
         });

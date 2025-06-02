@@ -12,7 +12,7 @@ use super::{
     schema::{DatabaseKind, SchemaManagerTrait, SchemaWrapper},
     table::TableBlueprint,
 };
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use orsomafo::Dispatchable;
 
 #[derive(Clone)]
@@ -103,15 +103,17 @@ impl Manager {
         name: &str,
         callback: impl FnOnce(&mut TableBlueprint),
     ) -> Result<(), anyhow::Error> {
-        if !self.has_table(name).await {
+        if !self.has_table(name).await? {
             let mut table = self.write_schema_manager().fetch_table_for_update(name);
             table.set_is_new(true);
 
             callback(&mut table);
-            self.write_schema_manager().apply(table).await;
+            self.write_schema_manager().apply(table).await?;
             self.dispatch_written_event();
+
+            return Ok(());
         }
-        Ok(())
+        Err(anyhow::anyhow!("{} already exist", name))
     }
 
     // Get an existing table for updating
@@ -119,15 +121,17 @@ impl Manager {
         &self,
         name: &str,
         callback: impl FnOnce(&mut TableBlueprint),
-    ) {
-        if self.has_table(name).await {
+    ) -> Result<(), anyhow::Error> {
+        if self.has_table(name).await? {
             let mut table = self.write_schema_manager().fetch_table_for_update(name);
             table.set_is_new(false);
 
             callback(&mut table);
-            self.write_schema_manager().apply(table).await;
+            self.write_schema_manager().apply(table).await?;
             self.dispatch_written_event();
+            return Ok(());
         }
+        Err(anyhow::anyhow!("{} does not exist", name))
     }
 
     // Create a new view
@@ -136,7 +140,7 @@ impl Manager {
         name: &str,
         from_table: &str,
         callback: impl FnOnce(&mut QueryBuilder),
-    ) {
+    ) -> Result<(), anyhow::Error> {
         let mut query = QueryBuilder::new(
             from_table,
             super::query::QueryAction::Query { columns: None },
@@ -144,8 +148,9 @@ impl Manager {
         callback(&mut query);
         let mut table = self.write_schema_manager().fetch_table_for_update(name);
         table.view_query = Some(query);
-        self.write_schema_manager().apply(table).await;
+        self.write_schema_manager().apply(table).await?;
         self.dispatch_written_event();
+        Ok(())
     }
 
     pub async fn insert<CV: ToColumnAndValue>(&self, table_name: &str, record: CV) -> Result<()> {
@@ -279,7 +284,7 @@ impl Manager {
         todo!()
     }
 
-    pub async fn has_table(&self, name: &str) -> bool {
+    pub async fn has_table(&self, name: &str) -> Result<bool, anyhow::Error> {
         self.read_schema_manager().has_table(name).await
     }
 
