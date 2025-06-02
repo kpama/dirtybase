@@ -970,12 +970,10 @@ mod test {
 
         query.eq("age", 0);
 
-        query.is_in_sub("soso2", "bar", |q| {
+        query.is_in_sub("so_so2", "bar", |q| {
             q.select("col1");
             q.is_in("id", vec![1, 2]);
         });
-
-        // query.where_operator("soso", Operator::In, sub, None);
 
         // ue to test generated sql
         println!("{:#?}", sqlite.build_query(&query, &mut params));
