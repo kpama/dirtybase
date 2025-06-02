@@ -53,8 +53,8 @@ pub type UpdatedAtField = Option<DateTime<Utc>>;
 pub type DateField = NaiveDate;
 pub type OptionalDateField = Option<NaiveDate>;
 
-pub trait IntoColumnAndValue {
-    fn into_column_value(&self) -> ColumnAndValue;
+pub trait ToColumnAndValue {
+    fn to_column_value(&self) -> Result<ColumnAndValue, anyhow::Error>;
 }
 
 pub trait FromColumnAndValue {
@@ -156,8 +156,8 @@ fn build_structure(
 }
 
 // Allows the user to pass a hashmap if they want to
-impl IntoColumnAndValue for ColumnAndValue {
-    fn into_column_value(&self) -> ColumnAndValue {
-        self.clone()
+impl ToColumnAndValue for ColumnAndValue {
+    fn to_column_value(&self) -> Result<ColumnAndValue, anyhow::Error> {
+        Ok(self.clone())
     }
 }

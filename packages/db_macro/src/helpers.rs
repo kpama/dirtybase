@@ -350,7 +350,7 @@ pub(crate) fn build_into_for_calls(
         if item.1.flatten {
             let prop_name = format_ident!("{}", &item.1.name);
             built.push(quote! {
-                merge_column_value(::dirtybase_contract::db_contract::types::IntoColumnAndValue::into_column_value(&self.#prop_name))
+                merge_column_value(::dirtybase_contract::db_contract::types::ToColumnAndValue::to_column_value(&self.#prop_name).expect("could not flatten type"))
             });
             continue;
         }

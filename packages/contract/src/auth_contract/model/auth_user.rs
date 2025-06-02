@@ -14,8 +14,8 @@ use crate::{
     db_contract::{
         base::helper::generate_ulid,
         types::{
-            ArcUuid7, BooleanField, FromColumnAndValue, IntegerField, IntoColumnAndValue,
-            OptionalDateTimeField,
+            ArcUuid7, BooleanField, FromColumnAndValue, IntegerField, OptionalDateTimeField,
+            ToColumnAndValue,
         },
         ColumnAndValueBuilder,
     },
@@ -161,7 +161,9 @@ impl AuthUser {
     }
 
     pub fn merge(&mut self, payload: AuthUserPayload) {
-        let mut cv = payload.into_column_value();
+        let Ok(mut cv) = payload.to_column_value() else {
+            return;
+        };
 
         if let Some(v) = cv.remove("id") {
             self.id = v.into();
@@ -353,8 +355,8 @@ impl AuthUserPayload {
     }
 }
 
-impl IntoColumnAndValue for AuthUserPayload {
-    fn into_column_value(&self) -> crate::db_contract::types::ColumnAndValue {
+impl ToColumnAndValue for AuthUserPayload {
+    fn to_column_value(&self) -> Result<crate::db_contract::types::ColumnAndValue, anyhow::Error> {
         let mut builder = ColumnAndValueBuilder::new()
             .try_to_insert("id", self.id.as_ref())
             .try_to_insert("username", self.username.as_ref())
@@ -381,7 +383,7 @@ impl IntoColumnAndValue for AuthUserPayload {
             builder = builder.add_field("deleted_at", ());
         }
 
-        builder.build()
+        Ok(builder.build())
     }
 }
 

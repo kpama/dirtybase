@@ -1,5 +1,5 @@
 use dirtybase_db::{
-    TableEntityTrait, connector::sqlite::make_sqlite_in_memory_manager, types::IntoColumnAndValue,
+    TableEntityTrait, connector::sqlite::make_sqlite_in_memory_manager, types::ToColumnAndValue,
 };
 use dirtybase_db_macro::DirtyTable;
 
@@ -14,7 +14,7 @@ async fn main() {
             child_field: "embedded child_field value".to_string(),
         },
     };
-    let x = p.into_column_value();
+    let x = p.to_column_value();
 
     let _manager = make_sqlite_in_memory_manager().await;
     println!("{:#?}", x);

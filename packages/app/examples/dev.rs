@@ -9,7 +9,7 @@ use dirtybase_contract::{
     session_contract::Session,
 };
 use dirtybase_db::base::manager::Manager;
-use dirtybase_db::types::{ArcUuid7, IntoColumnAndValue};
+use dirtybase_db::types::{ArcUuid7, ToColumnAndValue};
 use tracing_subscriber::EnvFilter;
 use validator::Validate;
 
@@ -105,7 +105,7 @@ impl ExtensionSetup for App {
                     |Path(id): Path<ArcUuid7>, Form(mut data): Form<AuthUserPayload>| async move {
                         data.id = Some(id.clone());
                         tracing::error!("updating{:#?}", &data);
-                        tracing::error!("column/value: {:#?}", data.into_column_value());
+                        tracing::error!("column/value: {:#?}", data.to_column_value());
                         format!("updated user id: {}", &id)
                     },
                 );
