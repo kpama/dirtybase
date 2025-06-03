@@ -1,8 +1,9 @@
 use std::{ops::Deref, sync::Arc};
 
-use crate::db_contract::types::ArcUuid7;
-
-use super::{AuthUser, AuthUserPayload};
+use crate::{
+    auth_contract::{AuthUser, AuthUserPayload},
+    db_contract::types::ArcUuid7,
+};
 
 #[async_trait::async_trait]
 pub trait AuthUserStorage: Send + Sync {

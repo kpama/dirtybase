@@ -43,7 +43,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
     fn fetch_table_for_update(&self, name: &str) -> TableBlueprint {
         TableBlueprint::new(name)
     }
-    async fn has_table(&self, name: &str) -> bool {
+    async fn has_table(&self, name: &str) -> Result<bool, anyhow::Error> {
         let query = "SELECT name FROM sqlite_master WHERE name = ?";
 
         let result = sqlx::query(query)
@@ -52,16 +52,16 @@ impl SchemaManagerTrait for SqliteSchemaManager {
             .fetch_one(self.db_pool.as_ref())
             .await;
 
-        result.unwrap_or(false)
+        Ok(result.unwrap_or_default())
     }
 
     async fn stream_result(
         &self,
         query_builder: &QueryBuilder,
         sender: tokio::sync::mpsc::Sender<ColumnAndValue>,
-    ) {
+    ) -> Result<(), anyhow::Error> {
         let mut params = SqliteArguments::default();
-        let statement = self.build_query(query_builder, &mut params);
+        let statement = self.build_query(query_builder, &mut params)?;
 
         let query = sqlx::query_with(&statement, params);
 
@@ -69,23 +69,25 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         while let Ok(result) = rows.try_next().await {
             if let Some(row) = result {
                 if let Err(e) = sender.send(self.row_to_column_value(&row)).await {
-                    log::error!(target: LOG_TARGET, "could not send mpsc stream: {}", e.to_string());
+                    log::error!(target: LOG_TARGET, "could not send mpsc stream: {}", &e);
+                    return Err(anyhow::anyhow!(e));
                 }
             } else {
                 break;
             }
         }
+        Ok(())
     }
 
     async fn drop_table(&self, name: &str) -> Result<(), anyhow::Error> {
-        if self.has_table(name).await {
+        if self.has_table(name).await? {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
             return self.execute(query).await;
         }
         Err(anyhow!("could not drop the table"))
     }
 
-    async fn apply(&self, table: TableBlueprint) {
+    async fn apply(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         self.do_apply(table).await
     }
 
@@ -100,7 +102,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         let mut results = Vec::new();
 
         let mut params = SqliteArguments::default();
-        let statement = self.build_query(query_builder, &mut params);
+        let statement = self.build_query(query_builder, &mut params)?;
 
         let query = sqlx::query_with(&statement, params);
 
@@ -130,7 +132,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
     ) -> Result<Option<ColumnAndValue>, anyhow::Error> {
         let mut params = SqliteArguments::default();
 
-        let statement = self.build_query(query_builder, &mut params);
+        let statement = self.build_query(query_builder, &mut params)?;
         let query = sqlx::query_with(&statement, params);
 
         return match query.fetch_optional(self.db_pool.as_ref()).await {
@@ -212,14 +214,14 @@ impl SchemaManagerTrait for SqliteSchemaManager {
 }
 
 impl SqliteSchemaManager {
-    async fn do_apply(&self, table: TableBlueprint) {
-        if table.view_query.is_some() {
+    async fn do_apply(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
+        return if table.view_query.is_some() {
             // working with view table
             self.create_or_replace_view(table).await
         } else {
             // working with real table
             self.apply_table_changes(table).await
-        }
+        };
     }
 
     async fn do_execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
@@ -232,11 +234,11 @@ impl SqliteSchemaManager {
                 do_soft_insert,
             } => {
                 sql = format!(
-                    "INSERT {} INTO {} ",
+                    "INSERT {} INTO '{}' ",
                     if *do_soft_insert { "OR IGNORE" } else { "" },
                     query.table()
                 );
-                sql = self.build_insert_data(&mut params, rows, sql);
+                sql = self.build_insert_data(&mut params, rows, sql)?;
             }
             QueryAction::Upsert {
                 rows,
@@ -244,7 +246,7 @@ impl SqliteSchemaManager {
                 to_update,
             } => {
                 sql = format!("INSERT INTO {}", query.table());
-                sql = self.build_insert_data(&mut params, &rows, sql);
+                sql = self.build_insert_data(&mut params, rows, sql)?;
 
                 if !unique.is_empty() && !to_update.is_empty() {
                     sql = format!(
@@ -270,7 +272,7 @@ impl SqliteSchemaManager {
                 for entry in column_values {
                     if *entry.1 != FieldValue::NotSet {
                         columns.push(entry.0);
-                        self.field_value_to_args(entry.1, &mut params);
+                        self.field_value_to_args(entry.1, &mut params)?;
                     }
                 }
                 sql = format!("UPDATE `{}` SET ", query.table());
@@ -282,29 +284,32 @@ impl SqliteSchemaManager {
                     }
                 }
 
-                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
+                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
             QueryAction::Delete => {
-                sql = format!("DELETE FROM {0} ", query.table());
+                sql = format!("DELETE FROM '{0}' ", query.table());
                 // joins
-                sql = format!("{} {}", sql, self.build_join(&query, &mut params));
+                sql = format!("{} {}", sql, self.build_join(&query, &mut params)?);
                 // where
-                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
+                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
             QueryAction::DropTable => {
-                sql = format!("DROP TABLE IF EXISTS {};", query.table());
+                sql = format!("DROP TABLE IF EXISTS '{}';", query.table());
             }
             QueryAction::RenameColumn { old, new } => {
                 let table = query.table();
-                sql = format!("ALTER TABLE {} RENAME COLUMN {} TO {}", table, old, new);
+                sql = format!(
+                    "ALTER TABLE '{}' RENAME COLUMN '{}' TO '{}'",
+                    table, old, new
+                );
             }
             QueryAction::RenameTable(new) => {
                 let table = query.table();
-                sql = format!("ALTER TABLE {} RENAME TO {}", table, new);
+                sql = format!("ALTER TABLE '{}' RENAME TO '{}'", table, new);
             }
             QueryAction::DropColumn(column) => {
                 let table = query.table();
-                sql = format!("ALTER TABLE {} DROP {}", table, column);
+                sql = format!("ALTER TABLE '{}' DROP '{}'", table, column);
             }
             _ => {
                 sql = "".into();
@@ -327,10 +332,10 @@ impl SqliteSchemaManager {
         }
     }
 
-    async fn create_or_replace_view(&self, table: TableBlueprint) {
+    async fn create_or_replace_view(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         if let Some(query) = &table.view_query {
             let mut params = SqliteArguments::default();
-            let sql = self.build_query(query, &mut params);
+            let sql = self.build_query(query, &mut params)?;
 
             let query = format!("CREATE OR REPLACE VIEW `{}` AS ({})", &table.name, sql);
 
@@ -345,14 +350,17 @@ impl SqliteSchemaManager {
                     log::error!(
                         "Could not create or replace view '{}': {:#?}",
                         &table.name,
-                        error
+                        &error
                     );
+                    return Err(anyhow::anyhow!(error));
                 }
             }
         }
+
+        Ok(())
     }
 
-    async fn apply_table_changes(&self, table: TableBlueprint) {
+    async fn apply_table_changes(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         let mut foreign = Vec::new();
         let columns: Vec<String> = table
             .columns()
@@ -366,11 +374,22 @@ impl SqliteSchemaManager {
             format!("ALTER TABLE `{}`", &table.name)
         };
 
-        if !columns.is_empty() {
+        if table.is_new() {
             query = if foreign.is_empty() {
                 format!("{} ({})", query, columns.join(","))
             } else {
                 format!("{} ({}, {})", query, columns.join(","), foreign.join(","))
+            }
+        } else {
+            query = if foreign.is_empty() {
+                format!("{} ADD {}", query, columns.join(","))
+            } else {
+                format!(
+                    "{} ADD ({}, {})",
+                    query,
+                    columns.join(","),
+                    foreign.join(",")
+                )
             }
         }
 
@@ -403,7 +422,13 @@ impl SqliteSchemaManager {
                     action = "update";
                     name = table.name.clone();
                 }
-                log::error!("Could not {} table {}: {}", action, name, e);
+                log::error!("Could not {} table {}: {}", action, name, &e);
+                return Err(anyhow::anyhow!(
+                    "Could not {} table {}: {}",
+                    action,
+                    name,
+                    &e
+                ));
             }
         }
 
@@ -443,11 +468,14 @@ impl SqliteSchemaManager {
                     Ok(_e) => log::info!("table index created"),
                     Err(e) => {
                         log::error!("sql: {}", &sql);
-                        log::error!("could not create table index: {}", e.to_string())
+                        log::error!("could not create table index: {}", &e);
+                        return Err(anyhow::anyhow!("could not create table index: {}", &e));
                     }
                 }
             }
         }
+
+        Ok(())
     }
 
     fn create_column(&self, column: &ColumnBlueprint, foreign: &mut Vec<String>) -> String {
@@ -571,7 +599,11 @@ impl SqliteSchemaManager {
         entry
     }
 
-    fn build_query(&self, query: &QueryBuilder, params: &mut SqliteArguments) -> String {
+    fn build_query(
+        &self,
+        query: &QueryBuilder,
+        params: &mut SqliteArguments,
+    ) -> Result<String, anyhow::Error> {
         let mut sql = "SELECT".to_owned();
 
         // fields
@@ -596,10 +628,10 @@ impl SqliteSchemaManager {
         sql = format!("{} FROM {}", sql, query.table());
 
         // joins
-        sql = format!("{} {}", sql, self.build_join(query, params));
+        sql = format!("{} {}", sql, self.build_join(query, params)?);
 
         // wheres
-        sql = format!("{} {}", sql, self.build_where_clauses(query, params));
+        sql = format!("{} {}", sql, self.build_where_clauses(query, params)?);
 
         // group by
 
@@ -615,10 +647,14 @@ impl SqliteSchemaManager {
 
         // TODO: offset
 
-        sql
+        Ok(sql)
     }
 
-    fn build_join(&self, query: &QueryBuilder, _params: &mut SqliteArguments) -> String {
+    fn build_join(
+        &self,
+        query: &QueryBuilder,
+        _params: &mut SqliteArguments,
+    ) -> Result<String, anyhow::Error> {
         let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
             for a_join in joins {
@@ -632,19 +668,23 @@ impl SqliteSchemaManager {
             }
         }
 
-        sql
+        Ok(sql)
     }
 
     fn build_order_by(&self, query: &QueryBuilder) -> Option<String> {
         query.order_by().map(|order| order.to_string())
     }
 
-    fn build_where_clauses(&self, query: &QueryBuilder, params: &mut SqliteArguments) -> String {
+    fn build_where_clauses(
+        &self,
+        query: &QueryBuilder,
+        params: &mut SqliteArguments,
+    ) -> Result<String, anyhow::Error> {
         let mut wheres = "".to_owned();
         for where_join in query.where_clauses() {
             wheres = where_join.as_clause(
                 &wheres,
-                &self.transform_condition(where_join.condition(), params),
+                &self.transform_condition(where_join.condition(), params)?,
             );
         }
 
@@ -652,14 +692,22 @@ impl SqliteSchemaManager {
             wheres = format!("WHERE {}", wheres);
         }
 
-        wheres
+        Ok(wheres)
     }
 
-    fn transform_condition(&self, condition: &Condition, params: &mut SqliteArguments) -> String {
-        self.transform_value(condition.value(), params);
-
-        let placeholder =
-            if *condition.operator() == Operator::In || *condition.operator() == Operator::NotIn {
+    fn transform_condition(
+        &self,
+        condition: &Condition,
+        params: &mut SqliteArguments,
+    ) -> Result<String, anyhow::Error> {
+        let placeholder;
+        if let QueryValue::SubQuery(sub) = condition.value() {
+            placeholder = self.build_query(sub, params)?;
+        } else {
+            self.transform_value(condition.value(), params)?;
+            placeholder = if *condition.operator() == Operator::In
+                || *condition.operator() == Operator::NotIn
+            {
                 let length = match &condition.value() {
                     QueryValue::Field(FieldValue::Array(v)) => v.len(),
                     _ => 1,
@@ -671,19 +719,25 @@ impl SqliteSchemaManager {
             } else {
                 "?".to_owned()
             };
+        }
 
-        condition
+        Ok(condition
             .operator()
-            .as_clause(condition.column(), &placeholder)
+            .as_clause(condition.column(), &placeholder))
     }
 
-    fn transform_value(&self, value: &QueryValue, params: &mut SqliteArguments) {
+    fn transform_value(
+        &self,
+        value: &QueryValue,
+        params: &mut SqliteArguments,
+    ) -> Result<(), anyhow::Error> {
         match value {
             QueryValue::SubQuery(q) => {
-                self.build_query(q, params);
+                self.build_query(q, params)?;
             }
-            QueryValue::Field(field) => self.field_value_to_args(field, params),
+            QueryValue::Field(field) => self.field_value_to_args(field, params)?,
         }
+        Ok(())
     }
 
     fn row_to_column_value(&self, row: &SqliteRow) -> ColumnAndValue {
@@ -804,57 +858,12 @@ impl SqliteSchemaManager {
         this_row
     }
 
-    fn field_value_to_args(&self, field: &FieldValue, params: &mut SqliteArguments) {
-        match field.clone() {
-            // sqlite arguments uses a lifetime
-            FieldValue::DateTime(dt) => {
-                _ = Arguments::add(params, dt); // format!("{}", dt.format("%F %T")));
-            }
-            FieldValue::Timestamp(dt) => {
-                _ = Arguments::add(params, dt); //format!("{}", dt.format("%F %T")));
-            }
-            FieldValue::Date(d) => {
-                _ = Arguments::add(params, d); //format!("{}", d.format("%F")));
-            }
-            FieldValue::Binary(d) => {
-                _ = Arguments::add(params, d);
-            }
-
-            FieldValue::Uuid(d) => {
-                _ = Arguments::add(params, d);
-            }
-            FieldValue::Object(d) => {
-                _ = Arguments::add(params, sqlx::types::Json(d));
-            }
-            FieldValue::F64(v) => {
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::I64(v) => {
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::String(v) => {
-                _ = Arguments::add(params, sqlx::types::Text(v));
-            }
-            FieldValue::Array(v) => {
-                for entry in v {
-                    self.field_value_to_args(&entry, params);
-                }
-            }
-            FieldValue::Boolean(v) => {
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::Time(t) => {
-                _ = Arguments::add(params, t);
-            }
-            FieldValue::U64(v) => {
-                let v = v as i64;
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::Null => {
-                _ = Arguments::add(params, "NULL");
-            }
-            FieldValue::NotSet => (),
-        }
+    fn field_value_to_args(
+        &self,
+        field: &FieldValue,
+        params: &mut SqliteArguments,
+    ) -> Result<(), anyhow::Error> {
+        build_field_value_to_args(field, params)
     }
 
     fn build_insert_data(
@@ -862,7 +871,7 @@ impl SqliteSchemaManager {
         params: &mut SqliteArguments,
         rows: &[ColumnAndValue],
         mut sql: String,
-    ) -> String {
+    ) -> Result<String, anyhow::Error> {
         if !rows.is_empty() {
             let keys = rows
                 .first()
@@ -881,16 +890,107 @@ impl SqliteSchemaManager {
             sql = format!("{} ({}) VALUES ", sql, columns);
 
             for a_row in rows.iter().enumerate() {
-                keys.iter().for_each(|col| {
+                for col in &keys {
                     let field = a_row.1.get(col).unwrap();
-                    self.field_value_to_args(field, params);
-                });
+                    self.field_value_to_args(field, params)?;
+                }
                 let separator = if a_row.0 > 0 { "," } else { "" };
 
                 sql = format!("{} {} ({})", sql, separator, &placeholders);
             }
         }
 
-        sql
+        Ok(sql)
+    }
+}
+
+fn build_field_value_to_args(
+    field: &FieldValue,
+    params: &mut SqliteArguments,
+) -> Result<(), anyhow::Error> {
+    match field.clone() {
+        // sqlite arguments uses a lifetime
+        FieldValue::DateTime(dt) => {
+            _ = Arguments::add(params, dt);
+        }
+        FieldValue::Timestamp(dt) => {
+            _ = Arguments::add(params, dt);
+        }
+        FieldValue::Date(d) => {
+            _ = Arguments::add(params, d);
+        }
+        FieldValue::Binary(d) => {
+            _ = Arguments::add(params, d);
+        }
+
+        FieldValue::Uuid(d) => {
+            _ = Arguments::add(params, d);
+        }
+        FieldValue::Object(d) => {
+            _ = Arguments::add(params, sqlx::types::Json(d));
+        }
+        FieldValue::F64(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I64(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::String(v) => {
+            _ = Arguments::add(params, sqlx::types::Text(v));
+        }
+        FieldValue::Array(v) => {
+            for entry in v {
+                build_field_value_to_args(&entry, params)?;
+            }
+        }
+        FieldValue::Boolean(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::Time(t) => {
+            _ = Arguments::add(params, t);
+        }
+        FieldValue::U64(v) => {
+            let v = v as i64;
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::Null => {
+            _ = Arguments::add(params, "NULL");
+        }
+        FieldValue::NotSet => (),
+        FieldValue::Failable { field, error } => {
+            if error.is_some() {
+                return Err(anyhow::anyhow!(error.unwrap()));
+            }
+            build_field_value_to_args(&field, params)?
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{config::ConnectionConfig, connector::sqlite::sqlite_pool_manager::db_connect};
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_select_builder() {
+        let mut query = QueryBuilder::new("foo", QueryAction::Query { columns: None });
+        let config = ConnectionConfig::default();
+        let pool = db_connect(&config).await;
+        let sqlite = SqliteSchemaManager::new(Arc::new(pool.unwrap()));
+        let mut params = SqliteArguments::default();
+
+        query.eq("age", 0);
+
+        query.is_in_sub("so_so2", "bar", |q| {
+            q.select("col1");
+            q.is_in("id", vec![1, 2]);
+        });
+
+        // ue to test generated sql
+        println!("{:#?}", sqlite.build_query(&query, &mut params));
+        println!("{:#?}", &params)
     }
 }

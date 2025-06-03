@@ -2,7 +2,7 @@ use dirtybase_db::field_values::FieldValue;
 use dirtybase_db_macro::DirtyTable;
 // use dirtybase_db::types::FromColumnAndValue;
 use dirtybase_db::TableEntityTrait;
-use dirtybase_db::types::IntoColumnAndValue;
+use dirtybase_db::types::ToColumnAndValue;
 
 #[derive(DirtyTable, Default, Clone, Debug)]
 #[dirty(table = "address")]
@@ -51,7 +51,7 @@ fn main() {
     println!("table name: {:?}", Person::table_name());
     println!("table columns: {:#?}", Person::table_columns());
     println!("table columns aliases: {:#?}", Person::column_aliases(None));
-    println!("into table: {:#?}", john.into_column_value());
+    println!("into table: {:#?}", john.to_column_value());
 }
 
 #[derive(Debug)]

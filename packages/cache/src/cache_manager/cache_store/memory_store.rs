@@ -15,6 +15,12 @@ pub struct MemoryStore {
     tags: Arc<RwLock<HashMap<String, HashSet<String>>>>,
 }
 
+impl Default for MemoryStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MemoryStore {
     pub fn new() -> Self {
         Self {
@@ -44,7 +50,7 @@ impl MemoryStore {
             for a_tag in list {
                 if let Some(set) = lock.get_mut(a_tag) {
                     for an_entry in set.iter() {
-                        self.forget(&an_entry).await;
+                        self.forget(an_entry).await;
                     }
                 }
             }
@@ -103,7 +109,7 @@ impl CacheStoreTrait for MemoryStore {
     async fn many(&self, keys: &[String]) -> Option<Vec<CacheEntry>> {
         let mut results = Vec::<CacheEntry>::new();
         for a_key in keys {
-            if let Some(entry) = self.get(&a_key).await {
+            if let Some(entry) = self.get(a_key).await {
                 results.push(entry);
             }
         }

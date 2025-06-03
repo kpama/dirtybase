@@ -44,59 +44,6 @@ pub(crate) struct DirtybaseAttributes {
     pub(crate) into_handler: String,
     pub(crate) has_custom_into_handler: bool,
     pub(crate) skip_insert: bool, // Don't include the column in the list of columns when inserting
-    pub(crate) relation: RelType,
-}
-
-#[derive(Debug, Clone, Default, PartialEq)]
-pub(crate) enum RelType {
-    HasOne {
-        attribute: RelationAttribute,
-    },
-    BelongsTo {
-        attribute: RelationAttribute,
-    },
-    HasMany {
-        attribute: RelationAttribute,
-    },
-    HasOneThrough {
-        attribute: RelationAttribute,
-    },
-    HasManyThrough {
-        attribute: RelationAttribute,
-    },
-    BelongsToMany {
-        attribute: RelationAttribute,
-    },
-    #[default]
-    None,
-}
-
-impl RelType {
-    pub(crate) fn new(mut attribute: HashMap<String, String>) -> Self {
-        let name = attribute.remove("kind").unwrap_or_default();
-        // TODO: Make sure the attributes are set correctly or fallback the defaults
-        match name.as_str() {
-            "has_one" => Self::HasOne {
-                attribute: attribute.into(),
-            },
-            "belongs_to" => Self::BelongsTo {
-                attribute: attribute.into(),
-            },
-            "belongs_to_many" => Self::BelongsToMany {
-                attribute: attribute.into(),
-            },
-            "has_many" => Self::HasMany {
-                attribute: attribute.into(),
-            },
-            "has_one_through" => Self::HasOneThrough {
-                attribute: attribute.into(),
-            },
-            "has_many_through" => Self::HasManyThrough {
-                attribute: attribute.into(),
-            },
-            _ => Self::None,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

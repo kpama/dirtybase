@@ -9,7 +9,7 @@ use dirtybase_contract::{
     session_contract::Session,
 };
 use dirtybase_db::base::manager::Manager;
-use dirtybase_db::types::{ArcUuid7, IntoColumnAndValue};
+use dirtybase_db::types::{ArcUuid7, ToColumnAndValue};
 use tracing_subscriber::EnvFilter;
 use validator::Validate;
 
@@ -35,7 +35,12 @@ struct App;
 impl ExtensionSetup for App {
     async fn setup(&mut self, _context: &Context) {
         busybody::helpers::register_service(ContextResourceManager::<i32>::new(
-            |_| Box::pin(async { ("global points".to_string(), 50) }),
+            |_| {
+                Box::pin(async {
+                    //
+                    ("global points".to_string(), 50).into()
+                })
+            },
             |_| {
                 Box::pin(async {
                     tracing::error!(">>>>>>>>>>>>>>>>>>>>>>>  making new i32");
@@ -100,7 +105,7 @@ impl ExtensionSetup for App {
                     |Path(id): Path<ArcUuid7>, Form(mut data): Form<AuthUserPayload>| async move {
                         data.id = Some(id.clone());
                         tracing::error!("updating{:#?}", &data);
-                        tracing::error!("column/value: {:#?}", data.into_column_value());
+                        tracing::error!("column/value: {:#?}", data.to_column_value());
                         format!("updated user id: {}", &id)
                     },
                 );

@@ -13,7 +13,7 @@ impl SessionId {
         Self(random_bytes_hex(16).into())
     }
 
-    pub fn from_str(input: &str) -> Option<Self> {
+    pub fn from_str_ref(input: &str) -> Option<Self> {
         if let Ok(bytes) = hex::decode(input) {
             if bytes.len() == 16 {
                 return Some(Self(input.to_string().into()));

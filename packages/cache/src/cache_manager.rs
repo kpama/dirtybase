@@ -188,7 +188,7 @@ impl CacheManager {
 
     /// Deletes the entry for this key
     pub async fn forget(&self, key: &str) -> bool {
-        self.store.forget(key.into()).await
+        self.store.forget(key).await
     }
 
     /// Delete everything in the store

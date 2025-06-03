@@ -99,8 +99,8 @@ impl<D: serde::Serialize> ApiResponse<D> {
 
 impl<D: serde::Serialize + Debug, E: Debug> From<Result<D, E>> for ApiResponse<D> {
     fn from(value: Result<D, E>) -> Self {
-        if value.is_ok() {
-            Self::success(value.unwrap())
+        if let Ok(v) = value {
+            Self::success(v)
         } else {
             Self::error(format!("{:?}", value.unwrap_err()))
         }
@@ -185,14 +185,10 @@ where
 impl<D: serde::Serialize> IntoResponse for ApiResponse<D> {
     fn into_response(self) -> axum::response::Response {
         if self.has_data() {
-            (
-                self.status_code.unwrap_or_else(|| StatusCode::OK),
-                Json(self),
-            )
-                .into_response()
+            (self.status_code.unwrap_or(StatusCode::OK), Json(self)).into_response()
         } else {
             (
-                self.status_code.unwrap_or_else(|| StatusCode::BAD_REQUEST),
+                self.status_code.unwrap_or(StatusCode::BAD_REQUEST),
                 Json(self),
             )
                 .into_response()
@@ -200,8 +196,8 @@ impl<D: serde::Serialize> IntoResponse for ApiResponse<D> {
     }
 }
 
-impl<D: serde::Serialize> Into<Response> for ApiResponse<D> {
-    fn into(self) -> Response {
-        self.into_response()
+impl<D: serde::Serialize> From<ApiResponse<D>> for Response {
+    fn from(val: ApiResponse<D>) -> Self {
+        val.into_response()
     }
 }

@@ -1,3 +1,4 @@
+#![allow(unused)]
 pub trait DomainEvent {
     fn event_type(&self) -> impl ToString;
     fn version(&self) -> impl ToString;

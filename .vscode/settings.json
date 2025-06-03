@@ -10,6 +10,7 @@
     "dotenv",
     "dotenvy",
     "dtos",
+    "Failable",
     "fama",
     "fookbarkbass",
     "hasher",

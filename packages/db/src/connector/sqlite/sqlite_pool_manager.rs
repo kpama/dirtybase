@@ -73,7 +73,7 @@ pub async fn resolve(
     }
 
     if pools.is_empty() {
-        return Err(anyhow!("could not create any pool manager for mariadb"));
+        Err(anyhow!("could not create any pool manager for mariadb"))
     } else {
         Ok(pools)
     }

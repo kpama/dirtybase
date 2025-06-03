@@ -3,7 +3,7 @@ use std::sync::{atomic::AtomicI64, Arc};
 use crate::db_contract::{
     event::SchemeWroteEvent,
     field_values::FieldValue,
-    types::{ColumnAndValue, FromColumnAndValue, IntoColumnAndValue},
+    types::{ColumnAndValue, FromColumnAndValue, ToColumnAndValue},
     DatabaseKindPoolCollection, TableEntityTrait,
 };
 
@@ -12,7 +12,7 @@ use super::{
     schema::{DatabaseKind, SchemaManagerTrait, SchemaWrapper},
     table::TableBlueprint,
 };
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use orsomafo::Dispatchable;
 
 #[derive(Clone)]
@@ -103,15 +103,17 @@ impl Manager {
         name: &str,
         callback: impl FnOnce(&mut TableBlueprint),
     ) -> Result<(), anyhow::Error> {
-        if !self.has_table(name).await {
+        if !self.has_table(name).await? {
             let mut table = self.write_schema_manager().fetch_table_for_update(name);
             table.set_is_new(true);
 
             callback(&mut table);
-            self.write_schema_manager().apply(table).await;
+            self.write_schema_manager().apply(table).await?;
             self.dispatch_written_event();
+
+            return Ok(());
         }
-        Ok(())
+        Err(anyhow::anyhow!("{} already exist", name))
     }
 
     // Get an existing table for updating
@@ -119,15 +121,17 @@ impl Manager {
         &self,
         name: &str,
         callback: impl FnOnce(&mut TableBlueprint),
-    ) {
-        if self.has_table(name).await {
+    ) -> Result<(), anyhow::Error> {
+        if self.has_table(name).await? {
             let mut table = self.write_schema_manager().fetch_table_for_update(name);
             table.set_is_new(false);
 
             callback(&mut table);
-            self.write_schema_manager().apply(table).await;
+            self.write_schema_manager().apply(table).await?;
             self.dispatch_written_event();
+            return Ok(());
         }
+        Err(anyhow::anyhow!("{} does not exist", name))
     }
 
     // Create a new view
@@ -136,7 +140,7 @@ impl Manager {
         name: &str,
         from_table: &str,
         callback: impl FnOnce(&mut QueryBuilder),
-    ) {
+    ) -> Result<(), anyhow::Error> {
         let mut query = QueryBuilder::new(
             from_table,
             super::query::QueryAction::Query { columns: None },
@@ -144,31 +148,32 @@ impl Manager {
         callback(&mut query);
         let mut table = self.write_schema_manager().fetch_table_for_update(name);
         table.view_query = Some(query);
-        self.write_schema_manager().apply(table).await;
+        self.write_schema_manager().apply(table).await?;
         self.dispatch_written_event();
+        Ok(())
     }
 
-    pub async fn insert<CV: IntoColumnAndValue>(&self, table_name: &str, record: CV) -> Result<()> {
+    pub async fn insert<CV: ToColumnAndValue>(&self, table_name: &str, record: CV) -> Result<()> {
         self.insert_multi(table_name, vec![record]).await
     }
 
-    pub async fn insert_into<T>(&self, record: impl IntoColumnAndValue) -> Result<()>
+    pub async fn insert_into<T>(&self, record: impl ToColumnAndValue) -> Result<()>
     where
         T: TableEntityTrait,
     {
         self.insert(T::table_name(), record).await
     }
 
-    pub async fn insert_ref<CV: IntoColumnAndValue>(
+    pub async fn insert_ref<CV: ToColumnAndValue>(
         &self,
         table_name: &str,
         record: &CV,
     ) -> Result<()> {
-        self.insert_multi(table_name, vec![record.into_column_value()])
+        self.insert_multi(table_name, vec![record.to_column_value()?])
             .await
     }
 
-    pub async fn insert_multi<I: IntoColumnAndValue, R: IntoIterator<Item = I>>(
+    pub async fn insert_multi<I: ToColumnAndValue, R: IntoIterator<Item = I>>(
         &self,
         table_name: &str,
         rows: R,
@@ -177,12 +182,12 @@ impl Manager {
     }
 
     /// Insert row gracefully ignore insert duplicates
-    pub async fn soft_insert<I: IntoColumnAndValue>(&self, table_name: &str, row: I) -> Result<()> {
+    pub async fn soft_insert<I: ToColumnAndValue>(&self, table_name: &str, row: I) -> Result<()> {
         self.create_insert_query(table_name, vec![row], true).await
     }
 
     /// Insert rows gracefully ignore insert duplicates
-    pub async fn soft_insert_multi<I: IntoColumnAndValue, R: IntoIterator<Item = I>>(
+    pub async fn soft_insert_multi<I: ToColumnAndValue, R: IntoIterator<Item = I>>(
         &self,
         table_name: &str,
         rows: R,
@@ -190,7 +195,7 @@ impl Manager {
         self.create_insert_query(table_name, rows, true).await
     }
 
-    pub async fn upsert<I: IntoColumnAndValue>(
+    pub async fn upsert<I: ToColumnAndValue>(
         &self,
         table_name: &str,
         row: I,
@@ -201,7 +206,7 @@ impl Manager {
             .await
     }
 
-    pub async fn upsert_multi<R: IntoIterator<Item = I>, I: IntoColumnAndValue>(
+    pub async fn upsert_multi<R: IntoIterator<Item = I>, I: ToColumnAndValue>(
         &self,
         table_name: &str,
         rows: R,
@@ -211,7 +216,7 @@ impl Manager {
         let query = QueryBuilder::new(
             table_name,
             super::query::QueryAction::Upsert {
-                rows: rows.into_iter().map(|r| r.into_column_value()).collect(),
+                rows: rows.into_iter().flat_map(|r| r.to_column_value()).collect(),
                 to_update: update
                     .iter()
                     .map(|e| e.to_string())
@@ -228,7 +233,7 @@ impl Manager {
         Ok(())
     }
 
-    pub async fn update<R: IntoColumnAndValue>(
+    pub async fn update<R: ToColumnAndValue>(
         &self,
         table_name: &str,
         row: R,
@@ -236,7 +241,7 @@ impl Manager {
     ) -> Result<()> {
         let mut query = QueryBuilder::new(
             table_name,
-            super::query::QueryAction::Update(row.into_column_value()),
+            super::query::QueryAction::Update(row.to_column_value()?),
         );
         callback(&mut query);
         self.write_schema_manager().execute(query).await?;
@@ -246,7 +251,7 @@ impl Manager {
 
     pub async fn update_table<T: TableEntityTrait>(
         &self,
-        row: impl IntoColumnAndValue,
+        row: impl ToColumnAndValue,
         callback: impl FnOnce(&mut QueryBuilder),
     ) -> Result<()> {
         self.update(T::table_name(), row, callback).await
@@ -279,7 +284,7 @@ impl Manager {
         todo!()
     }
 
-    pub async fn has_table(&self, name: &str) -> bool {
+    pub async fn has_table(&self, name: &str) -> Result<bool, anyhow::Error> {
         self.read_schema_manager().has_table(name).await
     }
 
@@ -318,7 +323,7 @@ impl Manager {
         self.create_schema_manager(true)
     }
 
-    async fn create_insert_query<I: IntoColumnAndValue, R: IntoIterator<Item = I>>(
+    async fn create_insert_query<I: ToColumnAndValue, R: IntoIterator<Item = I>>(
         &self,
         table_name: &str,
         rows: R,
@@ -327,7 +332,7 @@ impl Manager {
         let query = QueryBuilder::new(
             table_name,
             super::query::QueryAction::Create {
-                rows: rows.into_iter().map(|r| r.into_column_value()).collect(),
+                rows: rows.into_iter().flat_map(|r| r.to_column_value()).collect(),
                 do_soft_insert,
             },
         );

@@ -43,7 +43,7 @@ impl SchemaManagerTrait for PostgresSchemaManager {
     fn fetch_table_for_update(&self, name: &str) -> TableBlueprint {
         TableBlueprint::new(name)
     }
-    async fn has_table(&self, name: &str) -> bool {
+    async fn has_table(&self, name: &str) -> Result<bool, anyhow::Error> {
         let query = "SELECT EXISTS ( SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1);";
 
         let result = sqlx::query(query)
@@ -57,17 +57,17 @@ impl SchemaManagerTrait for PostgresSchemaManager {
             .fetch_one(self.db_pool.as_ref())
             .await;
 
-        result.unwrap_or(false)
+        result.map_err(|e| anyhow::anyhow!(e))
     }
 
     async fn stream_result(
         &self,
         query_builder: &QueryBuilder,
         sender: tokio::sync::mpsc::Sender<ColumnAndValue>,
-    ) {
+    ) -> Result<(), anyhow::Error> {
         let mut params = PgArguments::default();
 
-        let statement = self.build_query(query_builder, &mut params);
+        let statement = self.build_query(query_builder, &mut params)?;
 
         let query = sqlx::query_with(&statement, params);
         // for p in &params {
@@ -78,16 +78,19 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         while let Ok(result) = rows.try_next().await {
             if let Some(row) = result {
                 if let Err(e) = sender.send(self.row_to_column_value(&row)).await {
-                    log::error!(target: LOG_TARGET, "could not send mpsc stream: {}", e.to_string());
+                    log::error!(target: LOG_TARGET, "could not send mpsc stream: {}", &e);
+                    return Err(anyhow::anyhow!(e));
                 }
             } else {
                 break;
             }
         }
+
+        Ok(())
     }
 
     async fn drop_table(&self, name: &str) -> Result<(), anyhow::Error> {
-        if self.has_table(name).await {
+        if self.has_table(name).await? {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
             return self.execute(query).await;
         }
@@ -95,7 +98,7 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         Err(anyhow!("could not drop the table"))
     }
 
-    async fn apply(&self, table: TableBlueprint) {
+    async fn apply(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         self.do_apply(table).await
     }
 
@@ -110,7 +113,7 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         let mut results = Vec::new();
         let mut params = PgArguments::default();
 
-        let statement = self.build_query(query_builder, &mut params);
+        let statement = self.build_query(query_builder, &mut params)?;
 
         let query = sqlx::query_with(&statement, params);
 
@@ -139,7 +142,7 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         query_builder: &QueryBuilder,
     ) -> Result<Option<ColumnAndValue>, anyhow::Error> {
         let mut params = PgArguments::default();
-        let statement = self.build_query(query_builder, &mut params);
+        let statement = self.build_query(query_builder, &mut params)?;
 
         let query = sqlx::query_with(&statement, params);
 
@@ -193,14 +196,14 @@ impl SchemaManagerTrait for PostgresSchemaManager {
 }
 
 impl PostgresSchemaManager {
-    async fn do_apply(&self, table: TableBlueprint) {
-        if table.view_query.is_some() {
+    async fn do_apply(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
+        return if table.view_query.is_some() {
             // working with view table
             self.create_or_replace_view(table).await
         } else {
             // working with real table
             self.apply_table_changes(table).await
-        }
+        };
     }
 
     async fn do_execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
@@ -217,7 +220,7 @@ impl PostgresSchemaManager {
                     if *do_soft_insert { "IGNORE" } else { "" },
                     query.table()
                 );
-                sql = self.build_insert_data(&mut params, rows, sql);
+                sql = self.build_insert_data(&mut params, rows, sql)?;
             }
             QueryAction::Upsert {
                 rows,
@@ -225,7 +228,7 @@ impl PostgresSchemaManager {
                 to_update,
             } => {
                 sql = format!("INSERT INTO {}", query.table());
-                sql = self.build_insert_data(&mut params, &rows, sql);
+                sql = self.build_insert_data(&mut params, rows, sql)?;
 
                 if !unique.is_empty() && !to_update.is_empty() {
                     sql = format!(
@@ -252,7 +255,7 @@ impl PostgresSchemaManager {
                 for entry in column_values {
                     if *entry.1 != FieldValue::NotSet {
                         columns.push(entry.0);
-                        self.field_value_to_args(entry.1, &mut params);
+                        self.field_value_to_args(entry.1, &mut params)?;
                     }
                 }
                 sql = format!("UPDATE \"{}\" SET ", query.table());
@@ -266,16 +269,16 @@ impl PostgresSchemaManager {
                 }
 
                 // joins
-                sql = format!("{} {}", sql, self.build_join(&query));
+                sql = format!("{} {}", sql, self.build_join(&query)?);
                 // where
-                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
+                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
             QueryAction::Delete => {
                 sql = format!("DELETE FROM {0} ", query.table());
                 // joins
-                sql = format!("{} {}", sql, self.build_join(&query));
+                sql = format!("{} {}", sql, self.build_join(&query)?);
                 // where
-                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
+                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
             QueryAction::DropTable => {
                 sql = format!("DROP TABLE IF EXISTS {};", query.table());
@@ -313,10 +316,10 @@ impl PostgresSchemaManager {
         }
     }
 
-    async fn create_or_replace_view(&self, table: TableBlueprint) {
+    async fn create_or_replace_view(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         if let Some(query) = &table.view_query {
             let mut params = PgArguments::default();
-            let sql = self.build_query(query, &mut params);
+            let sql = self.build_query(query, &mut params)?;
 
             let query = format!("CREATE OR REPLACE VIEW \"{}\" AS ({})", &table.name, sql);
 
@@ -333,12 +336,15 @@ impl PostgresSchemaManager {
                         &table.name,
                         error
                     );
+                    return Err(anyhow::anyhow!(error));
                 }
             }
         }
+
+        Ok(())
     }
 
-    async fn apply_table_changes(&self, table: TableBlueprint) {
+    async fn apply_table_changes(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         let mut query = String::new();
         let columns: Vec<String> = table
             .columns()
@@ -352,8 +358,14 @@ impl PostgresSchemaManager {
             format!("{} ALTER TABLE \"{}\"", &query, &table.name)
         };
 
-        if !columns.is_empty() {
-            query = format!("{} ({})", query, columns.join(","));
+        if table.is_new() {
+            if !columns.is_empty() {
+                query = format!("{} ({})", query, columns.join(","));
+            }
+        } else {
+            if !columns.is_empty() {
+                query = format!("{} ADD {}", query, columns.join(","));
+            }
         }
 
         let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
@@ -377,7 +389,13 @@ impl PostgresSchemaManager {
                     action = "update";
                     name = table.name.clone();
                 }
-                log::error!("Could not {} table {}: {}", action, name, e);
+                log::error!("Could not {} table {}: {}", action, name, &e);
+                return Err(anyhow::anyhow!(
+                    "Could not {} table {}: {}",
+                    action,
+                    name,
+                    &e
+                ));
             }
         }
 
@@ -427,11 +445,14 @@ impl PostgresSchemaManager {
                     Ok(_) => log::info!("table index created"),
                     Err(e) => {
                         log::error!("postgres: {}", &sql);
-                        log::error!("could not create table index: {}", e.to_string())
+                        log::error!("could not create table index: {}", &e);
+                        return Err(anyhow::anyhow!("could not create table index: {}", &e));
                     }
                 }
             }
         }
+
+        Ok(())
     }
 
     fn create_column(&self, column: &ColumnBlueprint) -> String {
@@ -542,7 +563,11 @@ impl PostgresSchemaManager {
         entry
     }
 
-    fn build_query(&self, query: &QueryBuilder, params: &mut PgArguments) -> String {
+    fn build_query(
+        &self,
+        query: &QueryBuilder,
+        params: &mut PgArguments,
+    ) -> Result<String, anyhow::Error> {
         let mut sql = "SELECT".to_owned();
 
         // fields
@@ -567,10 +592,10 @@ impl PostgresSchemaManager {
         sql = format!("{} FROM {}", sql, query.table());
 
         // joins
-        sql = format!("{} {}", sql, self.build_join(query));
+        sql = format!("{} {}", sql, self.build_join(query)?);
 
         // wheres
-        sql = format!("{} {}", sql, self.build_where_clauses(query, params));
+        sql = format!("{} {}", sql, self.build_where_clauses(query, params)?);
 
         // group by
 
@@ -588,10 +613,10 @@ impl PostgresSchemaManager {
 
         // offset
 
-        sql
+        Ok(sql)
     }
 
-    fn build_join(&self, query: &QueryBuilder) -> String {
+    fn build_join(&self, query: &QueryBuilder) -> Result<String, anyhow::Error> {
         let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
             for a_join in joins {
@@ -605,19 +630,23 @@ impl PostgresSchemaManager {
             }
         }
 
-        sql
+        Ok(sql)
     }
 
     fn build_order_by(&self, query: &QueryBuilder) -> Option<String> {
         query.order_by().map(|order| order.to_string())
     }
 
-    fn build_where_clauses(&self, query: &QueryBuilder, params: &mut PgArguments) -> String {
+    fn build_where_clauses(
+        &self,
+        query: &QueryBuilder,
+        params: &mut PgArguments,
+    ) -> Result<String, anyhow::Error> {
         let mut wheres = "".to_owned();
         for where_join in query.where_clauses() {
             wheres = where_join.as_clause(
                 &wheres,
-                &self.transform_condition(where_join.condition(), params),
+                &self.transform_condition(where_join.condition(), params)?,
             );
         }
 
@@ -625,14 +654,23 @@ impl PostgresSchemaManager {
             wheres = format!("WHERE {}", wheres);
         }
 
-        wheres
+        Ok(wheres)
     }
 
-    fn transform_condition(&self, condition: &Condition, params: &mut PgArguments) -> String {
-        self.transform_value(condition.value(), params);
+    fn transform_condition(
+        &self,
+        condition: &Condition,
+        params: &mut PgArguments,
+    ) -> Result<String, anyhow::Error> {
+        let placeholder;
 
-        let placeholder =
-            if *condition.operator() == Operator::In || *condition.operator() == Operator::NotIn {
+        if let QueryValue::SubQuery(sub) = condition.value() {
+            placeholder = self.build_query(sub, params)?;
+        } else {
+            self.transform_value(condition.value(), params)?;
+            placeholder = if *condition.operator() == Operator::In
+                || *condition.operator() == Operator::NotIn
+            {
                 let length = match &condition.value() {
                     QueryValue::Field(FieldValue::Array(v)) => v.len(),
                     _ => 1,
@@ -644,19 +682,26 @@ impl PostgresSchemaManager {
             } else {
                 format!("${}", params.len())
             };
+        }
 
-        condition
+        Ok(condition
             .operator()
-            .as_clause(condition.column(), &placeholder)
+            .as_clause(condition.column(), &placeholder))
     }
 
-    fn transform_value(&self, value: &QueryValue, params: &mut PgArguments) {
+    fn transform_value(
+        &self,
+        value: &QueryValue,
+        params: &mut PgArguments,
+    ) -> Result<(), anyhow::Error> {
         match value {
             QueryValue::SubQuery(q) => {
-                self.build_query(q, params);
+                self.build_query(q, params)?;
             }
-            QueryValue::Field(field) => self.field_value_to_args(field, params),
+            QueryValue::Field(field) => self.field_value_to_args(field, params)?,
         }
+
+        Ok(())
     }
 
     fn row_to_column_value(&self, row: &PgRow) -> ColumnAndValue {
@@ -834,55 +879,12 @@ impl PostgresSchemaManager {
         this_row
     }
 
-    fn field_value_to_args(&self, field: &FieldValue, params: &mut PgArguments) {
-        match field {
-            FieldValue::DateTime(dt) => {
-                _ = Arguments::add(params, dt);
-            }
-            FieldValue::Timestamp(dt) => {
-                _ = Arguments::add(params, dt);
-            }
-            FieldValue::Date(d) => {
-                _ = Arguments::add(params, d);
-            }
-            FieldValue::Binary(d) => {
-                _ = Arguments::add(params, d);
-            }
-            FieldValue::Uuid(d) => {
-                _ = Arguments::add(params, d);
-            }
-            FieldValue::Object(d) => {
-                _ = Arguments::add(params, sqlx::types::Json(d));
-            }
-            FieldValue::F64(v) => {
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::I64(v) => {
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::String(v) => {
-                _ = Arguments::add(params, sqlx::types::Text(v));
-            }
-            FieldValue::Array(v) => {
-                for entry in v {
-                    self.field_value_to_args(&entry, params);
-                }
-            }
-            FieldValue::Boolean(v) => {
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::Time(t) => {
-                _ = Arguments::add(params, t);
-            }
-            FieldValue::U64(v) => {
-                let v = *v as i64;
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::Null => {
-                _ = Arguments::add(params, "NULL");
-            }
-            FieldValue::NotSet => (),
-        }
+    fn field_value_to_args(
+        &self,
+        field: &FieldValue,
+        params: &mut PgArguments,
+    ) -> Result<(), anyhow::Error> {
+        build_field_value_to_args(field, params)
     }
 
     fn build_insert_data(
@@ -890,7 +892,7 @@ impl PostgresSchemaManager {
         params: &mut PgArguments,
         rows: &[ColumnAndValue],
         mut sql: String,
-    ) -> String {
+    ) -> Result<String, anyhow::Error> {
         if !rows.is_empty() {
             let first_row = rows.first().unwrap();
             let keys = first_row.keys().cloned().collect::<Vec<String>>();
@@ -903,10 +905,10 @@ impl PostgresSchemaManager {
             sql = format!("{} ({}) VALUES ", sql, columns);
             let mut placeholder_counter = 0;
             for a_row in rows.iter().enumerate() {
-                keys.iter().for_each(|col| {
+                for col in &keys {
                     let field = a_row.1.get(col).unwrap();
-                    self.field_value_to_args(field, params);
-                });
+                    self.field_value_to_args(field, params)?;
+                }
                 let separator = if a_row.0 > 0 { "," } else { "" };
 
                 let placeholders = keys
@@ -922,6 +924,68 @@ impl PostgresSchemaManager {
             }
         }
 
-        sql
+        Ok(sql)
     }
+}
+
+fn build_field_value_to_args(
+    field: &FieldValue,
+    params: &mut PgArguments,
+) -> Result<(), anyhow::Error> {
+    match field {
+        FieldValue::DateTime(dt) => {
+            _ = Arguments::add(params, dt);
+        }
+        FieldValue::Timestamp(dt) => {
+            _ = Arguments::add(params, dt);
+        }
+        FieldValue::Date(d) => {
+            _ = Arguments::add(params, d);
+        }
+        FieldValue::Binary(d) => {
+            _ = Arguments::add(params, d);
+        }
+        FieldValue::Uuid(d) => {
+            _ = Arguments::add(params, d);
+        }
+        FieldValue::Object(d) => {
+            _ = Arguments::add(params, sqlx::types::Json(d));
+        }
+        FieldValue::F64(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I64(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::String(v) => {
+            _ = Arguments::add(params, sqlx::types::Text(v));
+        }
+        FieldValue::Array(v) => {
+            for entry in v {
+                build_field_value_to_args(entry, params)?;
+            }
+        }
+        FieldValue::Boolean(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::Time(t) => {
+            _ = Arguments::add(params, t);
+        }
+        FieldValue::U64(v) => {
+            let v = *v as i64;
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::Null => {
+            _ = Arguments::add(params, "NULL");
+        }
+        FieldValue::NotSet => (),
+        FieldValue::Failable { field, error } => {
+            if error.is_some() {
+                return Err(anyhow::anyhow!(error.clone().unwrap()));
+            }
+            build_field_value_to_args(&field, params)?
+        }
+    }
+
+    Ok(())
 }

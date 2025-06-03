@@ -7,7 +7,7 @@ pub mod config_contract;
 pub mod db_contract;
 pub mod http_contract;
 pub mod multitenant_contract;
-pub mod perm_contract;
+pub mod permission_contract;
 pub mod queue_contract;
 pub mod session_contract;
 
@@ -47,7 +47,7 @@ pub mod prelude {
     pub use super::extension::ExtensionMigrations;
     pub use super::extension::ExtensionSetup;
     pub use super::http_contract::prelude::*;
-    pub use super::perm_contract;
+    pub use super::permission_contract::*;
     pub use chrono::*;
 
     pub use anyhow;

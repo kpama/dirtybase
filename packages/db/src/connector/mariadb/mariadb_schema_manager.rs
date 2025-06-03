@@ -48,7 +48,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
     fn fetch_table_for_update(&self, name: &str) -> TableBlueprint {
         TableBlueprint::new(name)
     }
-    async fn has_table(&self, name: &str) -> bool {
+    async fn has_table(&self, name: &str) -> Result<bool, anyhow::Error> {
         let query = "SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_name = ? AND table_schema = ?";
 
         let database = self
@@ -66,16 +66,16 @@ impl SchemaManagerTrait for MariadbSchemaManager {
             .fetch_one(self.db_pool.as_ref())
             .await;
 
-        result.unwrap_or(false)
+        result.map_err(|e| anyhow::anyhow!(e))
     }
 
     async fn stream_result(
         &self,
         query_builder: &QueryBuilder,
         sender: tokio::sync::mpsc::Sender<ColumnAndValue>,
-    ) {
+    ) -> Result<(), anyhow::Error> {
         let mut params = MySqlArguments::default();
-        let statement = self.build_query(query_builder, &mut params);
+        let statement = self.build_query(query_builder, &mut params)?;
 
         let query = sqlx::query_with(&statement, params);
 
@@ -83,16 +83,19 @@ impl SchemaManagerTrait for MariadbSchemaManager {
         while let Ok(result) = rows.try_next().await {
             if let Some(row) = result {
                 if let Err(e) = sender.send(self.row_to_column_value(&row)).await {
-                    log::error!(target: LOG_TARGET, "could not send mpsc stream: {}", e.to_string());
+                    log::error!(target: LOG_TARGET, "could not send mpsc stream: {}", &e);
+                    return Err(anyhow::anyhow!(e));
                 }
             } else {
                 break;
             }
         }
+
+        Ok(())
     }
 
     async fn drop_table(&self, name: &str) -> Result<(), anyhow::Error> {
-        if self.has_table(name).await {
+        if self.has_table(name).await? {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
             return self.do_execute(query).await;
         }
@@ -100,7 +103,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
         Err(anyhow!("could not drop the table"))
     }
 
-    async fn apply(&self, table: TableBlueprint) {
+    async fn apply(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         self.do_apply(table).await
     }
 
@@ -115,7 +118,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
         let mut results = Vec::new();
 
         let mut params = MySqlArguments::default();
-        let statement = self.build_query(query_builder, &mut params);
+        let statement = self.build_query(query_builder, &mut params)?;
 
         let query = sqlx::query_with(&statement, params);
         let mut rows = query.fetch(self.db_pool.as_ref());
@@ -144,7 +147,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
         query_builder: &QueryBuilder,
     ) -> Result<Option<ColumnAndValue>, anyhow::Error> {
         let mut params = MySqlArguments::default();
-        let statement = self.build_query(query_builder, &mut params);
+        let statement = self.build_query(query_builder, &mut params)?;
 
         let query = sqlx::query_with(&statement, params);
         return match query.fetch_optional(self.db_pool.as_ref()).await {
@@ -197,14 +200,14 @@ impl SchemaManagerTrait for MariadbSchemaManager {
 }
 
 impl MariadbSchemaManager {
-    async fn do_apply(&self, table: TableBlueprint) {
-        if table.view_query.is_some() {
+    async fn do_apply(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
+        return if table.view_query.is_some() {
             // working with view table
             self.create_or_replace_view(table).await
         } else {
             // working with real table
             self.apply_table_changes(table).await
-        }
+        };
     }
 
     async fn do_execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
@@ -221,7 +224,7 @@ impl MariadbSchemaManager {
                     if *do_soft_insert { "IGNORE" } else { "" },
                     query.table()
                 );
-                sql = self.build_insert_data(&mut params, rows, sql);
+                sql = self.build_insert_data(&mut params, rows, sql)?;
             }
             QueryAction::Upsert {
                 rows,
@@ -229,7 +232,7 @@ impl MariadbSchemaManager {
                 to_update,
             } => {
                 sql = format!("INSERT INTO {}", query.table());
-                sql = self.build_insert_data(&mut params, &rows, sql);
+                sql = self.build_insert_data(&mut params, rows, sql)?;
 
                 if !unique.is_empty() && !to_update.is_empty() {
                     let mut update_values = Vec::new();
@@ -249,7 +252,7 @@ impl MariadbSchemaManager {
                 for entry in column_values {
                     if *entry.1 != FieldValue::NotSet {
                         columns.push(entry.0);
-                        self.field_value_to_args(entry.1, &mut params);
+                        self.field_value_to_args(entry.1, &mut params)?;
                     }
                 }
                 for entry in columns.iter().enumerate() {
@@ -261,16 +264,16 @@ impl MariadbSchemaManager {
                 }
 
                 // joins
-                sql = format!("{} {}", sql, self.build_join(&query, &mut params));
+                sql = format!("{} {}", sql, self.build_join(&query, &mut params)?);
                 // where
-                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
+                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
             QueryAction::Delete => {
                 sql = format!("DELETE FROM {0} ", query.table());
                 // joins
-                sql = format!("{} {}", sql, self.build_join(&query, &mut params));
+                sql = format!("{} {}", sql, self.build_join(&query, &mut params)?);
                 // where
-                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params));
+                sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
             QueryAction::DropTable => {
                 sql = format!("DROP TABLE IF EXISTS {}", query.table());
@@ -308,10 +311,10 @@ impl MariadbSchemaManager {
         }
     }
 
-    async fn create_or_replace_view(&self, table: TableBlueprint) {
+    async fn create_or_replace_view(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         if let Some(query) = &table.view_query {
             let mut params = MySqlArguments::default();
-            let sql = self.build_query(query, &mut params);
+            let sql = self.build_query(query, &mut params)?;
 
             let query = format!("CREATE OR REPLACE VIEW `{}` AS ({})", &table.name, sql);
 
@@ -326,14 +329,18 @@ impl MariadbSchemaManager {
                     log::error!(
                         "Could not create or replace view '{}': {:#?}",
                         &table.name,
-                        error
+                        &error
                     );
+
+                    return Err(anyhow::anyhow!(error));
                 }
             }
         }
+
+        Ok(())
     }
 
-    async fn apply_table_changes(&self, table: TableBlueprint) {
+    async fn apply_table_changes(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         let columns: Vec<String> = table
             .columns()
             .iter()
@@ -346,11 +353,19 @@ impl MariadbSchemaManager {
             format!("ALTER TABLE `{}`", &table.name)
         };
 
-        if !columns.is_empty() {
-            query = format!("{} ({})", query, columns.join(","));
+        if table.is_new() {
+            if !columns.is_empty() {
+                query = format!("{} ({})", query, columns.join(","));
+            }
+        } else {
+            if !columns.is_empty() {
+                query = format!("{} ADD {}", query, columns.join(","));
+            }
         }
 
-        query = format!("{} ENGINE='InnoDB';", query);
+        if table.is_new() {
+            query = format!("{} ENGINE='InnoDB';", query);
+        }
 
         let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
 
@@ -373,7 +388,13 @@ impl MariadbSchemaManager {
                     action = "update";
                     name = table.name.clone();
                 }
-                log::error!("Could not {} table {}: {}", action, name, e);
+                log::error!("Could not {} table {}: {}", action, name, &e);
+                return Err(anyhow::anyhow!(
+                    "Could not {} table {}: {}",
+                    action,
+                    name,
+                    &e
+                ));
             }
         }
 
@@ -413,11 +434,14 @@ impl MariadbSchemaManager {
                     Ok(_) => log::info!("table index created"),
                     Err(e) => {
                         log::error!(target: LOG_TARGET, "{}", &sql);
-                        log::error!(target: LOG_TARGET, "could not create table index: {}", e.to_string())
+                        log::error!(target: LOG_TARGET, "could not create table index: {}", &e);
+                        return Err(anyhow::anyhow!(e));
                     }
                 }
             }
         }
+
+        Ok(())
     }
 
     fn create_column(&self, column: &ColumnBlueprint) -> String {
@@ -461,20 +485,20 @@ impl MariadbSchemaManager {
         // column is nullable
         if let Some(nullable) = column.is_nullable {
             if nullable {
-                the_type.push_str(" NULL");
+                the_type.push_str(" NULL ");
             } else {
-                the_type.push_str(" NOT NULL");
+                the_type.push_str(" NOT NULL ");
             }
         }
 
         // column is unique
         if column.is_unique {
-            the_type.push_str(" UNIQUE");
+            the_type.push_str(" UNIQUE ");
         }
 
         // primary key
         if column.is_primary {
-            the_type.push_str(" PRIMARY KEY");
+            the_type.push_str(" PRIMARY KEY ");
         }
 
         // column default
@@ -520,7 +544,11 @@ impl MariadbSchemaManager {
         entry
     }
 
-    fn build_query(&self, query: &QueryBuilder, params: &mut MySqlArguments) -> String {
+    fn build_query(
+        &self,
+        query: &QueryBuilder,
+        params: &mut MySqlArguments,
+    ) -> Result<String, anyhow::Error> {
         let mut sql = "SELECT".to_owned();
 
         // fields
@@ -545,10 +573,10 @@ impl MariadbSchemaManager {
         sql = format!("{} FROM {}", sql, query.table());
 
         // joins
-        sql = format!("{} {}", sql, self.build_join(query, params));
+        sql = format!("{} {}", sql, self.build_join(query, params)?);
 
         // wheres
-        sql = format!("{} {}", sql, self.build_where_clauses(query, params));
+        sql = format!("{} {}", sql, self.build_where_clauses(query, params)?);
 
         // group by
 
@@ -566,10 +594,14 @@ impl MariadbSchemaManager {
 
         //  offset
 
-        sql
+        Ok(sql)
     }
 
-    fn build_join(&self, query: &QueryBuilder, _params: &mut MySqlArguments) -> String {
+    fn build_join(
+        &self,
+        query: &QueryBuilder,
+        _params: &mut MySqlArguments,
+    ) -> Result<String, anyhow::Error> {
         let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
             for a_join in joins {
@@ -583,15 +615,19 @@ impl MariadbSchemaManager {
             }
         }
 
-        sql
+        Ok(sql)
     }
 
-    fn build_where_clauses(&self, query: &QueryBuilder, params: &mut MySqlArguments) -> String {
+    fn build_where_clauses(
+        &self,
+        query: &QueryBuilder,
+        params: &mut MySqlArguments,
+    ) -> Result<String, anyhow::Error> {
         let mut wheres = "".to_owned();
         for where_join in query.where_clauses() {
             wheres = where_join.as_clause(
                 &wheres,
-                &self.transform_condition(where_join.condition(), params),
+                &self.transform_condition(where_join.condition(), params)?,
             );
         }
 
@@ -599,18 +635,27 @@ impl MariadbSchemaManager {
             wheres = format!("WHERE {}", wheres);
         }
 
-        wheres
+        Ok(wheres)
     }
 
     fn build_order_by(&self, query: &QueryBuilder) -> Option<String> {
         query.order_by().map(|order| order.to_string())
     }
 
-    fn transform_condition(&self, condition: &Condition, params: &mut MySqlArguments) -> String {
-        self.transform_value(condition.value(), params);
+    fn transform_condition(
+        &self,
+        condition: &Condition,
+        params: &mut MySqlArguments,
+    ) -> Result<String, anyhow::Error> {
+        let placeholder;
 
-        let placeholder =
-            if *condition.operator() == Operator::In || *condition.operator() == Operator::NotIn {
+        if let QueryValue::SubQuery(sub) = condition.value() {
+            placeholder = self.build_query(sub, params)?;
+        } else {
+            self.transform_value(condition.value(), params)?;
+            placeholder = if *condition.operator() == Operator::In
+                || *condition.operator() == Operator::NotIn
+            {
                 let length = match &condition.value() {
                     QueryValue::Field(FieldValue::Array(v)) => v.len(),
                     _ => 1,
@@ -622,19 +667,26 @@ impl MariadbSchemaManager {
             } else {
                 "?".to_owned()
             };
+        }
 
-        condition
+        Ok(condition
             .operator()
-            .as_clause(condition.column(), &placeholder)
+            .as_clause(condition.column(), &placeholder))
     }
 
-    fn transform_value(&self, value: &QueryValue, params: &mut MySqlArguments) {
+    fn transform_value(
+        &self,
+        value: &QueryValue,
+        params: &mut MySqlArguments,
+    ) -> Result<(), anyhow::Error> {
         match value {
             QueryValue::SubQuery(q) => {
-                self.build_query(q, params);
+                self.build_query(q, params)?;
             }
-            QueryValue::Field(field) => self.field_value_to_args(field, params),
+            QueryValue::Field(field) => self.field_value_to_args(field, params)?,
         }
+
+        Ok(())
     }
 
     fn row_to_column_value(&self, row: &MySqlRow) -> ColumnAndValue {
@@ -786,55 +838,12 @@ impl MariadbSchemaManager {
         this_row
     }
 
-    fn field_value_to_args(&self, field: &FieldValue, params: &mut MySqlArguments) {
-        match field {
-            FieldValue::DateTime(dt) => {
-                _ = Arguments::add(params, dt); // format!("{}", dt.format("%F %T")));
-            }
-            FieldValue::Timestamp(dt) => {
-                _ = Arguments::add(params, dt); //format!("{}", dt.format("%F %T")));
-            }
-            FieldValue::Date(d) => {
-                _ = Arguments::add(params, d); //format!("{}", d.format("%F")));
-            }
-            FieldValue::Binary(d) => {
-                _ = Arguments::add(params, d);
-            }
-            FieldValue::Uuid(d) => {
-                _ = Arguments::add(params, d);
-            }
-            FieldValue::Object(d) => {
-                _ = Arguments::add(params, sqlx::types::Json(d));
-            }
-            FieldValue::F64(v) => {
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::I64(v) => {
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::String(v) => {
-                _ = Arguments::add(params, sqlx::types::Text(v));
-            }
-            FieldValue::Array(v) => {
-                for entry in v {
-                    self.field_value_to_args(&entry, params);
-                }
-            }
-            FieldValue::Boolean(v) => {
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::Time(t) => {
-                _ = Arguments::add(params, t);
-            }
-            FieldValue::U64(v) => {
-                let v = *v as i64;
-                _ = Arguments::add(params, v);
-            }
-            FieldValue::Null => {
-                _ = Arguments::add(params, "NULL");
-            }
-            FieldValue::NotSet => (),
-        }
+    fn field_value_to_args(
+        &self,
+        field: &FieldValue,
+        params: &mut MySqlArguments,
+    ) -> Result<(), anyhow::Error> {
+        build_field_value_to_args(field, params)
     }
 
     fn build_insert_data(
@@ -842,7 +851,7 @@ impl MariadbSchemaManager {
         params: &mut MySqlArguments,
         rows: &[ColumnAndValue],
         mut sql: String,
-    ) -> String {
+    ) -> Result<String, anyhow::Error> {
         if !rows.is_empty() {
             let keys = rows
                 .first()
@@ -861,16 +870,78 @@ impl MariadbSchemaManager {
             sql = format!("{} ({}) VALUES ", sql, columns);
 
             for a_row in rows.iter().enumerate() {
-                keys.iter().for_each(|col| {
+                for col in &keys {
                     let field = a_row.1.get(col).unwrap();
-                    self.field_value_to_args(field, params);
-                });
+                    self.field_value_to_args(field, params)?;
+                }
                 let separator = if a_row.0 > 0 { "," } else { "" };
 
                 sql = format!("{} {} ({})", sql, separator, &placeholders);
             }
         }
 
-        sql
+        Ok(sql)
     }
+}
+
+fn build_field_value_to_args(
+    field: &FieldValue,
+    params: &mut MySqlArguments,
+) -> Result<(), anyhow::Error> {
+    match field {
+        FieldValue::DateTime(dt) => {
+            _ = Arguments::add(params, dt);
+        }
+        FieldValue::Timestamp(dt) => {
+            _ = Arguments::add(params, dt);
+        }
+        FieldValue::Date(d) => {
+            _ = Arguments::add(params, d);
+        }
+        FieldValue::Binary(d) => {
+            _ = Arguments::add(params, d);
+        }
+        FieldValue::Uuid(d) => {
+            _ = Arguments::add(params, d);
+        }
+        FieldValue::Object(d) => {
+            _ = Arguments::add(params, sqlx::types::Json(d));
+        }
+        FieldValue::F64(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I64(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::String(v) => {
+            _ = Arguments::add(params, sqlx::types::Text(v));
+        }
+        FieldValue::Array(v) => {
+            for entry in v {
+                build_field_value_to_args(entry, params)?;
+            }
+        }
+        FieldValue::Boolean(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::Time(t) => {
+            _ = Arguments::add(params, t);
+        }
+        FieldValue::U64(v) => {
+            let v = *v as i64;
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::Null => {
+            _ = Arguments::add(params, "NULL");
+        }
+        FieldValue::NotSet => (),
+        FieldValue::Failable { field, error } => {
+            if error.is_some() {
+                return Err(anyhow::anyhow!(error.clone().unwrap()));
+            }
+            build_field_value_to_args(&field, params)?
+        }
+    }
+
+    Ok(())
 }

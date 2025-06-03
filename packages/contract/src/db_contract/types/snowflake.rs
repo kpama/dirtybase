@@ -66,7 +66,7 @@ impl From<SnowflakeField> for FieldValue {
 
 impl From<&SnowflakeField> for FieldValue {
     fn from(value: &SnowflakeField) -> Self {
-        value.clone().into()
+        (*value).into()
     }
 }
 
@@ -83,6 +83,6 @@ impl From<FieldValue> for Option<SnowflakeField> {
 
 impl From<&SnowflakeField> for SnowflakeField {
     fn from(value: &SnowflakeField) -> Self {
-        value.clone()
+        *value
     }
 }

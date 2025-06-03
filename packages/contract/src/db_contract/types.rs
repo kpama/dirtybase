@@ -5,12 +5,16 @@ use std::{collections::HashMap, sync::Arc};
 
 mod arc_ulid;
 mod arc_uuid;
+mod label_field;
+mod name_field;
 mod snowflake;
 mod ulid;
 mod uuid;
 
 pub use arc_ulid::*;
 pub use arc_uuid::*;
+pub use label_field::*;
+pub use name_field::*;
 pub use snowflake::*;
 pub use ulid::*;
 pub type ColumnAndValue = HashMap<String, FieldValue>;
@@ -28,6 +32,7 @@ pub type UnsignedIntegerField = u64;
 pub type OptionalUnsignedIntegerField = Option<u64>;
 pub type FloatField = f64;
 pub type OptionalFloatField = Option<f64>;
+pub type OptionalNameField = Option<NameField>;
 pub type StringField = String;
 pub type OptionalStringField = Option<String>;
 pub type OptionalArcStringField = Option<Arc<String>>;
@@ -48,8 +53,8 @@ pub type UpdatedAtField = Option<DateTime<Utc>>;
 pub type DateField = NaiveDate;
 pub type OptionalDateField = Option<NaiveDate>;
 
-pub trait IntoColumnAndValue {
-    fn into_column_value(&self) -> ColumnAndValue;
+pub trait ToColumnAndValue {
+    fn to_column_value(&self) -> Result<ColumnAndValue, anyhow::Error>;
 }
 
 pub trait FromColumnAndValue {
@@ -151,8 +156,8 @@ fn build_structure(
 }
 
 // Allows the user to pass a hashmap if they want to
-impl IntoColumnAndValue for ColumnAndValue {
-    fn into_column_value(&self) -> ColumnAndValue {
-        self.clone()
+impl ToColumnAndValue for ColumnAndValue {
+    fn to_column_value(&self) -> Result<ColumnAndValue, anyhow::Error> {
+        Ok(self.clone())
     }
 }

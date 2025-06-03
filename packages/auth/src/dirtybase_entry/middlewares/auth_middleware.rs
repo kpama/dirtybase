@@ -17,18 +17,17 @@ pub async fn handle_auth_middleware(
         guard_name = SESSION_GUARD.to_string()
     }
 
-    let context = if let Some(ctx) = req.extensions().get::<Context>().cloned() {
-        ctx
-    } else {
-        Context::default()
-    };
-
+    let context = req
+        .extensions()
+        .get::<Context>()
+        .cloned()
+        .unwrap_or_default();
     tracing::debug!("current auth guard: {}", &guard_name);
 
     if let Ok(config) = context.get_config::<AuthConfig>("auth").await {
         if let Some(storage) = StorageResolver::from_context(context.clone())
             .await
-            .get_provider(&config.storage_ref())
+            .get_provider(config.storage_ref())
             .await
         {
             let result =

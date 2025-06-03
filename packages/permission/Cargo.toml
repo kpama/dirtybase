@@ -1,5 +1,5 @@
 [package]
-name = "permission"
+name = "dirtybase_permission"
 version.workspace = true
 edition.workspace = true
 

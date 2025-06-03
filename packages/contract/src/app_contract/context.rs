@@ -1,7 +1,10 @@
 use std::{ops::Deref, sync::Arc};
 
 use anyhow::anyhow;
-use axum::{extract::FromRequestParts, http::request::Parts};
+use axum::{
+    extract::FromRequestParts,
+    http::{request::Parts, StatusCode},
+};
 use serde::de::DeserializeOwned;
 
 mod app_context;
@@ -9,8 +12,9 @@ mod context_manager;
 mod context_metadata;
 
 use crate::{
-    auth_contract::AuthUser,
+    auth_contract::{AuthUser, Gate},
     config_contract::{DirtyConfig, TryFromDirtyConfig},
+    http_contract::{Bind, ModelBindResolver},
     multitenant_contract::*,
 };
 pub use app_context::*;
@@ -31,8 +35,7 @@ impl Default for Context {
         let instance = Self {
             id: ArcUuid7::default(),
             is_global: false,
-            sc: busybody::helpers::make_task_proxy()
-                .unwrap_or_else(|_| busybody::helpers::make_proxy()),
+            sc: busybody::helpers::make_proxy(),
         };
 
         instance
@@ -54,6 +57,13 @@ impl Context {
             sc: busybody::helpers::service_container(),
         };
 
+        busybody::helpers::resolver::<Gate>(|sc| {
+            Box::pin(async {
+                //..
+                Gate::new(sc)
+            })
+        })
+        .await;
         busybody::helpers::set_type(instance.clone()).await;
         instance
     }
@@ -181,24 +191,37 @@ where
     T: Clone + Send + Sync + 'static,
     S: Send + Sync,
 {
-    type Rejection = String;
+    type Rejection = (StatusCode, String);
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let context = parts
-            .extensions
-            .get::<Context>()
-            .ok_or_else(|| "Context not yet setup".to_string())
-            .cloned()?;
+        let Some(context) = parts.extensions.get::<Context>().cloned() else {
+            return Err((StatusCode::INTERNAL_SERVER_ERROR, String::new()));
+        };
 
         if let Ok(ext) = context.get::<T>().await {
-            Ok(Self(ext))
-        } else {
-            tracing::error!("{} not found in context", std::any::type_name::<T>());
-            Err(format!(
-                "{} not found in context",
-                std::any::type_name::<T>()
-            ))
+            return Ok(Self(ext));
         }
+
+        if let Some(v) = context.container().get_type::<Bind<T>>().await {
+            return Ok(Self(v.0));
+        }
+
+        match ModelBindResolver::new(context.clone(), None)
+            .await
+            .bind::<T>()
+            .await
+        {
+            Ok(Some(bind)) => {
+                return Ok(Self(
+                    context.set(bind).await.get::<Bind<T>>().await.unwrap().0,
+                ))
+            }
+            Ok(None) => return Err((StatusCode::NOT_FOUND, String::new())),
+            _ => (),
+        }
+
+        tracing::error!("{} not found in context", std::any::type_name::<T>());
+        Err((StatusCode::INTERNAL_SERVER_ERROR, String::new()))
     }
 }
 

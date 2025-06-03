@@ -1,4 +1,4 @@
-use dirtybase_contract::prelude::ContextResourceManager;
+use dirtybase_contract::prelude::{ContextResourceManager, ResourceManager};
 
 use crate::{CacheManager, CacheStorageResolver, cache_store::MemoryStore, config::CacheConfig};
 
@@ -8,14 +8,12 @@ pub async fn register_resource_manager() {
             //
             Box::pin(async move {
                 //...
-                let name = context
-                    .tenant()
-                    .await
-                    .expect("could not get tenant")
-                    .id()
-                    .to_string();
-
-                (name, 0)
+                // TODO: Source the idle timeout from config
+                if context.is_global() {
+                    ResourceManager::forever()
+                } else {
+                    ResourceManager::idle(5)
+                }
             })
         },
         |context| {
