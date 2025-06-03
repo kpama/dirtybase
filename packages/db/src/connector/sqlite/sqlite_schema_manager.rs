@@ -52,7 +52,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
             .fetch_one(self.db_pool.as_ref())
             .await;
 
-        result.map_err(|e| anyhow::anyhow!(e))
+        Ok(result.unwrap_or_default())
     }
 
     async fn stream_result(
@@ -234,7 +234,7 @@ impl SqliteSchemaManager {
                 do_soft_insert,
             } => {
                 sql = format!(
-                    "INSERT {} INTO {} ",
+                    "INSERT {} INTO '{}' ",
                     if *do_soft_insert { "OR IGNORE" } else { "" },
                     query.table()
                 );
@@ -287,26 +287,29 @@ impl SqliteSchemaManager {
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
             QueryAction::Delete => {
-                sql = format!("DELETE FROM {0} ", query.table());
+                sql = format!("DELETE FROM '{0}' ", query.table());
                 // joins
                 sql = format!("{} {}", sql, self.build_join(&query, &mut params)?);
                 // where
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
             QueryAction::DropTable => {
-                sql = format!("DROP TABLE IF EXISTS {};", query.table());
+                sql = format!("DROP TABLE IF EXISTS '{}';", query.table());
             }
             QueryAction::RenameColumn { old, new } => {
                 let table = query.table();
-                sql = format!("ALTER TABLE {} RENAME COLUMN {} TO {}", table, old, new);
+                sql = format!(
+                    "ALTER TABLE '{}' RENAME COLUMN '{}' TO '{}'",
+                    table, old, new
+                );
             }
             QueryAction::RenameTable(new) => {
                 let table = query.table();
-                sql = format!("ALTER TABLE {} RENAME TO {}", table, new);
+                sql = format!("ALTER TABLE '{}' RENAME TO '{}'", table, new);
             }
             QueryAction::DropColumn(column) => {
                 let table = query.table();
-                sql = format!("ALTER TABLE {} DROP {}", table, column);
+                sql = format!("ALTER TABLE '{}' DROP '{}'", table, column);
             }
             _ => {
                 sql = "".into();
@@ -371,11 +374,22 @@ impl SqliteSchemaManager {
             format!("ALTER TABLE `{}`", &table.name)
         };
 
-        if !columns.is_empty() {
+        if table.is_new() {
             query = if foreign.is_empty() {
                 format!("{} ({})", query, columns.join(","))
             } else {
                 format!("{} ({}, {})", query, columns.join(","), foreign.join(","))
+            }
+        } else {
+            query = if foreign.is_empty() {
+                format!("{} ADD {}", query, columns.join(","))
+            } else {
+                format!(
+                    "{} ADD ({}, {})",
+                    query,
+                    columns.join(","),
+                    foreign.join(",")
+                )
             }
         }
 

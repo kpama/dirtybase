@@ -7,7 +7,6 @@ use crate::db_contract::{
 
 use super::{
     aggregate::Aggregate,
-    column::ColumnBlueprint,
     join_builder::JoinQueryBuilder,
     order_by_builder::{LimitBuilder, OffsetBuilder, OrderByBuilder},
     query_conditions::Condition,
@@ -44,7 +43,6 @@ pub enum QueryAction {
     DropTable,
     RenameTable(String),
     DropColumn(String),
-    AddColumn(ColumnBlueprint),
     RenameColumn {
         old: String,
         new: String,
@@ -72,7 +70,6 @@ impl Display for QueryAction {
                 QueryAction::DropTable => "DropTable",
                 QueryAction::RenameTable(_) => "RenameTable",
                 QueryAction::DropColumn(_) => "DropColumn",
-                QueryAction::AddColumn(_) => "AddColumn",
                 QueryAction::RenameColumn { old: _, new: _ } => "RenameColumn",
             }
         )

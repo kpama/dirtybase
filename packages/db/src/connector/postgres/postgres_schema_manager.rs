@@ -358,8 +358,14 @@ impl PostgresSchemaManager {
             format!("{} ALTER TABLE \"{}\"", &query, &table.name)
         };
 
-        if !columns.is_empty() {
-            query = format!("{} ({})", query, columns.join(","));
+        if table.is_new() {
+            if !columns.is_empty() {
+                query = format!("{} ({})", query, columns.join(","));
+            }
+        } else {
+            if !columns.is_empty() {
+                query = format!("{} ADD {}", query, columns.join(","));
+            }
         }
 
         let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;

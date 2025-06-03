@@ -353,11 +353,19 @@ impl MariadbSchemaManager {
             format!("ALTER TABLE `{}`", &table.name)
         };
 
-        if !columns.is_empty() {
-            query = format!("{} ({})", query, columns.join(","));
+        if table.is_new() {
+            if !columns.is_empty() {
+                query = format!("{} ({})", query, columns.join(","));
+            }
+        } else {
+            if !columns.is_empty() {
+                query = format!("{} ADD {}", query, columns.join(","));
+            }
         }
 
-        query = format!("{} ENGINE='InnoDB';", query);
+        if table.is_new() {
+            query = format!("{} ENGINE='InnoDB';", query);
+        }
 
         let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
 
