@@ -44,7 +44,7 @@ impl ExtensionSetup for Extension {
                         }
                     }
                 }
-                return Ok(());
+                Ok(())
             })
         });
         manager

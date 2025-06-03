@@ -1,5 +1,6 @@
 use dirtybase_contract::{
     app_contract::ContextResourceManager, db_contract::base::manager::Manager,
+    prelude::ResourceManager,
 };
 
 use crate::{config::DbConfig, pool_manager_resolver::DbPoolManagerResolver};
@@ -11,15 +12,9 @@ pub(crate) async fn register_resource_manager() {
         |context| {
             Box::pin(async move {
                 let config = context.get_config::<DbConfig>("database").await.unwrap();
-                let name = context
-                    .tenant()
-                    .await
-                    .expect("could not get tenant")
-                    .id()
-                    .to_string();
                 let timeout = config.idle_timeout();
                 context.set(config).await;
-                (name, timeout)
+                ResourceManager::idle(timeout)
             })
         },
         |context| {

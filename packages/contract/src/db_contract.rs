@@ -20,8 +20,6 @@ pub use column_value_builder::*;
 pub use seeder_registerer::*;
 pub use table_entity::*;
 
-pub const USER_TABLE: &str = "users";
-
 pub type PoolManagerSet = HashMap<ClientType, Box<dyn ConnectionPoolTrait>>;
 
 pub type DatabaseKindPoolCollection = HashMap<DatabaseKind, PoolManagerSet>;

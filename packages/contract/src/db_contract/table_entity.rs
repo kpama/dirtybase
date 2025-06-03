@@ -1,6 +1,6 @@
-use super::types::{FromColumnAndValue, IntoColumnAndValue};
+use super::types::{FromColumnAndValue, ToColumnAndValue};
 
-pub trait TableEntityTrait: FromColumnAndValue + IntoColumnAndValue {
+pub trait TableEntityTrait: FromColumnAndValue + ToColumnAndValue {
     /// Tables table's column names without prefix
     fn table_columns() -> &'static [&'static str];
 

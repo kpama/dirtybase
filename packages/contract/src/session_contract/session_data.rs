@@ -64,9 +64,7 @@ impl SessionData {
 
     pub fn delete(&self, key: &str) -> Option<serde_json::Value> {
         match self.inner.write() {
-            Ok(mut w_lock) => {
-                return w_lock.remove(key);
-            }
+            Ok(mut w_lock) => w_lock.remove(key),
             Err(e) => {
                 tracing::error!("could not delete session data: {}", e);
                 None
@@ -82,11 +80,8 @@ impl SessionData {
     }
 
     pub fn all(&self) -> serde_json::Map<String, serde_json::Value> {
-        match self.inner.read() {
-            Ok(r_lock) => {
-                return r_lock.clone();
-            }
-            _ => (),
+        if let Ok(r_lock) = self.inner.read() {
+            return r_lock.clone();
         }
         serde_json::Map::default()
     }

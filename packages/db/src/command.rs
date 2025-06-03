@@ -43,7 +43,7 @@ pub(crate) fn setup_commands(mut manager: CliCommandManager) -> CliCommandManage
             let command: Commands = Commands::from((name, matches));
             match command {
                 Commands::Migrate { action } => {
-                    let migrator = Migrator::new().await;
+                    let migrator = Migrator::new(Some(context.clone())).await;
                     if let Ok(db_manager) = context.get::<Manager>().await {
                         match action {
                             MigrateAction::Up => return migrator.up(&db_manager).await,
@@ -52,13 +52,13 @@ pub(crate) fn setup_commands(mut manager: CliCommandManager) -> CliCommandManage
                             MigrateAction::Refresh => return migrator.refresh(&db_manager).await,
                             MigrateAction::Unknown => {
                                 eprintln!("unknown action");
-                                return Err(anyhow!("unknown action"));
+                                Err(anyhow!("unknown action"))
                             }
                         }
                     } else {
                         eprintln!("could not get database manager");
                         tracing::error!("could not get database manager");
-                        return Err(anyhow!("could not get database manager"));
+                        Err(anyhow!("could not get database manager"))
                     }
                 }
             }

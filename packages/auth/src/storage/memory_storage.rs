@@ -25,13 +25,13 @@ impl AuthUserStorage for AuthUserMemoryStorage {
         let id = existing_id.unwrap_or_default();
         let mut w_lock = self.storage.write().await;
         if let Some(existing) = w_lock.get_mut(&id) {
-            existing.update(payload);
-            existing.touch_deleted_at();
+            existing.merge(payload);
+            existing.touch_updated_at();
             return Ok(existing.clone());
         } else {
             let mut new_user = AuthUser::default();
             payload.id = Some(id.clone());
-            new_user.update(payload);
+            new_user.merge(payload);
             new_user.touch_created_at();
             new_user.touch_updated_at();
             w_lock.insert(id, new_user.clone());

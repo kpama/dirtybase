@@ -153,7 +153,7 @@ pub(crate) async fn handle_register_request(
     let storage = if let Ok(s) = get_auth_storage(ctx.clone(), None).await {
         s
     } else {
-        return format!("token:");
+        return "token:".to_string();
     };
 
     payload.rotate_salt = true;

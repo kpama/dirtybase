@@ -1,6 +1,10 @@
 #![allow(unused)]
 
-use std::{collections::HashMap, io, path::PathBuf};
+use std::{
+    collections::HashMap,
+    io,
+    path::{Path, PathBuf},
+};
 
 pub(crate) fn directories() -> &'static [&'static str] {
     &[
@@ -77,32 +81,32 @@ pub(crate) fn stubs<'a>() -> HashMap<&'a str, &'a str> {
     file_content
 }
 
-pub(crate) fn make_directories(path_buf: &PathBuf) {
+pub(crate) fn make_directories(path: &Path) {
     for dir in directories() {
-        let path = path_buf.join(dir);
+        let path = path.join(dir);
         if !path.exists() {
             _ = std::fs::create_dir_all(path);
         }
     }
 }
 
-pub(crate) fn make_entry_directory(path_buf: &PathBuf) {
-    let path = path_buf.join("dirtybase_entry");
+pub(crate) fn make_entry_directory(path: &Path) {
+    let path = path.join("dirtybase_entry");
     if !path.exists() {
         _ = std::fs::create_dir_all(path);
     }
 }
 
-pub(crate) fn make_a_directory(path_buf: &PathBuf) {
-    if !path_buf.exists() {
-        _ = std::fs::create_dir_all(path_buf);
+pub(crate) fn make_a_directory(path: &Path) {
+    if !path.exists() {
+        _ = std::fs::create_dir_all(path);
     }
 }
 
-pub(crate) fn dump_stubs(path_buf: &PathBuf) {
+pub(crate) fn dump_stubs(path: &Path) {
     let file_content = stubs();
     for filename in files() {
-        let path = path_buf.join(filename);
+        let path = path.join(filename);
 
         if !path.exists() && !path.is_dir() {
             let content = if let Some(content) = file_content.get(filename) {
@@ -123,12 +127,12 @@ pub(crate) fn dump_a_stub(name: &str, path_buf: &PathBuf) {
     }
 }
 
-pub(crate) fn read_entry_file(path_buf: &PathBuf) -> io::Result<String> {
-    let file = path_buf.join("dirtybase_entry.rs");
+pub(crate) fn read_entry_file(path: &Path) -> io::Result<String> {
+    let file = path.join("dirtybase_entry.rs");
     std::fs::read_to_string(&file)
 }
 
-pub(crate) fn update_entry_file(path_buf: &PathBuf, content: String) -> io::Result<()> {
-    let file = path_buf.join("dirtybase_entry.rs");
+pub(crate) fn update_entry_file(path: &Path, content: String) -> io::Result<()> {
+    let file = path.join("dirtybase_entry.rs");
     std::fs::write(&file, content)
 }

@@ -56,7 +56,7 @@ impl dirtybase_app::contract::ExtensionSetup for MyApp {
 async fn handle_home(CtxExt(manager): CtxExt<Manager>) -> impl IntoResponse {
     Html(format!(
         "Hello world!!: {}",
-        manager.has_table("core_user").await,
+        manager.has_table("core_user").await.unwrap(),
     ))
 }
 

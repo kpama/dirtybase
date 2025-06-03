@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use crate::{
     content::{dump_stubs, make_directories},
@@ -17,10 +17,10 @@ pub(crate) fn init(package: Option<&String>) {
     register_entry_file(&path_buf);
 }
 
-fn register_entry_file(path_buf: &PathBuf) {
+fn register_entry_file(path: &Path) {
     let files = ["lib.rs", "main.rs"];
     for a_file in files {
-        let full_path = path_buf.join(a_file);
+        let full_path = path.join(a_file);
         if full_path.exists() {
             if let Ok(mut content) = std::fs::read_to_string(&full_path) {
                 if !content.contains("mod dirtybase_entry") {

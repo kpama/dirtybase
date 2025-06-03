@@ -76,16 +76,8 @@ impl JobConfig {
             id: id.into(),
             schedule: Arc::new(schedule.to_string()),
             enable,
-            description: if description.is_some() {
-                Some(Arc::new(description.unwrap()))
-            } else {
-                None
-            },
-            _args: if _args.is_some() {
-                Some(Arc::new(_args.unwrap()))
-            } else {
-                None
-            },
+            description: description.map(Arc::new),
+            _args: _args.map(Arc::new),
         }
     }
 

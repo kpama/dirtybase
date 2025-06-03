@@ -24,7 +24,7 @@ pub async fn register_resource_manager() {
                     .to_string();
                 let duration = if context.is_global() { 0 } else { 5 };
 
-                (name, duration)
+                (name, duration).into()
             })
         },
         |_context| {

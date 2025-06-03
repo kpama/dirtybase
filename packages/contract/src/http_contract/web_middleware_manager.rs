@@ -158,7 +158,7 @@ impl WebMiddlewareManager {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct MiddlewareParam {
     name: Arc<String>,
     kind: Arc<String>,
@@ -198,11 +198,11 @@ impl MiddlewareParam {
     }
 }
 
-// parses "name::kind>arg1=v1,arg2=v2" to an Instance
+// parses "name:kind>arg1=v1,arg2=v2" to an Instance
 impl From<String> for MiddlewareParam {
     fn from(subject: String) -> Self {
-        let (name, rest) = if subject.contains("::") {
-            subject.split_once("::").unwrap_or_default()
+        let (name, rest) = if subject.contains(":") {
+            subject.split_once(":").unwrap_or_default()
         } else {
             (subject.as_str(), "")
         };

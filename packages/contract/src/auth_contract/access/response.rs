@@ -110,6 +110,12 @@ impl From<GateResponse> for Response {
     }
 }
 
+impl IntoResponse for GateResponse {
+    fn into_response(self) -> Response {
+        self.into()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

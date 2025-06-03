@@ -12,10 +12,10 @@ async fn main() {
     let context = Context::make_global().await;
     dirtybase_auth::Extension::default().setup(&context).await;
 
+    //
     Gate::before(|_actor: AuthUser| async {
         // -
         if false {
-            println!("very wrong....");
             return true.into();
         }
         None
@@ -39,17 +39,14 @@ async fn main() {
         .expect("could not resolve the auth storage provider");
 
     let mut payload = AuthUserPayload::new();
-    payload.email = "foo@bar.com".to_string().into();
-    payload.password = "password".to_string().into();
-    payload.username = "testuser".to_string().into();
     payload.status = AuthUserStatus::Active.into();
 
     if let Ok(user) = storage.store(payload).await {
-        println!("current user: {:?}", &user);
+        println!("current user: {:?}", &user.username());
         context.set(user).await;
         context.set((Arc::new(Post::default()),)).await;
 
-        let gate = Gate::new();
+        let gate = Gate::from(&context);
         if gate
             .all_when(&["update-post"], (Arc::new(Post::default()), 55))
             .await
@@ -78,6 +75,7 @@ async fn register_gates() {
 }
 
 #[derive(Debug)]
+#[allow(unused)]
 struct Post {
     id: i32,
 }

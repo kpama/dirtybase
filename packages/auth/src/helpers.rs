@@ -13,8 +13,8 @@ pub async fn get_auth_storage(
     let config = ctx.get_config::<AuthConfig>("auth").await?;
     if let Some(storage) = StorageResolver::from_context(ctx)
         .await
-        .get_provider(if name.is_some() {
-            name.unwrap()
+        .get_provider(if let Some(n) = name {
+            n
         } else {
             config.storage_as_str()
         })

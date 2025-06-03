@@ -89,8 +89,7 @@ pub trait SchemaManagerTrait: Send + Sync {
     fn fetch_table_for_update(&self, name: &str) -> TableBlueprint;
 
     // commit schema changes
-    // FIXME: should return a Result<(), anyhow::Error>
-    async fn apply(&self, table: TableBlueprint);
+    async fn apply(&self, table: TableBlueprint) -> Result<()>;
 
     async fn execute(&self, query_builder: QueryBuilder) -> Result<()>;
 
@@ -103,7 +102,7 @@ pub trait SchemaManagerTrait: Send + Sync {
         &self,
         query_builder: &QueryBuilder,
         sender: tokio::sync::mpsc::Sender<ColumnAndValue>,
-    );
+    ) -> Result<()>;
 
     async fn fetch_one(
         &self,
@@ -148,7 +147,7 @@ pub trait SchemaManagerTrait: Send + Sync {
     }
 
     // checks if a table exist in the database
-    async fn has_table(&self, name: &str) -> bool;
+    async fn has_table(&self, name: &str) -> Result<bool, anyhow::Error>;
 
     async fn drop_table(&self, name: &str) -> Result<()>;
 
@@ -294,7 +293,7 @@ impl SchemaWrapper {
         let (sender, receiver) = tokio::sync::mpsc::channel::<ColumnAndValue>(100);
 
         tokio::spawn(async move {
-            self.inner.stream_result(&self.query_builder, sender).await;
+            _ = self.inner.stream_result(&self.query_builder, sender).await;
         });
 
         tokio_stream::wrappers::ReceiverStream::new(receiver)
@@ -316,7 +315,8 @@ impl SchemaWrapper {
         });
 
         tokio::spawn(async move {
-            self.inner
+            _ = self
+                .inner
                 .stream_result(&self.query_builder, inner_sender)
                 .await;
         });
