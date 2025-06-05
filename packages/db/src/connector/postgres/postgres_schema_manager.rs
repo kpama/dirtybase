@@ -9,7 +9,10 @@ use crate::base::{
 use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAndValue};
 use anyhow::anyhow;
 use async_trait::async_trait;
-use dirtybase_contract::db_contract::base::index::IndexType;
+use dirtybase_contract::db_contract::{
+    base::{aggregate::Aggregate, index::IndexType},
+    query_column::{QueryColumn, QueryColumnName},
+};
 use futures::stream::TryStreamExt;
 use sqlx::{
     Arguments, Column, Pool, Postgres, Row,
@@ -573,7 +576,11 @@ impl PostgresSchemaManager {
         // fields
         if let QueryAction::Query { columns } = query.action() {
             if let Some(fields) = columns {
-                sql = format!("{} {}", sql, fields.join(","));
+                let mut col_names = Vec::new();
+                for a_field in fields {
+                    col_names.push(self.column_to_string(a_field, params)?);
+                }
+                sql = format!("{} {}", sql, col_names.join(","));
             } else {
                 sql = format!("{} *", sql) // Select all columns by default
             }
@@ -663,25 +670,30 @@ impl PostgresSchemaManager {
         params: &mut PgArguments,
     ) -> Result<String, anyhow::Error> {
         let placeholder;
+        match condition.value() {
+            QueryValue::SubQuery(sub) => {
+                placeholder = self.build_query(sub, params)?;
+            }
+            QueryValue::ColumnName(name) => {
+                placeholder = name.clone();
+            }
+            _ => {
+                self.transform_value(condition.value(), params)?;
+                placeholder = if *condition.operator() == Operator::In
+                    || *condition.operator() == Operator::NotIn
+                {
+                    let length = match &condition.value() {
+                        QueryValue::Field(FieldValue::Array(v)) => v.len(),
+                        _ => 1,
+                    };
 
-        if let QueryValue::SubQuery(sub) = condition.value() {
-            placeholder = self.build_query(sub, params)?;
-        } else {
-            self.transform_value(condition.value(), params)?;
-            placeholder = if *condition.operator() == Operator::In
-                || *condition.operator() == Operator::NotIn
-            {
-                let length = match &condition.value() {
-                    QueryValue::Field(FieldValue::Array(v)) => v.len(),
-                    _ => 1,
+                    let mut placeholder = Vec::new();
+                    placeholder.resize(length, format!("${}", params.len()));
+                    placeholder.join(",")
+                } else {
+                    format!("${}", params.len())
                 };
-
-                let mut placeholder = Vec::new();
-                placeholder.resize(length, format!("${}", params.len()));
-                placeholder.join(",")
-            } else {
-                format!("${}", params.len())
-            };
+            }
         }
 
         Ok(condition
@@ -699,6 +711,7 @@ impl PostgresSchemaManager {
                 self.build_query(q, params)?;
             }
             QueryValue::Field(field) => self.field_value_to_args(field, params)?,
+            QueryValue::ColumnName(_) => (), // does not require an entry into the params,
         }
 
         Ok(())
@@ -925,6 +938,70 @@ impl PostgresSchemaManager {
         }
 
         Ok(sql)
+    }
+
+    fn column_to_string(
+        &self,
+        column: &QueryColumn,
+        params: &mut PgArguments,
+    ) -> Result<String, anyhow::Error> {
+        let alias = column.alias().as_ref().cloned().unwrap_or_default().clone();
+
+        if let Some(a) = column.aggregate() {
+            let aggregate = match a {
+                Aggregate::Avg => "AVG",
+                Aggregate::Count => "COUNT",
+                Aggregate::Max => "MAX",
+                Aggregate::Min => "MIN",
+                Aggregate::Sum => "SUM",
+            };
+
+            return match column.name() {
+                QueryColumnName::Name(n) => {
+                    let full_name = if let Some(tbl) = column.table() {
+                        format!("\"{}\".\"{}\"", tbl, n)
+                    } else {
+                        n.clone()
+                    };
+                    if alias.is_empty() {
+                        Ok(format!("({}({1})) as \"{1}\"", aggregate, full_name))
+                    } else {
+                        Ok(format!("{}({}) as \"{}\"", aggregate, full_name, alias))
+                    }
+                }
+                QueryColumnName::SubQuery(query) => {
+                    let sql = self.build_query(query, params)?;
+                    if alias.is_empty() {
+                        Ok(sql)
+                    } else {
+                        Ok(format!("({}({})) as \"{}\"", aggregate, sql, alias))
+                    }
+                }
+            };
+        }
+        return match column.name() {
+            QueryColumnName::Name(n) => {
+                let full_name = if let Some(tbl) = column.table() {
+                    format!("\"{}\".\"{}\"", tbl, n)
+                } else {
+                    n.clone()
+                };
+
+                if alias.is_empty() {
+                    Ok(format!("{}", full_name))
+                } else {
+                    Ok(format!("{} as \"{}\"", full_name, alias))
+                }
+            }
+            QueryColumnName::SubQuery(query) => {
+                let sql = self.build_query(query, params)?;
+                if alias.is_empty() {
+                    Ok(sql)
+                } else {
+                    Ok(format!("({}) as \"{}\"", sql, alias))
+                }
+            }
+        };
     }
 }
 

@@ -1,4 +1,7 @@
-use super::types::{FromColumnAndValue, ToColumnAndValue};
+use super::{
+    query_column::QueryColumn,
+    types::{FromColumnAndValue, ToColumnAndValue},
+};
 
 pub trait TableEntityTrait: FromColumnAndValue + ToColumnAndValue {
     /// Tables table's column names without prefix
@@ -41,10 +44,35 @@ pub trait TableEntityTrait: FromColumnAndValue + ToColumnAndValue {
         format!("{}.{}", Self::table_name(), subject.to_string())
     }
 
+    /// Returns the full column names as strings
     fn table_column_full_names() -> Vec<String> {
         Self::table_columns()
             .iter()
             .map(|c| format!("{0}.{1}", Self::table_name(), c))
+            .collect()
+    }
+
+    /// Returns the full columns names as QueryColumn
+    fn table_query_columns() -> Vec<QueryColumn> {
+        Self::table_columns()
+            .iter()
+            .map(|c| QueryColumn::new(*c, Some(Self::table_name()), None))
+            .collect()
+    }
+
+    fn table_query_col_aliases(prefix: Option<&str>) -> Vec<QueryColumn> {
+        let pre: String = if let Some(t) = prefix {
+            t.to_string()
+        } else {
+            Self::table_name().to_owned()
+        };
+
+        Self::table_columns()
+            .iter()
+            .map(|c| {
+                let alias = format!("{}.{}", pre, c);
+                QueryColumn::new(*c, Some(Self::table_name()), Some(&alias))
+            })
             .collect()
     }
 

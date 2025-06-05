@@ -10,6 +10,10 @@ use crate::base::{
 use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAndValue};
 use anyhow::anyhow;
 use async_trait::async_trait;
+use dirtybase_contract::db_contract::{
+    base::aggregate::Aggregate,
+    query_column::{QueryColumn, QueryColumnName},
+};
 use futures::stream::TryStreamExt;
 use sqlx::{
     Arguments, Column, Pool, Row, Sqlite, TypeInfo,
@@ -609,7 +613,11 @@ impl SqliteSchemaManager {
         // fields
         if let QueryAction::Query { columns } = query.action() {
             if let Some(fields) = columns {
-                sql = format!("{} {}", sql, fields.join(","));
+                let mut col_names = Vec::new();
+                for a_field in fields {
+                    col_names.push(self.column_to_string(a_field, params)?);
+                }
+                sql = format!("{} {}", sql, col_names.join(","));
             } else {
                 sql = format!("{} *", sql) // Select all columns by default
             }
@@ -625,7 +633,7 @@ impl SqliteSchemaManager {
         }
 
         // from
-        sql = format!("{} FROM {}", sql, query.table());
+        sql = format!("{} FROM '{}'", sql, query.table());
 
         // joins
         sql = format!("{} {}", sql, self.build_join(query, params)?);
@@ -701,24 +709,31 @@ impl SqliteSchemaManager {
         params: &mut SqliteArguments,
     ) -> Result<String, anyhow::Error> {
         let placeholder;
-        if let QueryValue::SubQuery(sub) = condition.value() {
-            placeholder = self.build_query(sub, params)?;
-        } else {
-            self.transform_value(condition.value(), params)?;
-            placeholder = if *condition.operator() == Operator::In
-                || *condition.operator() == Operator::NotIn
-            {
-                let length = match &condition.value() {
-                    QueryValue::Field(FieldValue::Array(v)) => v.len(),
-                    _ => 1,
-                };
+        match condition.value() {
+            QueryValue::SubQuery(sub) => {
+                //
+                placeholder = self.build_query(sub, params)?;
+            }
+            QueryValue::ColumnName(name) => {
+                placeholder = name.clone();
+            }
+            _ => {
+                self.transform_value(condition.value(), params)?;
+                placeholder = if *condition.operator() == Operator::In
+                    || *condition.operator() == Operator::NotIn
+                {
+                    let length = match &condition.value() {
+                        QueryValue::Field(FieldValue::Array(v)) => v.len(),
+                        _ => 1,
+                    };
 
-                let mut placeholder = Vec::new();
-                placeholder.resize(length, "?");
-                placeholder.join(",")
-            } else {
-                "?".to_owned()
-            };
+                    let mut placeholder = Vec::new();
+                    placeholder.resize(length, "?");
+                    placeholder.join(",")
+                } else {
+                    "?".to_owned()
+                };
+            }
         }
 
         Ok(condition
@@ -736,6 +751,7 @@ impl SqliteSchemaManager {
                 self.build_query(q, params)?;
             }
             QueryValue::Field(field) => self.field_value_to_args(field, params)?,
+            QueryValue::ColumnName(_) => (), // does not require an entry into the params,
         }
         Ok(())
     }
@@ -902,6 +918,70 @@ impl SqliteSchemaManager {
 
         Ok(sql)
     }
+
+    fn column_to_string(
+        &self,
+        column: &QueryColumn,
+        params: &mut SqliteArguments,
+    ) -> Result<String, anyhow::Error> {
+        let alias = column.alias().as_ref().cloned().unwrap_or_default().clone();
+
+        if let Some(a) = column.aggregate() {
+            let aggregate = match a {
+                Aggregate::Avg => "AVG",
+                Aggregate::Count => "COUNT",
+                Aggregate::Max => "MAX",
+                Aggregate::Min => "MIN",
+                Aggregate::Sum => "SUM",
+            };
+
+            return match column.name() {
+                QueryColumnName::Name(n) => {
+                    let full_name = if let Some(tbl) = column.table() {
+                        format!("`{}`.`{}`", tbl, n)
+                    } else {
+                        n.clone()
+                    };
+                    if alias.is_empty() {
+                        Ok(format!("({}({1})) as '{1}'", aggregate, full_name))
+                    } else {
+                        Ok(format!("{}({}) as '{}'", aggregate, full_name, alias))
+                    }
+                }
+                QueryColumnName::SubQuery(query) => {
+                    let sql = self.build_query(query, params)?;
+                    if alias.is_empty() {
+                        Ok(sql)
+                    } else {
+                        Ok(format!("({}({})) as '{}'", aggregate, sql, alias))
+                    }
+                }
+            };
+        }
+        return match column.name() {
+            QueryColumnName::Name(n) => {
+                let full_name = if let Some(tbl) = column.table() {
+                    format!("`{}`.`{}`", tbl, n)
+                } else {
+                    n.clone()
+                };
+
+                if alias.is_empty() {
+                    Ok(format!("{}", full_name))
+                } else {
+                    Ok(format!("{} as '{}'", full_name, alias))
+                }
+            }
+            QueryColumnName::SubQuery(query) => {
+                let sql = self.build_query(query, params)?;
+                if alias.is_empty() {
+                    Ok(sql)
+                } else {
+                    Ok(format!("({}) as '{}'", sql, alias))
+                }
+            }
+        };
+    }
 }
 
 fn build_field_value_to_args(
@@ -982,12 +1062,15 @@ mod test {
         let sqlite = SqliteSchemaManager::new(Arc::new(pool.unwrap()));
         let mut params = SqliteArguments::default();
 
-        query.eq("age", 0);
+        let mut builder = QueryBuilder::new("inner", QueryAction::Query { columns: None });
+        // builder.max_as("point", "user_points");
+        builder.is_eq("user", 32);
+        let mut col = QueryColumn::from(QueryColumnName::SubQuery(builder));
+        col.set_alias("points");
+        col.set_aggregate(Aggregate::Count);
 
-        query.is_in_sub("so_so2", "bar", |q| {
-            q.select("col1");
-            q.is_in("id", vec![1, 2]);
-        });
+        query.is_eq("age", 54);
+        query.select(col);
 
         // ue to test generated sql
         println!("{:#?}", sqlite.build_query(&query, &mut params));

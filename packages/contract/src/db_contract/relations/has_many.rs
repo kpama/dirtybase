@@ -39,7 +39,7 @@ where
         let mut qb = QueryBuilder::new(
             child_table,
             crate::db_contract::base::query::QueryAction::Query {
-                columns: Some(C::table_column_full_names()),
+                columns: Some(C::table_query_columns()),
             },
         );
 
@@ -77,7 +77,7 @@ where
         let mut qb = QueryBuilder::new(
             &self.child_table,
             crate::db_contract::base::query::QueryAction::Query {
-                columns: Some(C::table_column_full_names()),
+                columns: Some(C::table_query_columns()),
             },
         );
         qb.is_in(&self.child_field, keys);

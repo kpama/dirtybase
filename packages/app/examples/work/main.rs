@@ -10,7 +10,7 @@ use dirtybase_contract::db_contract::{
         RelationMany, RelationOne, RelationQueryBuilder,
     },
 };
-use dirtybase_db::{config::ConnectionConfig, connector::mariadb::make_mariadb_manager};
+use dirtybase_db::{config::ConnectionConfig, connector::sqlite::make_sqlite_manager};
 use models::{
     Address, Company, Customer, Image, Inventory, Invoice, Product, SalesOrder, Warehouse,
 };
@@ -26,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    // let manager = make_sqlite_manager(base_config).await;
+    let manager = make_sqlite_manager(base_config).await;
 
     // mariadb
     // let base_config = ConnectionConfig {
@@ -35,12 +35,12 @@ async fn main() -> anyhow::Result<()> {
     //     ..Default::default()
     // };
 
-    let manager = make_mariadb_manager(base_config).await;
+    // let manager = make_mariadb_manager(base_config).await;
 
     // postgres
-    // let base_config = BaseConfig {
+    // let base_config = ConnectionConfig {
     //     url: "postgres://dbuser:dbpassword@postgres/work".to_string(),
-    //     kind: dirtybase_db::base::schema::DatabaseKind::Postgres,
+    //     kind: "postgres".into(),
     //     ..Default::default()
     // };
 
@@ -69,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
     let mut rng = rand::rng();
     let customer = if let Ok(Some(c)) = manager
         .select_from_table(Customer::table_name(), |q| {
-            q.eq(
+            q.is_eq(
                 Customer::col_name_for_internal_id(),
                 rng.random_range(1..=200),
             );

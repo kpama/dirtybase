@@ -100,11 +100,11 @@ where
         let mut qb = QueryBuilder::new(
             pivot_table,
             crate::db_contract::base::query::QueryAction::Query {
-                columns: Some(PV::table_column_full_names()),
+                columns: Some(PV::table_query_columns()),
             },
         );
 
-        qb.eq(pivot_field, value);
+        qb.is_eq(pivot_field, value);
 
         qb.left_join_and_select(
             child_table,

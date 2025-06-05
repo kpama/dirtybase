@@ -69,7 +69,7 @@ impl<T: TableEntityTrait + 'static> Bind<T> {
                     if let Ok(manager) = resolver.context_ref().get::<Manager>().await {
                         if let Ok(Some(value)) = manager
                             .select_from::<T>(|query| {
-                                query.eq(name, field_value);
+                                query.is_eq(name, field_value);
                             })
                             .fetch_one_to::<T>()
                             .await

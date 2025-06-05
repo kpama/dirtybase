@@ -1,6 +1,6 @@
 use super::query_conditions::Condition;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum WhereJoinOperator {
     None(Condition),
     And(Condition),

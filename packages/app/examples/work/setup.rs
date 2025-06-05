@@ -8,7 +8,7 @@ use rand::Rng;
 pub async fn seed_tables(manager: &Manager) {
     if let Ok(Some(_)) = manager
         .select_from_table(Customer::table_name(), |q| {
-            q.eq(Customer::col_name_for_name(), "Customer1");
+            q.is_eq(Customer::col_name_for_name(), "Customer1");
         })
         .fetch_one_to::<Customer>()
         .await
@@ -95,10 +95,10 @@ pub async fn seed_tables(manager: &Manager) {
                 .await;
         }
 
-        for id in 1..=4 {
+        for id in 1..rng.random_range(1..=4) {
             if let Ok(Some(warehouse)) = manager
                 .select_from_table(Warehouse::table_name(), |q| {
-                    q.eq(Warehouse::col_name_for_internal_id(), id);
+                    q.is_eq(Warehouse::col_name_for_internal_id(), id);
                 })
                 .fetch_one_to::<Warehouse>()
                 .await
@@ -118,7 +118,7 @@ pub async fn seed_tables(manager: &Manager) {
     }
 
     // customer
-    for index in 1..2001 {
+    for index in 1..100 {
         let customer_name = format!("Customer{}", index);
         let customer_id = UlidField::new();
         _ = manager
@@ -180,7 +180,7 @@ pub async fn seed_tables(manager: &Manager) {
                 loop {
                     if let Ok(Some(product)) = manager
                         .select_from_table(Product::table_name(), |q| {
-                            q.eq(
+                            q.is_eq(
                                 Product::col_name_for_sku(),
                                 format!("PROD-{}", rng.random_range(1..=150)),
                             );

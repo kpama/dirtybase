@@ -24,7 +24,7 @@ impl CacheDbStoreRepository {
                 // TODO: Add time condition
             }
 
-            query.eq(
+            query.is_eq(
                 CacheDbStoreEntity::prefix_with_tbl(CacheEntry::col_name_for_key()),
                 key,
             );
@@ -133,7 +133,7 @@ impl CacheDbStoreRepository {
     pub async fn delete(&self, key: &str) -> bool {
         self.manager
             .delete(CacheDbStoreEntity::table_name(), |query| {
-                query.eq(CacheEntry::col_name_for_key(), key);
+                query.is_eq(CacheEntry::col_name_for_key(), key);
             })
             .await
             .is_ok()

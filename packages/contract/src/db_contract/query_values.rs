@@ -1,8 +1,9 @@
 use crate::db_contract::{base::query::QueryBuilder, field_values::FieldValue};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum QueryValue {
     Field(FieldValue),
+    ColumnName(String),
     SubQuery(Box<QueryBuilder>),
 }
 

@@ -54,7 +54,7 @@ pub struct ResourceManager {
 impl ResourceManager {
     /// Create an instance
     ///
-    /// The idel timeout value have some implecations
+    /// The idle timeout value have some implications
     ///  - value == 0 : The instance will live forever
     ///  - value < 0  : The instance will live of current request
     ///  - value > 0  : The instance will be dropped after being idle that long (in seconds)
@@ -271,7 +271,7 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
         lock.contains_key(name)
     }
 
-    async fn _drop_all(&self) {
+    async fn drop_all(&self) {
         tracing::trace!("shutting down manager: {}", self.name_of_t());
         let clean_up_fn = self.drop_fn.clone();
         let mut write_lock = self.collection.write().await;
@@ -287,9 +287,6 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
 
     async fn handle_shutdown_signal(self) -> Self {
         let this_manager = self.clone();
-        // FIXME: use something else other than block_on
-        //        block_on does not work for db over tcp connection
-
         tokio::spawn(async move {
             let ctrl_c = async {
                 tokio::signal::ctrl_c()
@@ -311,12 +308,12 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
             tokio::select! {
                 _ = ctrl_c => {
                     tracing::debug!("shutting down due to ctr+c");
-                    //  this_manager.drop_all().await;
+                     this_manager.drop_all().await;
                     drop(this_manager);
                 },
                 _ = terminate => {
                     tracing::debug!("shutting down for other reason");
-                    // this_manager.drop_all().await;
+                    this_manager.drop_all().await;
                     drop(this_manager);
                 },
             }

@@ -1,5 +1,6 @@
 use crate::db_contract::{
     field_values::FieldValue,
+    query_column::{QueryColumn, QueryColumnName},
     query_values::QueryValue,
     types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue},
     TableEntityTrait,
@@ -27,7 +28,7 @@ pub enum WhereJoin {
 #[derive(Debug, Clone, PartialEq)]
 pub enum QueryAction {
     Query {
-        columns: Option<Vec<String>>,
+        columns: Option<Vec<QueryColumn>>,
     },
     Create {
         rows: Vec<ColumnAndValue>,
@@ -76,7 +77,7 @@ impl Display for QueryAction {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct QueryBuilder {
     where_clauses: Vec<WhereJoinOperator>,
     table: String,
@@ -132,11 +133,9 @@ impl QueryBuilder {
     }
 
     pub fn count_as(&mut self, column: &str, as_name: &str) -> &mut Self {
-        self.select(format!(
-            "{} as '{}'",
-            Aggregate::Count(column.to_string()),
-            as_name
-        ));
+        let mut col = QueryColumn::new(column, None, Some(as_name));
+        col.set_aggregate(Aggregate::Count);
+        self.select(col);
         self
     }
 
@@ -146,52 +145,50 @@ impl QueryBuilder {
     }
 
     pub fn max_as(&mut self, column: &str, as_name: &str) -> &mut Self {
-        self.select(format!(
-            "{} as '{}'",
-            Aggregate::Max(column.to_string()),
-            as_name
-        ));
+        let mut col = QueryColumn::new(column, None, Some(as_name));
+        col.set_aggregate(Aggregate::Max);
+        self.select(col);
         self
     }
 
     pub fn min<C: ToString>(&mut self, column: C) -> &mut Self {
-        let as_name = format!("min_{}", column.to_string());
-        self.min_as(column, as_name)
-    }
-
-    pub fn min_as<C: ToString, A: ToString>(&mut self, column: C, as_name: A) -> &mut Self {
-        self.select(format!(
-            "{} as '{}'",
-            Aggregate::Min(column.to_string()),
-            as_name.to_string()
-        ));
-        self
-    }
-    pub fn sum<C: ToString>(&mut self, column: C) -> &mut Self {
-        let as_name = format!("sum_{}", column.to_string());
-        self.sum_as(column, as_name)
-    }
-
-    pub fn sum_as<C: ToString, A: ToString>(&mut self, column: C, as_name: A) -> &mut Self {
-        self.select(format!(
-            "{} as '{}'",
-            Aggregate::Sum(column.to_string()),
-            as_name.to_string()
-        ));
+        let mut col = QueryColumn::new(column, None, None);
+        col.set_aggregate(Aggregate::Min);
+        self.select(col);
         self
     }
 
-    pub fn avg<C: ToString>(&mut self, column: C) -> &mut Self {
-        let as_name = format!("avg_{}", column.to_string());
-        self.avg_as(column, as_name)
+    pub fn min_as<C: ToString>(&mut self, column: C, as_name: &str) -> &mut Self {
+        let mut col = QueryColumn::new(column, None, Some(as_name));
+        col.set_aggregate(Aggregate::Min);
+        self.select(col);
+        self
+    }
+    pub fn sum<C: Into<QueryColumnName>>(&mut self, column: C) -> &mut Self {
+        let mut col = QueryColumn::new(column, None, None);
+        col.set_aggregate(Aggregate::Sum);
+        self.select(col);
+        self
     }
 
-    pub fn avg_as<C: ToString, A: ToString>(&mut self, column: C, as_name: A) -> &mut Self {
-        self.select(format!(
-            "{} as '{}'",
-            Aggregate::Avg(column.to_string()),
-            as_name.to_string()
-        ));
+    pub fn sum_as<C: Into<QueryColumnName>>(&mut self, column: C, as_name: &str) -> &mut Self {
+        let mut col = QueryColumn::new(column, None, Some(as_name));
+        col.set_aggregate(Aggregate::Sum);
+        self.select(col);
+        self
+    }
+
+    pub fn avg<C: Into<QueryColumnName>>(&mut self, column: C) -> &mut Self {
+        let mut col = QueryColumn::new(column, None, None);
+        col.set_aggregate(Aggregate::Avg);
+        self.select(col);
+        self
+    }
+
+    pub fn avg_as<C: Into<QueryColumnName>>(&mut self, column: C, as_name: &str) -> &mut Self {
+        let mut col = QueryColumn::new(column, None, Some(as_name));
+        col.set_aggregate(Aggregate::Avg);
+        self.select(col);
         self
     }
 
@@ -255,16 +252,47 @@ impl QueryBuilder {
     }
 
     /// Adds a column that should be selected
-    pub fn select<T: ToString>(&mut self, column: T) -> &mut Self {
+    pub fn select<T: Into<QueryColumn>>(&mut self, column: T) -> &mut Self {
         if let QueryAction::Query { columns } = &mut self.action {
+            let col: QueryColumn = column.into();
             if let Some(list) = columns {
-                list.push(column.to_string())
+                list.push(col)
             } else {
-                *columns = Some(vec![column.to_string()]);
+                *columns = Some(vec![col]);
             }
         }
 
         self
+    }
+
+    /// Adds a column that should be selected as alias
+    pub fn select_as<T: Into<QueryColumn>>(&mut self, column: T, alias: &str) -> &mut Self {
+        let table = self.table.clone();
+        if let QueryAction::Query { columns } = &mut self.action {
+            let mut col: QueryColumn = column.into();
+            col.set_table(&table);
+            col.set_alias(alias);
+
+            if let Some(list) = columns {
+                list.push(col)
+            } else {
+                *columns = Some(vec![col]);
+            }
+        }
+
+        self
+    }
+
+    pub fn subquery_column<F>(&mut self, table: &str, callback: F, alias: Option<&str>) -> &mut Self
+    where
+        F: FnOnce(&mut QueryBuilder),
+    {
+        let mut builder = QueryBuilder::new(table, QueryAction::Query { columns: None });
+        callback(&mut builder);
+
+        let col = QueryColumn::new(QueryColumnName::SubQuery(builder), Some(table), alias);
+
+        self.select(col)
     }
 
     /// Adds a table to the list of tables to select from
@@ -273,19 +301,19 @@ impl QueryBuilder {
     }
 
     /// Adds multiple columns to be selected
-    pub fn select_multiple<T: ToString, C: IntoIterator<Item = T>>(
+    pub fn select_multiple<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
         &mut self,
         columns_to_select: C,
     ) -> &mut Self {
         if let QueryAction::Query { columns } = &mut self.action {
             if let Some(list) = columns {
-                list.extend(columns_to_select.into_iter().map(|c| c.to_string()))
+                list.extend(columns_to_select.into_iter().map(|c| c.into()))
             } else {
                 *columns = Some(
                     columns_to_select
                         .into_iter()
-                        .map(|c| c.to_string())
-                        .collect::<Vec<String>>(),
+                        .map(|c| c.into())
+                        .collect::<Vec<QueryColumn>>(),
                 );
             }
         }
@@ -334,7 +362,7 @@ impl QueryBuilder {
     }
 
     /// `WHERE` column equals value
-    pub fn eq<T: Into<QueryValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
+    pub fn is_eq<T: Into<QueryValue>, C: ToString>(&mut self, column: C, value: T) -> &mut Self {
         self.where_operator(column, Operator::Equal, value, None)
     }
 
@@ -599,7 +627,6 @@ impl QueryBuilder {
         )
     }
 
-    // TODO: Test this feature. Also allow optional prefix?
     pub fn without_trash(&mut self) -> &mut Self {
         self.is_null(DELETED_AT_FIELD)
     }
@@ -611,7 +638,6 @@ impl QueryBuilder {
         self
     }
 
-    // TODO: Test this feature. Also allow optional prefix?
     pub fn with_trash(&mut self) -> &mut Self {
         self.is_null(DELETED_AT_FIELD)
             .or_is_not_null(DELETED_AT_FIELD)

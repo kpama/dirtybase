@@ -60,7 +60,7 @@ where
         let mut qb = QueryBuilder::new(
             C::table_name(),
             crate::db_contract::base::query::QueryAction::Query {
-                columns: Some(C::table_column_full_names()),
+                columns: Some(C::table_query_columns()),
             },
         );
 
@@ -69,8 +69,8 @@ where
         } else {
             FieldValue::Null
         };
-        qb.eq(&self.relation.child_field, value);
-        qb.eq(&self.relation.child_type_field, &self.relation.child_type);
+        qb.is_eq(&self.relation.child_field, value);
+        qb.is_eq(&self.relation.child_type_field, &self.relation.child_type);
 
         self.relation.query_builder = qb;
         self

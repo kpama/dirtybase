@@ -2,7 +2,7 @@ use crate::db_contract::query_values::QueryValue;
 
 use super::query_operators::Operator;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Condition {
     pub column: String,
     pub operator: Operator,

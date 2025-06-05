@@ -42,7 +42,7 @@ where
         let mut qb = QueryBuilder::new(
             parent_table,
             crate::db_contract::base::query::QueryAction::Query {
-                columns: Some(P::table_column_full_names()),
+                columns: Some(P::table_query_columns()),
             },
         );
 
@@ -70,7 +70,7 @@ where
         let mut qb = QueryBuilder::new(
             &self.parent_table,
             crate::db_contract::base::query::QueryAction::Query {
-                columns: Some(P::table_column_full_names()),
+                columns: Some(P::table_query_columns()),
             },
         );
         qb.is_in(&self.parent_field, keys);

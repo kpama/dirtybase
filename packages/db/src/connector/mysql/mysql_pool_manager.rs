@@ -40,7 +40,10 @@ impl ConnectionPoolTrait for MysqlPoolManager {
         MYSQL_KIND.into()
     }
     async fn close(&self) {
-        self.db_pool.close().await;
+        if !self.db_pool.is_closed() {
+            self.db_pool.close().await;
+        }
+        tracing::trace!("mysql connection closed: {}", self.db_pool.is_closed());
     }
 }
 

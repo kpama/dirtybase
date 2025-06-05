@@ -41,7 +41,7 @@ impl MigrationRepository {
     pub async fn find_by_name(&self, name: &str) -> Result<Option<MigrationEntity>, anyhow::Error> {
         self.manager
             .select_from_table(TABLE_NAME, |query| {
-                query.eq(NAME_COLUMN, name);
+                query.is_eq(NAME_COLUMN, name);
             })
             .fetch_one_to()
             .await
@@ -59,7 +59,7 @@ impl MigrationRepository {
             if let Ok(Some(collection)) = self
                 .manager
                 .select_from_table(TABLE_NAME, |q| {
-                    q.eq(BATCH_COLUMN, last.batch).desc("created_at");
+                    q.is_eq(BATCH_COLUMN, last.batch).desc("created_at");
                 })
                 .fetch_all_to::<MigrationEntity>()
                 .await
@@ -78,7 +78,7 @@ impl MigrationRepository {
         _ = self
             .manager()
             .delete(TABLE_NAME, |q| {
-                q.eq(BATCH_COLUMN, batch);
+                q.is_eq(BATCH_COLUMN, batch);
             })
             .await;
     }

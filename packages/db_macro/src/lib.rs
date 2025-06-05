@@ -91,7 +91,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
 
       // ToColumnAndValue for T
       impl #ty_generics ::dirtybase_contract::db_contract::types::ToColumnAndValue for #name  #ty_generics #where_clause {
-        fn to_column_value(&self) -> Result<::dirtybase_contract::db_contract::types::ColumnAndValue, ::anyhow::Error> {
+        fn to_column_value(&self) -> Result<::dirtybase_contract::db_contract::types::ColumnAndValue, ::dirtybase_contract::anyhow::Error> {
             Ok(::dirtybase_contract::db_contract::ColumnAndValueBuilder::new()
                 #(.#into_cv_for_calls)*
                 .build())

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Direction {
     ASC,
     DESC,
@@ -15,12 +15,12 @@ impl Display for Direction {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct OrderByBuilder {
     orders: Vec<(String, Direction)>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LimitBuilder {
     pub(crate) limit: usize,
 }
@@ -31,7 +31,7 @@ impl Display for LimitBuilder {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct OffsetBuilder {
     pub(crate) offset: usize,
 }

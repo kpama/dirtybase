@@ -57,7 +57,7 @@ where
         let mut qb = QueryBuilder::new(
             pivot_table,
             crate::db_contract::base::query::QueryAction::Query {
-                columns: Some(PV::table_column_full_names()),
+                columns: Some(PV::table_query_columns()),
             },
         );
 

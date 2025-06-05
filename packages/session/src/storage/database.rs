@@ -51,7 +51,7 @@ impl SessionStorage for DatabaseStorage {
         match self
             .manager
             .select_from::<SessionTable>(|query| {
-                query.eq(SessionTable::col_name_for_id(), id.to_string());
+                query.is_eq(SessionTable::col_name_for_id(), id.to_string());
             })
             .fetch_one_to::<SessionTable>()
             .await
@@ -67,7 +67,7 @@ impl SessionStorage for DatabaseStorage {
         _ = self
             .manager
             .delete_from_table::<SessionTable>(|q| {
-                q.eq(SessionTable::col_name_for_id(), id.to_string());
+                q.is_eq(SessionTable::col_name_for_id(), id.to_string());
             })
             .await;
 

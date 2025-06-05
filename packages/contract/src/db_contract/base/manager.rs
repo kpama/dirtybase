@@ -413,7 +413,7 @@ impl Manager {
         self.is_writable
     }
 
-    pub async fn close(&self) {
+    pub async fn close(self) {
         for (_, collection) in self.connections.iter() {
             for (_, pool) in collection {
                 pool.close().await;

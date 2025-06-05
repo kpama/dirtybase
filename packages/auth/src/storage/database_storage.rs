@@ -26,7 +26,7 @@ impl AuthUserStorage for AuthUserDatabaseStorage {
         if existing_id.is_some() {
             self.manager
                 .update(AUTH_USER_TABLE, payload, |q| {
-                    q.eq("id", &id);
+                    q.is_eq("id", &id);
                 })
                 .await?;
         } else {
@@ -36,7 +36,7 @@ impl AuthUserStorage for AuthUserDatabaseStorage {
         match self
             .manager
             .select_from_table(AUTH_USER_TABLE, |q| {
-                q.eq("id", id);
+                q.is_eq("id", id);
             })
             .fetch_one_to::<AuthUser>()
             .await
@@ -49,7 +49,7 @@ impl AuthUserStorage for AuthUserDatabaseStorage {
     async fn find_by_id(&self, id: ArcUuid7) -> Result<Option<AuthUser>, anyhow::Error> {
         self.manager
             .select_from_table(AUTH_USER_TABLE, |q| {
-                q.eq("id", id);
+                q.is_eq("id", id);
             })
             .fetch_one_to::<AuthUser>()
             .await
@@ -57,7 +57,7 @@ impl AuthUserStorage for AuthUserDatabaseStorage {
     async fn find_by_username(&self, username: &str) -> Result<Option<AuthUser>, anyhow::Error> {
         self.manager
             .select_from_table(AUTH_USER_TABLE, |q| {
-                q.eq("username", username);
+                q.is_eq("username", username);
             })
             .fetch_one_to::<AuthUser>()
             .await
@@ -65,7 +65,7 @@ impl AuthUserStorage for AuthUserDatabaseStorage {
     async fn find_by_email_hash(&self, hash: &str) -> Result<Option<AuthUser>, anyhow::Error> {
         self.manager
             .select_from_table(AUTH_USER_TABLE, |q| {
-                q.eq("email_hash", hash);
+                q.is_eq("email_hash", hash);
             })
             .fetch_one_to::<AuthUser>()
             .await
@@ -73,7 +73,7 @@ impl AuthUserStorage for AuthUserDatabaseStorage {
     async fn delete(&self, id: ArcUuid7) -> Result<(), anyhow::Error> {
         self.manager
             .delete(AUTH_USER_TABLE, |q| {
-                q.eq("id", id);
+                q.is_eq("id", id);
             })
             .await
     }
