@@ -249,7 +249,9 @@ impl Display for AuthUser {
 }
 
 impl FromColumnAndValue for AuthUser {
-    fn from_column_value(mut cv: crate::db_contract::types::ColumnAndValue) -> Self {
+    fn from_column_value(
+        mut cv: crate::db_contract::types::ColumnAndValue,
+    ) -> Result<Self, anyhow::Error> {
         let mut user = Self::default();
 
         if let Some(v) = cv.remove("id") {
@@ -305,9 +307,13 @@ impl FromColumnAndValue for AuthUser {
 
         if !cv.is_empty() {
             tracing::error!("not handling all of column value entries: {:?}", cv);
+            return Err(anyhow::anyhow!(
+                "not handling all of column value entries: {:?}",
+                cv
+            ));
         }
 
-        user
+        Ok(user)
     }
 }
 

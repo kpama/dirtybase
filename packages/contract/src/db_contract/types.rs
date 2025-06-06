@@ -58,7 +58,9 @@ pub trait ToColumnAndValue {
 }
 
 pub trait FromColumnAndValue {
-    fn from_column_value(column_and_value: ColumnAndValue) -> Self;
+    fn from_column_value(column_and_value: ColumnAndValue) -> Result<Self, anyhow::Error>
+    where
+        Self: Sized;
 }
 
 #[derive(Debug, serde::Serialize, Clone)]
@@ -77,25 +79,30 @@ impl StructuredColumnAndValue {
     }
 
     pub fn from_results(results: Vec<ColumnAndValue>) -> Vec<Self> {
-        results.into_iter().map(Self::from_column_value).collect()
+        results
+            .into_iter()
+            .flat_map(Self::from_column_value)
+            .collect()
     }
 
-    pub fn from_results_into<T: FromColumnAndValue>(results: Vec<ColumnAndValue>) -> Vec<T> {
+    pub fn from_results_into<T: FromColumnAndValue>(
+        results: Vec<ColumnAndValue>,
+    ) -> Result<Vec<T>, anyhow::Error> {
         let structured_results = Self::from_results(results);
         let mut data = Vec::new();
 
         for structured in structured_results {
             for entry in structured.fields {
                 if let FieldValue::Object(kv) = entry.1 {
-                    data.push(T::from_column_value(kv));
+                    data.push(T::from_column_value(kv)?);
                 }
             }
         }
 
-        data
+        Ok(data)
     }
 
-    pub fn from_a_result(result: ColumnAndValue) -> Self {
+    pub fn from_a_result(result: ColumnAndValue) -> Result<Self, anyhow::Error> {
         Self::from_column_value(result)
     }
 
@@ -111,7 +118,7 @@ impl Default for StructuredColumnAndValue {
 }
 
 impl FromColumnAndValue for StructuredColumnAndValue {
-    fn from_column_value(column_and_value: ColumnAndValue) -> Self {
+    fn from_column_value(column_and_value: ColumnAndValue) -> Result<Self, anyhow::Error> {
         let mut data = ColumnAndValue::new();
 
         for kv in column_and_value.into_iter() {
@@ -119,7 +126,7 @@ impl FromColumnAndValue for StructuredColumnAndValue {
             data = build_structure(data, pieces, kv.1);
         }
 
-        Self::new(data)
+        Ok(Self::new(data))
     }
 }
 

@@ -191,7 +191,7 @@ pub(crate) fn names_of_from_cv_handlers(
             if item.1.flatten {
                 let the_type = format_ident!("{}", &item.1.the_type);
                 return quote! {
-                    #struct_field:#the_type::from_column_value(cv.clone())
+                    #struct_field:#the_type::from_column_value(cv.clone()).expect("could not flatten")
                 };
             }
 
@@ -230,7 +230,7 @@ pub(crate) fn spread_default(
         }
     } else {
         quote! {
-            // Nothting do do
+            // Nothing do do
         }
     }
 }

@@ -49,7 +49,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
                     None
                 }
           } else {
-            Some(::dirtybase_contract::db_contract::types::FromColumnAndValue::from_column_value(cv.clone().fields()))
+            ::dirtybase_contract::db_contract::types::FromColumnAndValue::from_column_value(cv.clone().fields()).ok()
           }
         }
 
@@ -81,11 +81,11 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
 
       // FromColumnAndValue for T
       impl #ty_generics ::dirtybase_contract::db_contract::types::FromColumnAndValue  for #name  #ty_generics #where_clause {
-        fn from_column_value(cv: ::dirtybase_contract::db_contract::types::ColumnAndValue) -> Self {
-            Self {
+        fn from_column_value(cv: ::dirtybase_contract::db_contract::types::ColumnAndValue) -> Result<Self, ::dirtybase_contract::anyhow::Error>{
+            Ok(Self {
                 #(#from_cv_for_handlers),*,
                 #defaults
-            }
+            })
         }
       }
 
@@ -105,7 +105,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
              if cv.is_empty() {
                 Self::default()
              } else {
-              ::dirtybase_contract::db_contract::types::FromColumnAndValue::from_column_value(cv)
+              ::dirtybase_contract::db_contract::types::FromColumnAndValue::from_column_value(cv).expect("could not convert from field value")
              }
           }
       }

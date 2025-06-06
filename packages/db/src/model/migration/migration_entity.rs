@@ -16,12 +16,14 @@ pub struct MigrationEntity {
 }
 
 impl FromColumnAndValue for MigrationEntity {
-    fn from_column_value(cv: dirtybase_contract::db_contract::types::ColumnAndValue) -> Self {
-        Self {
+    fn from_column_value(
+        cv: dirtybase_contract::db_contract::types::ColumnAndValue,
+    ) -> Result<Self, anyhow::Error> {
+        Ok(Self {
             _id: cv.get("id").unwrap().into(),
             name: cv.get(NAME_COLUMN).unwrap().into(),
             batch: cv.get(BATCH_COLUMN).unwrap().into(),
             _created_at: cv.get(CREATED_AT_COLUMN).unwrap().into(),
-        }
+        })
     }
 }

@@ -1201,12 +1201,14 @@ impl<T: FromColumnAndValue + Send + Sync + 'static> EntityQueryBuilder<T> {
         let result = self.fetch_all().await;
         if let Ok(records) = result {
             match records {
-                Some(rows) => Ok(Some(
-                    rows.into_iter()
-                        .map(|row| T::from_column_value(row.fields()))
-                        .collect::<Vec<T>>(),
-                )),
-                None => Ok(Some(Vec::new())),
+                Some(rows) => {
+                    let mut data = Vec::new();
+                    for a_row in rows {
+                        data.push(T::from_column_value(a_row.fields())?)
+                    }
+                    Ok(Some(data))
+                }
+                None => Ok(None),
             }
         } else {
             Err(result.err().unwrap())
@@ -1218,7 +1220,7 @@ impl<T: FromColumnAndValue + Send + Sync + 'static> EntityQueryBuilder<T> {
 
         if let Ok(row) = result {
             match row {
-                Some(r) => Ok(Some(T::from_column_value(r.fields()))),
+                Some(r) => Ok(Some(T::from_column_value(r.fields())?)),
                 None => Ok(None),
             }
         } else {
@@ -1232,9 +1234,16 @@ impl<T: FromColumnAndValue + Send + Sync + 'static> EntityQueryBuilder<T> {
 
         tokio::spawn(async move {
             while let Some(result) = inner_receiver.recv().await {
-                if let Err(e) = outer_sender.send(T::from_column_value(result)).await {
-                    log::debug!("error sending transformed row result: {}", e);
-                    break;
+                match T::from_column_value(result) {
+                    Ok(d) => {
+                        if let Err(e) = outer_sender.send(d).await {
+                            tracing::error!("error sending transformed row result: {}", e);
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("error sending transformed row result: {}", e);
+                    }
                 }
             }
         });
@@ -1266,7 +1275,7 @@ impl<T: FromColumnAndValue + Send + Sync + 'static> EntityQueryBuilder<T> {
 
         if let Ok(row) = result {
             match row {
-                Some(r) => Ok(Some(StructuredColumnAndValue::from_a_result(r))),
+                Some(r) => Ok(Some(StructuredColumnAndValue::from_a_result(r)?)),
                 None => Ok(None),
             }
         } else {

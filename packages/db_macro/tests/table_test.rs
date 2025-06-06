@@ -100,7 +100,7 @@ fn test_complex_field() {
         FieldValue::String("25, 20".to_string()),
     );
 
-    let instance = Example::from_column_value(data);
+    let instance = Example::from_column_value(data).unwrap();
 
     assert_eq!(
         instance.discount_allowed,

@@ -120,7 +120,7 @@ pub trait SchemaManagerTrait: Send + Sync {
 
         if let Ok(row) = result {
             match row {
-                Some(r) => Ok(Some(T::from_column_value(r))),
+                Some(r) => Ok(Some(T::from_column_value(r)?)),
                 None => Ok(None),
             }
         } else {
@@ -137,7 +137,9 @@ pub trait SchemaManagerTrait: Send + Sync {
         if let Ok(records) = result {
             match records {
                 Some(rs) => Ok(Some(
-                    rs.into_iter().map(T::from_column_value).collect::<Vec<T>>(),
+                    rs.into_iter()
+                        .flat_map(T::from_column_value)
+                        .collect::<Vec<T>>(),
                 )),
                 None => Ok(None),
             }
@@ -237,7 +239,7 @@ impl SchemaWrapper {
 
         if let Ok(row) = result {
             match row {
-                Some(r) => Ok(Some(StructuredColumnAndValue::from_a_result(r))),
+                Some(r) => Ok(Some(StructuredColumnAndValue::from_a_result(r)?)),
                 None => Ok(None),
             }
         } else {
@@ -261,7 +263,7 @@ impl SchemaWrapper {
 
         if let Ok(row) = result {
             match row {
-                Some(r) => Ok(Some(T::from_column_value(r.fields()))),
+                Some(r) => Ok(Some(T::from_column_value(r.fields())?)),
                 None => Ok(None),
             }
         } else {
@@ -279,7 +281,7 @@ impl SchemaWrapper {
             match records {
                 Some(rows) => Ok(Some(
                     rows.into_iter()
-                        .map(|row| T::from_column_value(row.fields()))
+                        .flat_map(|row| T::from_column_value(row.fields()))
                         .collect::<Vec<T>>(),
                 )),
                 None => Ok(Some(Vec::new())),
@@ -307,9 +309,16 @@ impl SchemaWrapper {
 
         tokio::spawn(async move {
             while let Some(result) = inner_receiver.recv().await {
-                if let Err(e) = outer_sender.send(T::from_column_value(result)).await {
-                    log::debug!("error sending transformed row result: {}", e);
-                    break;
+                match T::from_column_value(result) {
+                    Ok(d) => {
+                        if let Err(e) = outer_sender.send(d).await {
+                            tracing::error!("error sending transformed row result: {}", e);
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("error sending transformed row result: {}", e);
+                    }
                 }
             }
         });
