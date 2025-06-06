@@ -40,7 +40,7 @@ impl ExtensionSetup for Extension {
                         } else {
                             // TODO: WRITE THIS KEY TO THE .ENV FILE
                             //       If there is an existing key, move it to the list of previous keys
-                            println!("{}", key);
+                            println!("writing to .env: {}", key);
                         }
                     }
                 }

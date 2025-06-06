@@ -48,7 +48,7 @@ fn load_dot_env<P: AsRef<Path>>(mut dir: Option<P>) {
     };
 
     if !path.is_dir() {
-        panic!("Directory to find .env files does not exist");
+        // panic!("Directory to find .env files does not exist");
     }
 
     let _ = dotenvy::from_filename(path.join(".env.defaults"));

@@ -232,7 +232,12 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 req.extensions_mut().insert(context.clone());
 
                 let cookie_jar = CookieJar::from_headers(req.headers());
-                let app = context.get::<AppService>().await.unwrap();
+                let app = context
+                    .get::<AppService>()
+                    .await
+                    .expect("could not get app service");
+
+                // TODO: CHECK THAT WE HAVE A ENCRYPTION KEY
                 let app_config = app.config_ref();
                 let cookie_config = app_config.web_cookie_ref();
                 let encrypter = dirtybase_encrypt::Encrypter::new(
@@ -248,7 +253,10 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 // pass the request
                 let mut response = next.run(req).await;
 
-                let http_context = context.get::<HttpContext>().await.unwrap();
+                let http_context = context
+                    .get::<HttpContext>()
+                    .await
+                    .expect("could not get http context");
                 // The cookie must be setting via the http context
                 let mut cookie_jar = http_context.cookie_jar().await;
 

@@ -111,8 +111,6 @@ impl DirtyConfig {
             builder = builder.add_source(env_callback(self.build_env(prefix)));
         }
 
-        builder = self.append_optional(builder, filename);
-
         builder
     }
     pub fn load_optional_file(
