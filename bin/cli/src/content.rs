@@ -30,6 +30,7 @@ pub(crate) fn files() -> &'static [&'static str] {
         // http
         "dirtybase_entry/http/.gitkeep",
         "dirtybase_entry/http.rs",
+        "dirtybase_entry/http/general.rs",
         // model
         "dirtybase_entry/model/.gitkeep",
         "dirtybase_entry/model.rs",
@@ -68,6 +69,16 @@ pub(crate) fn stubs<'a>() -> HashMap<&'a str, &'a str> {
     file_content.insert(
         "../.env.defaults",
         include_str!("./stubs/.env.defaults.stub.txt"),
+    );
+
+    // http
+    file_content.insert(
+        "dirtybase_entry/http.rs",
+        include_str!("./stubs/http.stub.txt"),
+    );
+    file_content.insert(
+        "dirtybase_entry/http/general.rs",
+        include_str!("./stubs/http/general.stub.txt"),
     );
 
     // seeder

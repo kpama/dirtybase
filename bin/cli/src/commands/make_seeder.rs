@@ -42,6 +42,13 @@ pub fn make(package: Option<&String>, name: &str) {
         name, module_name
     );
 
+    if !module.contains("dirtybase_contract::db_contract::SeederRegisterer") {
+        module.insert_str(
+            0,
+            "use dirtybase_contract::db_contract::SeederRegisterer;\r\n",
+        );
+    }
+
     module = module.replace("register_seeders() {", &seed_function);
     module = module.replace("register_seeders(){", &seed_function);
     module = module.replace("register_seeders()\n{", &seed_function);
@@ -53,7 +60,7 @@ pub fn make(package: Option<&String>, name: &str) {
     _ = std::fs::write(&path, built);
 
     if let Ok(mut entry_content) = read_entry_file(&path_buf) {
-        if !entry_content.contains("pub(crate) mod seeder;") {
+        if !entry_content.contains("mod seeder;") {
             entry_content.insert_str(0, "mod seeder;\r\n");
             _ = update_entry_file(&path_buf, entry_content);
         }
