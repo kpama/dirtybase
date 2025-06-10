@@ -85,7 +85,7 @@ impl Image {
         Self {
             internal_id: None,
             id: Default::default(),
-            url: url.to_string(),
+            url: url.to_string().into(),
             imageable_id: id.clone(),
             imageable_type: T::table_name().to_string(),
             created_at: Default::default(),

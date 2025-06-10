@@ -17,14 +17,14 @@ pub use role::*;
 pub use role_permission::*;
 use serde::{Deserialize, Serialize};
 
-use crate::db_contract::field_values::FieldValue;
-
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PermissionRecordAction {
     SoftDelete,
     SoftRestore,
     PermDelete,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PermissionRelAction {
     Add,
     Remove,

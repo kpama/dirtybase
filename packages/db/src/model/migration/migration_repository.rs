@@ -1,4 +1,4 @@
-use dirtybase_contract::db_contract::base::manager::Manager;
+use dirtybase_contract::db_contract::{base::manager::Manager, types::StringField};
 use std::collections::{BTreeMap, HashMap};
 
 use super::{BATCH_COLUMN, MigrationEntity, NAME_COLUMN, TABLE_NAME};
@@ -47,7 +47,7 @@ impl MigrationRepository {
             .await
     }
 
-    pub async fn get_last_batch(&self) -> BTreeMap<String, MigrationEntity> {
+    pub async fn get_last_batch(&self) -> BTreeMap<StringField, MigrationEntity> {
         if let Ok(Some(last)) = self
             .manager
             .select_from_table(TABLE_NAME, |q| {
@@ -67,7 +67,7 @@ impl MigrationRepository {
                 return collection
                     .into_iter()
                     .map(|m| (m.name.clone(), m))
-                    .collect::<BTreeMap<String, MigrationEntity>>();
+                    .collect::<BTreeMap<StringField, MigrationEntity>>();
             }
         }
 

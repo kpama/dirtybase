@@ -67,7 +67,7 @@ impl Migrator {
 
         for name in collection.keys() {
             for entry in &self.migrations {
-                if entry.id() == *name {
+                if entry.id() == name.as_str() {
                     tracing::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
                     entry.down(manager).await?;
                 }

@@ -49,7 +49,7 @@ pub async fn seed_tables(manager: &Manager) {
                 Warehouse {
                     internal_id: None,
                     id: warehouse_id,
-                    name: warehouse_name,
+                    name: warehouse_name.into(),
                 },
             )
             .await;
@@ -65,7 +65,7 @@ pub async fn seed_tables(manager: &Manager) {
                 Product {
                     internal_id: None,
                     id: product_id.clone(),
-                    sku: product_sku,
+                    sku: product_sku.into(),
                 },
             )
             .await;
@@ -127,7 +127,7 @@ pub async fn seed_tables(manager: &Manager) {
                 Customer {
                     internal_id: None,
                     id: customer_id.clone(),
-                    name: customer_name,
+                    name: customer_name.into(),
                 },
             )
             .await;
@@ -194,7 +194,7 @@ pub async fn seed_tables(manager: &Manager) {
                         product_lists.push(*product.internal_id.as_ref().unwrap());
                         items.push(OrderItem {
                             id: Default::default(),
-                            name: item_name.to_string(),
+                            name: item_name.into(),
                             sales_order_id: order_id.clone(),
                             product_id: product.id.clone(),
                             ..Default::default()

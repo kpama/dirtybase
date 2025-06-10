@@ -9,7 +9,7 @@ use crate::db_contract::field_values::FieldValue;
 ///
 /// Takes a string, removes all white spaces, join the words with a dash and convert it to lowercase
 /// Example: "Foo Bar" => "foo-bar"
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Hash, Eq, Clone, Serialize, Deserialize)]
 pub struct NameField(Arc<String>);
 
 impl Validate for NameField {
