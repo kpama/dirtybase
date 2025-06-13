@@ -12,7 +12,7 @@ mod context_manager;
 mod context_metadata;
 
 use crate::{
-    auth_contract::{AuthUser, Gate},
+    auth_contract::AuthUser,
     config_contract::{DirtyConfig, TryFromDirtyConfig},
     http_contract::{Bind, ModelBindResolver},
     multitenant_contract::*,
@@ -30,19 +30,24 @@ pub struct Context {
     sc: busybody::ServiceContainer,
 }
 
-impl Default for Context {
-    fn default() -> Self {
+impl Context {
+    pub async fn new() -> Self {
+        Self::new_with_id(ArcUuid7::default()).await
+    }
+
+    pub async fn new_with_id(id: ArcUuid7) -> Self {
+        let sc = busybody::helpers::make_proxy();
         let instance = Self {
-            id: ArcUuid7::default(),
+            id,
             is_global: false,
-            sc: busybody::helpers::make_proxy(),
+            sc: sc.clone(),
         };
+
+        sc.set_type(instance.clone()).await;
 
         instance
     }
-}
 
-impl Context {
     pub async fn make_global() -> Self {
         // app
         busybody::helpers::set_type(AppContext::make_global()).await;
@@ -57,13 +62,6 @@ impl Context {
             sc: busybody::helpers::service_container(),
         };
 
-        busybody::helpers::resolver::<Gate>(|sc| {
-            Box::pin(async {
-                //..
-                Gate::new(sc)
-            })
-        })
-        .await;
         busybody::helpers::set_type(instance.clone()).await;
         instance
     }
