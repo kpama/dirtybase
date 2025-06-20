@@ -72,7 +72,7 @@ async fn setup_db() {
 async fn create_tables(manager: &Manager) {
     _ = manager
         .create_table_schema(Person::table_name(), |builder| {
-            builder.id(Person::id_column());
+            builder.id(Person::id_column().into());
             builder.string(Person::col_name_for_first_name());
             builder.string(Person::col_name_for_last_name());
             builder.boolean(Person::col_name_for_is_admin());

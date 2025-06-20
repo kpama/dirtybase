@@ -24,11 +24,13 @@ async fn main() {
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(id = "child_field")]
 struct Child {
     child_field: String,
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(id = "name")]
 struct Parent {
     name: String,
     #[dirty(flatten)]

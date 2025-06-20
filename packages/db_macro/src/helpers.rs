@@ -179,14 +179,18 @@ pub(crate) fn pluck_names(
 
 pub(crate) fn names_of_from_cv_handlers(
     columns_attributes: &HashMap<String, DirtybaseAttributes>,
+    table_name: &String,
 ) -> Vec<TokenStream> {
     columns_attributes
         .iter()
         .map(|item| {
             let struct_field = format_ident!("{}", &item.0);
-            let column = item.1.name.clone();
+            let column = if *item.0 == item.1.name {
+                item.0.clone()
+            } else {
+                item.1.name.clone()
+            };
             let handler = format_ident!("{}", &item.1.from_handler);
-            let field_name = item.0.clone();
 
             if item.1.flatten {
                 let the_type = format_ident!("{}", &item.1.the_type);
@@ -195,19 +199,29 @@ pub(crate) fn names_of_from_cv_handlers(
                 };
             }
 
-            if *item.0 == item.1.name {
                 quote! {
-                    #struct_field: Self::#handler(cv.get(#column))
-                }
-            } else {
-                quote! {
-                    #struct_field: if let Some(v) =  cv.get(#column) {
-                        Self::#handler(Some(v))
+                    #struct_field: Self::#handler(if cv.contains_key(#column) {
+                        cv.get(#column)
                     } else {
-                        Self::#handler(cv.get(#field_name))
-                    }
+                        match cv.get(#table_name) {
+                          Some(::dirtybase_contract::db_contract::field_values::FieldValue::Object(c)) => {
+                               c.get(#column).clone()
+                          },
+                          _ => None
+                        }
+                    } )
                 }
-            }
+
+            // if *item.0 == item.1.name {
+            // } else {
+            //     quote! {
+            //         #struct_field: if let Some(v) =  cv.get(#column) {
+            //             Self::#handler(Some(v))
+            //         } else {
+            //             Self::#handler(cv.get(#field_name))
+            //         }
+            //     }
+            // }
         })
         .collect()
 }
@@ -414,18 +428,20 @@ pub(crate) fn pluck_id_column(input: &DeriveInput) -> String {
 
 pub(crate) fn build_id_method(input: &DeriveInput) -> TokenStream {
     let id_field = pluck_id_column(input);
-
-    if id_field.is_empty() {
-        quote! {
-            fn id_column() -> Option<&'static str> {
-                None
-            }
+    quote! {
+        fn id_column() -> &'static str {
+            #id_field
         }
-    } else {
-        quote! {
-            fn id_column() -> Option<&'static str> {
-                Some(#id_field)
-            }
+    }
+}
+
+pub(crate) fn build_entity_hash_method(input: &DeriveInput) -> TokenStream {
+    let id_field = format_ident!("{}", pluck_id_column(input));
+    quote! {
+        fn entity_hash(&self) -> u64 {
+            let mut s = ::std::hash::DefaultHasher::new();
+            ::std::hash::Hash::hash(&self.#id_field, &mut s);
+            ::std::hash::Hasher::finish(&s)
         }
     }
 }
@@ -440,20 +456,10 @@ pub(crate) fn pluck_foreign_column(input: &DeriveInput, table_name: &str) -> Str
 }
 
 pub(crate) fn build_foreign_id_method(input: &DeriveInput, table_name: &str) -> TokenStream {
-    let id_field = pluck_id_column(input);
-
-    if id_field.is_empty() {
-        quote! {
-            fn foreign_id_column() -> Option<&'static str> {
-                None
-            }
-        }
-    } else {
-        let name = pluck_foreign_column(input, table_name);
-        quote! {
-            fn foreign_id_column() -> Option<&'static str> {
-                Some(#name)
-            }
+    let name = pluck_foreign_column(input, table_name);
+    quote! {
+        fn foreign_id_column() -> &'static str {
+            #name
         }
     }
 }

@@ -15,6 +15,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let columns_attributes = pluck_columns(&input);
     let table_name = pluck_table_name(&input);
     let id_column_method = build_id_method(&input);
+    let entity_hash_method = build_entity_hash_method(&input);
     let foreign_id_method = build_foreign_id_method(&input, &table_name);
 
     let column = pluck_names(&columns_attributes);
@@ -22,7 +23,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let generics = input.generics.clone();
     let (_impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    let from_cv_for_handlers = names_of_from_cv_handlers(&columns_attributes);
+    let from_cv_for_handlers = names_of_from_cv_handlers(&columns_attributes, &table_name);
     let from_cvs = build_from_handlers(&columns_attributes);
     let into_field_values = build_into_handlers(&columns_attributes);
     let into_cv_for_calls = build_into_for_calls(&columns_attributes);
@@ -41,7 +42,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
 
         #(#column_name_methods)*
 
-        pub fn from_struct_column_value(mut cv: &mut ::dirtybase_contract::db_contract::types::StructuredColumnAndValue, key: Option<&str>) -> Option<Self> {
+        pub fn from_struct_column_value(cv: &::dirtybase_contract::db_contract::types::StructuredColumnAndValue, key: Option<&str>) -> Option<Self> {
           if let Some(name) = key {
               if let Some(values) = cv.get(name) {
                     Some(values.clone().into())
@@ -65,6 +66,8 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
         #id_column_method
 
         #foreign_id_method
+
+        #entity_hash_method
 
         #(#special_column_methods)*
 

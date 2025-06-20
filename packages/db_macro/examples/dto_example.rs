@@ -2,6 +2,7 @@ use dirtybase_db::{TableEntityTrait, connector::sqlite::make_sqlite_in_memory_ma
 use dirtybase_db_macro::DirtyTable;
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(id = "name")]
 struct User {
     name: String,
     // name2: Option<String>,
