@@ -146,7 +146,6 @@ impl SchemaManagerTrait for PostgresSchemaManager {
     ) -> Result<Option<ColumnAndValue>, anyhow::Error> {
         let mut params = PgArguments::default();
         let statement = self.build_query(query_builder, &mut params)?;
-
         let query = sqlx::query_with(&statement, params);
 
         return match query.fetch_optional(self.db_pool.as_ref()).await {
@@ -590,7 +589,11 @@ impl PostgresSchemaManager {
         if let Some(joins) = query.joins() {
             for a_join in joins {
                 if let Some(columns) = a_join.select_columns() {
-                    sql = format!("{}, {}", sql, columns.join(","));
+                    let mut col_names = Vec::new();
+                    for a_field in columns {
+                        col_names.push(self.column_to_string(a_field, params)?);
+                    }
+                    sql = format!("{}, {}", sql, col_names.join(","));
                 }
             }
         }

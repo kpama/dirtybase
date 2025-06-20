@@ -573,7 +573,11 @@ impl MySqlSchemaManager {
         if let Some(joins) = query.joins() {
             for a_join in joins {
                 if let Some(columns) = a_join.select_columns() {
-                    sql = format!("{}, {}", sql, columns.join(","));
+                    let mut col_names = Vec::new();
+                    for a_field in columns {
+                        col_names.push(self.column_to_string(a_field, params)?);
+                    }
+                    sql = format!("{}, {}", sql, col_names.join(","));
                 }
             }
         }
