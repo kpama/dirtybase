@@ -33,7 +33,7 @@ where
     pub fn new(manager: Manager) -> Self {
         Self::new_with_custom(
             manager,
-            P::prefix_with_tbl(P::id_column().as_ref().unwrap()).as_str(),
+            P::prefix_with_tbl(P::id_column()).as_str(),
             P::table_name(),
         )
     }

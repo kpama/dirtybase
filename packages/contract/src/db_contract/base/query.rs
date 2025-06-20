@@ -943,14 +943,14 @@ impl QueryBuilder {
         self.where_(WhereJoinOperator::And(condition))
     }
 
-    pub fn join<T: ToString>(
+    pub fn join<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
         &mut self,
         table: &str,
         left_table: &str,
         operator: &str,
         right_table: &str,
         join_type: JoinType,
-        select_columns: Option<&[T]>,
+        select_columns: Option<C>,
     ) -> &mut Self {
         if self.joins.is_none() {
             self.joins = Some(Vec::new());
@@ -976,7 +976,7 @@ impl QueryBuilder {
         operator: &str,
         right_table: &str,
     ) -> &mut Self {
-        self.join::<String>(
+        self.join::<String, Vec<String>>(
             table,
             left_table,
             operator,
@@ -999,13 +999,13 @@ impl QueryBuilder {
         )
     }
 
-    pub fn inner_join_and_select<T: ToString>(
+    pub fn inner_join_and_select<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
         &mut self,
         table: &str,
         left_table: &str,
         operator: &str,
         right_table: &str,
-        select_columns: &[T],
+        select_columns: C,
     ) -> &mut Self {
         self.join(
             table,
@@ -1039,7 +1039,7 @@ impl QueryBuilder {
         operator: &str,
         right_table: &str,
     ) -> &mut Self {
-        self.join::<String>(
+        self.join::<String, Vec<String>>(
             table,
             left_table,
             operator,
@@ -1062,13 +1062,13 @@ impl QueryBuilder {
         )
     }
 
-    pub fn left_join_and_select<T: ToString>(
+    pub fn left_join_and_select<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
         &mut self,
         table: &str,
         left_table: &str,
         operator: &str,
         right_table: &str,
-        select_columns: &[T],
+        select_columns: C,
     ) -> &mut Self {
         self.join(
             table,
@@ -1102,7 +1102,7 @@ impl QueryBuilder {
         operator: &str,
         right_table: &str,
     ) -> &mut Self {
-        self.join::<String>(
+        self.join::<String, Vec<String>>(
             table,
             left_table,
             operator,
@@ -1125,13 +1125,13 @@ impl QueryBuilder {
         )
     }
 
-    pub fn right_join_and_select<T: ToString>(
+    pub fn right_join_and_select<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
         &mut self,
         table: &str,
         left_table: &str,
         operator: &str,
         right_table: &str,
-        select_columns: &[T],
+        select_columns: C,
     ) -> &mut Self {
         self.join(
             table,

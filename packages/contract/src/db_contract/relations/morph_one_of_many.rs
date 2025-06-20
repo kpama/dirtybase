@@ -97,7 +97,7 @@ where
         let sort_by = if let Some(f) = sort_by {
             f.to_string()
         } else {
-            C::id_column().unwrap().to_string()
+            C::id_column().to_string()
         };
 
         if asc {

@@ -11,14 +11,14 @@ pub trait TableEntityTrait: FromColumnAndValue + ToColumnAndValue {
     fn table_name() -> &'static str;
 
     /// Table's ID column. Usually `id`
-    fn id_column() -> Option<&'static str> {
-        None
+    fn id_column() -> &'static str {
+        "id"
     }
 
     /// Table's foreign column name `table name + _ + id`
-    fn foreign_id_column() -> Option<&'static str> {
-        None
-    }
+    fn foreign_id_column() -> &'static str;
+
+    fn entity_hash(&self) -> u64;
 
     fn created_at_column() -> Option<&'static str> {
         None
@@ -85,7 +85,7 @@ pub trait TableEntityTrait: FromColumnAndValue + ToColumnAndValue {
 
         Self::table_columns()
             .iter()
-            .map(|c| format!("{0}.{2} as '{1}.{2}'", Self::table_name(), pre, c))
+            .map(|c| format!("{0}.{2} as \"{1}.{2}\"", Self::table_name(), pre, c))
             .collect()
     }
 }

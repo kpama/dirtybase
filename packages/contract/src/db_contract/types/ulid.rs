@@ -8,7 +8,7 @@ use crate::db_contract::{base::helper::generate_ulid, field_values::FieldValue};
 
 use super::ArcUlidField;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Hash, Serialize, Deserialize)]
 pub struct UlidField(pub(crate) String);
 
 impl Default for UlidField {
