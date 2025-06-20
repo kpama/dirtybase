@@ -18,6 +18,7 @@ use dirtybase_contract::multitenant_contract::{
     TenantStorageProvider,
 };
 
+use dirtybase_db::types::ArcUuid7;
 use dirtybase_encrypt::Encrypter;
 use named_routes_axum::RouterWrapper;
 use tracing::{Instrument, field};
@@ -189,15 +190,10 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
         web_app = web_app.middleware(move |mut req, next| {
             let trusted_headers = trusted_headers.clone();
             let trusted_ips = trusted_ips.clone();
-            let context = Context::default();
-            let span = tracing::trace_span!(
-                "http",
-                ctx_id = context.id_ref().to_string(),
-                data = field::Empty
-            );
+            let id = ArcUuid7::default();
+            let span = tracing::trace_span!("http", ctx_id = id.to_string(), data = field::Empty);
 
             // light copy of the request without the "body"
-            let r = clone_request(&req);
             tracing::dispatcher::get_default(|dispatch| {
                 if let Some(id) = span.id() {
                     if let Some(current) = dispatch.current_span().id() {
@@ -207,7 +203,12 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             });
 
             async move {
-                let http_ctx = HttpContext::new(&r, trusted_headers.as_ref(), &trusted_ips).await;
+                let req_clone = clone_request(&req);
+                let context = Context::new_with_id(id).await;
+                let http_ctx =
+                    HttpContext::new(&req_clone, trusted_headers.as_ref(), &trusted_ips).await;
+                // Add the request context
+                context.set(http_ctx.clone()).await;
 
                 log::trace!("uri: {}", req.uri());
                 log::trace!("full url: : {}", http_ctx.full_path());
@@ -246,9 +247,6 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 );
 
                 decrypt_cookies(cookie_jar, &encrypter, cookie_config, &mut req);
-
-                // Add the request context
-                context.set(http_ctx).await;
 
                 // pass the request
                 let mut response = next.run(req).await;
