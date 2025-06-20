@@ -23,7 +23,7 @@ async fn setup_cache_db_store_table(manager: &Manager) {
     _ = manager
         .create_table_schema(CacheDbStoreEntity::table_name(), |table| {
             table
-                .string(CacheDbStoreEntity::id_column().unwrap())
+                .string(CacheDbStoreEntity::id_column())
                 .set_is_unique(true);
             table
                 .text(CacheEntry::col_name_for_value())
