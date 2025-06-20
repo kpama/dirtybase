@@ -5,6 +5,7 @@ pub mod migration;
 use dirtybase_contract::{
     ExtensionMigrations, ExtensionSetup,
     app_contract::Context,
+    auth_contract::Gate,
     http_contract::{RouterManager, WebMiddlewareManager},
 };
 use middlewares::setup_middlewares;
@@ -27,6 +28,17 @@ impl ExtensionSetup for Extension {
 
         self.is_enable = global_config.is_enabled();
         self.is_db_storage = global_config.storage_ref().as_str() == DATABASE_STORAGE;
+
+        global_context
+            .container()
+            .resolver::<Gate>(|sc| {
+                tracing::info!("calling the gate resolver: {}", sc.id());
+                Box::pin(async {
+                    //..
+                    Gate::new(sc)
+                })
+            })
+            .await;
 
         if !self.is_enable {
             tracing::debug!("Auth is not enabled");
