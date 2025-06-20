@@ -17,11 +17,10 @@ pub async fn handle_auth_middleware(
         guard_name = SESSION_GUARD.to_string()
     }
 
-    let context = req
-        .extensions()
-        .get::<Context>()
-        .cloned()
-        .unwrap_or_default();
+    let Some(context) = req.extensions().get::<Context>().cloned() else {
+        tracing::error!(target = "auth middleware", "could not get context");
+        return (StatusCode::UNAUTHORIZED, ()).into_response();
+    };
     tracing::debug!("current auth guard: {}", &guard_name);
 
     if let Ok(config) = context.get_config::<AuthConfig>("auth").await {
