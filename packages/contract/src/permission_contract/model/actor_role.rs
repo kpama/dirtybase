@@ -32,14 +32,6 @@ impl FromColumnAndValue for ActorRole {
     where
         Self: Sized,
     {
-        //
-
-        /*
-        tenant_id: Option<TenantId>,
-        actor: Option<Actor>,
-        role: Option<Role>,
-        tenant: Option<Tenant>,
-             */
         let actor_role = Self {
             actor_id: cv
                 .remove("actor_id")
@@ -74,6 +66,7 @@ impl FromColumnAndValue for ActorRole {
                 cv.keys().collect::<Vec<&String>>()
             ));
         }
-        Err(anyhow::anyhow!("not implemented"))
+
+        Ok(actor_role)
     }
 }
