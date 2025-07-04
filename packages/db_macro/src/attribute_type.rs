@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use syn::DeriveInput;
 
-use crate::relationship::{belongs_to, has_many, has_one, has_one_through};
+use crate::relationship::{belongs_to, has_many, has_many_through, has_one, has_one_through};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum AttributeType {
@@ -123,7 +123,7 @@ impl RelType {
                 attribute: has_one_through::build_attribute(attribute, field, input),
             }),
             "has_many_through" => Some(Self::HasManyThrough {
-                attribute: attribute.into(),
+                attribute: has_many_through::build_attribute(attribute, field, input),
             }),
             _ => None,
         }

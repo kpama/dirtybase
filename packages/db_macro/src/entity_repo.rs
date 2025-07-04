@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 
-use proc_macro::Ident;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::DeriveInput;
 
 use crate::{
     attribute_type::{DirtybaseAttributes, RelType},
-    relationship::{belongs_to, has_many, has_one, has_one_through},
+    relationship::{belongs_to, has_many, has_many_through, has_one, has_one_through},
 };
 
 pub fn build_entity_repo(
@@ -47,6 +46,12 @@ pub fn build_entity_repo(
                 has_one_through::append_result_collection(attr, &mut collections);
                 has_one_through::build_row_processor(attr, &mut row_processors);
                 has_one_through::build_entity_append(attr, &mut entity_appends);
+            }
+            Some(RelType::HasManyThrough { attribute: _ }) => {
+                has_many_through::generate_join_method(attr, input, &mut with_methods);
+                has_many_through::append_result_collection(attr, &mut collections);
+                has_many_through::build_row_processor(attr, &mut row_processors);
+                has_many_through::build_entity_append(attr, &mut entity_appends);
             }
             _ => (),
         }

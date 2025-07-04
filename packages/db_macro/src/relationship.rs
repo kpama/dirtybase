@@ -1,6 +1,6 @@
 pub(crate) mod belongs_to;
 pub(crate) mod has_many;
-pub(crate) mod has_many_throught;
+pub(crate) mod has_many_through;
 pub(crate) mod has_one;
 pub(crate) mod has_one_through;
 
