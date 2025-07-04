@@ -22,3 +22,4 @@ serde_json = { workspace = true }
 [dev-dependencies]
 dirtybase_db = { path = "../db", version = "*" }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
+rand = { workspace = true }

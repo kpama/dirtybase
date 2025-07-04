@@ -4,20 +4,24 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, parse_macro_input};
 
+use crate::entity_repo::build_entity_repo;
+
 mod attribute_type;
+mod entity_repo;
 mod helpers;
+mod relationship;
 
 #[proc_macro_derive(DirtyTable, attributes(dirty, dirty_rel))]
 pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
 
     let name = input.ident.clone();
-    let columns_attributes = pluck_columns(&input);
     let table_name = pluck_table_name(&input);
     let id_column_method = build_id_method(&input);
     let entity_hash_method = build_entity_hash_method(&input);
     let foreign_id_method = build_foreign_id_method(&input, &table_name);
 
+    let columns_attributes = pluck_columns(&input);
     let column = pluck_names(&columns_attributes);
 
     let generics = input.generics.clone();
@@ -30,6 +34,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let special_column_methods = build_special_column_methods(&columns_attributes);
     let column_name_methods = build_prop_column_names_getter(&columns_attributes);
     let defaults = spread_default(&columns_attributes, &input);
+    let entity_repo = build_entity_repo(&input, &columns_attributes);
 
     let expanded = quote! {
 
@@ -132,6 +137,9 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
             ::dirtybase_contract::db_contract::field_values::FieldValue::Object(::dirtybase_contract::db_contract::types::ToColumnAndValue::to_column_value(&value).expect("could not convert to field object"))
           }
       }
+
+      // Entity repo
+      #entity_repo
 
       // TODO: Generate a function that can be used in a migration to create the entity table
 

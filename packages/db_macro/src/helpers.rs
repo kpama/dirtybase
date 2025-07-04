@@ -1,6 +1,6 @@
-use crate::attribute_type::DirtybaseAttributes;
+use crate::{attribute_type::DirtybaseAttributes, relationship::process_relation_attribute};
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
+use quote::{ToTokens, format_ident, quote};
 use std::collections::HashMap;
 use syn::{Data, DeriveInput, GenericArgument, Meta, MetaList, PathArguments, TypePath};
 
@@ -10,7 +10,7 @@ pub(crate) fn pluck_columns(input: &DeriveInput) -> HashMap<String, DirtybaseAtt
     if let Data::Struct(data) = &input.data {
         if let syn::Fields::Named(fields) = &data.fields {
             for a_field in fields.named.iter() {
-                if let Some(a_col) = get_real_column_name(a_field) {
+                if let Some(a_col) = get_real_column_name(a_field, input) {
                     columns.insert(a_col.0, a_col.1);
                 }
             }
@@ -20,7 +20,10 @@ pub(crate) fn pluck_columns(input: &DeriveInput) -> HashMap<String, DirtybaseAtt
     columns
 }
 
-pub(crate) fn get_real_column_name(field: &syn::Field) -> Option<(String, DirtybaseAttributes)> {
+pub(crate) fn get_real_column_name(
+    field: &syn::Field,
+    input: &DeriveInput,
+) -> Option<(String, DirtybaseAttributes)> {
     let name = field.ident.as_ref().unwrap().to_string();
 
     let mut dirty_attribute = DirtybaseAttributes {
@@ -35,11 +38,12 @@ pub(crate) fn get_real_column_name(field: &syn::Field) -> Option<(String, Dirtyb
     if !field.attrs.is_empty() {
         for attr in &field.attrs {
             if let Meta::List(the_list) = &attr.meta {
-                include_column = field_attributes(field, Some(the_list), &mut dirty_attribute);
+                include_column =
+                    field_attributes(field, Some(the_list), &mut dirty_attribute, input);
             }
         }
     } else {
-        include_column = field_attributes(field, None, &mut dirty_attribute);
+        include_column = field_attributes(field, None, &mut dirty_attribute, input);
     }
 
     if include_column {
@@ -53,6 +57,7 @@ pub(crate) fn field_attributes(
     field: &syn::Field,
     metalist: Option<&MetaList>,
     dirty_attribute: &mut DirtybaseAttributes,
+    input: &DeriveInput,
 ) -> bool {
     let mut include = true;
     let name = field.ident.as_ref().unwrap().to_string();
@@ -64,7 +69,7 @@ pub(crate) fn field_attributes(
     if let Some(meta) = metalist {
         if meta.path.is_ident("dirty") {
             let walker = meta.tokens.clone().into_iter();
-            include = attribute_to_attribute_type(walker, field, dirty_attribute);
+            include = attribute_to_attribute_type(walker, field, dirty_attribute, input);
         } else {
             make_column_name_attribute_type(field, dirty_attribute);
         }
@@ -79,10 +84,24 @@ pub(crate) fn attribute_to_attribute_type(
     mut walker: proc_macro2::token_stream::IntoIter,
     field: &syn::Field,
     dirty_attribute: &mut DirtybaseAttributes,
+    input: &DeriveInput,
 ) -> bool {
     let mut include = true;
+
+    make_column_name_attribute_type(field, dirty_attribute);
+
     if let Some(key) = walker.next() {
         match key.to_string().as_str() {
+            "rel" => {
+                if let Some(tree) = walker.next() {
+                    include = process_relation_attribute(
+                        field,
+                        dirty_attribute,
+                        tree.into_token_stream(),
+                        input,
+                    );
+                }
+            }
             "col" => {
                 _ = walker.next();
                 dirty_attribute.name = walker.next().unwrap().to_string().replace('\"', "");
@@ -119,11 +138,9 @@ pub(crate) fn attribute_to_attribute_type(
 
         if let Some(x) = walker.next() {
             if x.to_string() == "," {
-                attribute_to_attribute_type(walker, field, dirty_attribute);
+                attribute_to_attribute_type(walker, field, dirty_attribute, input);
             }
         }
-
-        make_column_name_attribute_type(field, dirty_attribute);
     }
 
     include
@@ -172,6 +189,7 @@ pub(crate) fn pluck_names(
     columns_attributes
         .iter()
         .filter(|c| !c.1.skip_select)
+        .filter(|c| !c.1.relation.is_some())
         .filter(|c| !c.1.flatten)
         .map(|c| c.1.name.clone())
         .collect::<Vec<String>>()
@@ -183,6 +201,7 @@ pub(crate) fn names_of_from_cv_handlers(
 ) -> Vec<TokenStream> {
     columns_attributes
         .iter()
+        // .filter(|c| c.1.relation.is_none())
         .map(|item| {
             let struct_field = format_ident!("{}", &item.0);
             let column = if *item.0 == item.1.name {
@@ -211,17 +230,6 @@ pub(crate) fn names_of_from_cv_handlers(
                         }
                     } )
                 }
-
-            // if *item.0 == item.1.name {
-            // } else {
-            //     quote! {
-            //         #struct_field: if let Some(v) =  cv.get(#column) {
-            //             Self::#handler(Some(v))
-            //         } else {
-            //             Self::#handler(cv.get(#field_name))
-            //         }
-            //     }
-            // }
         })
         .collect()
 }
@@ -305,7 +313,7 @@ pub(crate) fn build_into_handlers(
         let fn_name = format_ident!("{}", &item.1.into_handler);
         let struct_field = format_ident!("{}", &item.0);
 
-        if item.1.has_custom_into_handler {
+        if item.1.has_custom_into_handler || item.1.relation.is_some() {
             continue;
         }
 
@@ -357,7 +365,7 @@ pub(crate) fn build_into_for_calls(
         let name = item.1.name.clone();
         let method_name = format_ident!("{}", &item.1.into_handler);
 
-        if item.1.skip_insert {
+        if item.1.skip_insert || item.1.relation.is_some() {
             continue;
         }
 
@@ -540,6 +548,10 @@ pub(crate) fn build_prop_column_names_getter(
     let mut built: Vec<proc_macro2::TokenStream> = Vec::new();
 
     for item in columns_attributes.iter() {
+        if item.1.relation.is_some() {
+            continue;
+        }
+
         let fn_name = format_ident!("col_name_for_{}", item.0);
         let col_name = item.1.name.clone();
         built.push(quote! {
