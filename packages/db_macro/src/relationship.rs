@@ -41,6 +41,5 @@ pub(crate) fn process_relation_attribute(
     }
 
     dirty_attribute.relation = RelType::new(attributes, field, input);
-    println!(">>>>>>>>>>>>>>> {:#?}", &dirty_attribute);
     true
 }
