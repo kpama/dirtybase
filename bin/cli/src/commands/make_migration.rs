@@ -20,7 +20,7 @@ pub fn make(package: Option<&String>, name: &str) {
     let struct_name = format!(
         "Mig{}{}",
         ts,
-        dirtybase_helper::inflector::cases::pascalcase::to_pascal_case(name)
+        dirtybase_helper::cruet::case::to_pascal_case(name)
     );
 
     let built = stubs()

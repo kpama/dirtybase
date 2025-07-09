@@ -10,7 +10,7 @@ chrono = { workspace = true, features = ["serde"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
-Inflector = { workspace = true }
+cruet = { workspace = true }
 ulid = { workspace = true }
 uuid = { workspace = true }
 uuid25 = { workspace = true }
