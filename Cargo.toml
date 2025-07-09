@@ -26,7 +26,7 @@ clap = { version = "4", features = ["derive", "unstable-doc"] }
 dotenv = "0.15"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["raw_value"] }
-toml = "0.8"
+toml = "0.9"
 sqlx = { version = "0.8", features = [
 	"runtime-tokio",
 	"tls-rustls",
@@ -74,7 +74,7 @@ redis = { version = "0.32", features = [
 lettre = { version = "0.11" }
 config = "0.15"
 deadpool = "0.12"
-deadpool-redis = { version = "0.21" }
+deadpool-redis = { version = "0.22" }
 cron = { version = "0.15" }
 english-to-cron = { version = "0.1" }
 validator = { version = "0.20", features = ["derive"] }
