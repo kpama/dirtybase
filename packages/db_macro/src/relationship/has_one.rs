@@ -22,19 +22,19 @@ pub(crate) fn generate_join_method(
     input: &DeriveInput,
     list: &mut HashMap<String, TokenStream>,
 ) {
-    // method
-    let name = &attr.name;
-    let method_name_st = format!("with_{}", name);
-    let method_name = format_ident!("{}", &method_name_st);
-    let parent = format_ident!("{}", &input.ident);
-    let foreign_type = format_ident!("{}", attr.the_type);
+    if let Some(RelType::HasOne { attribute }) = &attr.relation {
+        // method
+        let name = &attr.name;
+        let method_name_st = format!("with_{}", name);
+        let method_name = format_ident!("{}", &method_name_st);
+        let parent = format_ident!("{}", &input.ident);
+        let foreign_type = format_ident!("{}", attr.the_type);
 
-    // parent key
-    let mut parent_key = quote! {<#parent as ::dirtybase_contract::db_contract::table_entity::TableEntityTrait>::id_column()};
-    // foreign key
-    let mut foreign_key = quote! { <#parent as ::dirtybase_contract::db_contract::table_entity::TableEntityTrait>::foreign_id_column() };
+        // parent key
+        let mut parent_key = quote! {<#parent as ::dirtybase_contract::db_contract::table_entity::TableEntityTrait>::id_column()};
+        // foreign key
+        let mut foreign_key = quote! { <#parent as ::dirtybase_contract::db_contract::table_entity::TableEntityTrait>::foreign_id_column() };
 
-    if let Some(RelType::HasMany { attribute }) = &attr.relation {
         // parent key
         if let Some(field) = &attribute.local_key {
             parent_key = quote! { #field };
@@ -44,20 +44,20 @@ pub(crate) fn generate_join_method(
         if let Some(field) = &attribute.foreign_key {
             foreign_key = quote! { #field };
         }
-    }
 
-    let token = quote! {
-        pub fn #method_name(&mut self,) -> &mut Self {
-            let name = #name.to_string();
-            if !self.eager.contains(&name) {
-                self.builder.inner_join_table_and_select::<#parent, #foreign_type>(#parent_key, #foreign_key, None);
-                self.eager.push(name);
+        let token = quote! {
+            pub fn #method_name(&mut self,) -> &mut Self {
+                let name = #name.to_string();
+                if !self.eager.contains(&name) {
+                    self.builder.inner_join_table_and_select::<#parent, #foreign_type>(#parent_key, #foreign_key, None);
+                    self.eager.push(name);
+                }
+                self
             }
-            self
-        }
-    };
+        };
 
-    list.insert(method_name_st, token);
+        list.insert(method_name_st, token);
+    }
 }
 
 pub(crate) fn append_result_collection(

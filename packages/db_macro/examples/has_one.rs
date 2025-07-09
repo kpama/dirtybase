@@ -17,7 +17,7 @@ async fn main() {
 struct Employee {
     id: Option<i64>,
     name: String,
-    #[dirty(rel(kind = "has_one"))]
+    #[dirty(rel(kind = "has_one",))]
     pin: Option<PinCode>,
 }
 

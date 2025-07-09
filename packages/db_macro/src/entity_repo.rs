@@ -6,7 +6,9 @@ use syn::DeriveInput;
 
 use crate::{
     attribute_type::{DirtybaseAttributes, RelType},
-    relationship::{belongs_to, has_many, has_many_through, has_one, has_one_through},
+    relationship::{
+        belongs_to, has_many, has_many_through, has_one, has_one_through, morph_many, morph_one,
+    },
 };
 
 pub fn build_entity_repo(
@@ -52,6 +54,18 @@ pub fn build_entity_repo(
                 has_many_through::append_result_collection(attr, &mut collections);
                 has_many_through::build_row_processor(attr, &mut row_processors);
                 has_many_through::build_entity_append(attr, &mut entity_appends);
+            }
+            Some(RelType::MorphOne { attribute: _ }) => {
+                morph_one::generate_join_method(attr, input, &mut with_methods);
+                morph_one::append_result_collection(attr, &mut collections);
+                morph_one::build_row_processor(attr, &mut row_processors);
+                morph_one::build_entity_append(attr, &mut entity_appends);
+            }
+            Some(RelType::MorphMany { attribute: _ }) => {
+                morph_many::generate_join_method(attr, input, &mut with_methods);
+                morph_many::append_result_collection(attr, &mut collections);
+                morph_many::build_row_processor(attr, &mut row_processors);
+                morph_many::build_entity_append(attr, &mut entity_appends);
             }
             _ => (),
         }
@@ -122,6 +136,16 @@ pub fn build_entity_repo(
                     },
                     Ok(None) => Ok(None),
                     Err(e) => Err(e),
+                }
+            }
+
+            pub async fn first(&mut self) -> Result<Option<#ident>, ::anyhow::Error> {
+                match self.get().await {
+                    Ok(Some(mut list)) => {
+                        Ok(list.pop())
+                    },
+                    Err(e) => Err(e),
+                    _ => Ok(None)
                 }
             }
         }

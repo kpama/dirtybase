@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use syn::DeriveInput;
 
-use crate::relationship::{belongs_to, has_many, has_many_through, has_one, has_one_through};
+use crate::relationship::{
+    belongs_to, has_many, has_many_through, has_one, has_one_through, morph_many, morph_one,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum AttributeType {
@@ -54,36 +56,26 @@ pub(crate) struct DirtybaseAttributes {
 #[derive(Debug, Clone, PartialEq)]
 pub struct RelationAttribute {
     pub(crate) foreign_key: Option<String>,
-    // pub(crate) foreign_tbl: Option<String>,
     pub(crate) local_key: Option<String>,
-    // pub(crate) this_tbl: Option<String>,
-    // pub(crate) final_key: Option<String>,
-    // pub(crate) final_tbl: Option<String>,
-    // pub(crate) through_tbl: Option<String>,
     pub(crate) through_key: Option<String>,
-    // pub(crate) through_final_key: Option<String>,
-    // pub(crate) pivot_key: Option<String>,
     pub(crate) pivot_through_key: Option<String>,
-    // pub(crate) pivot_tbl: Option<String>,
     pub(crate) pivot: Option<String>,
+    pub(crate) morph_name: Option<String>,
+    pub(crate) morph_type: Option<String>,
+    pub(crate) morph_type_key: Option<String>,
 }
 
 impl From<HashMap<String, String>> for RelationAttribute {
     fn from(mut val: HashMap<String, String>) -> Self {
         RelationAttribute {
             foreign_key: val.remove("foreign_key"),
-            // foreign_tbl: val.remove("foreign_tbl"),
             local_key: val.remove("local_key"),
-            // this_tbl: val.remove("this_tbl"),
-            // final_key: val.remove("final_key"),
-            // final_tbl: val.remove("final_tbl"),
-            // through_tbl: val.remove("through_tbl"),
             through_key: val.remove("through_key"),
-            // through_final_key: val.remove("through_final_key"),
-            // pivot_key: val.remove("pivot_key"),
             pivot_through_key: val.remove("pivot_through_key"),
-            // pivot_tbl: val.remove("pivot_tbl"),
             pivot: val.remove("pivot"),
+            morph_name: val.remove("morph_name"),
+            morph_type: val.remove("morph_type"),
+            morph_type_key: val.remove("morph_type_key"),
         }
     }
 }
@@ -96,6 +88,9 @@ pub(crate) enum RelType {
     HasOneThrough { attribute: RelationAttribute },
     HasManyThrough { attribute: RelationAttribute },
     BelongsToMany { attribute: RelationAttribute },
+    // MorphTo { attribute: RelationAttribute },
+    MorphOne { attribute: RelationAttribute },
+    MorphMany { attribute: RelationAttribute },
 }
 
 impl RelType {
@@ -124,6 +119,12 @@ impl RelType {
             }),
             "has_many_through" => Some(Self::HasManyThrough {
                 attribute: has_many_through::build_attribute(attribute, field, input),
+            }),
+            "morph_one" => Some(Self::MorphOne {
+                attribute: morph_one::build_attribute(attribute, field, input),
+            }),
+            "morph_many" => Some(Self::MorphMany {
+                attribute: morph_many::build_attribute(attribute, field, input),
             }),
             _ => None,
         }

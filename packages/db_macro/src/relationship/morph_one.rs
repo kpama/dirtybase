@@ -22,18 +22,36 @@ pub(crate) fn generate_join_method(
     input: &DeriveInput,
     list: &mut HashMap<String, TokenStream>,
 ) {
-    if let Some(RelType::BelongsTo { attribute }) = &attr.relation {
+    if let Some(RelType::MorphOne { attribute }) = &attr.relation {
         // method
         let name = &attr.name;
         let method_name_st = format!("with_{}", name);
         let method_name = format_ident!("{}", &method_name_st);
         let parent = format_ident!("{}", &input.ident);
-        let foreign_type = format_ident!("{}", &attr.the_type);
+        let foreign_type = format_ident!("{}", attr.the_type);
+        let morph_name = if let Some(field) = &attribute.morph_name {
+            field
+        } else {
+            std::println!("morph relation must have a name. {}", name);
+            return;
+        };
+
+        let morph_type = if let Some(field) = &attribute.morph_type {
+            field
+        } else {
+            std::println!("morph relation must have a type value. {}", name);
+            return;
+        };
+
+        let foreign_key_name = format!("{}_id", &morph_name);
+        let morph_type_name = format!("{}_type", &morph_name);
+        let mut morph_method_name = format_ident!("{}", &morph_type_name);
 
         // parent key
-        let mut parent_key = quote! {<#foreign_type as ::dirtybase_contract::db_contract::table_entity::TableEntityTrait>::foreign_id_column()};
+        let mut parent_key = quote! {<#parent as ::dirtybase_contract::db_contract::table_entity::TableEntityTrait>::id_column()};
         // foreign key
-        let mut foreign_key = quote! { <#foreign_type  as ::dirtybase_contract::db_contract::table_entity::TableEntityTrait>::id_column() };
+        let mut foreign_key = quote! { #foreign_key_name };
+        let mut morph_type_key = quote! { #morph_type_name };
 
         // parent key
         if let Some(field) = &attribute.local_key {
@@ -45,11 +63,17 @@ pub(crate) fn generate_join_method(
             foreign_key = quote! { #field };
         }
 
+        if let Some(field) = &attribute.morph_type_key {
+            morph_type_key = quote! { #field };
+            morph_method_name = format_ident!("{}", &field);
+        }
+
         let token = quote! {
             pub fn #method_name(&mut self,) -> &mut Self {
                 let name = #name.to_string();
                 if !self.eager.contains(&name) {
-                    self.builder.inner_join_table_and_select::<#parent,#foreign_type>(#parent_key, #foreign_key, None);
+                    self.builder.inner_join_table_and_select::<#parent, #foreign_type>(#parent_key, #foreign_key, None);
+                    self.builder.is_eq(#morph_type_key, Self::#morph_method_name());
                     self.eager.push(name);
                 }
                 self
@@ -57,6 +81,14 @@ pub(crate) fn generate_join_method(
         };
 
         list.insert(method_name_st, token);
+        list.insert(
+            morph_type_name,
+            quote! {
+                pub fn #morph_method_name() -> &'static str {
+                    #morph_type
+                }
+            },
+        );
     }
 }
 
@@ -69,18 +101,15 @@ pub(crate) fn append_result_collection(
     let map_name_st = format!("{}_map", name);
     let map_name = format_ident!("{}", &map_name_st);
     let is_eager = format_ident!("are_{}_eager", name);
-
     let token = quote! {
         let mut #map_name: ::std::collections::HashMap::<u64,#foreign_type> = ::std::collections::HashMap::new();
         let #is_eager = self.eager.contains(&#name.to_string());
     };
-
     list.insert(map_name_st, token);
 }
 
 pub(crate) fn build_row_processor(
     attr: &DirtybaseAttributes,
-
     list: &mut HashMap<String, TokenStream>,
 ) {
     let name = &attr.name;

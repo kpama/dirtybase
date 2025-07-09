@@ -3,6 +3,8 @@ pub(crate) mod has_many;
 pub(crate) mod has_many_through;
 pub(crate) mod has_one;
 pub(crate) mod has_one_through;
+pub(crate) mod morph_many;
+pub(crate) mod morph_one;
 
 use std::collections::HashMap;
 

@@ -25,7 +25,7 @@ struct Child {
     id: Option<i64>,
     name: String,
     family_id: i64,
-    #[dirty(rel(kind = "belongs_to"))]
+    #[dirty(rel(kind = "belongs_to", scope = "pub(crate)"))]
     family: Family,
 }
 

@@ -386,8 +386,7 @@ pub(crate) fn build_into_for_calls(
 }
 
 pub(crate) fn pluck_table_name(input: &DeriveInput) -> String {
-    let mut table_name =
-        inflector::cases::tablecase::to_table_case(&input.ident.clone().to_string());
+    let mut table_name = cruet::case::to_table_case(&input.ident.clone().to_string());
 
     for attr in &input.attrs {
         if let Meta::List(the_list) = &attr.meta {
@@ -458,7 +457,7 @@ pub(crate) fn pluck_foreign_column(input: &DeriveInput, table_name: &str) -> Str
     let id_field = pluck_id_column(input);
     format!(
         "{}_{}",
-        inflector::string::singularize::to_singular(table_name),
+        cruet::string::singularize::to_singular(table_name),
         &id_field
     )
 }
