@@ -587,7 +587,7 @@ impl PostgresSchemaManager {
 
         // join fields
         if let Some(joins) = query.joins() {
-            for a_join in joins {
+            for (_, a_join) in joins {
                 if let Some(columns) = a_join.select_columns() {
                     let mut col_names = Vec::new();
                     for a_field in columns {
@@ -629,7 +629,7 @@ impl PostgresSchemaManager {
     fn build_join(&self, query: &QueryBuilder) -> Result<String, anyhow::Error> {
         let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
-            for a_join in joins {
+            for (_, a_join) in joins {
                 sql = format!(
                     "{} {} JOIN {} ON {}",
                     sql,

@@ -152,8 +152,6 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         let mut params = MySqlArguments::default();
         let statement = self.build_query(query_builder, &mut params)?;
 
-        println!("generated: {}", &statement);
-
         let query = sqlx::query_with(&statement, params);
         return match query.fetch_optional(self.db_pool.as_ref()).await {
             Ok(result) => match result {
@@ -571,7 +569,7 @@ impl MySqlSchemaManager {
 
         // join fields
         if let Some(joins) = query.joins() {
-            for a_join in joins {
+            for (_, a_join) in joins {
                 if let Some(columns) = a_join.select_columns() {
                     let mut col_names = Vec::new();
                     for a_field in columns {
@@ -618,7 +616,7 @@ impl MySqlSchemaManager {
     ) -> Result<String, anyhow::Error> {
         let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
-            for a_join in joins {
+            for (_, a_join) in joins {
                 sql = format!(
                     "{} {} JOIN {} ON {}",
                     sql,

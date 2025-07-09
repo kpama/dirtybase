@@ -17,7 +17,7 @@ use super::{
     table::DELETED_AT_FIELD,
     where_join_operators::WhereJoinOperator,
 };
-use std::{fmt::Display, marker::PhantomData};
+use std::{collections::HashMap, fmt::Display, marker::PhantomData};
 
 #[derive(Debug)]
 pub enum WhereJoin {
@@ -81,7 +81,7 @@ impl Display for QueryAction {
 pub struct QueryBuilder {
     where_clauses: Vec<WhereJoinOperator>,
     table: String,
-    joins: Option<Vec<JoinQueryBuilder>>,
+    joins: Option<HashMap<String, JoinQueryBuilder>>,
     action: QueryAction,
     order_by: Option<OrderByBuilder>,
     limit: Option<LimitBuilder>,
@@ -192,7 +192,7 @@ impl QueryBuilder {
         self
     }
 
-    pub fn joins(&self) -> Option<&Vec<JoinQueryBuilder>> {
+    pub fn joins(&self) -> Option<&HashMap<String, JoinQueryBuilder>> {
         self.joins.as_ref()
     }
 
@@ -953,7 +953,7 @@ impl QueryBuilder {
         select_columns: Option<C>,
     ) -> &mut Self {
         if self.joins.is_none() {
-            self.joins = Some(Vec::new());
+            self.joins = Some(HashMap::new());
         }
 
         let join = JoinQueryBuilder::new(
@@ -964,7 +964,7 @@ impl QueryBuilder {
             join_type,
             select_columns,
         );
-        self.joins.as_mut().unwrap().push(join);
+        self.joins.as_mut().unwrap().insert(table.to_string(), join);
 
         self
     }
@@ -992,7 +992,7 @@ impl QueryBuilder {
         right_field: &str,
     ) -> &mut Self {
         self.inner_join(
-            L::table_name(),
+            R::table_name(),
             &L::prefix_with_tbl(left_field),
             "=",
             &R::prefix_with_tbl(right_field),
@@ -1021,14 +1021,14 @@ impl QueryBuilder {
         &mut self,
         left_field: &str,
         right_field: &str,
-        left_tbl_columns_prefix: Option<&str>,
+        right_tbl_columns_prefix: Option<&str>,
     ) -> &mut Self {
         self.inner_join_and_select(
-            L::table_name(),
+            R::table_name(),
             &L::prefix_with_tbl(left_field),
             "=",
             &R::prefix_with_tbl(right_field),
-            &L::column_aliases(left_tbl_columns_prefix),
+            &R::column_aliases(right_tbl_columns_prefix),
         )
     }
 
@@ -1055,7 +1055,7 @@ impl QueryBuilder {
         right_field: &str,
     ) -> &mut Self {
         self.left_join(
-            L::table_name(),
+            R::table_name(),
             &L::prefix_with_tbl(left_field),
             "=",
             &R::prefix_with_tbl(right_field),
@@ -1087,11 +1087,11 @@ impl QueryBuilder {
         left_tbl_columns_prefix: Option<&str>,
     ) -> &mut Self {
         self.left_join_and_select(
-            L::table_name(),
+            R::table_name(),
             &L::prefix_with_tbl(left_field),
             "=",
             &R::prefix_with_tbl(right_field),
-            &L::column_aliases(left_tbl_columns_prefix),
+            &R::column_aliases(left_tbl_columns_prefix),
         )
     }
 
@@ -1118,7 +1118,7 @@ impl QueryBuilder {
         right_field: &str,
     ) -> &mut Self {
         self.right_join(
-            L::table_name(),
+            R::table_name(),
             &L::prefix_with_tbl(left_field),
             "=",
             &R::prefix_with_tbl(right_field),

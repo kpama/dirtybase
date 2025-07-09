@@ -1,4 +1,7 @@
-use std::sync::{atomic::AtomicI64, Arc};
+use std::{
+    fmt::Debug,
+    sync::{atomic::AtomicI64, Arc},
+};
 
 use crate::db_contract::{
     event::SchemeWroteEvent,
@@ -23,6 +26,12 @@ pub struct Manager {
     sticky_duration: i64,
     is_writable: bool,
     last_write_ts: Arc<AtomicI64>,
+}
+
+impl Debug for Manager {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "db manager: {}", &self.kind)
+    }
 }
 
 // TODO: add: first or create
