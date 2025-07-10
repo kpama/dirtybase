@@ -6,22 +6,15 @@ use syn::DeriveInput;
 
 use crate::attribute_type::RelType;
 use crate::attribute_type::{DirtybaseAttributes, RelationAttribute};
-use crate::pluck_foreign_column;
-use crate::pluck_table_name;
 
 pub(crate) fn build_attribute(
     attr: HashMap<String, String>,
     _field: &syn::Field,
-    input: &DeriveInput,
+    _input: &DeriveInput,
 ) -> RelationAttribute {
-    let mut attribute = RelationAttribute::from(attr);
-    let table_name = pluck_table_name(input);
+    let attribute = RelationAttribute::from(attr);
 
     //
-    if attribute.foreign_key.is_none() {
-        attribute.foreign_key = Some(pluck_foreign_column(input, &table_name));
-    }
-
     attribute
 }
 
@@ -38,9 +31,9 @@ pub(crate) fn generate_join_method(
     let foreign_type = format_ident!("{}", attr.the_type);
 
     // parent key
-    let mut parent_key = quote! {<#parent as ::dirtybase_contract::db_contract::table_entity::TableEntityTrait>::id_column()};
+    let mut parent_key = quote! {<#parent as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column()};
     // foreign key
-    let mut foreign_key = quote! { <#parent as ::dirtybase_contract::db_contract::table_entity::TableEntityTrait>::foreign_id_column() };
+    let mut foreign_key = quote! { <#parent as ::dirtybase_contract::db_contract::table_model::TableModel>::foreign_id_column() };
 
     if let Some(RelType::HasMany { attribute }) = &attr.relation {
         // parent key
@@ -100,13 +93,13 @@ pub(crate) fn build_row_processor(
        //
        if #is_eager {
             if let Some(entity) = #foreign_type::from_struct_column_value(row,
-                 Some(<#foreign_type as ::dirtybase_contract::db_contract::table_entity::TableEntityTrait>::table_name())) {
+                 Some(<#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::table_name())) {
                 if !#map_name.contains_key(&row_hash) {
                     #map_name.insert(row_hash, ::std::collections::HashMap::new());
                 }
 
                 if let Some(entry) = #map_name.get_mut(&row_hash) {
-                   entry.insert(::dirtybase_contract::db_contract::table_entity::TableEntityTrait::entity_hash(&entity), entity);
+                   entry.insert(::dirtybase_contract::db_contract::table_model::TableModel::entity_hash(&entity), entity);
                 }
             }
        }

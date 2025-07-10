@@ -1,5 +1,5 @@
 use dirtybase_db::{
-    TableEntityTrait, base::manager::Manager, connector::sqlite::make_sqlite_in_memory_manager,
+    TableModel, base::manager::Manager, connector::sqlite::make_sqlite_in_memory_manager,
 };
 use dirtybase_db_macro::DirtyTable;
 

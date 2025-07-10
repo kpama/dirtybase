@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use syn::DeriveInput;
+use syn::{DeriveInput, Meta};
 
 use crate::relationship::{
     belongs_to, has_many, has_many_through, has_one, has_one_through, morph_many, morph_one,
@@ -33,6 +33,115 @@ impl From<String> for AttributeType {
                 the_type: String::new(),
             },
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct TableAttribute {
+    pub(crate) table_name: String,
+    pub(crate) id_field: String,
+    pub(crate) id_column: String,
+    pub(crate) foreign_name: String,
+    pub(crate) no_timestamp: bool,
+    pub(crate) no_softdelete: bool,
+    pub(crate) created_at_col: String,
+    pub(crate) updated_at_col: String,
+    pub(crate) deleted_at_col: String,
+}
+
+impl Default for TableAttribute {
+    fn default() -> Self {
+        Self {
+            table_name: String::new(),
+            id_field: "id".to_string(),
+            id_column: "id".to_string(),
+            foreign_name: String::new(),
+            no_timestamp: false,
+            no_softdelete: false,
+            created_at_col: "created_at".to_string(),
+            updated_at_col: "updated_at".to_string(),
+            deleted_at_col: "deleted_at".to_string(),
+        }
+    }
+}
+
+impl From<&DeriveInput> for TableAttribute {
+    fn from(input: &DeriveInput) -> Self {
+        let table_name = cruet::case::to_table_case(&input.ident.clone().to_string());
+        let mut value = Self::default();
+
+        value.table_name = table_name;
+        value.foreign_name = format!(
+            "{}_{}",
+            cruet::string::singularize::to_singular(&value.table_name),
+            &value.id_column
+        );
+
+        for attr in &input.attrs {
+            if let Meta::List(the_list) = &attr.meta {
+                if the_list.path.is_ident("dirty") {
+                    let mut walker = the_list.tokens.clone().into_iter();
+                    while let Some(arg) = walker.next() {
+                        if arg.to_string() == "no_timestamp" {
+                            value.no_timestamp = true;
+                        }
+
+                        if arg.to_string() == "no_softdelete" {
+                            value.no_softdelete = true;
+                        }
+
+                        if arg.to_string() == "created_at" {
+                            _ = walker.next();
+                            if let Some(name) = walker.next() {
+                                value.created_at_col = name.to_string().replace('\"', "");
+                            }
+                        }
+
+                        if arg.to_string() == "updated_at" {
+                            _ = walker.next();
+                            if let Some(name) = walker.next() {
+                                value.updated_at_col = name.to_string().replace('\"', "");
+                            }
+                        }
+
+                        if arg.to_string() == "deleted_at" {
+                            _ = walker.next();
+                            if let Some(name) = walker.next() {
+                                value.deleted_at_col = name.to_string().replace('\"', "");
+                            }
+                        }
+
+                        if arg.to_string() == "table" {
+                            _ = walker.next();
+                            if let Some(name) = walker.next() {
+                                value.table_name = name.to_string().replace('\"', "");
+                            }
+                        }
+                        if arg.to_string() == "id" {
+                            _ = walker.next();
+                            if let Some(name) = walker.next() {
+                                value.id_field = name.to_string().replace('\"', "");
+                            }
+                        }
+                        if arg.to_string() == "id_column" {
+                            _ = walker.next();
+                            if let Some(name) = walker.next() {
+                                value.id_column = name.to_string().replace('\"', "");
+                            }
+                        }
+
+                        if arg.to_string() == "foreign_name" {
+                            _ = walker.next();
+                            if let Some(name) = walker.next() {
+                                value.foreign_name = name.to_string().replace('\"', "");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        value
     }
 }
 

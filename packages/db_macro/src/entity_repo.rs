@@ -5,7 +5,7 @@ use quote::{format_ident, quote};
 use syn::DeriveInput;
 
 use crate::{
-    attribute_type::{DirtybaseAttributes, RelType},
+    attribute_type::{DirtybaseAttributes, RelType, TableAttribute},
     relationship::{
         belongs_to, has_many, has_many_through, has_one, has_one_through, morph_many, morph_one,
     },
@@ -14,6 +14,7 @@ use crate::{
 pub fn build_entity_repo(
     input: &DeriveInput,
     columns_attributes: &HashMap<String, DirtybaseAttributes>,
+    _table_attribute: &TableAttribute,
 ) -> TokenStream {
     //
     let ident = input.ident.clone();
@@ -89,7 +90,7 @@ pub fn build_entity_repo(
             pub fn new(manager: &::dirtybase_contract::db_contract::base::manager::Manager) -> Self {
                  let mut instance = Self {
                     builder:  ::dirtybase_contract::db_contract::base::query::QueryBuilder::new(
-                        <#ident as ::dirtybase_contract::db_contract::table_entity::TableEntityTrait>::table_name(),
+                        <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::table_name(),
                         ::dirtybase_contract::db_contract::base::query::QueryAction::Query {columns: None}
                     ),
                     manager: manager.clone(),
@@ -98,7 +99,7 @@ pub fn build_entity_repo(
 
                  instance
                     .builder
-                    .select_multiple(&<#ident as ::dirtybase_contract::db_contract::table_entity::TableEntityTrait>::table_query_col_aliases(None));
+                    .select_multiple(&<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::table_query_col_aliases(None));
 
                  instance
             }
@@ -117,8 +118,8 @@ pub fn build_entity_repo(
                     Ok(Some(list)) => {
                         for row in &list {
                             if let Some(row_entity) = #ident::from_struct_column_value(row,
-                                Some(<#ident as ::dirtybase_contract::db_contract::table_entity::TableEntityTrait>::table_name())) {
-                                let row_hash = ::dirtybase_contract::db_contract::table_entity::TableEntityTrait::entity_hash(&row_entity);
+                                Some(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::table_name())) {
+                                let row_hash = ::dirtybase_contract::db_contract::table_model::TableModel::entity_hash(&row_entity);
                                 rows_map.insert(row_hash, row_entity);
 
                                 //joins
@@ -128,7 +129,7 @@ pub fn build_entity_repo(
 
                         // now map relationships
                         for(_, row_entity) in &mut rows_map {
-                            let row_hash = ::dirtybase_contract::db_contract::table_entity::TableEntityTrait::entity_hash(row_entity);
+                            let row_hash = ::dirtybase_contract::db_contract::table_model::TableModel::entity_hash(row_entity);
                             #(#entity_appends_vec)*
                         }
 

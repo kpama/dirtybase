@@ -1,4 +1,4 @@
-use dirtybase_db::{TableEntityTrait, connector::sqlite::make_sqlite_in_memory_manager};
+use dirtybase_db::{TableModel, connector::sqlite::make_sqlite_in_memory_manager};
 use dirtybase_db_macro::DirtyTable;
 
 #[derive(Debug, Default, Clone, DirtyTable)]

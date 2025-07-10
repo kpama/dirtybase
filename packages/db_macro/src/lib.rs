@@ -16,25 +16,23 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
 
     let name = input.ident.clone();
-    let table_name = pluck_table_name(&input);
-    let id_column_method = build_id_method(&input);
-    let entity_hash_method = build_entity_hash_method(&input);
-    let foreign_id_method = build_foreign_id_method(&input, &table_name);
+    let (table_attribute, columns_attributes) = pluck_attributes(&input);
+    let entity_hash_method = build_entity_hash_method(&table_attribute);
+    let table_name = &table_attribute.table_name;
 
-    let columns_attributes = pluck_columns(&input);
     let column = pluck_names(&columns_attributes);
 
     let generics = input.generics.clone();
     let (_impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    let from_cv_for_handlers = names_of_from_cv_handlers(&columns_attributes, &table_name);
+    let from_cv_for_handlers = names_of_from_cv_handlers(&columns_attributes, table_name);
     let from_cvs = build_from_handlers(&columns_attributes);
     let into_field_values = build_into_handlers(&columns_attributes);
     let into_cv_for_calls = build_into_for_calls(&columns_attributes);
-    let special_column_methods = build_special_column_methods(&columns_attributes);
+    let special_column_methods = build_special_column_methods(&table_attribute);
     let column_name_methods = build_prop_column_names_getter(&columns_attributes);
     let defaults = spread_default(&columns_attributes, &input);
-    let entity_repo = build_entity_repo(&input, &columns_attributes);
+    let entity_repo = build_entity_repo(&input, &columns_attributes, &table_attribute);
 
     let expanded = quote! {
 
@@ -65,20 +63,12 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
 
       }
 
-      // TableEntityTrait
-      impl #ty_generics ::dirtybase_contract::db_contract::TableEntityTrait for #name  #ty_generics #where_clause {
-
-        #id_column_method
-
-        #foreign_id_method
+      // TableModel
+      impl #ty_generics ::dirtybase_contract::db_contract::TableModel for #name  #ty_generics #where_clause {
 
         #entity_hash_method
 
         #(#special_column_methods)*
-
-        fn table_name() -> &'static str {
-          #table_name
-        }
 
         fn table_columns() -> &'static [&'static str] {
           &[

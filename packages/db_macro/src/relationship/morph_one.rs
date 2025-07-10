@@ -48,7 +48,7 @@ pub(crate) fn generate_join_method(
         let mut morph_method_name = format_ident!("{}", &morph_type_name);
 
         // parent key
-        let mut parent_key = quote! {<#parent as ::dirtybase_contract::db_contract::table_entity::TableEntityTrait>::id_column()};
+        let mut parent_key = quote! {<#parent as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column()};
         // foreign key
         let mut foreign_key = quote! { #foreign_key_name };
         let mut morph_type_key = quote! { #morph_type_name };
@@ -122,7 +122,7 @@ pub(crate) fn build_row_processor(
        //
        if #is_eager {
             if let Some(entity) = #foreign_type::from_struct_column_value(row,
-                 Some(<#foreign_type as ::dirtybase_contract::db_contract::table_entity::TableEntityTrait>::table_name())) {
+                 Some(<#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::table_name())) {
                 #map_name.insert(row_hash ,entity);
             }
        }
