@@ -18,7 +18,7 @@ async fn main() {
 struct Customer {
     id: Option<i64>,
     name: String,
-    #[dirty(rel(kind = has_many_through, pivot: Order, pivot_through_key= id, through_key = order_id))]
+    #[dirty(rel(kind = has_many_through, pivot: Order, pivot_through_col = id, through_col= order_id))]
     invoices: Option<Vec<Invoice>>,
     #[dirty(rel(kind = has_many))]
     orders: Option<Vec<Order>>,

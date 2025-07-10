@@ -19,8 +19,8 @@ struct Machanic {
     #[dirty(rel(
       kind = "has_one_through",
       pivot = Car,
-      pivot_through_key = id,
-      through_key = car_id 
+      pivot_through_col= id,
+      through_col= car_id 
     ))]
     owner: Option<Owner>,
     #[dirty(rel(kind = has_one))]

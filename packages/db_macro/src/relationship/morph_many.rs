@@ -47,24 +47,24 @@ pub(crate) fn generate_join_method(
         let morph_type_name = format!("{}_type", &morph_name);
         let mut morph_method_name = format_ident!("{}", &morph_type_name);
 
-        // parent key
-        let mut parent_key = quote! {<#parent as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column()};
-        // foreign key
-        let mut foreign_key = quote! { #foreign_key_name };
-        let mut morph_type_key = quote! { #morph_type_name };
+        // parent col
+        let mut parent_col = quote! {<#parent as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column()};
+        // foreign col
+        let mut foreign_col = quote! { #foreign_key_name };
+        let mut morph_type_col = quote! { #morph_type_name };
 
-        // parent key
-        if let Some(field) = &attribute.local_key {
-            parent_key = quote! { #field };
+        // parent col
+        if let Some(field) = &attribute.local_col {
+            parent_col = quote! { #field };
         }
 
-        // foreign key
-        if let Some(field) = &attribute.foreign_key {
-            foreign_key = quote! { #field };
+        // foreign col
+        if let Some(field) = &attribute.foreign_col {
+            foreign_col = quote! { #field };
         }
 
-        if let Some(field) = &attribute.morph_type_key {
-            morph_type_key = quote! { #field };
+        if let Some(field) = &attribute.morph_type_col {
+            morph_type_col = quote! { #field };
             morph_method_name = format_ident!("{}", &field);
         }
 
@@ -72,8 +72,8 @@ pub(crate) fn generate_join_method(
             pub fn #method_name(&mut self,) -> &mut Self {
                 let name = #name.to_string();
                 if !self.eager.contains(&name) {
-                    self.builder.inner_join_table_and_select::<#parent, #foreign_type>(#parent_key, #foreign_key, None);
-                    self.builder.is_eq(#morph_type_key, Self::#morph_method_name());
+                    self.builder.inner_join_table_and_select::<#parent, #foreign_type>(#parent_col, #foreign_col, None);
+                    self.builder.is_eq(#morph_type_col, Self::#morph_method_name());
                     self.eager.push(name);
                 }
                 self

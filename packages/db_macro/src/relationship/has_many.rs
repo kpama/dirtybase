@@ -30,20 +30,20 @@ pub(crate) fn generate_join_method(
     let parent = format_ident!("{}", &input.ident);
     let foreign_type = format_ident!("{}", attr.the_type);
 
-    // parent key
-    let mut parent_key = quote! {<#parent as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column()};
-    // foreign key
-    let mut foreign_key = quote! { <#parent as ::dirtybase_contract::db_contract::table_model::TableModel>::foreign_id_column() };
+    // parent col
+    let mut parent_col = quote! {<#parent as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column()};
+    // foreign col
+    let mut foreign_col = quote! { <#parent as ::dirtybase_contract::db_contract::table_model::TableModel>::foreign_id_column() };
 
     if let Some(RelType::HasMany { attribute }) = &attr.relation {
-        // parent key
-        if let Some(field) = &attribute.local_key {
-            parent_key = quote! { #field };
+        // parent col
+        if let Some(field) = &attribute.local_col {
+            parent_col = quote! { #field };
         }
 
         // foreign key
-        if let Some(field) = &attribute.foreign_key {
-            foreign_key = quote! { #field };
+        if let Some(field) = &attribute.foreign_col {
+            foreign_col = quote! { #field };
         }
     }
 
@@ -51,7 +51,7 @@ pub(crate) fn generate_join_method(
         pub fn #method_name(&mut self,) -> &mut Self {
             let name = #name.to_string();
             if !self.eager.contains(&name) {
-                self.builder.inner_join_table_and_select::<#parent, #foreign_type>(#parent_key, #foreign_key, None);
+                self.builder.inner_join_table_and_select::<#parent, #foreign_type>(#parent_col, #foreign_col, None);
                 self.eager.push(name);
             }
             self

@@ -164,27 +164,27 @@ pub(crate) struct DirtybaseAttributes {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RelationAttribute {
-    pub(crate) foreign_key: Option<String>,
-    pub(crate) local_key: Option<String>,
-    pub(crate) through_key: Option<String>,
-    pub(crate) pivot_through_key: Option<String>,
+    pub(crate) foreign_col: Option<String>,
+    pub(crate) local_col: Option<String>,
+    pub(crate) through_col: Option<String>,
+    pub(crate) pivot_through_col: Option<String>,
     pub(crate) pivot: Option<String>,
     pub(crate) morph_name: Option<String>,
     pub(crate) morph_type: Option<String>,
-    pub(crate) morph_type_key: Option<String>,
+    pub(crate) morph_type_col: Option<String>,
 }
 
 impl From<HashMap<String, String>> for RelationAttribute {
     fn from(mut val: HashMap<String, String>) -> Self {
         RelationAttribute {
-            foreign_key: val.remove("foreign_key"),
-            local_key: val.remove("local_key"),
-            through_key: val.remove("through_key"),
-            pivot_through_key: val.remove("pivot_through_key"),
+            foreign_col: val.remove("foreign_col"),
+            local_col: val.remove("local_col"),
+            through_col: val.remove("through_col"),
+            pivot_through_col: val.remove("pivot_through_col"),
             pivot: val.remove("pivot"),
             morph_name: val.remove("morph_name"),
             morph_type: val.remove("morph_type"),
-            morph_type_key: val.remove("morph_type_key"),
+            morph_type_col: val.remove("morph_type_col"),
         }
     }
 }

@@ -20,8 +20,8 @@ struct Post {
         kind = "morph_one",
         morph_name = "imageable",
         morph_type = "post_image",
-        morph_type_key = "imageable_type",
-        foreign_key = "imageable_id"
+        morph_type_col = "imageable_type",
+        foreign_col = "imageable_id"
     ))]
     image: Option<Image>,
 }
