@@ -4,16 +4,16 @@ use crate::db_contract::{
     base::{manager::Manager, query::QueryBuilder},
     field_values::FieldValue,
     types::StructuredColumnAndValue,
-    TableEntityTrait,
+    TableModel,
 };
 
 use super::{RelationMany, RelationOne, RelationQueryBuilder};
 
 pub struct BelongsToMany<C, PV, P>
 where
-    C: TableEntityTrait,
-    PV: TableEntityTrait,
-    P: TableEntityTrait,
+    C: TableModel,
+    PV: TableModel,
+    P: TableModel,
 {
     pivot_field: String,
     pivot_parent_field: String,
@@ -29,9 +29,9 @@ where
 
 impl<C, PV, P> BelongsToMany<C, PV, P>
 where
-    C: TableEntityTrait,
-    PV: TableEntityTrait,
-    P: TableEntityTrait,
+    C: TableModel,
+    PV: TableModel,
+    P: TableModel,
 {
     pub fn new(manager: Manager) -> Self {
         Self::new_with_custom(
@@ -104,9 +104,9 @@ where
 
 impl<C, PV, P> RelationQueryBuilder for BelongsToMany<C, PV, P>
 where
-    C: TableEntityTrait,
-    PV: TableEntityTrait,
-    P: TableEntityTrait,
+    C: TableModel,
+    PV: TableModel,
+    P: TableModel,
 {
     type Target = P;
 
@@ -132,9 +132,9 @@ where
 #[async_trait::async_trait]
 impl<C, PV, P> RelationOne for BelongsToMany<C, PV, P>
 where
-    C: TableEntityTrait + Send,
-    PV: TableEntityTrait + Send,
-    P: TableEntityTrait + Send,
+    C: TableModel + Send,
+    PV: TableModel + Send,
+    P: TableModel + Send,
 {
     async fn one_s(&mut self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
         self.manager
@@ -154,9 +154,9 @@ where
 #[async_trait::async_trait]
 impl<C, PV, P> RelationMany for BelongsToMany<C, PV, P>
 where
-    C: TableEntityTrait + Send,
-    PV: TableEntityTrait + Send,
-    P: TableEntityTrait + Send,
+    C: TableModel + Send,
+    PV: TableModel + Send,
+    P: TableModel + Send,
 {
     async fn get(&mut self) -> Result<Option<Vec<Self::Target>>, anyhow::Error> {
         self.manager

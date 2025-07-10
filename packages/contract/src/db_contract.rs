@@ -5,7 +5,7 @@ pub mod migration;
 pub mod query_column;
 pub mod query_values;
 pub mod relations;
-pub mod table_entity;
+pub mod table_model;
 pub mod types;
 
 mod column_value_builder;
@@ -19,7 +19,7 @@ use base::{
 };
 pub use column_value_builder::*;
 pub use seeder_registerer::*;
-pub use table_entity::*;
+pub use table_model::*;
 
 pub type PoolManagerSet = HashMap<ClientType, Box<dyn ConnectionPoolTrait>>;
 

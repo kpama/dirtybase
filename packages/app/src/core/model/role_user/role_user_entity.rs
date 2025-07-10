@@ -1,7 +1,7 @@
 use crate::core::model::role::RoleEntity;
 use dirtybase_contract::db::{
     types::{DateTimeField, UlidField},
-    TableEntityTrait,
+    TableModel,
 };
 use dirtybase_db::types::OptionalUlidField;
 use dirtybase_db_macro::DirtyTable;

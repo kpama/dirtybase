@@ -4,15 +4,15 @@ use crate::db_contract::{
     base::{manager::Manager, query::QueryBuilder},
     field_values::FieldValue,
     types::StructuredColumnAndValue,
-    TableEntityTrait,
+    TableModel,
 };
 
 use super::{RelationMany, RelationOne, RelationQueryBuilder};
 
 pub struct HasMany<P, C>
 where
-    P: TableEntityTrait,
-    C: TableEntityTrait,
+    P: TableModel,
+    C: TableModel,
 {
     child_field: String,
     child_table: String,
@@ -24,8 +24,8 @@ where
 
 impl<P, C> HasMany<P, C>
 where
-    P: TableEntityTrait,
-    C: TableEntityTrait,
+    P: TableModel,
+    C: TableModel,
 {
     pub fn new(manager: Manager) -> Self {
         Self::new_with_custom(
@@ -68,8 +68,8 @@ where
 
 impl<P, C> RelationQueryBuilder for HasMany<P, C>
 where
-    P: TableEntityTrait + Send,
-    C: TableEntityTrait + Send,
+    P: TableModel + Send,
+    C: TableModel + Send,
 {
     type Target = C;
 
@@ -95,8 +95,8 @@ where
 #[async_trait::async_trait]
 impl<P, C> RelationMany for HasMany<P, C>
 where
-    P: TableEntityTrait + Send,
-    C: TableEntityTrait + Send,
+    P: TableModel + Send,
+    C: TableModel + Send,
 {
     async fn get(&mut self) -> Result<Option<Vec<Self::Target>>, anyhow::Error> {
         self.manager
@@ -116,8 +116,8 @@ where
 #[async_trait::async_trait]
 impl<P, C> RelationOne for HasMany<P, C>
 where
-    P: TableEntityTrait + Send,
-    C: TableEntityTrait + Send,
+    P: TableModel + Send,
+    C: TableModel + Send,
 {
     async fn one_s(&mut self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
         self.manager

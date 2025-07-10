@@ -4,15 +4,15 @@ use crate::db_contract::{
     base::{manager::Manager, query::QueryBuilder},
     field_values::FieldValue,
     types::StructuredColumnAndValue,
-    TableEntityTrait,
+    TableModel,
 };
 
 use super::{RelationMany, RelationOne, RelationQueryBuilder};
 
 pub struct MorphManyToMany<P, C>
 where
-    P: TableEntityTrait,
-    C: TableEntityTrait,
+    P: TableModel,
+    C: TableModel,
 {
     pub(crate) child_field: String,
     pub(crate) child_type_field: String,
@@ -26,8 +26,8 @@ where
 
 impl<P, C> MorphManyToMany<P, C>
 where
-    P: TableEntityTrait,
-    C: TableEntityTrait,
+    P: TableModel,
+    C: TableModel,
 {
     pub fn new(manager: Manager, child_field: &str, child_type_field: &str) -> Self {
         Self::new_with_custom(
@@ -71,8 +71,8 @@ where
 
 impl<P, C> RelationQueryBuilder for MorphManyToMany<P, C>
 where
-    P: TableEntityTrait + Send,
-    C: TableEntityTrait + Send,
+    P: TableModel + Send,
+    C: TableModel + Send,
 {
     type Target = C;
 
@@ -100,8 +100,8 @@ where
 #[async_trait::async_trait]
 impl<P, C> RelationOne for MorphManyToMany<P, C>
 where
-    P: TableEntityTrait + Send,
-    C: TableEntityTrait + Send,
+    P: TableModel + Send,
+    C: TableModel + Send,
 {
     async fn one_s(&mut self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
         self.manager
@@ -121,8 +121,8 @@ where
 #[async_trait::async_trait]
 impl<P, C> RelationMany for MorphManyToMany<P, C>
 where
-    P: TableEntityTrait + Send,
-    C: TableEntityTrait + Send,
+    P: TableModel + Send,
+    C: TableModel + Send,
 {
     async fn get(&mut self) -> Result<Option<Vec<Self::Target>>, anyhow::Error> {
         self.manager

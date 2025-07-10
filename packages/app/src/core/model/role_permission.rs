@@ -1,7 +1,7 @@
 mod role_permission_entity;
 
+use dirtybase_db::TableModel;
 use dirtybase_db::base::manager::Manager;
-use dirtybase_db::TableEntityTrait;
 pub use role_permission_entity::RolePermissionEntity;
 
 use super::{permission::permission_entity::PermissionEntity, role::RoleEntity};

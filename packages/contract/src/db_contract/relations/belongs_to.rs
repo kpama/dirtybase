@@ -7,15 +7,15 @@ use crate::db_contract::{
     base::{manager::Manager, query::QueryBuilder},
     field_values::FieldValue,
     types::StructuredColumnAndValue,
-    TableEntityTrait,
+    TableModel,
 };
 
 use super::{RelationOne, RelationQueryBuilder};
 
 pub struct BelongsTo<C, P>
 where
-    C: TableEntityTrait,
-    P: TableEntityTrait,
+    C: TableModel,
+    P: TableModel,
 {
     parent_field: String,
     parent_table: String,
@@ -27,8 +27,8 @@ where
 
 impl<C, P> BelongsTo<C, P>
 where
-    C: TableEntityTrait,
-    P: TableEntityTrait,
+    C: TableModel,
+    P: TableModel,
 {
     pub fn new(manager: Manager) -> Self {
         Self::new_with_custom(
@@ -61,8 +61,8 @@ where
 
 impl<C, P> RelationQueryBuilder for BelongsTo<C, P>
 where
-    C: TableEntityTrait + Send,
-    P: TableEntityTrait + Send,
+    C: TableModel + Send,
+    P: TableModel + Send,
 {
     type Target = P;
 
@@ -88,8 +88,8 @@ where
 #[async_trait::async_trait]
 impl<C, P> RelationOne for BelongsTo<C, P>
 where
-    C: TableEntityTrait + Send,
-    P: TableEntityTrait + Send,
+    C: TableModel + Send,
+    P: TableModel + Send,
 {
     async fn one(&mut self) -> Result<Option<Self::Target>, anyhow::Error> {
         self.manager
@@ -108,8 +108,8 @@ where
 
 impl<C, P> Deref for BelongsTo<C, P>
 where
-    C: TableEntityTrait,
-    P: TableEntityTrait,
+    C: TableModel,
+    P: TableModel,
 {
     type Target = QueryBuilder;
     fn deref(&self) -> &Self::Target {
@@ -119,8 +119,8 @@ where
 
 impl<C, P> DerefMut for BelongsTo<C, P>
 where
-    C: TableEntityTrait,
-    P: TableEntityTrait,
+    C: TableModel,
+    P: TableModel,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.query_builder

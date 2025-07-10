@@ -4,7 +4,7 @@ mod setup;
 use setup::*;
 
 use dirtybase_contract::db_contract::{
-    TableEntityTrait,
+    TableModel,
     relations::{
         BelongsTo, BelongsToMany, HasMany, HasManyThrough, HasOne, MorphOneOfMany, MorphOneToMany,
         RelationMany, RelationOne, RelationQueryBuilder,

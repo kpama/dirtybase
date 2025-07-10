@@ -4,7 +4,7 @@ use axum::extract::{rejection::PathRejection, Path};
 use serde::de::DeserializeOwned;
 
 use crate::{
-    db_contract::{base::manager::Manager, field_values::FieldValue, TableEntityTrait},
+    db_contract::{base::manager::Manager, field_values::FieldValue, TableModel},
     prelude::Context,
 };
 
@@ -49,8 +49,8 @@ impl<T: std::any::Any + Clone + Send + Sync> Bind<T> {
     }
 }
 
-/// Implement a general resolver for types that implements `TableEntityTrait`
-impl<T: TableEntityTrait + 'static> Bind<T> {
+/// Implement a general resolver for types that implements `TableModel`
+impl<T: TableModel + 'static> Bind<T> {
     /// Binds a URI `path` to a table `column`
     ///
     /// If the table column is None, the `id` column will be used

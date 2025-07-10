@@ -2,19 +2,19 @@ use crate::db_contract::{
     base::{manager::Manager, query::QueryBuilder},
     field_values::FieldValue,
     types::StructuredColumnAndValue,
-    TableEntityTrait,
+    TableModel,
 };
 
 use super::{MorphManyToMany, RelationQueryBuilder};
 
-pub struct MorphOneOfMany<P: TableEntityTrait, C: TableEntityTrait> {
+pub struct MorphOneOfMany<P: TableModel, C: TableModel> {
     relation: MorphManyToMany<P, C>,
 }
 
 impl<P, C> MorphOneOfMany<P, C>
 where
-    P: TableEntityTrait,
-    C: TableEntityTrait,
+    P: TableModel,
+    C: TableModel,
 {
     pub fn new(manager: Manager, child_field: &str, child_type_field: &str) -> Self {
         Self::new_with_custom(
@@ -49,8 +49,8 @@ where
         sort_by: Option<&str>,
     ) -> Result<Option<C>, anyhow::Error>
     where
-        P: TableEntityTrait + Send,
-        C: TableEntityTrait + Send,
+        P: TableModel + Send,
+        C: TableModel + Send,
     {
         let qb = self.build_query(sort_by, false);
         self.relation.manager.execute_query(qb).fetch_one_to().await
@@ -61,8 +61,8 @@ where
         sort_by: Option<&str>,
     ) -> Result<Option<StructuredColumnAndValue>, anyhow::Error>
     where
-        P: TableEntityTrait + Send,
-        C: TableEntityTrait + Send,
+        P: TableModel + Send,
+        C: TableModel + Send,
     {
         let qb = self.build_query(sort_by, false);
         self.relation.manager.execute_query(qb).fetch_one().await
@@ -73,8 +73,8 @@ where
         sort_by: Option<&str>,
     ) -> Result<Option<C>, anyhow::Error>
     where
-        P: TableEntityTrait + Send,
-        C: TableEntityTrait + Send,
+        P: TableModel + Send,
+        C: TableModel + Send,
     {
         let qb = self.build_query(sort_by, true);
         self.relation.manager.execute_query(qb).fetch_one_to().await
@@ -85,8 +85,8 @@ where
         sort_by: Option<&str>,
     ) -> Result<Option<StructuredColumnAndValue>, anyhow::Error>
     where
-        P: TableEntityTrait + Send,
-        C: TableEntityTrait + Send,
+        P: TableModel + Send,
+        C: TableModel + Send,
     {
         let qb = self.build_query(sort_by, true);
         self.relation.manager.execute_query(qb).fetch_one().await
@@ -111,8 +111,8 @@ where
 
 impl<P, C> RelationQueryBuilder for MorphOneOfMany<P, C>
 where
-    P: TableEntityTrait + Send,
-    C: TableEntityTrait + Send,
+    P: TableModel + Send,
+    C: TableModel + Send,
 {
     type Target = C;
 

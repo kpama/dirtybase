@@ -3,7 +3,7 @@ use crate::db_contract::{
     query_column::{QueryColumn, QueryColumnName},
     query_values::QueryValue,
     types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue},
-    TableEntityTrait,
+    TableModel,
 };
 
 use super::{
@@ -296,7 +296,7 @@ impl QueryBuilder {
     }
 
     /// Adds a table to the list of tables to select from
-    pub fn select_table<T: TableEntityTrait>(&mut self) -> &mut Self {
+    pub fn select_table<T: TableModel>(&mut self) -> &mut Self {
         self.select_multiple(T::table_column_full_names())
     }
 
@@ -631,7 +631,7 @@ impl QueryBuilder {
         self.is_null(DELETED_AT_FIELD)
     }
 
-    pub fn without_table_trash<T: TableEntityTrait>(&mut self) -> &mut Self {
+    pub fn without_table_trash<T: TableModel>(&mut self) -> &mut Self {
         if let Some(field) = T::deleted_at_column() {
             self.is_null(T::prefix_with_tbl(field));
         }
@@ -986,7 +986,7 @@ impl QueryBuilder {
         )
     }
 
-    pub fn inner_join_table<L: TableEntityTrait, R: TableEntityTrait>(
+    pub fn inner_join_table<L: TableModel, R: TableModel>(
         &mut self,
         left_field: &str,
         right_field: &str,
@@ -1017,7 +1017,7 @@ impl QueryBuilder {
         )
     }
 
-    pub fn inner_join_table_and_select<L: TableEntityTrait, R: TableEntityTrait>(
+    pub fn inner_join_table_and_select<L: TableModel, R: TableModel>(
         &mut self,
         left_field: &str,
         right_field: &str,
@@ -1049,7 +1049,7 @@ impl QueryBuilder {
         )
     }
 
-    pub fn left_join_table<L: TableEntityTrait, R: TableEntityTrait>(
+    pub fn left_join_table<L: TableModel, R: TableModel>(
         &mut self,
         left_field: &str,
         right_field: &str,
@@ -1080,7 +1080,7 @@ impl QueryBuilder {
         )
     }
 
-    pub fn left_join_table_and_select<L: TableEntityTrait, R: TableEntityTrait>(
+    pub fn left_join_table_and_select<L: TableModel, R: TableModel>(
         &mut self,
         left_field: impl ToString,
         right_field: impl ToString,
@@ -1112,7 +1112,7 @@ impl QueryBuilder {
         )
     }
 
-    pub fn right_join_table<L: TableEntityTrait, R: TableEntityTrait>(
+    pub fn right_join_table<L: TableModel, R: TableModel>(
         &mut self,
         left_field: &str,
         right_field: &str,
@@ -1143,7 +1143,7 @@ impl QueryBuilder {
         )
     }
 
-    pub fn right_join_table_and_select<L: TableEntityTrait, R: TableEntityTrait>(
+    pub fn right_join_table_and_select<L: TableModel, R: TableModel>(
         &mut self,
         left_field: &str,
         right_field: &str,

@@ -1,6 +1,6 @@
 use dirtybase_contract::{
     db_contract::{
-        TableEntityTrait,
+        TableModel,
         base::manager::Manager,
         types::{JsonField, OptionalDateTimeField, OptionalStringField},
     },

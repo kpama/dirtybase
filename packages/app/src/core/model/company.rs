@@ -9,7 +9,7 @@ pub mod dto;
 pub use company_entity::CompanyEntity;
 pub use company_repository::CompanyRepository;
 pub use company_service::CompanyService;
-use dirtybase_db::TableEntityTrait;
+use dirtybase_db::TableModel;
 use dirtybase_user::entity::user::UserEntity;
 
 pub async fn setup_company_table(manager: &Manager) {

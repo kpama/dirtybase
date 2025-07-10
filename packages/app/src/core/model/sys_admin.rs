@@ -8,7 +8,7 @@ mod sys_admin_entity;
 mod sys_admin_repository;
 mod sys_admin_service;
 
-use dirtybase_db::TableEntityTrait;
+use dirtybase_db::TableModel;
 use dirtybase_user::entity::user::UserEntity;
 pub use sys_admin_entity::SysAdminEntity;
 pub use sys_admin_repository::SysAdminRepository;

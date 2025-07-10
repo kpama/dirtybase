@@ -4,7 +4,7 @@ use crate::core::App;
 
 use super::CompanyEntity;
 use dirtybase_db::{
-    base::manager::Manager, field_values::FieldValue, types::IntoColumnAndValue, TableEntityTrait,
+    base::manager::Manager, field_values::FieldValue, types::IntoColumnAndValue, TableModel,
 };
 
 pub struct CompanyRepository {

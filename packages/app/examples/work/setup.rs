@@ -2,7 +2,7 @@ use crate::models::{
     Address, Company, CompanyType, Customer, Foo, Image, Inventory, Invoice, OrderItem, Product,
     SalesOrder, Warehouse,
 };
-use dirtybase_db::{TableEntityTrait, base::manager::Manager, types::UlidField};
+use dirtybase_db::{TableModel, base::manager::Manager, types::UlidField};
 use rand::Rng;
 
 pub async fn seed_tables(manager: &Manager) {

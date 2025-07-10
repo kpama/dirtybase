@@ -1,5 +1,5 @@
 use dirtybase_contract::db_contract::{
-    TableEntityTrait,
+    TableModel,
     types::{ArcUlidField, NumberField, StringField, UlidField},
 };
 use dirtybase_db::{
@@ -82,7 +82,7 @@ pub(crate) struct Image {
 }
 
 impl Image {
-    pub fn make_imageable<T: TableEntityTrait>(url: &str, id: &UlidField) -> Self {
+    pub fn make_imageable<T: TableModel>(url: &str, id: &UlidField) -> Self {
         Self {
             internal_id: None,
             id: Default::default(),
