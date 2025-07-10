@@ -3,7 +3,7 @@ use crate::core::App;
 use super::permission_entity::PermissionEntity;
 use dirtybase_db::base::manager::Manager;
 use dirtybase_db::types::UlidField;
-use dirtybase_db::{field_values::FieldValue, types::IntoColumnAndValue, TableEntityTrait};
+use dirtybase_db::{field_values::FieldValue, types::IntoColumnAndValue, TableModel};
 
 pub struct PermissionRepository {
     manager: Manager,

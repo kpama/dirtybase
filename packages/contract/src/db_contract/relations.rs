@@ -11,7 +11,7 @@ mod morph_one_to_one;
 
 use super::{
     base::query::QueryBuilder, field_values::FieldValue, types::StructuredColumnAndValue,
-    TableEntityTrait,
+    TableModel,
 };
 
 pub use belongs_to::*;
@@ -26,7 +26,7 @@ pub use morph_one_to_many::*;
 pub use morph_one_to_one::*;
 
 pub trait RelationQueryBuilder {
-    type Target: TableEntityTrait;
+    type Target: TableModel;
 
     fn constrain_keys<K: Into<FieldValue> + IntoIterator>(&mut self, keys: K) -> &mut Self;
 

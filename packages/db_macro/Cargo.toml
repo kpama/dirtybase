@@ -16,9 +16,10 @@ syn = { workspace = true }
 sqlx = { workspace = true }
 proc-macro2 = { version = "1.0.62", default-features = false }
 anyhow = { workspace = true }
-Inflector = { workspace = true }
+cruet = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
 dirtybase_db = { path = "../db", version = "*" }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
+rand = { workspace = true }

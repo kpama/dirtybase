@@ -105,7 +105,7 @@ impl CliCommandManager {
         };
 
         let task = tokio::spawn(async move {
-            let context = Context::default();
+            let context = Context::new().await;
             let token = CancellationToken::new();
             let cloned_token = token.clone();
             let cloned_context = context.clone();

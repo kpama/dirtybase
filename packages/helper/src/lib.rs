@@ -5,4 +5,4 @@ pub mod snowflake;
 pub mod time;
 pub mod ulid;
 pub mod uuid;
-pub use inflector;
+pub use cruet;

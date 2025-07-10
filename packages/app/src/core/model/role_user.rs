@@ -6,7 +6,7 @@ mod role_user_entity;
 mod role_user_repository;
 mod role_user_service;
 
-use dirtybase_contract::db::TableEntityTrait;
+use dirtybase_contract::db::TableModel;
 pub use role_user_entity::RoleUserEntity;
 pub use role_user_repository::RoleUserRepository;
 pub use role_user_service::RoleUserService;

@@ -4,16 +4,16 @@ use crate::db_contract::{
     base::{manager::Manager, query::QueryBuilder},
     field_values::FieldValue,
     types::StructuredColumnAndValue,
-    TableEntityTrait,
+    TableModel,
 };
 
 use super::{RelationMany, RelationOne, RelationQueryBuilder};
 
 pub struct HasManyThrough<P, PV, C>
 where
-    P: TableEntityTrait,
-    PV: TableEntityTrait,
-    C: TableEntityTrait,
+    P: TableModel,
+    PV: TableModel,
+    C: TableModel,
 {
     pivot_field: String,
     pivot_child_field: String,
@@ -29,17 +29,17 @@ where
 
 impl<P, PV, C> HasManyThrough<P, PV, C>
 where
-    P: TableEntityTrait,
-    PV: TableEntityTrait,
-    C: TableEntityTrait,
+    P: TableModel,
+    PV: TableModel,
+    C: TableModel,
 {
     pub fn new(manager: Manager) -> Self {
         Self::new_with_custom(
             manager,
-            PV::prefix_with_tbl(P::foreign_id_column().as_ref().unwrap()).as_str(),
-            PV::prefix_with_tbl(C::foreign_id_column().as_ref().unwrap()).as_str(),
+            PV::prefix_with_tbl(P::foreign_id_column()).as_str(),
+            PV::prefix_with_tbl(C::foreign_id_column()).as_str(),
             PV::table_name(),
-            C::prefix_with_tbl(C::id_column().as_ref().unwrap()).as_str(),
+            C::prefix_with_tbl(C::id_column()).as_str(),
             C::table_name(),
         )
     }
@@ -120,9 +120,9 @@ where
 
 impl<P, PV, C> RelationQueryBuilder for HasManyThrough<P, PV, C>
 where
-    P: TableEntityTrait + Send,
-    PV: TableEntityTrait + Send,
-    C: TableEntityTrait + Send,
+    P: TableModel + Send,
+    PV: TableModel + Send,
+    C: TableModel + Send,
 {
     type Target = C;
 
@@ -156,9 +156,9 @@ where
 #[async_trait::async_trait]
 impl<P, PV, C> RelationOne for HasManyThrough<P, PV, C>
 where
-    P: TableEntityTrait + Send,
-    PV: TableEntityTrait + Send,
-    C: TableEntityTrait + Send,
+    P: TableModel + Send,
+    PV: TableModel + Send,
+    C: TableModel + Send,
 {
     async fn one_s(&mut self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
         self.manager
@@ -178,9 +178,9 @@ where
 #[async_trait::async_trait]
 impl<P, PV, C> RelationMany for HasManyThrough<P, PV, C>
 where
-    P: TableEntityTrait + Send,
-    PV: TableEntityTrait + Send,
-    C: TableEntityTrait + Send,
+    P: TableModel + Send,
+    PV: TableModel + Send,
+    C: TableModel + Send,
 {
     async fn get(&mut self) -> Result<Option<Vec<Self::Target>>, anyhow::Error> {
         self.manager

@@ -43,7 +43,7 @@ impl Gate {
     where
         F: Clone + Handler<Args, Output = Option<R>> + Send + Sync + 'static,
         Args: Clone + Resolver + 'static + Send,
-        <F as busybody::Handler<Args>>::Future: Send + Sync,
+        <F as busybody::Handler<Args>>::Future: Send,
         R: Into<GateResponse>,
     {
         let rw_lock = GATE_COLLECTION.get_or_init(|| RwLock::default());
@@ -70,7 +70,7 @@ impl Gate {
     where
         F: Clone + Handler<Args, Output = Option<R>> + Send + Sync + 'static,
         Args: Clone + Resolver + 'static + Send,
-        <F as busybody::Handler<Args>>::Future: Send + Sync,
+        <F as busybody::Handler<Args>>::Future: Send,
         R: Into<GateResponse>,
     {
         GateBeforeMiddleware::register(move |resolver| {
@@ -91,7 +91,7 @@ impl Gate {
     where
         F: Clone + Handler<Args, Output = Option<R>> + Send + Sync + 'static,
         Args: Clone + Resolver + 'static + Send,
-        <F as busybody::Handler<Args>>::Future: Send + Sync,
+        <F as busybody::Handler<Args>>::Future: Send,
         R: Into<GateResponse>,
     {
         GateAfterMiddleware::register(move |resolver| {

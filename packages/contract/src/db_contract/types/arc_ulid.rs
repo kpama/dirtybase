@@ -9,7 +9,7 @@ use crate::db_contract::{base::helper::generate_arc_ulid, field_values::FieldVal
 
 use super::UlidField;
 
-#[derive(Clone)]
+#[derive(Clone, Hash)]
 pub struct ArcUlidField(pub(crate) Arc<String>);
 
 impl<'de> Deserialize<'de> for ArcUlidField {

@@ -2,23 +2,23 @@ use crate::db_contract::{
     base::{manager::Manager, query::QueryBuilder},
     field_values::FieldValue,
     types::StructuredColumnAndValue,
-    TableEntityTrait,
+    TableModel,
 };
 
 use super::{MorphManyToMany, RelationOne, RelationQueryBuilder};
 
 pub struct MorphOneToOne<P, C>
 where
-    P: TableEntityTrait,
-    C: TableEntityTrait,
+    P: TableModel,
+    C: TableModel,
 {
     relation: MorphManyToMany<P, C>,
 }
 
 impl<P, C> MorphOneToOne<P, C>
 where
-    P: TableEntityTrait,
-    C: TableEntityTrait,
+    P: TableModel,
+    C: TableModel,
 {
     pub fn new(manager: Manager, child_field: &str, child_type_field: &str) -> Self {
         Self::new_with_custom(
@@ -51,8 +51,8 @@ where
 
 impl<P, C> RelationQueryBuilder for MorphOneToOne<P, C>
 where
-    P: TableEntityTrait + Send,
-    C: TableEntityTrait + Send,
+    P: TableModel + Send,
+    C: TableModel + Send,
 {
     type Target = C;
 
@@ -84,8 +84,8 @@ where
 #[async_trait::async_trait]
 impl<P, C> RelationOne for MorphOneToOne<P, C>
 where
-    P: TableEntityTrait + Send,
-    C: TableEntityTrait + Send,
+    P: TableModel + Send,
+    C: TableModel + Send,
 {
     async fn one_s(&mut self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
         self.relation.one_s().await

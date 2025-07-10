@@ -2,7 +2,7 @@ mod audit_log_entity;
 
 pub use audit_log_entity::AuditLogEntity;
 use dirtybase_db::base::{manager::Manager, table::CREATED_AT_FIELD};
-use dirtybase_db::TableEntityTrait;
+use dirtybase_db::TableModel;
 
 pub const AUDIT_LOG_TABLE: &str = "core_audit_log";
 

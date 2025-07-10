@@ -1,4 +1,4 @@
-use crate::db_contract::TableEntityTrait;
+use crate::db_contract::TableModel;
 
 use super::{
     column::{ColumnBlueprint, ColumnType},
@@ -244,12 +244,12 @@ impl TableBlueprint {
         })
     }
 
-    pub fn ulid_table_fk<F: TableEntityTrait>(
+    pub fn ulid_table_fk<F: TableModel>(
         &mut self,
         cascade_delete: bool,
     ) -> &mut ColumnBlueprint {
         let foreign_table = F::table_name();
-        let id = F::id_column().unwrap();
+        let id = F::id_column();
         let name = to_fk_column(foreign_table, Some(id));
 
         self.column_string(name, |column| {
@@ -262,12 +262,12 @@ impl TableBlueprint {
         })
     }
 
-    pub fn uuid_table_fk<F: TableEntityTrait>(
+    pub fn uuid_table_fk<F: TableModel>(
         &mut self,
         cascade_delete: bool,
     ) -> &mut ColumnBlueprint {
         let foreign_table = F::table_name();
-        let id = F::id_column().unwrap();
+        let id = F::id_column();
         let name = to_fk_column(foreign_table, Some(id));
 
         self.column_string(name, |column| {
@@ -296,12 +296,12 @@ impl TableBlueprint {
         )
     }
 
-    pub fn id_table_fk<F: TableEntityTrait>(
+    pub fn id_table_fk<F: TableModel>(
         &mut self,
         cascade_delete: bool,
     ) -> &mut ColumnBlueprint {
         let foreign_table = F::table_name();
-        let id = F::id_column().unwrap();
+        let id = F::id_column();
         let name = to_fk_column(foreign_table, Some(id));
 
         self.column_string(name, |column| {

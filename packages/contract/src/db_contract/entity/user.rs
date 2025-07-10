@@ -7,7 +7,7 @@ mod user_service;
 
 pub mod dtos;
 
-use crate::db::TableEntityTrait;
+use crate::db::TableModel;
 pub use user_entity::UserEntity;
 pub use user_helpers::*;
 pub use user_repository::UserRepository;

@@ -1,10 +1,13 @@
-use std::sync::{atomic::AtomicI64, Arc};
+use std::{
+    fmt::Debug,
+    sync::{atomic::AtomicI64, Arc},
+};
 
 use crate::db_contract::{
     event::SchemeWroteEvent,
     field_values::FieldValue,
     types::{ColumnAndValue, FromColumnAndValue, ToColumnAndValue},
-    DatabaseKindPoolCollection, TableEntityTrait,
+    DatabaseKindPoolCollection, TableModel,
 };
 
 use super::{
@@ -23,6 +26,12 @@ pub struct Manager {
     sticky_duration: i64,
     is_writable: bool,
     last_write_ts: Arc<AtomicI64>,
+}
+
+impl Debug for Manager {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "db manager: {}", &self.kind)
+    }
 }
 
 // TODO: add: first or create
@@ -67,7 +76,7 @@ impl Manager {
 
     pub fn select_from<T>(&self, callback: impl FnOnce(&mut QueryBuilder)) -> SchemaWrapper
     where
-        T: TableEntityTrait,
+        T: TableModel,
     {
         self.select_from_table(T::table_name(), callback)
     }
@@ -78,7 +87,7 @@ impl Manager {
 
     pub fn select_table<T>(&self) -> QueryBuilder
     where
-        T: TableEntityTrait,
+        T: TableModel,
     {
         self.table(T::table_name())
     }
@@ -159,7 +168,7 @@ impl Manager {
 
     pub async fn insert_into<T>(&self, record: impl ToColumnAndValue) -> Result<()>
     where
-        T: TableEntityTrait,
+        T: TableModel,
     {
         self.insert(T::table_name(), record).await
     }
@@ -249,7 +258,7 @@ impl Manager {
         Ok(())
     }
 
-    pub async fn update_table<T: TableEntityTrait>(
+    pub async fn update_table<T: TableModel>(
         &self,
         row: impl ToColumnAndValue,
         callback: impl FnOnce(&mut QueryBuilder),
@@ -271,7 +280,7 @@ impl Manager {
 
     pub async fn delete_from_table<T>(&self, callback: impl FnOnce(&mut QueryBuilder)) -> Result<()>
     where
-        T: TableEntityTrait,
+        T: TableModel,
     {
         self.delete(T::table_name(), callback).await
     }

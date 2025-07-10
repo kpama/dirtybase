@@ -1,27 +1,26 @@
 use crate::db_contract::{
-    base::manager::Manager, field_values::FieldValue, types::StructuredColumnAndValue,
-    TableEntityTrait,
+    base::manager::Manager, field_values::FieldValue, types::StructuredColumnAndValue, TableModel,
 };
 
 use super::{HasMany, RelationOne, RelationQueryBuilder};
 
 pub struct HasOne<P, C>
 where
-    P: TableEntityTrait,
-    C: TableEntityTrait,
+    P: TableModel,
+    C: TableModel,
 {
     relation: HasMany<P, C>,
 }
 
 impl<P, C> HasOne<P, C>
 where
-    P: TableEntityTrait,
-    C: TableEntityTrait,
+    P: TableModel,
+    C: TableModel,
 {
     pub fn new(manager: Manager) -> Self {
         Self::new_with_custom(
             manager,
-            C::prefix_with_tbl(P::foreign_id_column().as_ref().unwrap()).as_str(),
+            C::prefix_with_tbl(P::foreign_id_column()).as_str(),
             C::table_name(),
         )
     }
@@ -35,8 +34,8 @@ where
 
 impl<P, C> RelationQueryBuilder for HasOne<P, C>
 where
-    P: TableEntityTrait + Send,
-    C: TableEntityTrait + Send,
+    P: TableModel + Send,
+    C: TableModel + Send,
 {
     type Target = C;
 
@@ -53,8 +52,8 @@ where
 #[async_trait::async_trait]
 impl<P, C> RelationOne for HasOne<P, C>
 where
-    P: TableEntityTrait + Send,
-    C: TableEntityTrait + Send,
+    P: TableModel + Send,
+    C: TableModel + Send,
 {
     async fn one_s(&mut self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
         self.relation.one_s().await

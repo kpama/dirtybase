@@ -4,31 +4,35 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, parse_macro_input};
 
+use crate::entity_repo::build_entity_repo;
+
 mod attribute_type;
+mod entity_repo;
 mod helpers;
+mod relationship;
 
 #[proc_macro_derive(DirtyTable, attributes(dirty, dirty_rel))]
 pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
 
     let name = input.ident.clone();
-    let columns_attributes = pluck_columns(&input);
-    let table_name = pluck_table_name(&input);
-    let id_column_method = build_id_method(&input);
-    let foreign_id_method = build_foreign_id_method(&input, &table_name);
+    let (table_attribute, columns_attributes) = pluck_attributes(&input);
+    let entity_hash_method = build_entity_hash_method(&table_attribute);
+    let table_name = &table_attribute.table_name;
 
     let column = pluck_names(&columns_attributes);
 
     let generics = input.generics.clone();
     let (_impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-    let from_cv_for_handlers = names_of_from_cv_handlers(&columns_attributes);
+    let from_cv_for_handlers = names_of_from_cv_handlers(&columns_attributes, table_name);
     let from_cvs = build_from_handlers(&columns_attributes);
     let into_field_values = build_into_handlers(&columns_attributes);
     let into_cv_for_calls = build_into_for_calls(&columns_attributes);
-    let special_column_methods = build_special_column_methods(&columns_attributes);
+    let special_column_methods = build_special_column_methods(&table_attribute);
     let column_name_methods = build_prop_column_names_getter(&columns_attributes);
     let defaults = spread_default(&columns_attributes, &input);
+    let entity_repo = build_entity_repo(&input, &columns_attributes, &table_attribute);
 
     let expanded = quote! {
 
@@ -41,7 +45,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
 
         #(#column_name_methods)*
 
-        pub fn from_struct_column_value(mut cv: &mut ::dirtybase_contract::db_contract::types::StructuredColumnAndValue, key: Option<&str>) -> Option<Self> {
+        pub fn from_struct_column_value(cv: &::dirtybase_contract::db_contract::types::StructuredColumnAndValue, key: Option<&str>) -> Option<Self> {
           if let Some(name) = key {
               if let Some(values) = cv.get(name) {
                     Some(values.clone().into())
@@ -59,18 +63,12 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
 
       }
 
-      // TableEntityTrait
-      impl #ty_generics ::dirtybase_contract::db_contract::TableEntityTrait for #name  #ty_generics #where_clause {
+      // TableModel
+      impl #ty_generics ::dirtybase_contract::db_contract::TableModel for #name  #ty_generics #where_clause {
 
-        #id_column_method
-
-        #foreign_id_method
+        #entity_hash_method
 
         #(#special_column_methods)*
-
-        fn table_name() -> &'static str {
-          #table_name
-        }
 
         fn table_columns() -> &'static [&'static str] {
           &[
@@ -129,6 +127,9 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
             ::dirtybase_contract::db_contract::field_values::FieldValue::Object(::dirtybase_contract::db_contract::types::ToColumnAndValue::to_column_value(&value).expect("could not convert to field object"))
           }
       }
+
+      // Entity repo
+      #entity_repo
 
       // TODO: Generate a function that can be used in a migration to create the entity table
 

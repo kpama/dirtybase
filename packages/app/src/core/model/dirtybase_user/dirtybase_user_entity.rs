@@ -4,7 +4,7 @@ use dirtybase_contract::db::{
     types::{StructuredColumnAndValue, UlidField},
 };
 
-use dirtybase_db::{types::OptionalTimestampField, TableEntityTrait};
+use dirtybase_db::{types::OptionalTimestampField, TableModel};
 use dirtybase_db_macro::DirtyTable;
 use dirtybase_user::entity::user::UserEntity;
 use sha2::{Digest, Sha256};

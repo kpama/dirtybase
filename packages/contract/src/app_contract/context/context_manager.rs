@@ -353,7 +353,9 @@ mod test {
         )
         .await;
 
-        let counter = manager.get_resource(Context::default(), "counter", 1).await;
+        let counter = manager
+            .get_resource(Context::new().await, "counter", 1)
+            .await;
 
         assert_eq!(counter.unwrap(), 100);
     }
@@ -380,7 +382,7 @@ mod test {
         )
         .await;
         let connection = manager
-            .get_resource(Context::default(), "db_connection", 1)
+            .get_resource(Context::new().await, "db_connection", 1)
             .await;
 
         assert_eq!(&connection.unwrap().url, url_string);
@@ -395,7 +397,9 @@ mod test {
         )
         .await;
 
-        _ = manager.get_resource(Context::default(), "counter", 1).await;
+        _ = manager
+            .get_resource(Context::new().await, "counter", 1)
+            .await;
 
         assert!((manager.has_resource("counter").await));
 
@@ -412,7 +416,9 @@ mod test {
         )
         .await;
 
-        let x = manager.get_resource(Context::default(), "counter", 3).await;
+        let x = manager
+            .get_resource(Context::new().await, "counter", 3)
+            .await;
 
         println!("{:?}", &x);
 

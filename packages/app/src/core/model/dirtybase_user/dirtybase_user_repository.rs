@@ -14,7 +14,7 @@ use dirtybase_contract::db::{
     types::{FromColumnAndValue, IntoColumnAndValue, StructuredColumnAndValue},
 };
 
-use dirtybase_db::{field_values::FieldValue, TableEntityTrait};
+use dirtybase_db::{field_values::FieldValue, TableModel};
 use dirtybase_user::entity::user::UserEntity;
 use std::collections::HashMap;
 

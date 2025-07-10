@@ -1,13 +1,22 @@
+use std::collections::HashMap;
+use std::hash::{DefaultHasher, Hash, Hasher};
+
 use dirtybase_app::setup;
-use dirtybase_db::{base::manager::Manager, query_values::QueryValue, types::DateTimeField};
+use dirtybase_db::{
+    TableModel,
+    base::{manager::Manager, query::QueryBuilder},
+    field_values::FieldValue,
+    types::DateTimeField,
+};
 use dirtybase_db_macro::DirtyTable;
+use tracing::Level;
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
-        // .with_max_level(Level::DEBUG)
+        .with_max_level(Level::TRACE)
         .try_init()
         .expect("could not setup tracing");
 
@@ -16,44 +25,13 @@ async fn main() {
     _ = app_service.init().await;
 
     if let Ok(manager) = app_service.global_context().await.get::<Manager>().await {
-        let result = manager
-            .select_from_table("posts", |q| {
-                q.is_in("posts.id", vec![4, 1]);
-                q.select_multiple(&["posts.id", "title", "date"]);
-                q.select_as("author_id", "author_id");
-                q.subquery_column(
-                    "authors",
-                    |q1| {
-                        q1.select("first_name");
-                        q1.is_eq("id", QueryValue::ColumnName("author_id".to_string()));
-                    },
-                    Some("first_name"),
-                );
-            })
-            .fetch_all_to::<PostWithAuthor>()
-            .await;
-
-        println!("result 1: {:#?}", result);
-
-        let result = manager
-            .select_from_table("posts", |q| {
-                q.is_in("posts.id", vec![4, 1]);
-                q.select_multiple(&["posts.id", "title", "date"]);
-                q.left_join_and_select(
-                    "authors",
-                    "posts.author_id",
-                    "=",
-                    "authors.id",
-                    &["authors.first_name"],
-                );
-            })
-            .fetch_all_to::<PostWithAuthor>()
-            .await;
-
-        println!("result 2: {:#?}", result);
+        let mut author_repo = AuthorRepo::new(&manager);
+        println!(
+            "author: {:#?}",
+            author_repo.with_posts().by_id(1).get().await
+        );
 
         manager.close().await;
-        println!("db closed");
     }
 
     println!(">>>> finished <<<<< ");
@@ -66,4 +44,46 @@ struct PostWithAuthor {
     title: String,
     date: DateTimeField,
     first_name: String,
+}
+
+#[derive(Debug, Clone, Default, DirtyTable)]
+#[dirty(table = "posts")]
+struct Post {
+    id: i64,
+    title: String,
+    author_id: i64,
+}
+
+impl Post {
+    pub fn author_id_hash(&self) -> u64 {
+        calculate_hash(&self.author_id)
+    }
+}
+
+#[derive(Debug, Default, DirtyTable)]
+#[dirty(table = "authors")]
+struct Author {
+    id: i64,
+    first_name: String,
+    last_name: String,
+    #[dirty(rel(kind = "has_many"))]
+    posts: Vec<Post>,
+}
+
+struct AuthorRelation {
+    builder: QueryBuilder,
+}
+
+fn calculate_hash<T: Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new();
+    t.hash(&mut s);
+    s.finish()
+}
+
+impl AuthorRepo {
+    pub fn by_id(&mut self, id: impl Into<FieldValue>) -> &mut Self {
+        self.builder
+            .is_eq(Author::prefix_with_tbl(Author::col_name_for_id()), id);
+        self
+    }
 }

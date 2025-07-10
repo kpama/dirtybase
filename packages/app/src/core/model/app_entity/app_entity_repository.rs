@@ -1,7 +1,7 @@
 use super::{AppEntity, APP_TABLE, APP_TABLE_ID_FIELD};
 use crate::core::model::{role::RoleEntity, role_user::RoleUserEntity};
 use crate::core::App;
-use dirtybase_db::TableEntityTrait;
+use dirtybase_db::TableModel;
 use dirtybase_db::{
     base::manager::Manager,
     field_values::FieldValue,

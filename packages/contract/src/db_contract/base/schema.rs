@@ -232,8 +232,8 @@ impl SchemaWrapper {
         self.fetch_all_to().await
     }
 
-    pub async fn fetch_one(mut self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
-        self.query_builder.limit(1);
+    pub async fn fetch_one(self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
+        // self.query_builder.limit(1); // We shouldn't be doing this. It affects joins
 
         let result = self.inner.fetch_one(&self.query_builder).await;
 
@@ -309,7 +309,10 @@ impl SchemaWrapper {
 
         tokio::spawn(async move {
             while let Some(result) = inner_receiver.recv().await {
-                match T::from_column_value(result) {
+                let Ok(row) = StructuredColumnAndValue::from_a_result(result) else {
+                    break;
+                };
+                match T::from_column_value(row.fields()) {
                     Ok(d) => {
                         if let Err(e) = outer_sender.send(d).await {
                             tracing::error!("error sending transformed row result: {}", e);
@@ -318,6 +321,7 @@ impl SchemaWrapper {
                     }
                     Err(e) => {
                         tracing::error!("error sending transformed row result: {}", e);
+                        break;
                     }
                 }
             }

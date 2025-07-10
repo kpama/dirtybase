@@ -1,7 +1,7 @@
 use self::permission_entity::PermissionEntity;
 use super::company::CompanyEntity;
 use dirtybase_db::base::manager::Manager;
-use dirtybase_db::TableEntityTrait;
+use dirtybase_db::TableModel;
 
 mod permission_validator;
 

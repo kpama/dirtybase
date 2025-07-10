@@ -2,7 +2,7 @@
 
 use super::UserEntity;
 use crate::db::base::manager::Manager;
-use dirtybase_db::{field_values::FieldValue, types::IntoColumnAndValue, TableEntityTrait};
+use dirtybase_db::{field_values::FieldValue, types::IntoColumnAndValue, TableModel};
 
 pub struct UserRepository {
     manager: Manager,

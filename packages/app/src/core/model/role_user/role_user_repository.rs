@@ -4,7 +4,7 @@ use super::RoleUserEntity;
 use dirtybase_contract::db::{
     base::manager::Manager, field_values::FieldValue, types::IntoColumnAndValue,
 };
-use dirtybase_db::TableEntityTrait;
+use dirtybase_db::TableModel;
 
 pub struct RoleUserRepository {
     manager: Manager,

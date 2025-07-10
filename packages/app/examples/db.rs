@@ -1,5 +1,5 @@
 use dirtybase_db::{
-    TableEntityTrait, config::ConnectionConfig, connector::postgres::make_postgres_manager,
+    TableModel, config::ConnectionConfig, connector::postgres::make_postgres_manager,
     types::IntegerField,
 };
 use dirtybase_db_macro::DirtyTable;
@@ -51,6 +51,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 #[derive(Debug, Clone, Default, DirtyTable)]
+#[dirty(id = "user_id")]
 struct Score {
     user_id: IntegerField,
     points: IntegerField,

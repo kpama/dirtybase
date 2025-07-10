@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use dirtybase_contract::db_contract::base::manager::Manager;
 use dirtybase_contract::db_contract::base::query::QueryBuilder;
-use dirtybase_contract::db_contract::{TableEntityTrait, field_values::FieldValue};
+use dirtybase_contract::db_contract::{TableModel, field_values::FieldValue};
 use dirtybase_helper::time::now;
 
 use crate::CacheEntry;

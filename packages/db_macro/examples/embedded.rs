@@ -1,5 +1,5 @@
 use dirtybase_db::{
-    TableEntityTrait, connector::sqlite::make_sqlite_in_memory_manager, types::ToColumnAndValue,
+    TableModel, connector::sqlite::make_sqlite_in_memory_manager, types::ToColumnAndValue,
 };
 use dirtybase_db_macro::DirtyTable;
 
@@ -24,11 +24,13 @@ async fn main() {
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(id = "child_field")]
 struct Child {
     child_field: String,
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(id = "name")]
 struct Parent {
     name: String,
     #[dirty(flatten)]

@@ -11,7 +11,7 @@ use dirtybase_db::base::manager::Manager;
 use dirtybase_db::base::table::ID_FIELD;
 use dirtybase_db::base::table::INTERNAL_ID_FIELD;
 
-use dirtybase_db::TableEntityTrait;
+use dirtybase_db::TableModel;
 
 use dirtybase_user::entity::user::UserEntity;
 pub use dirtybase_user_entity::DirtybaseUserEntity;

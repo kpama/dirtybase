@@ -1,7 +1,7 @@
 use dirtybase_db::field_values::FieldValue;
 use dirtybase_db_macro::DirtyTable;
 // use dirtybase_db::types::FromColumnAndValue;
-use dirtybase_db::TableEntityTrait;
+use dirtybase_db::TableModel;
 use dirtybase_db::types::ToColumnAndValue;
 
 #[derive(DirtyTable, Default, Clone, Debug)]

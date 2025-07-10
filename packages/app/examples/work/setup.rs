@@ -2,7 +2,7 @@ use crate::models::{
     Address, Company, CompanyType, Customer, Foo, Image, Inventory, Invoice, OrderItem, Product,
     SalesOrder, Warehouse,
 };
-use dirtybase_db::{TableEntityTrait, base::manager::Manager, types::UlidField};
+use dirtybase_db::{TableModel, base::manager::Manager, types::UlidField};
 use rand::Rng;
 
 pub async fn seed_tables(manager: &Manager) {
@@ -24,6 +24,7 @@ pub async fn seed_tables(manager: &Manager) {
     let company_type = [CompanyType::A, CompanyType::B, CompanyType::C];
     for index in 0..=10 {
         let address = Address {
+            id: None,
             line_one: format!("{0} Company {0} St", index),
             line_two: format!("Line two for company {}", index),
             state: "Address State".to_string(),
@@ -107,6 +108,7 @@ pub async fn seed_tables(manager: &Manager) {
                     .insert(
                         Inventory::table_name(),
                         Inventory {
+                            id: None,
                             warehouse_id: warehouse.id,
                             product_id: product_id.clone(),
                             quantity: rng.random_range(1.0..=6000.0),
@@ -267,6 +269,7 @@ pub async fn create_tables(manager: &Manager) {
     // inventory
     _ = manager
         .create_table_schema(Inventory::table_name(), |table| {
+            table.id(None);
             table.ulid_table_fk::<Warehouse>(true);
             table.ulid_table_fk::<Product>(true);
             table.number(Inventory::col_name_for_quantity());

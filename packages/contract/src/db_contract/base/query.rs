@@ -3,7 +3,7 @@ use crate::db_contract::{
     query_column::{QueryColumn, QueryColumnName},
     query_values::QueryValue,
     types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue},
-    TableEntityTrait,
+    TableModel,
 };
 
 use super::{
@@ -17,7 +17,7 @@ use super::{
     table::DELETED_AT_FIELD,
     where_join_operators::WhereJoinOperator,
 };
-use std::{fmt::Display, marker::PhantomData};
+use std::{collections::HashMap, fmt::Display, marker::PhantomData};
 
 #[derive(Debug)]
 pub enum WhereJoin {
@@ -81,7 +81,7 @@ impl Display for QueryAction {
 pub struct QueryBuilder {
     where_clauses: Vec<WhereJoinOperator>,
     table: String,
-    joins: Option<Vec<JoinQueryBuilder>>,
+    joins: Option<HashMap<String, JoinQueryBuilder>>,
     action: QueryAction,
     order_by: Option<OrderByBuilder>,
     limit: Option<LimitBuilder>,
@@ -192,7 +192,7 @@ impl QueryBuilder {
         self
     }
 
-    pub fn joins(&self) -> Option<&Vec<JoinQueryBuilder>> {
+    pub fn joins(&self) -> Option<&HashMap<String, JoinQueryBuilder>> {
         self.joins.as_ref()
     }
 
@@ -296,7 +296,7 @@ impl QueryBuilder {
     }
 
     /// Adds a table to the list of tables to select from
-    pub fn select_table<T: TableEntityTrait>(&mut self) -> &mut Self {
+    pub fn select_table<T: TableModel>(&mut self) -> &mut Self {
         self.select_multiple(T::table_column_full_names())
     }
 
@@ -631,7 +631,7 @@ impl QueryBuilder {
         self.is_null(DELETED_AT_FIELD)
     }
 
-    pub fn without_table_trash<T: TableEntityTrait>(&mut self) -> &mut Self {
+    pub fn without_table_trash<T: TableModel>(&mut self) -> &mut Self {
         if let Some(field) = T::deleted_at_column() {
             self.is_null(T::prefix_with_tbl(field));
         }
@@ -943,17 +943,17 @@ impl QueryBuilder {
         self.where_(WhereJoinOperator::And(condition))
     }
 
-    pub fn join<T: ToString>(
+    pub fn join<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
         &mut self,
         table: &str,
         left_table: &str,
         operator: &str,
         right_table: &str,
         join_type: JoinType,
-        select_columns: Option<&[T]>,
+        select_columns: Option<C>,
     ) -> &mut Self {
         if self.joins.is_none() {
-            self.joins = Some(Vec::new());
+            self.joins = Some(HashMap::new());
         }
 
         let join = JoinQueryBuilder::new(
@@ -964,7 +964,7 @@ impl QueryBuilder {
             join_type,
             select_columns,
         );
-        self.joins.as_mut().unwrap().push(join);
+        self.joins.as_mut().unwrap().insert(table.to_string(), join);
 
         self
     }
@@ -976,7 +976,7 @@ impl QueryBuilder {
         operator: &str,
         right_table: &str,
     ) -> &mut Self {
-        self.join::<String>(
+        self.join::<String, Vec<String>>(
             table,
             left_table,
             operator,
@@ -986,26 +986,26 @@ impl QueryBuilder {
         )
     }
 
-    pub fn inner_join_table<L: TableEntityTrait, R: TableEntityTrait>(
+    pub fn inner_join_table<L: TableModel, R: TableModel>(
         &mut self,
         left_field: &str,
         right_field: &str,
     ) -> &mut Self {
         self.inner_join(
-            L::table_name(),
+            R::table_name(),
             &L::prefix_with_tbl(left_field),
             "=",
             &R::prefix_with_tbl(right_field),
         )
     }
 
-    pub fn inner_join_and_select<T: ToString>(
+    pub fn inner_join_and_select<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
         &mut self,
         table: &str,
         left_table: &str,
         operator: &str,
         right_table: &str,
-        select_columns: &[T],
+        select_columns: C,
     ) -> &mut Self {
         self.join(
             table,
@@ -1017,18 +1017,18 @@ impl QueryBuilder {
         )
     }
 
-    pub fn inner_join_table_and_select<L: TableEntityTrait, R: TableEntityTrait>(
+    pub fn inner_join_table_and_select<L: TableModel, R: TableModel>(
         &mut self,
         left_field: &str,
         right_field: &str,
-        left_tbl_columns_prefix: Option<&str>,
+        right_tbl_columns_prefix: Option<&str>,
     ) -> &mut Self {
         self.inner_join_and_select(
-            L::table_name(),
+            R::table_name(),
             &L::prefix_with_tbl(left_field),
             "=",
             &R::prefix_with_tbl(right_field),
-            &L::column_aliases(left_tbl_columns_prefix),
+            &R::column_aliases(right_tbl_columns_prefix),
         )
     }
 
@@ -1039,7 +1039,7 @@ impl QueryBuilder {
         operator: &str,
         right_table: &str,
     ) -> &mut Self {
-        self.join::<String>(
+        self.join::<String, Vec<String>>(
             table,
             left_table,
             operator,
@@ -1049,26 +1049,26 @@ impl QueryBuilder {
         )
     }
 
-    pub fn left_join_table<L: TableEntityTrait, R: TableEntityTrait>(
+    pub fn left_join_table<L: TableModel, R: TableModel>(
         &mut self,
         left_field: &str,
         right_field: &str,
     ) -> &mut Self {
         self.left_join(
-            L::table_name(),
+            R::table_name(),
             &L::prefix_with_tbl(left_field),
             "=",
             &R::prefix_with_tbl(right_field),
         )
     }
 
-    pub fn left_join_and_select<T: ToString>(
+    pub fn left_join_and_select<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
         &mut self,
         table: &str,
         left_table: &str,
         operator: &str,
         right_table: &str,
-        select_columns: &[T],
+        select_columns: C,
     ) -> &mut Self {
         self.join(
             table,
@@ -1080,18 +1080,18 @@ impl QueryBuilder {
         )
     }
 
-    pub fn left_join_table_and_select<L: TableEntityTrait, R: TableEntityTrait>(
+    pub fn left_join_table_and_select<L: TableModel, R: TableModel>(
         &mut self,
         left_field: impl ToString,
         right_field: impl ToString,
         left_tbl_columns_prefix: Option<&str>,
     ) -> &mut Self {
         self.left_join_and_select(
-            L::table_name(),
+            R::table_name(),
             &L::prefix_with_tbl(left_field),
             "=",
             &R::prefix_with_tbl(right_field),
-            &L::column_aliases(left_tbl_columns_prefix),
+            &R::column_aliases(left_tbl_columns_prefix),
         )
     }
 
@@ -1102,7 +1102,7 @@ impl QueryBuilder {
         operator: &str,
         right_table: &str,
     ) -> &mut Self {
-        self.join::<String>(
+        self.join::<String, Vec<String>>(
             table,
             left_table,
             operator,
@@ -1112,26 +1112,26 @@ impl QueryBuilder {
         )
     }
 
-    pub fn right_join_table<L: TableEntityTrait, R: TableEntityTrait>(
+    pub fn right_join_table<L: TableModel, R: TableModel>(
         &mut self,
         left_field: &str,
         right_field: &str,
     ) -> &mut Self {
         self.right_join(
-            L::table_name(),
+            R::table_name(),
             &L::prefix_with_tbl(left_field),
             "=",
             &R::prefix_with_tbl(right_field),
         )
     }
 
-    pub fn right_join_and_select<T: ToString>(
+    pub fn right_join_and_select<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
         &mut self,
         table: &str,
         left_table: &str,
         operator: &str,
         right_table: &str,
-        select_columns: &[T],
+        select_columns: C,
     ) -> &mut Self {
         self.join(
             table,
@@ -1143,7 +1143,7 @@ impl QueryBuilder {
         )
     }
 
-    pub fn right_join_table_and_select<L: TableEntityTrait, R: TableEntityTrait>(
+    pub fn right_join_table_and_select<L: TableModel, R: TableModel>(
         &mut self,
         left_field: &str,
         right_field: &str,

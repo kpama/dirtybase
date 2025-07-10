@@ -9,8 +9,8 @@ async fn main() {}
 #[dirty(table = "family", id = "id")]
 struct Family {
     id: String,
-    // #[dirty(rel(_foreign_key = "family_id", kind = "has_many", _local_key = "id"))]
-    // members: Option<Vec<Member>>,
+    #[dirty(rel(kind = "has_many", foreign_key = "family_id", local_key = "id"))]
+    members: Option<Vec<Member>>,
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
