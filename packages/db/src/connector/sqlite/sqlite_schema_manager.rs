@@ -5,7 +5,7 @@ use crate::base::{
     query_conditions::Condition,
     query_operators::Operator,
     schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
-    table::{TableBlueprint, UPDATED_AT_FIELD},
+    table::TableBlueprint,
 };
 use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAndValue};
 use anyhow::anyhow;
@@ -397,14 +397,6 @@ impl SqliteSchemaManager {
             }
         }
 
-        // query = format!("{} ENGINE='InnoDB';", query);
-        if query.contains(UPDATED_AT_FIELD) {
-            query = format!(
-                "{}; CREATE TRIGGER IF NOT EXISTS {1}_updated_at_trigger AFTER UPDATE ON {1} BEGIN UPDATE core_user SET {2} = CURRENT_TIMESTAMP; END; ",
-                query, &table.name, UPDATED_AT_FIELD
-            )
-        }
-
         let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
 
         match result {
@@ -755,7 +747,7 @@ impl SqliteSchemaManager {
                 self.build_query(q, params)?;
             }
             QueryValue::Field(field) => self.field_value_to_args(field, params)?,
-            QueryValue::ColumnName(_) => (), // does not require an entry into the params,
+            QueryValue::ColumnName(_) => (), // Does not require an entry into the params,
         }
         Ok(())
     }
@@ -1037,10 +1029,7 @@ fn build_field_value_to_args(
             let v = v as i64;
             _ = Arguments::add(params, v);
         }
-        FieldValue::Null => {
-            _ = Arguments::add(params, "NULL");
-        }
-        FieldValue::NotSet => (),
+        FieldValue::NotSet | FieldValue::Null => (),
         FieldValue::Failable { field, error } => {
             if error.is_some() {
                 return Err(anyhow::anyhow!(error.unwrap()));
@@ -1076,7 +1065,7 @@ mod test {
         query.is_eq("age", 54);
         query.select(col);
 
-        // ue to test generated sql
+        // use to test generated sql
         println!("{:#?}", sqlite.build_query(&query, &mut params));
         println!("{:#?}", &params)
     }

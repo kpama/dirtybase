@@ -1055,10 +1055,7 @@ fn build_field_value_to_args(
             let v = *v as i64;
             _ = Arguments::add(params, v);
         }
-        FieldValue::Null => {
-            _ = Arguments::add(params, "NULL");
-        }
-        FieldValue::NotSet => (),
+        FieldValue::NotSet | FieldValue::Null => (),
         FieldValue::Failable { field, error } => {
             if error.is_some() {
                 return Err(anyhow::anyhow!(error.clone().unwrap()));
