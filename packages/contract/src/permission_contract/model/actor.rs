@@ -44,7 +44,7 @@ impl Actor {
 impl Display for Actor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.id.as_ref() {
-            Some(id) => write!(f, "actor:{}", id),
+            Some(id) => write!(f, "actor:{id}"),
             None => write!(f, "actor:"),
         }
     }
@@ -57,42 +57,38 @@ impl FromColumnAndValue for Actor {
     where
         Self: Sized,
     {
-        let mut actor = Self::default();
-
-        actor.id = cv.remove("id").map(ArcUuid7::from);
-        actor.user_id = cv.remove("user_id").map(ArcUuid7::from);
-        actor.created_at = cv.remove("created_at").map(DateTimeField::from);
-        actor.updated_at = cv.remove("updated_at").map(DateTimeField::from);
-        actor.deleted_at = cv.remove("updated_at").map(DateTimeField::from);
+        let mut actor = Self {
+            id: cv.remove("id").map(ArcUuid7::from),
+            user_id: cv.remove("user_id").map(ArcUuid7::from),
+            created_at: cv.remove("created_at").map(DateTimeField::from),
+            updated_at: cv.remove("updated_at").map(DateTimeField::from),
+            deleted_at: cv.remove("updated_at").map(DateTimeField::from),
+            ..Default::default()
+        };
 
         // roles
         actor.roles = cv.remove("roles").map(|en| {
             let mut map = HashMap::new();
-            match en {
-                FieldValue::Array(roles) => {
-                    for a_role in roles {
-                        if let Ok(r) = Role::from_column_value(ColumnAndValue::from(a_role)) {
-                            map.insert(r.name(), r.id());
-                        }
+            if let FieldValue::Array(roles) = en {
+                for a_role in roles {
+                    if let Ok(r) = Role::from_column_value(ColumnAndValue::from(a_role)) {
+                        map.insert(r.name(), r.id());
                     }
                 }
-                _ => (),
             }
+
             map
         });
 
         // permissions
         actor.permissions = cv.remove("permissions").map(|en| {
             let mut map = HashMap::new();
-            match en {
-                FieldValue::Array(roles) => {
-                    for a_role in roles {
-                        if let Ok(r) = Permission::from_column_value(ColumnAndValue::from(a_role)) {
-                            map.insert(r.name(), r.id());
-                        }
+            if let FieldValue::Array(roles) = en {
+                for a_role in roles {
+                    if let Ok(r) = Permission::from_column_value(ColumnAndValue::from(a_role)) {
+                        map.insert(r.name(), r.id());
                     }
                 }
-                _ => (),
             }
             map
         });

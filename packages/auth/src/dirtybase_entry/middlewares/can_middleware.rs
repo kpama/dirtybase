@@ -3,7 +3,7 @@ use dirtybase_contract::{
     prelude::{Context, IntoResponse, MiddlewareParam, Next, Request},
 };
 
-const LOG_TARGET: &'static str = "auth::mw::can";
+const LOG_TARGET: &str = "auth::mw::can";
 
 /// Auth middleware that automatically call the gate
 pub async fn handle_can_middleware(

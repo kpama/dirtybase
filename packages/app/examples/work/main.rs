@@ -60,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
         Ok(Some(c)) => c.len(),
         _ => 0,
     };
-    println!("company count: {}", company_count);
+    println!("company count: {company_count}");
 
     // let customer_repo = CustomerRepository::new(manager.clone());
     // let mut builder = customer_repo.builder();
@@ -148,7 +148,7 @@ async fn main() -> anyhow::Result<()> {
     morph_one_to_many.constrain_key(product_id.as_str());
 
     match morph_one_to_many.get().await {
-        Err(e) => println!("product images error: {:?}", e),
+        Err(e) => println!("product images error: {e:?}"),
         Ok(Some(i)) => println!("product images count: {}", i.len()),
         _ => (),
     }

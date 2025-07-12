@@ -75,7 +75,7 @@ async fn seed_tables(manager: &Manager) {
             .insert(
                 Family::table_name(),
                 Family {
-                    name: format!("family {}", f),
+                    name: format!("family {f}"),
                     ..Default::default()
                 },
             )
@@ -86,7 +86,7 @@ async fn seed_tables(manager: &Manager) {
                 .insert(
                     Child::table_name(),
                     Child {
-                        name: format!("child {} for family {}", c, f),
+                        name: format!("child {c} for family {f}"),
                         family_id: f,
                         ..Default::default()
                     },

@@ -22,7 +22,7 @@ async fn main() {
         route.general(None, |router| {
             router.get_x("/", |CtxExt(gate): CtxExt<Gate>| async move {
                 //-
-                println!("current gate: {:?}", gate);
+                println!("current gate: {gate:?}");
                 "binding example"
             });
             router.get_x_with_middleware("/posts/{post}", get_post, ["can:view_posts"]);
@@ -34,7 +34,7 @@ async fn main() {
 
     Gate::define("view_posts", |post: Post, user: AuthUser| async move {
         //--
-        println!("validating view post: {:#?}, user: {:#?}", post, user);
+        println!("validating view post: {post:#?}, user: {user:#?}");
         Some(post.id > 10)
     })
     .await;
@@ -49,7 +49,7 @@ async fn main() {
                 id,
                 Post {
                     id,
-                    name: format!("post {}", id),
+                    name: format!("post {id}"),
                 },
             );
         }

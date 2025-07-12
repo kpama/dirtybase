@@ -126,11 +126,11 @@ impl Context {
     pub async fn get<T: Clone + Send + Sync + 'static>(&self) -> Result<T, anyhow::Error> {
         let result = self.sc.get_type().await;
 
-        if result.is_some() {
-            return Ok(result.unwrap());
+        if let Some(r) = result {
+            return Ok(r);
         }
 
-        ContextResourceManager::try_get(&self).await
+        ContextResourceManager::try_get(self).await
     }
 
     pub fn id(&self) -> ArcUuid7 {

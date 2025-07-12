@@ -15,7 +15,7 @@ impl WhereJoinOperator {
             Self::None(_) => "",
         };
 
-        format!("{} {} {}", existing_wheres, join, condition)
+        format!("{existing_wheres} {join} {condition}")
     }
 
     pub fn condition(&self) -> &Condition {

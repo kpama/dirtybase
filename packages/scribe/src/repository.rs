@@ -17,7 +17,7 @@ impl Repository {
 
     pub async fn find<I: Into<ArcUuid7>>(&self, id: I) -> Result<Aggregate, String> {
         let agg_id: ArcUuid7 = id.into();
-        println!("fetch aggregate: {}", agg_id);
+        println!("fetch aggregate: {agg_id}");
         let aggregate = Aggregate::new(agg_id);
         Ok(aggregate)
     }

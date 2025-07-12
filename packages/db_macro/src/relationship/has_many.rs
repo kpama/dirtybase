@@ -12,10 +12,10 @@ pub(crate) fn build_attribute(
     _field: &syn::Field,
     _input: &DeriveInput,
 ) -> RelationAttribute {
-    let attribute = RelationAttribute::from(attr);
+    
 
     //
-    attribute
+    RelationAttribute::from(attr)
 }
 
 pub(crate) fn generate_join_method(
@@ -25,7 +25,7 @@ pub(crate) fn generate_join_method(
 ) {
     // method
     let name = &attr.name;
-    let method_name_st = format!("with_{}", name);
+    let method_name_st = format!("with_{name}");
     let method_name = format_ident!("{}", &method_name_st);
     let trashed_method_name = format_ident!("with_trashed_{}", &name);
     let with_only_trashed_method_name = format_ident!("with_trashed_only_{}", &name);
@@ -115,7 +115,7 @@ pub(crate) fn append_result_collection(
 ) {
     let name = &attr.name;
     let foreign_type = format_ident!("{}", attr.the_type);
-    let map_name_st = format!("{}_map", name);
+    let map_name_st = format!("{name}_map");
     let map_name = format_ident!("{}", &map_name_st);
     let is_eager = format_ident!("are_{}_eager", name);
 
@@ -133,7 +133,7 @@ pub(crate) fn build_row_processor(
 ) {
     let name = &attr.name;
     let is_eager = format_ident!("are_{}_eager", name);
-    let map_name_st = format!("{}_map", name);
+    let map_name_st = format!("{name}_map");
     let map_name = format_ident!("{}", &map_name_st);
     let foreign_type = format_ident!("{}", attr.the_type);
 
@@ -161,7 +161,7 @@ pub(crate) fn build_entity_append(
 ) {
     let name = &attr.name;
     let is_eager = format_ident!("are_{}_eager", name);
-    let map_name_st = format!("{}_map", name);
+    let map_name_st = format!("{name}_map");
     let map_name = format_ident!("{}", &map_name_st);
     let foreign_type = format_ident!("{}", attr.the_type);
     let name_ident = format_ident!("{}", name);

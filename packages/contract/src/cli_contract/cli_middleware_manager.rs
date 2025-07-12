@@ -95,7 +95,7 @@ impl CliMiddlewareManager {
                 manager = (middleware)(manager);
             } else {
                 // FIXME: Add translation
-                log::error!("could not find web middleware: {}", key);
+                log::error!("could not find web middleware: {key}",);
             }
         }
 

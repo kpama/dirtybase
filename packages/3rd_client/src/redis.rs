@@ -21,7 +21,7 @@ pub async fn init() {
             }
             Err(e) => {
                 log::error!("error creating redis client: {:?}", e.to_string());
-                panic!("{:?}", e);
+                panic!("{e:?}");
             }
         }
     }

@@ -12,9 +12,9 @@ pub(crate) fn build_attribute(
     _field: &syn::Field,
     _input: &DeriveInput,
 ) -> RelationAttribute {
-    let attribute = RelationAttribute::from(attr);
+    
     //
-    attribute
+    RelationAttribute::from(attr)
 }
 
 pub(crate) fn generate_join_method(
@@ -25,7 +25,7 @@ pub(crate) fn generate_join_method(
     if let Some(RelType::HasManyThrough { attribute }) = &attr.relation {
         // method
         let name = &attr.name;
-        let method_name_st = format!("with_{}", name);
+        let method_name_st = format!("with_{name}");
         let method_name = format_ident!("{}", &method_name_st);
         let trashed_method_name = format_ident!("with_trashed_{}", &name);
         let with_only_trashed_method_name = format_ident!("with_trashed_only_{}", &name);
@@ -35,7 +35,7 @@ pub(crate) fn generate_join_method(
         let pivot_type = if let Some(p) = &attribute.pivot {
             format_ident!("{}", p)
         } else {
-            std::println!("pivot type not specified for: {}", name);
+            std::println!("pivot type not specified for: {name}");
             return;
         };
         // parent col
@@ -136,7 +136,7 @@ pub(crate) fn append_result_collection(
     if let Some(RelType::HasManyThrough { attribute: _ }) = &attr.relation {
         let name = &attr.name;
         let foreign_type = format_ident!("{}", attr.the_type);
-        let map_name_st = format!("{}_map", name);
+        let map_name_st = format!("{name}_map");
         let map_name = format_ident!("{}", &map_name_st);
         let is_eager = format_ident!("are_{}_eager", name);
 
@@ -156,7 +156,7 @@ pub(crate) fn build_row_processor(
     if let Some(RelType::HasManyThrough { attribute: _ }) = &attr.relation {
         let name = &attr.name;
         let is_eager = format_ident!("are_{}_eager", name);
-        let map_name_st = format!("{}_map", name);
+        let map_name_st = format!("{name}_map");
         let map_name = format_ident!("{}", &map_name_st);
         let foreign_type = format_ident!("{}", attr.the_type);
 
@@ -186,7 +186,7 @@ pub(crate) fn build_entity_append(
     if let Some(RelType::HasManyThrough { attribute: _ }) = &attr.relation {
         let name = &attr.name;
         let is_eager = format_ident!("are_{}_eager", name);
-        let map_name_st = format!("{}_map", name);
+        let map_name_st = format!("{name}_map");
         let map_name = format_ident!("{}", &map_name_st);
         let foreign_type = format_ident!("{}", attr.the_type);
         let name_ident = format_ident!("{}", name);

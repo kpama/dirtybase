@@ -68,7 +68,7 @@ where
             parent_field,
             "=",
             pivot_parent_field,
-            &P::table_column_full_names(),
+            P::table_column_full_names(),
         );
 
         Self {

@@ -53,7 +53,7 @@ impl TryFromDirtyConfig for SessionConfig {
         {
             Ok(c) => Ok(c),
             Err(e) => {
-                let message = format!("could not build session config: {}", e);
+                let message = format!("could not build session config: {e}");
                 tracing::error!("{}", &message);
                 Err(anyhow!(e))
             }

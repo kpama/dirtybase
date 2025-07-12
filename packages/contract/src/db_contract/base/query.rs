@@ -128,7 +128,7 @@ impl QueryBuilder {
     }
 
     pub fn count(&mut self, column: &str) -> &mut Self {
-        let as_name = format!("count_{}", column);
+        let as_name = format!("count_{column}",);
         self.count_as(column, &as_name)
     }
 
@@ -140,7 +140,7 @@ impl QueryBuilder {
     }
 
     pub fn max(&mut self, column: &str) -> &mut Self {
-        let as_name = format!("max_{}", column);
+        let as_name = format!("max_{column}",);
         self.max_as(column, &as_name)
     }
 
@@ -612,14 +612,14 @@ impl QueryBuilder {
     }
 
     pub fn is_null<C: ToString>(&mut self, column: C) -> &mut Self {
-        self.where_operator(column, Operator::Null, FieldValue::Null, None)
+        self.where_operator(column, Operator::Null, QueryValue::Null, None)
     }
 
     pub fn and_is_null<C: ToString>(&mut self, column: C) -> &mut Self {
         self.where_operator(
             column,
             Operator::Null,
-            FieldValue::Null,
+            QueryValue::Null,
             Some(WhereJoin::And),
         )
     }
@@ -628,36 +628,44 @@ impl QueryBuilder {
         self.where_operator(
             column,
             Operator::Null,
-            FieldValue::Null,
+            QueryValue::Null,
             Some(WhereJoin::Or),
         )
     }
 
-    pub fn without_trash(&mut self) -> &mut Self {
+    pub fn without_trashed(&mut self) -> &mut Self {
         self.is_null(DELETED_AT_FIELD)
     }
 
-    pub fn without_table_trash<T: TableModel>(&mut self) -> &mut Self {
+    pub fn without_table_trashed<T: TableModel>(&mut self) -> &mut Self {
         if let Some(field) = T::deleted_at_column() {
             self.is_null(T::prefix_with_tbl(field));
         }
         self
     }
 
-    pub fn with_trash(&mut self) -> &mut Self {
+    pub fn with_trashed(&mut self) -> &mut Self {
         self.is_null(DELETED_AT_FIELD)
             .or_is_not_null(DELETED_AT_FIELD)
     }
 
+    pub fn with_table_trashed<T: TableModel>(&mut self) -> &mut Self {
+        if let Some(field) = T::deleted_at_column() {
+            let n = T::prefix_with_tbl(field);
+            self.is_null(&n).or_is_not_null(&n);
+        }
+        self
+    }
+
     pub fn is_not_null<C: ToString>(&mut self, column: C) -> &mut Self {
-        self.where_operator(column, Operator::NotNull, FieldValue::Null, None)
+        self.where_operator(column, Operator::NotNull, QueryValue::Null, None)
     }
 
     pub fn and_is_not_null<C: ToString>(&mut self, column: C) -> &mut Self {
         self.where_operator(
             column,
             Operator::NotNull,
-            FieldValue::Null,
+            QueryValue::Null,
             Some(WhereJoin::And),
         )
     }
@@ -666,7 +674,7 @@ impl QueryBuilder {
         self.where_operator(
             column,
             Operator::NotNull,
-            FieldValue::Null,
+            QueryValue::Null,
             Some(WhereJoin::Or),
         )
     }
@@ -1034,7 +1042,7 @@ impl QueryBuilder {
             &L::prefix_with_tbl(left_field),
             "=",
             &R::prefix_with_tbl(right_field),
-            &R::column_aliases(right_tbl_columns_prefix),
+            R::column_aliases(right_tbl_columns_prefix),
         )
     }
 
@@ -1097,7 +1105,7 @@ impl QueryBuilder {
             &L::prefix_with_tbl(left_field),
             "=",
             &R::prefix_with_tbl(right_field),
-            &R::column_aliases(left_tbl_columns_prefix),
+            R::column_aliases(left_tbl_columns_prefix),
         )
     }
 
@@ -1160,7 +1168,7 @@ impl QueryBuilder {
             &L::prefix_with_tbl(left_field),
             "=",
             &R::prefix_with_tbl(right_field),
-            &L::column_aliases(left_tbl_columns_prefix),
+            L::column_aliases(left_tbl_columns_prefix),
         )
     }
 }

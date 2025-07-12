@@ -199,7 +199,7 @@ pub(crate) fn pluck_names(
     columns_attributes
         .iter()
         .filter(|c| !c.1.skip_select)
-        .filter(|c| !c.1.relation.is_some())
+        .filter(|c| c.1.relation.is_none())
         .filter(|c| !c.1.flatten)
         .map(|c| c.1.name.clone())
         .collect::<Vec<String>>()

@@ -139,7 +139,7 @@ impl AuthUser {
         } else {
             Some(ParseToken::generate_token(
                 &self.salt,
-                &self.id().as_ref().unwrap(),
+                self.id().as_ref().unwrap(),
             ))
         }
     }
@@ -219,7 +219,7 @@ impl AuthUser {
 
     pub(crate) fn check_password(raw_password: &str, password_hash: &str) -> bool {
         let password = sha256::hash_str(raw_password);
-        match PasswordHash::new(&password_hash) {
+        match PasswordHash::new(password_hash) {
             Ok(parsed_hash) => Argon2::default()
                 .verify_password(password.as_bytes(), &parsed_hash)
                 .is_ok(),
@@ -233,7 +233,7 @@ impl AuthUser {
 
 impl Debug for AuthUser {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{self}")
     }
 }
 
@@ -242,9 +242,9 @@ impl Display for AuthUser {
         let id = if self.id.is_some() {
             self.id.as_ref().unwrap().to_string()
         } else {
-            format!("-- guest user --")
+            "-- guest user --".to_string()
         };
-        write!(f, "{}", id)
+        write!(f, "{id}")
     }
 }
 
@@ -346,18 +346,18 @@ pub struct AuthUserPayload {
 
 impl AuthUserPayload {
     pub fn new() -> Self {
-        let mut payload = Self::default();
-        payload.status = Some(AuthUserStatus::Pending);
-        payload.rotate_salt = true;
-
-        payload
+        Self {
+            status: Some(AuthUserStatus::Pending),
+            rotate_salt: true,
+            ..Default::default()
+        }
     }
 
     pub fn for_update(id: ArcUuid7) -> Self {
-        let mut payload = Self::default();
-        payload.id = Some(id);
-
-        payload
+        Self {
+            id: Some(id),
+            ..Default::default()
+        }
     }
 }
 
@@ -371,7 +371,7 @@ impl ToColumnAndValue for AuthUserPayload {
             .try_to_insert("reset_password", self.reset_password.as_ref());
 
         if let Some(password) = self.password.as_ref() {
-            builder = builder.add_field("password", AuthUser::hash_password(&password));
+            builder = builder.add_field("password", AuthUser::hash_password(password));
         }
         if let Some(email) = self.email.as_ref() {
             builder = builder.add_field::<String>("email_hash", sha256::hash_str(email));

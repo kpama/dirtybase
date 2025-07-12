@@ -666,11 +666,9 @@ impl RouterBuilder {
 
         if self.middleware.is_none() {
             self.middleware = Some(list);
-        } else {
-            if let Some(mut existing) = self.middleware.take() {
-                existing.extend(list);
-                self.middleware = Some(existing);
-            }
+        } else if let Some(mut existing) = self.middleware.take() {
+            existing.extend(list);
+            self.middleware = Some(existing);
         }
 
         self
@@ -678,7 +676,7 @@ impl RouterBuilder {
 
     pub fn nest<C>(&mut self, prefix: &str, mut callback: C) -> &mut Self
     where
-        C: FnMut(&mut Self) -> (),
+        C: FnMut(&mut Self),
     {
         if prefix.is_empty() || prefix == "/" {
             panic!("routes in a grouped middleware must have a valid uri prefix");
@@ -694,7 +692,7 @@ impl RouterBuilder {
 
     pub fn merge<C>(&mut self, mut callback: C) -> &mut Self
     where
-        C: FnMut(&mut Self) -> (),
+        C: FnMut(&mut Self),
     {
         let mut router = Self::default();
 
@@ -713,7 +711,7 @@ impl RouterBuilder {
     where
         L: IntoIterator<Item = I>,
         I: ToString,
-        C: FnMut(&mut Self) -> (),
+        C: FnMut(&mut Self),
     {
         if prefix.is_empty() || prefix == "/" {
             panic!("routes in a grouped middleware must have a valid uri prefix");
@@ -774,25 +772,19 @@ impl RouterBuilder {
                 let mut map = HashMap::new();
                 map.insert(prefix.to_string(), builder);
                 self.nest = Some(map);
-            } else {
-                if let Some(mut map) = self.nest.take() {
-                    if let Some(existing) = map.get_mut(prefix) {
-                        existing.append(builder, ""); // nested prefix already exist
-                    } else {
-                        map.insert(prefix.to_string(), builder);
-                    }
-                    self.nest = Some(map);
+            } else if let Some(mut map) = self.nest.take() {
+                if let Some(existing) = map.get_mut(prefix) {
+                    existing.append(builder, ""); // nested prefix already exist
+                } else {
+                    map.insert(prefix.to_string(), builder);
                 }
+                self.nest = Some(map);
             }
-        } else {
-            if self.merge.is_none() {
-                self.merge = Some(vec![builder])
-            } else {
-                if let Some(mut list) = self.merge.take() {
-                    list.push(builder);
-                    self.merge = Some(list);
-                }
-            }
+        } else if self.merge.is_none() {
+            self.merge = Some(vec![builder])
+        } else if let Some(mut list) = self.merge.take() {
+            list.push(builder);
+            self.merge = Some(list);
         }
     }
 }

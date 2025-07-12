@@ -68,7 +68,7 @@ pub trait TableModel: FromColumnAndValue + ToColumnAndValue {
         Self::table_columns()
             .iter()
             .map(|c| {
-                let alias = format!("{}.{}", pre, c);
+                let alias = format!("{pre}.{c}");
                 QueryColumn::new(*c, Some(Self::table_name()), Some(&alias))
             })
             .collect()

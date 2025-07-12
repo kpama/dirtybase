@@ -25,12 +25,12 @@ pub async fn seed_tables(manager: &Manager) {
     for index in 0..=10 {
         let address = Address {
             id: None,
-            line_one: format!("{0} Company {0} St", index),
-            line_two: format!("Line two for company {}", index),
+            line_one: format!("{index} Company {index} St"),
+            line_two: format!("Line two for company {index}"),
             state: "Address State".to_string(),
         };
         let company = Company {
-            name: format!("Company {}", index),
+            name: format!("Company {index}"),
             address: address.clone(),
             json_address: address,
             company_type: company_type[rng.random_range(0..=2) as usize].clone(),
@@ -42,7 +42,7 @@ pub async fn seed_tables(manager: &Manager) {
 
     // warehouse
     for index in 0..=3 {
-        let warehouse_name = format!("Warehouse {}", index);
+        let warehouse_name = format!("Warehouse {index}");
         let warehouse_id = UlidField::new();
         _ = manager
             .insert(
@@ -58,7 +58,7 @@ pub async fn seed_tables(manager: &Manager) {
 
     // product and inventory
     for index in 1..=150 {
-        let product_sku = format!("PROD-{}", index);
+        let product_sku = format!("PROD-{index}");
         let product_id = UlidField::new();
         _ = manager
             .insert(
@@ -121,7 +121,7 @@ pub async fn seed_tables(manager: &Manager) {
 
     // customer
     for index in 1..100 {
-        let customer_name = format!("Customer{}", index);
+        let customer_name = format!("Customer{index}");
         let customer_id = UlidField::new();
         _ = manager
             .insert(
@@ -178,7 +178,7 @@ pub async fn seed_tables(manager: &Manager) {
             let total = rng.random_range(1..=15);
             let mut index = 1_usize;
             loop {
-                let item_name = format!("Line Item {}", index);
+                let item_name = format!("Line Item {index}");
                 loop {
                     if let Ok(Some(product)) = manager
                         .select_from_table(Product::table_name(), |q| {

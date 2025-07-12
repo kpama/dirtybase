@@ -35,7 +35,7 @@ impl DotEnvManipulator {
     }
 
     pub fn set_quote_value(&mut self, key: &str, value: &str) {
-        self.set_value(key, &format!("\"{}\"", value));
+        self.set_value(key, &format!("\"{value}\""));
     }
 
     pub fn set_value(&mut self, key: &str, value: &str) {
@@ -49,10 +49,10 @@ impl DotEnvManipulator {
                         } else if !old.is_empty() {
                             *entry = entry.replace(&old, value);
                         } else {
-                            *entry = entry.replace("=", &format!("={}", value));
+                            *entry = entry.replace("=", &format!("={value}"));
                         }
                     } else {
-                        *entry = entry.replace("=", &format!("={}", value));
+                        *entry = entry.replace("=", &format!("={value}"));
                     }
                 }
                 break;

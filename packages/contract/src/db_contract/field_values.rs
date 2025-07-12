@@ -84,10 +84,10 @@ impl Display for FieldValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Null => write!(f, "NULL"),
-            Self::U64(v) => write!(f, "{}", v),
-            Self::I64(v) => write!(f, "{}", v),
-            Self::F64(v) => write!(f, "{}", v),
-            Self::String(v) => write!(f, "{}", v),
+            Self::U64(v) => write!(f, "{v}",),
+            Self::I64(v) => write!(f, "{v}",),
+            Self::F64(v) => write!(f, "{v}",),
+            Self::String(v) => write!(f, "{v}",),
             Self::Boolean(v) => {
                 write!(f, "{}", if *v { 1 } else { 0 })
             }
@@ -96,20 +96,20 @@ impl Display for FieldValue {
                 write!(f, "{}", hex::encode(data))
             }
             Self::Uuid(data) => {
-                write!(f, "{}", data)
+                write!(f, "{data}",)
             }
             Self::Array(v) => {
                 let mut data = "".to_owned();
                 for entry in v {
-                    data = format!("{} {},", data, entry);
+                    data = format!("{data} {entry},");
                 }
 
-                write!(f, "[{}]", data)
+                write!(f, "[{data}]",)
             }
-            Self::DateTime(v) => write!(f, "{}", v),
-            Self::Timestamp(v) => write!(f, "{}", v),
-            Self::Date(v) => write!(f, "{}", v),
-            Self::Time(v) => write!(f, "{}", v),
+            Self::DateTime(v) => write!(f, "{v}",),
+            Self::Timestamp(v) => write!(f, "{v}",),
+            Self::Date(v) => write!(f, "{v}",),
+            Self::Time(v) => write!(f, "{v}",),
             Self::NotSet => write!(f, ""),
             Self::Failable { field, error } => {
                 if error.is_some() {
@@ -156,14 +156,14 @@ where
     }
 }
 
-impl<T> From<Box<T>> for FieldValue
-where
-    T: Into<FieldValue>,
-{
-    fn from(value: Box<T>) -> Self {
-        value.into()
-    }
-}
+// impl<T> From<Box<T>> for FieldValue
+// where
+//     T: Into<FieldValue>,
+// {
+//     fn from(value: Box<T>) -> Self {
+//         value.into()
+//     }
+// }
 
 impl<T, E> From<Result<T, E>> for FieldValue
 where

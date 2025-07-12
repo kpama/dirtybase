@@ -32,6 +32,12 @@ pub struct LoginCredentialBuilder {
     credential: LoginCredential,
 }
 
+impl Default for LoginCredentialBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LoginCredentialBuilder {
     pub fn new() -> Self {
         Self {

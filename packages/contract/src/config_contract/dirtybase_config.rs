@@ -193,7 +193,6 @@ where
     let s: String = serde::de::Deserialize::deserialize(deserializer).unwrap_or_default();
 
     Ok(s.split(',')
-        .into_iter()
         .map(|v| v.trim().to_string())
         .collect::<Vec<String>>())
 }
@@ -210,7 +209,6 @@ where
 
     Ok(Some(
         s.split(',')
-            .into_iter()
             .map(|v| v.trim().to_string())
             .collect::<Vec<String>>(),
     ))

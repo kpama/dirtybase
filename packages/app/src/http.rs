@@ -313,8 +313,8 @@ fn display_welcome_info(address: &str, port: u16) {
                  /____/                             
 "
     );
-    eprintln!("version: {}", VERSION);
-    eprintln!("Http server running at : {} on port: {}", address, port);
+    eprintln!("version: {VERSION}");
+    eprintln!("Http server running at : {address} on port: {port}");
 }
 
 fn encrypt_cookies(

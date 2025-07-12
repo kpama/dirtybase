@@ -25,23 +25,19 @@ impl FromColumnAndValue for MigrationEntity {
             id: cv
                 .remove("id")
                 .map(InternalIdField::from)
-                .ok_or(anyhow!("migration entity id field is missing"))?
-                .into(),
+                .ok_or(anyhow!("migration entity id field is missing"))?,
             name: cv
                 .remove(NAME_COLUMN)
                 .map(StringField::from)
-                .ok_or(anyhow!("migration entity name field is missing"))?
-                .into(),
+                .ok_or(anyhow!("migration entity name field is missing"))?,
             batch: cv
                 .get(BATCH_COLUMN)
                 .map(IntegerField::from)
-                .ok_or(anyhow!("migration entity batch field is missing"))?
-                .into(),
+                .ok_or(anyhow!("migration entity batch field is missing"))?,
             created_at: cv
                 .get(CREATED_AT_COLUMN)
                 .map(OptionalDateTimeField::from)
-                .ok_or(anyhow!("migration entity created_at field is missing"))?
-                .into(),
+                .ok_or(anyhow!("migration entity created_at field is missing"))?,
         })
     }
 }

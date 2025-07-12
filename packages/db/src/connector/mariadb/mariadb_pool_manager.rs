@@ -90,7 +90,7 @@ pub async fn db_connect(config: &ConnectionConfig) -> anyhow::Result<Pool<MySql>
         }
         Err(e) => {
             // TODO: Use i18n
-            log::error!(target: LOG_TARGET,"could not connect to mariadb: {:?}", e);
+            log::error!(target: LOG_TARGET,"could not connect to mariadb: {e:?}");
             Err(anyhow!(e))
         }
     }

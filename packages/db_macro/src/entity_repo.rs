@@ -24,7 +24,7 @@ pub fn build_entity_repo(
     let mut row_processors = HashMap::<String, TokenStream>::new();
     let mut entity_appends = HashMap::<String, TokenStream>::new();
 
-    for (_, attr) in columns_attributes {
+    for attr in columns_attributes.values() {
         match &attr.relation {
             Some(RelType::HasOne { attribute: _ }) => {
                 has_one::generate_join_method(attr, input, &mut with_methods);

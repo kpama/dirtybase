@@ -46,7 +46,7 @@ impl Gate {
         <F as busybody::Handler<Args>>::Future: Send,
         R: Into<GateResponse>,
     {
-        let rw_lock = GATE_COLLECTION.get_or_init(|| RwLock::default());
+        let rw_lock = GATE_COLLECTION.get_or_init(RwLock::default);
         let mut w_lock = rw_lock.write().await;
         w_lock.insert(
             ability.to_string(),
@@ -56,11 +56,10 @@ impl Gate {
                 Box::pin(async move {
                     //
                     let result = cc.resolve_and_call(h.clone()).await;
-                    if result.is_some() {
-                        Some(result.unwrap().into())
-                    } else {
-                        None
+                    if let Some(r) = result {
+                        return Some(r.into());
                     }
+                    None
                 })
             })),
         );
@@ -78,8 +77,8 @@ impl Gate {
             let cb = before.clone();
             async move {
                 let result = resolver.sc.resolve_and_call(cb).await;
-                if result.is_some() {
-                    return Some(result.unwrap().into());
+                if let Some(r) = result {
+                    return Some(r.into());
                 }
                 None
             }
@@ -98,8 +97,8 @@ impl Gate {
             let cb = after.clone();
             async move {
                 let result = resolver.sc.resolve_and_call(cb).await;
-                if result.is_some() {
-                    return Some(result.unwrap().into());
+                if let Some(r) = result {
+                    return Some(r.into());
                 }
                 None
             }
@@ -111,15 +110,16 @@ impl Gate {
         let result = GateBeforeMiddleware::new(self.sc.clone(), ability)
             .handle()
             .await;
-        if result.is_some() {
-            return result.unwrap();
+        if let Some(r) = result {
+            return r;
         }
+
         if let Some(rw_lock) = GATE_COLLECTION.get() {
             let r_lock = rw_lock.read().await;
             if let Some(callback) = r_lock.get(ability) {
                 let result = callback(self.sc.clone()).await;
-                if result.is_some() {
-                    return result.unwrap();
+                if let Some(r) = result {
+                    return r;
                 }
             }
         }
@@ -127,8 +127,9 @@ impl Gate {
         let result = GateAfterMiddleware::new(self.sc.clone(), ability)
             .handle()
             .await;
-        if result.is_some() {
-            return result.unwrap();
+
+        if let Some(r) = result {
+            return r;
         }
 
         GateResponse::deny()
@@ -168,7 +169,7 @@ impl Gate {
 
     pub async fn all(&self, abilities: &[&str]) -> bool {
         for ability in abilities {
-            if !self.allows(*ability).await {
+            if !self.allows(ability).await {
                 return false;
             }
         }
@@ -177,7 +178,7 @@ impl Gate {
 
     pub async fn any(&self, abilities: &[&str]) -> bool {
         for ability in abilities {
-            if self.allows(*ability).await {
+            if self.allows(ability).await {
                 return true;
             }
         }
@@ -189,7 +190,7 @@ impl Gate {
         params: P,
     ) -> bool {
         for ability in abilities {
-            if self.allows_when(*ability, params.clone()).await {
+            if self.allows_when(ability, params.clone()).await {
                 return true;
             }
         }
@@ -197,7 +198,7 @@ impl Gate {
     }
 
     pub async fn denies(&self, ability: &str) -> bool {
-        self.allows(ability).await == false
+        !(self.allows(ability).await)
     }
 
     pub async fn denies_when<P: Clone + Send + Sync + 'static>(
@@ -250,8 +251,8 @@ impl Gate {
     pub async fn get<T: Clone + Send + Sync + 'static>(&self) -> Result<T, anyhow::Error> {
         let result = self.sc.get_type().await;
 
-        if result.is_some() {
-            return Ok(result.unwrap());
+        if let Some(r) = result {
+            return Ok(r);
         }
 
         if let Some(ctx) = self.sc.get_type::<Context>().await {
@@ -264,7 +265,7 @@ impl Gate {
 
 impl From<busybody::ServiceContainer> for Gate {
     fn from(sc: busybody::ServiceContainer) -> Self {
-        Self { sc: sc }
+        Self { sc }
     }
 }
 

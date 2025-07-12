@@ -6,21 +6,23 @@ use crate::{app_contract::Context, ExtensionManager};
 use super::CliMiddlewareManager;
 use tokio_util::sync::CancellationToken;
 
+type CommandCollection = Vec<(
+    clap::Command,
+    Box<
+        dyn FnMut(
+                String,
+                clap::ArgMatches,
+                Context,
+            ) -> BoxFuture<'static, Result<(), anyhow::Error>>
+            + Send
+            + Sync
+            + 'static,
+    >,
+    Option<Vec<String>>,
+)>;
+
 pub struct CliCommandManager {
-    commands: Vec<(
-        clap::Command,
-        Box<
-            dyn FnMut(
-                    String,
-                    clap::ArgMatches,
-                    Context,
-                ) -> BoxFuture<'static, Result<(), anyhow::Error>>
-                + Send
-                + Sync
-                + 'static,
-        >,
-        Option<Vec<String>>,
-    )>,
+    commands: CommandCollection,
     middleware_manager: CliMiddlewareManager,
 }
 

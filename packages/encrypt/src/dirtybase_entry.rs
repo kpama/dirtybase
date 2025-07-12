@@ -36,11 +36,11 @@ impl ExtensionSetup for Extension {
                         // base64 encode it
                         let key = format!("base64:{}", Encrypter::generate_aes256gcm_key_string());
                         if arg.get_flag("print") {
-                            println!("{}", key);
+                            println!("{key}");
                         } else {
                             // TODO: WRITE THIS KEY TO THE .ENV FILE
                             //       If there is an existing key, move it to the list of previous keys
-                            println!("writing to .env: {}", key);
+                            println!("writing to .env: {key}");
                         }
                     }
                 }

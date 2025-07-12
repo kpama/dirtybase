@@ -420,7 +420,7 @@ impl Manager {
 
     pub async fn close(self) {
         for (_, collection) in self.connections.iter() {
-            for (_, pool) in collection {
+            for pool in collection.values() {
                 pool.close().await;
             }
         }

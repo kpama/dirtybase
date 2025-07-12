@@ -63,15 +63,15 @@ impl Permission {
     }
 
     pub fn created_at(&self) -> Option<DateTimeField> {
-        self.created_at.clone()
+        self.created_at
     }
 
     pub fn updated_at(&self) -> Option<DateTimeField> {
-        self.updated_at.clone()
+        self.updated_at
     }
 
     pub fn deleted_at(&self) -> Option<DateTimeField> {
-        self.deleted_at.clone()
+        self.deleted_at
     }
 
     pub fn touch_created_at(&mut self) {

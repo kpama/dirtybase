@@ -110,7 +110,7 @@ async fn seed_tables(manager: &Manager) {
             for an_order in orders {
                 _ = manager
                     .insert_into::<Invoice>(Invoice {
-                        order_id: an_order.id.clone().unwrap(),
+                        order_id: an_order.id.unwrap(),
                         total: rand::random_range(50..=10000),
                         ..Default::default()
                     })

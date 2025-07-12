@@ -111,7 +111,7 @@ where
             child_field,
             "=",
             pivot_child_field,
-            &C::table_column_full_names(),
+            C::table_column_full_names(),
         );
 
         qb

@@ -14,6 +14,6 @@ impl Display for JoinType {
             Self::Left => "LEFT",
             Self::Right => "RIGHT",
         };
-        write!(f, "{}", name)
+        write!(f, "{name}",)
     }
 }

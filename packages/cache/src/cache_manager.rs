@@ -43,7 +43,7 @@ impl CacheManager {
                 return match serde_json::from_value(entry.value) {
                     Ok(v) => Some(v),
                     Err(e) => {
-                        log::error!("Error parsing cache data. {}", e);
+                        log::error!("Error parsing cache data. {e}");
                         None
                     }
                 };
@@ -256,7 +256,7 @@ impl CacheManager {
         match serde_json::to_value(value) {
             Ok(v) => self.store.put(key, v, expiration, tags.as_deref()).await,
             Err(e) => {
-                log::error!("{}", e);
+                log::error!("{e}");
                 false
             }
         }

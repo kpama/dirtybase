@@ -54,7 +54,6 @@ impl SeederRegisterer {
             let manager = simple_middleware::Manager::<Self, ()>::last(|_registerer, _| {
                 Box::pin(async move {
                     //
-                    ()
                 })
             })
             .await;

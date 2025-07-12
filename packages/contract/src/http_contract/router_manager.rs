@@ -50,9 +50,9 @@ impl RouterManager {
         let mut builders = HashMap::new();
         // general
         builders.insert(RouteType::General, ("".to_string(), None));
-        // api
+        // API
         builders.insert(RouteType::Api, (api, None));
-        // insecure api
+        // insecure API
         builders.insert(RouteType::InsecureApi, (insecure_api, None));
         // backend
         builders.insert(RouteType::Backend, (backend, None));
@@ -65,7 +65,7 @@ impl RouterManager {
     pub fn api(
         &mut self,
         prefix: Option<&str>,
-        mut callback: impl FnMut(&mut RouterBuilder) -> (),
+        mut callback: impl FnMut(&mut RouterBuilder),
     ) -> &mut Self {
         let mut builder = RouterBuilder::new(Some(&self.generate_prefix(RouteType::Api, prefix)));
         callback(&mut builder);
@@ -75,7 +75,7 @@ impl RouterManager {
     pub fn insecure_api(
         &mut self,
         prefix: Option<&str>,
-        callback: fn(&mut RouterBuilder) -> (),
+        callback: fn(&mut RouterBuilder),
     ) -> &mut Self {
         let mut builder =
             RouterBuilder::new(Some(&self.generate_prefix(RouteType::InsecureApi, prefix)));
@@ -86,7 +86,7 @@ impl RouterManager {
     pub fn backend(
         &mut self,
         prefix: Option<&str>,
-        mut callback: impl FnMut(&mut RouterBuilder) -> (),
+        mut callback: impl FnMut(&mut RouterBuilder),
     ) -> &mut Self {
         let mut builder =
             RouterBuilder::new(Some(&self.generate_prefix(RouteType::Backend, prefix)));
@@ -97,7 +97,7 @@ impl RouterManager {
     pub fn general(
         &mut self,
         prefix: Option<&str>,
-        mut callback: impl FnMut(&mut RouterBuilder) -> (),
+        mut callback: impl FnMut(&mut RouterBuilder),
     ) -> &mut Self {
         let mut builder =
             RouterBuilder::new(Some(&self.generate_prefix(RouteType::General, prefix)));
@@ -108,7 +108,7 @@ impl RouterManager {
     pub fn dev(
         &mut self,
         prefix: Option<&str>,
-        mut callback: impl FnMut(&mut RouterBuilder) -> (),
+        mut callback: impl FnMut(&mut RouterBuilder),
     ) -> &mut Self {
         let mut builder = RouterBuilder::new(Some(&self.generate_prefix(RouteType::Dev, prefix)));
         callback(&mut builder);

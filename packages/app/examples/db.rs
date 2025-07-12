@@ -45,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
             &["user_id"],
         )
         .await;
-    println!("insert result: {:?}", result);
+    println!("insert result: {result:?}");
 
     Ok(())
 }
