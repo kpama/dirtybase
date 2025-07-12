@@ -148,7 +148,7 @@ pub trait SchemaManagerTrait: Send + Sync {
         }
     }
 
-    // checks if a table exist in the database
+    // Checks if a table exist in the database
     async fn has_table(&self, name: &str) -> Result<bool, anyhow::Error>;
 
     async fn drop_table(&self, name: &str) -> Result<()>;
