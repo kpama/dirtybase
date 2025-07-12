@@ -50,6 +50,7 @@ pub type OptionalJsonValueField = Option<serde_json::Value>;
 pub type OptionalJsonField = Option<serde_json::Map<String, serde_json::value::Value>>;
 pub type CreatedAtField = Option<DateTime<Utc>>;
 pub type UpdatedAtField = Option<DateTime<Utc>>;
+pub type DeletedAtField = Option<DateTime<Utc>>;
 pub type DateField = NaiveDate;
 pub type OptionalDateField = Option<NaiveDate>;
 
