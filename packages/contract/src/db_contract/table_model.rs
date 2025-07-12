@@ -1,3 +1,5 @@
+use crate::db_contract::base::table::{CREATED_AT_FIELD, DELETED_AT_FIELD, UPDATED_AT_FIELD};
+
 use super::{
     query_column::QueryColumn,
     types::{FromColumnAndValue, ToColumnAndValue},
@@ -25,15 +27,15 @@ pub trait TableModel: FromColumnAndValue + ToColumnAndValue {
     fn entity_hash(&self) -> u64;
 
     fn created_at_column() -> Option<&'static str> {
-        Some("created_at")
+        Some(CREATED_AT_FIELD)
     }
 
     fn updated_at_column() -> Option<&'static str> {
-        Some("updated_at")
+        Some(UPDATED_AT_FIELD)
     }
 
     fn deleted_at_column() -> Option<&'static str> {
-        Some("deleted_at")
+        Some(DELETED_AT_FIELD)
     }
 
     fn prefix_with_tbl<T: ToString>(subject: T) -> String {
