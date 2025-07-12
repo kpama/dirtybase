@@ -1,4 +1,4 @@
-use dirtybase_contract::db_contract::types::{InternalIdField, OptionalIntegerField};
+use dirtybase_contract::db_contract::types::OptionalIntegerField;
 use dirtybase_db_macro::DirtyTable;
 
 use crate::cache_manager::cache_entry::CacheEntry;
