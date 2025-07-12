@@ -285,11 +285,7 @@ impl Manager {
         self.delete(T::table_name(), callback).await
     }
 
-    pub async fn transaction(
-        &self,
-        _table_name: &str,
-        _callback: impl FnOnce(&mut QueryBuilder),
-    ) -> Result<()> {
+    pub async fn transaction<R>(&self, _callback: impl FnMut(&mut QueryBuilder) -> R) -> Result<R> {
         todo!()
     }
 
