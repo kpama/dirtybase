@@ -208,6 +208,10 @@ impl QueryBuilder {
     ) -> &mut Self {
         if let QueryAction::Update(columns) = &mut self.action {
             columns.insert(column.to_string(), value.into());
+        } else {
+            let mut cv = ColumnAndValue::new();
+            cv.insert(column.to_string(), value.into());
+            self.action = QueryAction::Update(cv);
         }
 
         self
@@ -217,6 +221,8 @@ impl QueryBuilder {
     pub fn set_columns(&mut self, column_and_values: ColumnAndValue) -> &mut Self {
         if let QueryAction::Update(columns) = &mut self.action {
             columns.extend(column_and_values);
+        } else {
+            self.action = QueryAction::Update(column_and_values);
         }
 
         self
