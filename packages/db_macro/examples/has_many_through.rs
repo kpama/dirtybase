@@ -1,5 +1,6 @@
 use dirtybase_db::{
     TableModel, base::manager::Manager, connector::sqlite::make_sqlite_in_memory_manager,
+    types::TimestampField,
 };
 use dirtybase_db_macro::DirtyTable;
 use rand::distr::SampleString;
@@ -10,6 +11,17 @@ async fn main() {
     setup_db(&manager).await;
 
     let mut customer_repo = CustomerRepo::new(&manager);
+
+    // let mut data = ColumnAndValue::new();
+    // data.insert(
+    //     Invoice::col_name_for_deleted_at().to_string(),
+    //     dirtybase_helper::time::current_datetime().into(),
+    // );
+    // _ = manager
+    //     .update_table::<Invoice>(data, |q| {
+    //         q.is_in(Invoice::col_name_for_id(), vec![1, 3]);
+    //     })
+    //     .await;
 
     println!("{:#?}", customer_repo.with_invoices().get().await);
 }
@@ -35,6 +47,7 @@ struct Invoice {
     id: Option<i64>,
     order_id: i64,
     total: i64,
+    deleted_at: Option<TimestampField>,
 }
 
 async fn setup_db(manager: &Manager) {
@@ -47,6 +60,7 @@ async fn create_tables(manager: &Manager) {
         .create_table_schema(Customer::table_name(), |table| {
             table.id(None);
             table.string(Customer::col_name_for_name());
+            table.soft_deletable();
         })
         .await;
 
@@ -54,6 +68,7 @@ async fn create_tables(manager: &Manager) {
         .create_table_schema(Order::table_name(), |table| {
             table.id(None);
             table.id_table_fk::<Customer>(true);
+            table.soft_deletable();
         })
         .await;
 
@@ -62,6 +77,7 @@ async fn create_tables(manager: &Manager) {
             table.id(None);
             table.integer(Invoice::col_name_for_total());
             table.id_table_fk::<Order>(true);
+            table.soft_deletable();
         })
         .await;
 }

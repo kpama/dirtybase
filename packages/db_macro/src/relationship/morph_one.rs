@@ -27,6 +27,8 @@ pub(crate) fn generate_join_method(
         let name = &attr.name;
         let method_name_st = format!("with_{}", name);
         let method_name = format_ident!("{}", &method_name_st);
+        let trashed_method_name = format_ident!("with_trashed_{}", &name);
+        let with_only_trashed_method_name = format_ident!("with_trashed_only_{}", &name);
         let parent = format_ident!("{}", &input.ident);
         let foreign_type = format_ident!("{}", attr.the_type);
         let morph_name = if let Some(field) = &attribute.morph_name {
@@ -68,10 +70,23 @@ pub(crate) fn generate_join_method(
             morph_method_name = format_ident!("{}", &field);
         }
 
+        let trash_condition = if attribute.no_soft_delete {
+            quote! {}
+        } else {
+            quote! {
+                 self.builder.is_null(
+                    <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
+                        <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                    )
+                );
+            }
+        };
+
         let token = quote! {
             pub fn #method_name(&mut self,) -> &mut Self {
                 let name = #name.to_string();
                 if !self.eager.contains(&name) {
+                    #trash_condition
                     self.builder.inner_join_table_and_select::<#parent, #foreign_type>(#parent_col, #foreign_col, None);
                     self.builder.is_eq(#morph_type_col, Self::#morph_method_name());
                     self.eager.push(name);
@@ -89,6 +104,41 @@ pub(crate) fn generate_join_method(
                 }
             },
         );
+
+        if !attribute.no_soft_delete {
+            list.insert("rel_with_trashed".to_string(),
+                quote! {
+                    pub fn #trashed_method_name(&mut self,) -> &mut Self {
+                        let name = #name.to_string();
+                        if !self.eager.contains(&name) {
+                            self.builder.inner_join_table_and_select::<#parent, #foreign_type>(#parent_col, #foreign_col, None);
+                            self.builder.is_eq(#morph_type_col, Self::#morph_method_name());
+                            self.eager.push(name);
+                        }
+                        self
+                    }
+                }
+            );
+
+            list.insert("with_only_trashed_method".to_string(), 
+                quote! {
+                    pub fn #with_only_trashed_method_name(&mut self,) -> &mut Self {
+                        let name = #name.to_string();
+                        if !self.eager.contains(&name) {
+                            self.builder.is_not_null(
+                                <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
+                                    <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                                )
+                            );
+                            self.builder.inner_join_table_and_select::<#parent, #foreign_type>(#parent_col, #foreign_col, None);
+                            self.builder.is_eq(#morph_type_col, Self::#morph_method_name());
+                            self.eager.push(name);
+                        }
+                        self
+                    }
+                }
+            );
+        }
     }
 }
 

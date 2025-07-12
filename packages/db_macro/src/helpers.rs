@@ -463,7 +463,7 @@ pub(crate) fn build_special_column_methods(
     }
 
     // soft delete
-    if !tbl_attr.no_softdelete {
+    if !tbl_attr.no_soft_delete {
         let name = &tbl_attr.deleted_at_col;
         tokens.push(quote! {
             fn deleted_at_column() -> Option<&'static str> {

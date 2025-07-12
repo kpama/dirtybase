@@ -35,6 +35,8 @@ pub(crate) fn process_relation_attribute(
                 _ = it.next();
                 if let Some(value) = it.next() {
                     attributes.insert(name, value.to_string().replace('\"', ""));
+                } else {
+                    attributes.insert(name, String::new());
                 }
             }
         }

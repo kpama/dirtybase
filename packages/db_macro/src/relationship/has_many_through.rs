@@ -22,14 +22,16 @@ pub(crate) fn generate_join_method(
     input: &DeriveInput,
     list: &mut HashMap<String, TokenStream>,
 ) {
-    // method
-    let name = &attr.name;
-    let method_name_st = format!("with_{}", name);
-    let method_name = format_ident!("{}", &method_name_st);
-    let parent = format_ident!("{}", &input.ident);
-    let foreign_type = format_ident!("{}", attr.the_type);
-
     if let Some(RelType::HasManyThrough { attribute }) = &attr.relation {
+        // method
+        let name = &attr.name;
+        let method_name_st = format!("with_{}", name);
+        let method_name = format_ident!("{}", &method_name_st);
+        let trashed_method_name = format_ident!("with_trashed_{}", &name);
+        let with_only_trashed_method_name = format_ident!("with_trashed_only_{}", &name);
+        let parent = format_ident!("{}", &input.ident);
+        let foreign_type = format_ident!("{}", attr.the_type);
+
         let pivot_type = if let Some(p) = &attribute.pivot {
             format_ident!("{}", p)
         } else {
@@ -40,7 +42,7 @@ pub(crate) fn generate_join_method(
         let mut parent_col = quote! {<#parent as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column()};
         // foreign col
         let mut foreign_col = quote! { <#parent as ::dirtybase_contract::db_contract::table_model::TableModel>::foreign_id_column() };
-        // pivot fk col
+        // pivot foreign col
         let mut pivot_through_col = quote! { <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::foreign_id_column() };
         let mut through_col = quote! { <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column() };
 
@@ -54,7 +56,7 @@ pub(crate) fn generate_join_method(
             foreign_col = quote! { #field };
         }
 
-        // pivot fk key
+        // pivot foreign key
         if let Some(field) = &attribute.pivot_through_col {
             pivot_through_col = quote! { #field };
         }
@@ -63,10 +65,23 @@ pub(crate) fn generate_join_method(
             through_col = quote! { #field };
         }
 
+        let trash_condition = if attribute.no_soft_delete {
+            quote! {}
+        } else {
+            quote! {
+                 self.builder.is_null(
+                    <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
+                        <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                    )
+                );
+            }
+        };
+
         let token = quote! {
             pub fn #method_name(&mut self,) -> &mut Self {
                 let name = #name.to_string();
                 if !self.eager.contains(&name) {
+                    #trash_condition
                     self.builder.inner_join_table_and_select::<#parent, #pivot_type>(#parent_col, #foreign_col, None);
                     self.builder.inner_join_table_and_select::<#pivot_type, #foreign_type>(#pivot_through_col, #through_col, None);
                     self.eager.push(name);
@@ -76,6 +91,41 @@ pub(crate) fn generate_join_method(
         };
 
         list.insert(method_name_st, token);
+
+        if !attribute.no_soft_delete {
+            list.insert("rel_with_trashed".to_string(),
+                quote! {
+                    pub fn #trashed_method_name(&mut self,) -> &mut Self {
+                        let name = #name.to_string();
+                        if !self.eager.contains(&name) {
+                            self.builder.inner_join_table_and_select::<#parent, #pivot_type>(#parent_col, #foreign_col, None);
+                            self.builder.inner_join_table_and_select::<#pivot_type, #foreign_type>(#pivot_through_col, #through_col, None);
+                            self.eager.push(name);
+                        }
+                        self
+                    }
+                }
+            );
+
+            list.insert("with_only_trashed_method".to_string(), 
+                quote! {
+                    pub fn #with_only_trashed_method_name(&mut self,) -> &mut Self {
+                        let name = #name.to_string();
+                        if !self.eager.contains(&name) {
+                            self.builder.is_not_null(
+                                <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
+                                <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                                )
+                            );
+                            self.builder.inner_join_table_and_select::<#parent, #pivot_type>(#parent_col, #foreign_col, None);
+                            self.builder.inner_join_table_and_select::<#pivot_type, #foreign_type>(#pivot_through_col, #through_col, None);
+                            self.eager.push(name);
+                        }
+                        self
+                    }
+                }
+            );
+        }
     }
 }
 
