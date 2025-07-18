@@ -6,11 +6,11 @@ use super::{
 };
 
 pub trait TableModel: FromColumnAndValue + ToColumnAndValue {
-    /// Tables table's column names without prefix
-    fn table_columns() -> &'static [&'static str];
-
     /// Table name
     fn table_name() -> &'static str;
+
+    /// Tables table's column names without prefix
+    fn table_columns() -> &'static [&'static str];
 
     fn id_field() -> &'static str {
         "id"
@@ -24,20 +24,26 @@ pub trait TableModel: FromColumnAndValue + ToColumnAndValue {
     /// Table's foreign column name `table name + _ + id`
     fn foreign_id_column() -> &'static str;
 
+    /// The hash representation of the current instance.
+    /// By default, this is calculated from the model ID value
     fn entity_hash(&self) -> u64;
 
+    /// Returns the `created at` column's name
     fn created_at_column() -> Option<&'static str> {
         Some(CREATED_AT_FIELD)
     }
 
+    /// Returns the `updated at` column's name
     fn updated_at_column() -> Option<&'static str> {
         Some(UPDATED_AT_FIELD)
     }
 
+    /// Returns the soft deleted at column's name
     fn deleted_at_column() -> Option<&'static str> {
         Some(DELETED_AT_FIELD)
     }
 
+    /// Prefixes the subject with the model's table name
     fn prefix_with_tbl<T: ToString>(subject: T) -> String {
         format!("{}.{}", Self::table_name(), subject.to_string())
     }
@@ -58,6 +64,8 @@ pub trait TableModel: FromColumnAndValue + ToColumnAndValue {
             .collect()
     }
 
+    /// Prefixes all the model column names with the table name.
+    /// The method is use mainly for joins
     fn table_query_col_aliases(prefix: Option<&str>) -> Vec<QueryColumn> {
         let pre: String = if let Some(t) = prefix {
             t.to_string()
@@ -74,6 +82,7 @@ pub trait TableModel: FromColumnAndValue + ToColumnAndValue {
             .collect()
     }
 
+    /// Same as `table_query_col_aliases` but returns the list as a Vec<String>
     fn column_aliases(prefix: Option<&str>) -> Vec<String> {
         let pre: String = if let Some(t) = prefix {
             t.to_string()
