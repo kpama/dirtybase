@@ -86,7 +86,7 @@ impl From<&DeriveInput> for TableAttribute {
                             value.no_timestamp = true;
                         }
 
-                        if arg.to_string() == "no_softdelete" {
+                        if arg.to_string() == "no_soft_delete" {
                             value.no_soft_delete = true;
                         }
 
