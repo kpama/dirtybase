@@ -96,6 +96,14 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
         }
       }
 
+      impl #ty_generics ::dirtybase_contract::db_contract::types::ToColumnAndValue for &#name  #ty_generics #where_clause {
+        fn to_column_value(&self) -> Result<::dirtybase_contract::db_contract::types::ColumnAndValue, ::dirtybase_contract::anyhow::Error> {
+            Ok(::dirtybase_contract::db_contract::ColumnAndValueBuilder::new()
+                #(.#into_cv_for_calls)*
+                .build())
+        }
+      }
+
       // Impl From FieldValue
       impl #ty_generics From<::dirtybase_contract::db_contract::field_values::FieldValue> for #name  #ty_generics #where_clause {
           fn from(value: ::dirtybase_contract::db_contract::field_values::FieldValue) -> Self {
@@ -114,19 +122,19 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
           }
       }
 
-      // Impl from &Self to FieldValue
-      impl #ty_generics From<&#name> for ::dirtybase_contract::db_contract::field_values::FieldValue {
-          fn from(value: &#name ) -> ::dirtybase_contract::db_contract::field_values::FieldValue {
-              ::dirtybase_contract::db_contract::field_values::FieldValue::Object(::dirtybase_contract::db_contract::types::ToColumnAndValue::to_column_value(value).expect("could not convert to field object"))
-          }
-      }
+      // // Impl from &Self to FieldValue
+      // impl #ty_generics From<&#name> for ::dirtybase_contract::db_contract::field_values::FieldValue {
+      //     fn from(value: &#name ) -> ::dirtybase_contract::db_contract::field_values::FieldValue {
+      //         ::dirtybase_contract::db_contract::field_values::FieldValue::Object(::dirtybase_contract::db_contract::types::ToColumnAndValue::to_column_value(value).expect("could not convert to field object"))
+      //     }
+      // }
 
-      // Impl from Self to FieldValue
-      impl #ty_generics From<#name> for ::dirtybase_contract::db_contract::field_values::FieldValue {
-          fn from(value: #name ) -> ::dirtybase_contract::db_contract::field_values::FieldValue {
-            ::dirtybase_contract::db_contract::field_values::FieldValue::Object(::dirtybase_contract::db_contract::types::ToColumnAndValue::to_column_value(&value).expect("could not convert to field object"))
-          }
-      }
+      // // Impl from Self to FieldValue
+      // impl #ty_generics From<#name> for ::dirtybase_contract::db_contract::field_values::FieldValue {
+      //     fn from(value: #name ) -> ::dirtybase_contract::db_contract::field_values::FieldValue {
+      //       ::dirtybase_contract::db_contract::field_values::FieldValue::Object(::dirtybase_contract::db_contract::types::ToColumnAndValue::to_column_value(&value).expect("could not convert to field object"))
+      //     }
+      // }
 
       // Entity repo
       #entity_repo
