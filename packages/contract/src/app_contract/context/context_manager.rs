@@ -56,8 +56,8 @@ impl ResourceManager {
     ///
     /// The idle timeout value have some implications
     ///  - value == 0 : The instance will live forever
-    ///  - value < 0  : The instance will live of current request
-    ///  - value > 0  : The instance will be dropped after being idle that long (in seconds)
+    ///  - value < 0 : The instance will live of current request
+    ///  - value > 0 : The instance will be dropped after being idle that long (in seconds)
     pub fn new(name: &str, idle_timeout: i64) -> Self {
         Self {
             name: Arc::new(name.to_string()),
