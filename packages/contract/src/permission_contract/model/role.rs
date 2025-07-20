@@ -29,7 +29,7 @@ impl Role {
         self.name.clone()
     }
 
-    pub fn lable(&self) -> LabelField {
+    pub fn label(&self) -> LabelField {
         self.label.clone()
     }
 
