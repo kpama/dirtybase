@@ -181,10 +181,10 @@ impl DirtyConfig {
     }
 }
 
-/// A deserializer function that will return Vev<String>
+/// A deserializer function that will return `Vec<String>`
 ///
 /// Use this function on an attribute where the raw value is a string
-/// that should be split at "," and the pieces return as a Vec<String>
+/// that should be split at "," and the pieces return as a `Vec<String>`
 ///  apply the function as the deserializer as `#[serde(deserialize_with = "field_to_array")]`
 pub fn field_to_array<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
