@@ -109,7 +109,7 @@ impl FromColumnAndValue for Permission {
                 .into(),
             description: cv
                 .remove("description")
-                .ok_or(anyhow::anyhow!("description not set for permissio"))?
+                .ok_or(anyhow::anyhow!("description not set for permission"))?
                 .into(),
             created_at: cv.remove("created_at").map(DateTimeField::from),
             updated_at: cv.remove("updated_at").map(DateTimeField::from),
