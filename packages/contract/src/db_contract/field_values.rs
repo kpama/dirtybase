@@ -8,6 +8,8 @@ mod insert_value;
 pub mod to_raw_values;
 pub use insert_value::InsertValueBuilder;
 
+use crate::db_contract::types::{FromColumnAndValue, ToColumnAndValue};
+
 use super::types::ColumnAndValue;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -178,27 +180,22 @@ where
     }
 }
 
-impl From<HashMap<String, FieldValue>> for FieldValue {
-    fn from(value: HashMap<String, FieldValue>) -> Self {
-        let mut obj = HashMap::new();
-        for entry in value {
-            obj.insert(entry.0, entry.1);
-        }
+// impl From<HashMap<String, FieldValue>> for FieldValue {
+//     fn from(value: HashMap<String, FieldValue>) -> Self {
+//         Self::Object(value)
+//     }
+// }
 
-        Self::Object(obj)
-    }
-}
-
-impl<'a> From<HashMap<&'a str, FieldValue>> for FieldValue {
-    fn from(value: HashMap<&'a str, FieldValue>) -> Self {
-        let mut obj = HashMap::new();
-        for entry in value {
-            obj.insert(entry.0.to_owned(), entry.1);
-        }
-
-        Self::Object(obj)
-    }
-}
+// impl<'a> From<HashMap<&'a str, FieldValue>> for FieldValue {
+//     fn from(value: HashMap<&'a str, FieldValue>) -> Self {
+//         Self::Object(
+//             value
+//                 .into_iter()
+//                 .map(|(k, v)| (k.to_owned(), v))
+//                 .collect::<HashMap<String, FieldValue>>(),
+//         )
+//     }
+// }
 
 impl<A: Into<FieldValue>> FromIterator<A> for FieldValue {
     fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
@@ -227,5 +224,17 @@ impl From<FieldValue> for ColumnAndValue {
             }
             _ => HashMap::new(),
         }
+    }
+}
+
+// impl From<&HashMap<String, FieldValue>> for FieldValue {
+//     fn from(value: &HashMap<String, FieldValue>) -> Self {
+//         Self::Object(Clone::clone(value))
+//     }
+// }
+
+impl<T: ToColumnAndValue> From<T> for FieldValue {
+    fn from(value: T) -> Self {
+        value.to_field_value()
     }
 }
