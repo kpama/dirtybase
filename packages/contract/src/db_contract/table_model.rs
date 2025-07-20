@@ -82,7 +82,7 @@ pub trait TableModel: FromColumnAndValue + ToColumnAndValue {
             .collect()
     }
 
-    /// Same as `table_query_col_aliases` but returns the list as a Vec<String>
+    /// Same as `table_query_col_aliases` but returns the list as a `Vec<String>`
     fn column_aliases(prefix: Option<&str>) -> Vec<String> {
         let pre: String = if let Some(t) = prefix {
             t.to_string()
