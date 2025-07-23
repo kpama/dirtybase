@@ -8,7 +8,7 @@ mod insert_value;
 pub mod to_raw_values;
 pub use insert_value::InsertValueBuilder;
 
-use crate::db_contract::types::{FromColumnAndValue, ToColumnAndValue};
+use crate::db_contract::types::ToColumnAndValue;
 
 use super::types::ColumnAndValue;
 
