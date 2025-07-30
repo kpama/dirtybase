@@ -1,3 +1,5 @@
+use std::hash::Hash;
+
 use crate::db_contract::base::table::{CREATED_AT_FIELD, DELETED_AT_FIELD, UPDATED_AT_FIELD};
 
 use super::{
@@ -27,6 +29,17 @@ pub trait TableModel: FromColumnAndValue + ToColumnAndValue {
     /// The hash representation of the current instance.
     /// By default, this is calculated from the model ID value
     fn entity_hash(&self) -> u64;
+
+    /// If the id value, this method returns the hash of that value
+    fn hash_from_id_value<T: Hash + ?Sized>(id: &T) -> u64 {
+        let mut s = ::std::hash::DefaultHasher::new();
+        ::std::hash::Hash::hash(id, &mut s);
+        ::std::hash::Hasher::finish(&s)
+    }
+
+    fn table_hash() -> u64 {
+        Self::hash_from_id_value(Self::table_name())
+    }
 
     /// Returns the `created at` column's name
     fn created_at_column() -> Option<&'static str> {
