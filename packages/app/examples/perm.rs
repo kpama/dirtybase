@@ -15,7 +15,7 @@ use tracing_subscriber::EnvFilter;
 async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
-        .with_max_level(Level::TRACE)
+        .with_max_level(Level::DEBUG)
         .try_init()
         .expect("could not setup tracing");
     let app = dirtybase_app::setup().await.unwrap();
@@ -28,6 +28,19 @@ async fn main() {
 }
 
 type AppStore = Arc<HashMap<i32, i32>>;
+
+#[derive(Debug)]
+enum G {
+    ViewDiscount,
+}
+
+impl AsRef<str> for G {
+    fn as_ref(&self) -> &str {
+        match self {
+            Self::ViewDiscount => "view_discount",
+        }
+    }
+}
 
 struct OurApp;
 
@@ -42,7 +55,25 @@ impl ExtensionSetup for OurApp {
 
         global_context.set(AppStore::new(discounts)).await;
 
-        Gate::define("view_discount", |ctx: Context| async move {
+        Gate::before(|| async {
+            println!("before handler 1");
+            None as Option<bool>
+        })
+        .await;
+
+        Gate::before(|| async {
+            println!("before handler 2");
+            None as Option<bool>
+        })
+        .await;
+
+        Gate::after(|| async {
+            println!("after handler 1");
+            None as Option<bool>
+        })
+        .await;
+
+        Gate::define(G::ViewDiscount.as_ref(), |ctx: Context| async move {
             //
             if let Ok(http_ctx) = ctx.get::<HttpContext>().await {
                 let Some(auth_header) = http_ctx.header("Authorization") else {
@@ -74,7 +105,7 @@ impl ExtensionSetup for OurApp {
             router.get_x_with_middleware(
                 "/discount/{id}",
                 show_discount_of_day,
-                ["can:view_discount"],
+                ["can:".to_string() + G::ViewDiscount.as_ref()],
             );
         });
     }
