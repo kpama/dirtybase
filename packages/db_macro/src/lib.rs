@@ -57,6 +57,23 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
           }
         }
 
+        pub fn hash_from_struct_column_value(cv: &::dirtybase_contract::db_contract::types::StructuredColumnAndValue, key: Option<&str>) -> Option<u64> {
+          if let Some(name) = key {
+              if let Some(::dirtybase_contract::db_contract::field_values::FieldValue::Object(v)) = cv.get(name) {
+                if let Some(value) = v.get(<Self as ::dirtybase_contract::db_contract::TableModel>::id_column()) {
+                    let id_value = Self::#from_column_for_id(Some(value));
+                    return Some(<Self  as ::dirtybase_contract::db_contract::TableModel>::hash_from_id_value(&id_value));
+                }
+              }
+          } else {
+            if let Some(value) = cv.get(<Self as ::dirtybase_contract::db_contract::TableModel>::id_column()) {
+                let id_value = Self::#from_column_for_id(Some(value));
+               return Some(<Self as ::dirtybase_contract::db_contract::TableModel>::hash_from_id_value(&id_value));
+            }
+          }
+          None
+        }
+
         pub fn into_embeddable(&self) -> ::dirtybase_contract::db_contract::field_values::FieldValue {
           ::dirtybase_contract::db_contract::field_values::FieldValue::from(self)
         }
