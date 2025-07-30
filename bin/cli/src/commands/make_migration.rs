@@ -38,13 +38,13 @@ pub fn make(package: Option<&String>, name: &str) {
     let path = path_buf
         .join("dirtybase_entry")
         .join("migration")
-        .join(format!("{}.rs", module_name));
+        .join(format!("{module_name}.rs"));
 
     let mut module = std::fs::read_to_string(&mod_path).unwrap();
 
     module = module.replace(
         "register_migration![",
-        format!("register_migration![\n{}::{},", module_name, struct_name).as_str(),
+        format!("register_migration![\n{module_name}::{struct_name},").as_str(),
     );
 
     _ = std::fs::write(&mod_path, format!("mod {}; \n{}", &module_name, module));

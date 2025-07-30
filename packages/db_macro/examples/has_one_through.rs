@@ -51,12 +51,14 @@ async fn create_tables(manager: &Manager) {
         .create_table_schema(Employee::table_name(), |table| {
             table.id(None);
             table.string(Employee::col_name_for_name());
+            table.soft_deletable();
         })
         .await;
     _ = manager
         .create_table_schema(Department::table_name(), |table| {
             table.id(None);
             table.string(Department::col_name_for_name());
+            table.soft_deletable();
         })
         .await;
     _ = manager
@@ -64,6 +66,7 @@ async fn create_tables(manager: &Manager) {
             table.id(None);
             table.id_table_fk::<Department>(true);
             table.id_table_fk::<Employee>(true);
+            table.soft_deletable();
             table.unique_index(&[
                 Department::foreign_id_column(),
                 Employee::foreign_id_column(),

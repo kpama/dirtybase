@@ -71,7 +71,7 @@ impl HttpContext {
         let subdomain = if let Some(host) = req.uri().host() {
             let pieces = host.split(".").map(String::from).collect::<Vec<String>>();
             if pieces.len() > 1 {
-                pieces.first().cloned().map(|x| Arc::new(x))
+                pieces.first().cloned().map(Arc::new)
             } else {
                 None
             }
@@ -174,7 +174,7 @@ impl HttpContext {
 
         // http:// or https://
         if let Some(scheme) = self.uri.scheme_str() {
-            full_path.push_str(&format!("{}://", scheme));
+            full_path.push_str(&format!("{scheme}://",));
         }
 
         // foo.com or 127.0.0.1
@@ -360,7 +360,7 @@ impl Display for HttpContext {
         } else {
             String::new()
         };
-        write!(f, "{}::{}", ip, user_agent)
+        write!(f, "{ip}::{user_agent}")
     }
 }
 
@@ -382,10 +382,8 @@ impl FromStr for TrustedIp {
             if let Ok(net) = ipnet::IpNet::from_str(s) {
                 return Ok(Self::Net(net));
             }
-        } else {
-            if let Ok(ip) = IpAddr::from_str(s) {
-                return Ok(Self::Ip(ip));
-            }
+        } else if let Ok(ip) = IpAddr::from_str(s) {
+            return Ok(Self::Ip(ip));
         }
         Err(String::from("could not parse IP"))
     }

@@ -14,7 +14,7 @@ use crate::{
 pub fn build_entity_repo(
     input: &DeriveInput,
     columns_attributes: &HashMap<String, DirtybaseAttributes>,
-    _table_attribute: &TableAttribute,
+    tbl_attr: &TableAttribute,
 ) -> TokenStream {
     //
     let ident = input.ident.clone();
@@ -24,7 +24,7 @@ pub fn build_entity_repo(
     let mut row_processors = HashMap::<String, TokenStream>::new();
     let mut entity_appends = HashMap::<String, TokenStream>::new();
 
-    for (_, attr) in columns_attributes {
+    for attr in columns_attributes.values() {
         match &attr.relation {
             Some(RelType::HasOne { attribute: _ }) => {
                 has_one::generate_join_method(attr, input, &mut with_methods);
@@ -76,39 +76,88 @@ pub fn build_entity_repo(
     let collections_vec = collections.into_values().collect::<Vec<TokenStream>>();
     let row_processors_vec = row_processors.into_values().collect::<Vec<TokenStream>>();
     let entity_appends_vec = entity_appends.into_values().collect::<Vec<TokenStream>>();
+    let mut append_trash_filter = quote! {};
+    let mut with_trashed = quote! {};
+    let mut trashed_only = quote! {};
+    let is_soft_deletable = !tbl_attr.no_soft_delete;
+    let instance = quote! {
+        let mut instance = Self {
+            builder:  ::dirtybase_contract::db_contract::base::query::QueryBuilder::new(
+                <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::table_name(),
+                        ::dirtybase_contract::db_contract::base::query::QueryAction::Query {columns: None}
+                    ),
+            manager: manager.clone(),
+            eager: Vec::new(),
+        };
+    };
+
+    if is_soft_deletable {
+        append_trash_filter = quote! {
+            if !self.eager.contains(&"_soft_delete".to_string()) {
+                self.builder.is_null(
+                    <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
+                        <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                        )
+                );
+            }
+        };
+
+        with_trashed = quote! {
+            pub fn with_trashed(&mut self,)  -> &mut Self {
+                let flag_soft = "_soft_delete".to_string();
+                if !self.eager.contains(&flag_soft) {
+                    self.eager.push(flag_soft);
+                }
+                self
+            }
+        };
+
+        trashed_only = quote! {
+            pub fn trashed_only(&mut self)  -> &mut Self {
+                let flag_soft = "_soft_delete".to_string();
+                if !self.eager.contains(&flag_soft) {
+                    self.builder.is_not_null(
+                        <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
+                            <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                            )
+                        );
+                    self.eager.push(flag_soft);
+                 }
+
+                self
+            }
+        };
+    }
 
     quote! {
         #[derive(Debug, Clone)]
         pub struct #repo_name {
             builder: ::dirtybase_contract::db_contract::base::query::QueryBuilder,
             manager: ::dirtybase_contract::db_contract::base::manager::Manager,
-            eager: Vec<String>
+            eager: Vec<String>,
         }
 
 
         impl #repo_name {
             pub fn new(manager: &::dirtybase_contract::db_contract::base::manager::Manager) -> Self {
-                 let mut instance = Self {
-                    builder:  ::dirtybase_contract::db_contract::base::query::QueryBuilder::new(
-                        <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::table_name(),
-                        ::dirtybase_contract::db_contract::base::query::QueryAction::Query {columns: None}
-                    ),
-                    manager: manager.clone(),
-                    eager: Vec::new()
-                 };
-
-                 instance
-                    .builder
-                    .select_multiple(&<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::table_query_col_aliases(None));
-
-                 instance
+                #instance
+                instance
             }
+
+            #with_trashed
+
+            #trashed_only
 
             #(#with_methods_vec)*
 
-            pub async fn get(&mut self) -> Result<Option<Vec<#ident>>, ::anyhow::Error> {
+            pub async fn get(&mut self) -> Result<Option<Vec<#ident>>, ::dirtybase_contract::anyhow::Error> {
                 let mut rows_map = ::std::collections::HashMap::new();
                 #(#collections_vec)*
+                #append_trash_filter
+
+                self
+                    .builder
+                    .select_multiple(&<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::table_query_col_aliases(None));
 
                 let result = self.manager.execute_query(self.builder.clone()).all().await;
 
@@ -128,8 +177,8 @@ pub fn build_entity_repo(
                         }
 
                         // now map relationships
-                        for(_, row_entity) in &mut rows_map {
-                            let row_hash = ::dirtybase_contract::db_contract::table_model::TableModel::entity_hash(row_entity);
+                        for(row_hash, row_entity) in &mut rows_map {
+                            // let row_hash = ::dirtybase_contract::db_contract::table_model::TableModel::entity_hash(row_entity);
                             #(#entity_appends_vec)*
                         }
 
@@ -140,7 +189,7 @@ pub fn build_entity_repo(
                 }
             }
 
-            pub async fn first(&mut self) -> Result<Option<#ident>, ::anyhow::Error> {
+            pub async fn first(&mut self) -> Result<Option<#ident>, ::dirtybase_contract::anyhow::Error> {
                 match self.get().await {
                     Ok(Some(mut list)) => {
                         Ok(list.pop())

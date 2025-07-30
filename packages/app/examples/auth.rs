@@ -21,7 +21,7 @@ async fn main() {
 
     let id = ArcUuid7::try_from("0195a437-7c59-7471-8c95-c05670e65df7").unwrap();
     if let Ok(Some(existing)) = storage.find_by_id(id).await {
-        println!("user already exist: {:?}", existing);
+        println!("user already exist: {existing:?}");
     } else {
         let mut payload = AuthUserPayload::default();
         payload.username = Some("admin".to_string());
@@ -29,7 +29,7 @@ async fn main() {
         payload.password = Some("password".to_string());
         payload.rotate_salt = true;
         if let Ok(x) = storage.store(payload).await {
-            println!("x: {:?}", x);
+            println!("x: {x:?}");
         }
     }
 

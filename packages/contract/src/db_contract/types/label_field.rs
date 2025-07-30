@@ -83,8 +83,7 @@ impl From<LabelField> for FieldValue {
 impl LabelField {
     pub fn new(name: &str) -> Self {
         Self(Arc::new(
-            name.trim()
-                .split_whitespace()
+            name.split_whitespace()
                 .collect::<Vec<&str>>()
                 .join("-")
                 .to_string()

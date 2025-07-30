@@ -8,12 +8,12 @@ use rand::distr::SampleString;
 async fn main() {
     let manager = make_sqlite_in_memory_manager().await;
     setup_db(&manager).await;
-    let mut machanic_repo = MachanicRepo::new(&manager);
-    println!("{:#?}", machanic_repo.with_car().with_owner().get().await);
+    let mut mechanic_repo = MechanicRepo::new(&manager);
+    println!("{:#?}", mechanic_repo.with_car().with_owner().get().await);
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
-struct Machanic {
+struct Mechanic {
     id: Option<i64>,
     name: String,
     #[dirty(rel(
@@ -48,9 +48,9 @@ async fn setup_db(manager: &Manager) {
 
 async fn create_tables(manager: &Manager) {
     _ = manager
-        .create_table_schema(Machanic::table_name(), |table| {
+        .create_table_schema(Mechanic::table_name(), |table| {
             table.id(None);
-            table.string(Machanic::col_name_for_name());
+            table.string(Mechanic::col_name_for_name());
         })
         .await;
 
@@ -58,7 +58,7 @@ async fn create_tables(manager: &Manager) {
         .create_table_schema(Car::table_name(), |table| {
             table.id(None);
             table.string(Car::col_name_for_model());
-            table.id_table_fk::<Machanic>(true);
+            table.id_table_fk::<Mechanic>(true);
         })
         .await;
 
@@ -75,8 +75,8 @@ async fn seed_db(manager: &Manager) {
     for _ in 1..=5 {
         _ = manager
             .insert(
-                Machanic::table_name(),
-                Machanic {
+                Mechanic::table_name(),
+                Mechanic {
                     name: rand::distr::Alphanumeric.sample_string(&mut rand::rng(), 10),
                     ..Default::default()
                 },

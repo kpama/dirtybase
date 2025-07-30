@@ -26,7 +26,7 @@ pub fn make(package: Option<&String>, name: &str) {
     let path = path_buf
         .join("dirtybase_entry")
         .join("seeder")
-        .join(format!("{}.rs", module_name));
+        .join(format!("{module_name}.rs"));
     let built = stubs()
         .get("new_seeder")
         .unwrap()
@@ -35,11 +35,10 @@ pub fn make(package: Option<&String>, name: &str) {
     let mut module = std::fs::read_to_string(&mod_path).unwrap();
     let seed_function = format!(
         r#"register_seeders() {{
-           SeederRegisterer::register("{}", |manager, context| {{
-                Box::pin(async move {{ {}::seed(manager, context).await }})
+           SeederRegisterer::register("{name}", |manager, context| {{
+                Box::pin(async move {{ {module_name}::seed(manager, context).await }})
     }}).await;
-        "#,
-        name, module_name
+        "#
     );
 
     if !module.contains("dirtybase_contract::db_contract::SeederRegisterer") {

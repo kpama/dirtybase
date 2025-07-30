@@ -12,9 +12,8 @@ pub(crate) fn build_attribute(
     _field: &syn::Field,
     _input: &DeriveInput,
 ) -> RelationAttribute {
-    let attribute = RelationAttribute::from(attr);
     //
-    attribute
+    RelationAttribute::from(attr)
 }
 
 pub(crate) fn generate_join_method(
@@ -25,21 +24,23 @@ pub(crate) fn generate_join_method(
     if let Some(RelType::MorphOne { attribute }) = &attr.relation {
         // method
         let name = &attr.name;
-        let method_name_st = format!("with_{}", name);
+        let method_name_st = format!("with_{name}");
         let method_name = format_ident!("{}", &method_name_st);
+        let trashed_method_name = format_ident!("with_trashed_{}", &name);
+        let with_only_trashed_method_name = format_ident!("with_trashed_only_{}", &name);
         let parent = format_ident!("{}", &input.ident);
         let foreign_type = format_ident!("{}", attr.the_type);
         let morph_name = if let Some(field) = &attribute.morph_name {
             field
         } else {
-            std::println!("morph relation must have a name. {}", name);
+            std::println!("morph relation must have a name. {name}");
             return;
         };
 
         let morph_type = if let Some(field) = &attribute.morph_type {
             field
         } else {
-            std::println!("morph relation must have a type value. {}", name);
+            std::println!("morph relation must have a type value. {name}");
             return;
         };
 
@@ -68,10 +69,23 @@ pub(crate) fn generate_join_method(
             morph_method_name = format_ident!("{}", &field);
         }
 
+        let trash_condition = if attribute.no_soft_delete {
+            quote! {}
+        } else {
+            quote! {
+                 self.builder.is_null(
+                    <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
+                        <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                    )
+                );
+            }
+        };
+
         let token = quote! {
             pub fn #method_name(&mut self,) -> &mut Self {
                 let name = #name.to_string();
                 if !self.eager.contains(&name) {
+                    #trash_condition
                     self.builder.inner_join_table_and_select::<#parent, #foreign_type>(#parent_col, #foreign_col, None);
                     self.builder.is_eq(#morph_type_col, Self::#morph_method_name());
                     self.eager.push(name);
@@ -89,6 +103,41 @@ pub(crate) fn generate_join_method(
                 }
             },
         );
+
+        if !attribute.no_soft_delete {
+            list.insert("rel_with_trashed".to_string(),
+                quote! {
+                    pub fn #trashed_method_name(&mut self,) -> &mut Self {
+                        let name = #name.to_string();
+                        if !self.eager.contains(&name) {
+                            self.builder.inner_join_table_and_select::<#parent, #foreign_type>(#parent_col, #foreign_col, None);
+                            self.builder.is_eq(#morph_type_col, Self::#morph_method_name());
+                            self.eager.push(name);
+                        }
+                        self
+                    }
+                }
+            );
+
+            list.insert("with_only_trashed_method".to_string(), 
+                quote! {
+                    pub fn #with_only_trashed_method_name(&mut self,) -> &mut Self {
+                        let name = #name.to_string();
+                        if !self.eager.contains(&name) {
+                            self.builder.is_not_null(
+                                <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
+                                    <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                                )
+                            );
+                            self.builder.inner_join_table_and_select::<#parent, #foreign_type>(#parent_col, #foreign_col, None);
+                            self.builder.is_eq(#morph_type_col, Self::#morph_method_name());
+                            self.eager.push(name);
+                        }
+                        self
+                    }
+                }
+            );
+        }
     }
 }
 
@@ -98,7 +147,7 @@ pub(crate) fn append_result_collection(
 ) {
     let name = &attr.name;
     let foreign_type = format_ident!("{}", attr.the_type);
-    let map_name_st = format!("{}_map", name);
+    let map_name_st = format!("{name}_map");
     let map_name = format_ident!("{}", &map_name_st);
     let is_eager = format_ident!("are_{}_eager", name);
     let token = quote! {
@@ -114,7 +163,7 @@ pub(crate) fn build_row_processor(
 ) {
     let name = &attr.name;
     let is_eager = format_ident!("are_{}_eager", name);
-    let map_name_st = format!("{}_map", name);
+    let map_name_st = format!("{name}_map");
     let map_name = format_ident!("{}", &map_name_st);
     let foreign_type = format_ident!("{}", attr.the_type);
 
@@ -137,7 +186,7 @@ pub(crate) fn build_entity_append(
 ) {
     let name = &attr.name;
     let is_eager = format_ident!("are_{}_eager", name);
-    let map_name_st = format!("{}_map", name);
+    let map_name_st = format!("{name}_map");
     let map_name = format_ident!("{}", &map_name_st);
     let name_ident = format_ident!("{}", name);
 
@@ -155,7 +204,7 @@ pub(crate) fn build_entity_append(
         //
         if #is_eager {
             //
-            if let Some(parent) = #map_name.get(&row_hash).cloned() {
+            if let Some(parent) = #map_name.remove(&row_hash) {
                 #body
             }
         }

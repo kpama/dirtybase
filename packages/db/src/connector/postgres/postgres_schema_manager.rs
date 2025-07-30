@@ -238,14 +238,14 @@ impl PostgresSchemaManager {
                         sql,
                         unique
                             .iter()
-                            .map(|e| format!("\"{}\"", e))
+                            .map(|e| format!("\"{e}\""))
                             .collect::<Vec<String>>()
                             .join(",")
                     );
 
                     let mut update_values = Vec::new();
                     for entry in to_update {
-                        update_values.push(format!("\"{0}\" = \"excluded\".\"{0}\"", entry));
+                        update_values.push(format!("\"{entry}\" = \"excluded\".\"{entry}\""));
                     }
 
                     sql = format!("{} DO UPDATE SET {}", sql, update_values.join(","));
@@ -287,15 +287,15 @@ impl PostgresSchemaManager {
             }
             QueryAction::RenameColumn { old, new } => {
                 let table = query.table();
-                sql = format!("ALTER TABLE {} RENAME COLUMN {} TO {}", table, old, new);
+                sql = format!("ALTER TABLE {table} RENAME COLUMN {old} TO {new}");
             }
             QueryAction::RenameTable(new) => {
                 let table = query.table();
-                sql = format!("ALTER TABLE {} RENAME TO {}", table, new);
+                sql = format!("ALTER TABLE {table} RENAME TO {new}");
             }
             QueryAction::DropColumn(column) => {
                 let table = query.table();
-                sql = format!("ALTER TABLE {} DROP {}", table, column);
+                sql = format!("ALTER TABLE {table} DROP {column}");
             }
             _ => {
                 sql = "".into();
@@ -364,10 +364,8 @@ impl PostgresSchemaManager {
             if !columns.is_empty() {
                 query = format!("{} ({})", query, columns.join(","));
             }
-        } else {
-            if !columns.is_empty() {
-                query = format!("{} ADD {}", query, columns.join(","));
-            }
+        } else if !columns.is_empty() {
+            query = format!("{} ADD {}", query, columns.join(","));
         }
 
         let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
@@ -417,7 +415,7 @@ impl PostgresSchemaManager {
                                 index
                                     .columns()
                                     .iter()
-                                    .map(|col| { format!("\"{}\"", col) })
+                                    .map(|col| { format!("\"{col}\"") })
                                     .collect::<Vec<String>>()
                                     .join(",")
                             );
@@ -434,7 +432,7 @@ impl PostgresSchemaManager {
                                 index
                                     .columns()
                                     .iter()
-                                    .map(|col| { format!("\"{}\"", col) })
+                                    .map(|col| { format!("\"{col}\"") })
                                     .collect::<Vec<String>>()
                                     .join(",")
                             );
@@ -473,7 +471,7 @@ impl PostgresSchemaManager {
             ColumnType::Number | ColumnType::Float => the_type.push_str("DOUBLE PRECISION"),
             ColumnType::Binary => the_type.push_str("BYTEA"),
             ColumnType::String(length) => {
-                let q = format!("VARCHAR({})", length);
+                let q = format!("VARCHAR({length})");
                 the_type.push_str(q.as_str());
             }
             ColumnType::Text => the_type.push_str("TEXT"),
@@ -482,7 +480,7 @@ impl PostgresSchemaManager {
                 if column.check.is_none() {
                     let list = opt
                         .iter()
-                        .map(|e| format!("'{}'", e))
+                        .map(|e| format!("'{e}'"))
                         .collect::<Vec<String>>()
                         .join(",");
                     the_type.push_str(&format!(
@@ -514,7 +512,7 @@ impl PostgresSchemaManager {
             the_type.push_str(" DEFAULT ");
             match default {
                 ColumnDefault::CreatedAt => the_type.push_str("CURRENT_TIMESTAMP"),
-                ColumnDefault::Custom(d) => the_type.push_str(&format!("'{}'", d)),
+                ColumnDefault::Custom(d) => the_type.push_str(&format!("'{d}'")),
                 ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
                 ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
@@ -544,7 +542,7 @@ impl PostgresSchemaManager {
                 ColumnType::Enum(ref opt) => {
                     let list = opt
                         .iter()
-                        .map(|e| format!("'{}'", e))
+                        .map(|e| format!("'{e}'"))
                         .collect::<Vec<String>>()
                         .join(",");
                     the_type.push_str(&format!(
@@ -581,13 +579,13 @@ impl PostgresSchemaManager {
                 }
                 sql = format!("{} {}", sql, col_names.join(","));
             } else {
-                sql = format!("{} *", sql) // Select all columns by default
+                sql = format!("{sql} *") // Select all columns by default
             }
         }
 
         // join fields
         if let Some(joins) = query.joins() {
-            for (_, a_join) in joins {
+            for a_join in joins.values() {
                 if let Some(columns) = a_join.select_columns() {
                     let mut col_names = Vec::new();
                     for a_field in columns {
@@ -611,14 +609,14 @@ impl PostgresSchemaManager {
 
         // order by
         if let Some(order) = self.build_order_by(query) {
-            sql = format!("{} {}", sql, order);
+            sql = format!("{sql} {order}");
         }
 
         // having
 
         // limit
         if let Some(limit) = query.limit_by() {
-            sql = format!("{} {}", sql, limit);
+            sql = format!("{sql} {limit}");
         }
 
         // offset
@@ -629,7 +627,7 @@ impl PostgresSchemaManager {
     fn build_join(&self, query: &QueryBuilder) -> Result<String, anyhow::Error> {
         let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
-            for (_, a_join) in joins {
+            for a_join in joins.values() {
                 sql = format!(
                     "{} {} JOIN {} ON {}",
                     sql,
@@ -661,7 +659,7 @@ impl PostgresSchemaManager {
         }
 
         if !wheres.is_empty() {
-            wheres = format!("WHERE {}", wheres);
+            wheres = format!("WHERE {wheres}");
         }
 
         Ok(wheres)
@@ -672,18 +670,12 @@ impl PostgresSchemaManager {
         condition: &Condition,
         params: &mut PgArguments,
     ) -> Result<String, anyhow::Error> {
-        let placeholder;
-        match condition.value() {
-            QueryValue::SubQuery(sub) => {
-                placeholder = self.build_query(sub, params)?;
-            }
-            QueryValue::ColumnName(name) => {
-                placeholder = name.clone();
-            }
+        let placeholder = match condition.value() {
+            QueryValue::SubQuery(sub) => self.build_query(sub, params)?,
+            QueryValue::ColumnName(name) => name.clone(),
             _ => {
                 self.transform_value(condition.value(), params)?;
-                placeholder = if *condition.operator() == Operator::In
-                    || *condition.operator() == Operator::NotIn
+                if *condition.operator() == Operator::In || *condition.operator() == Operator::NotIn
                 {
                     let length = match &condition.value() {
                         QueryValue::Field(FieldValue::Array(v)) => v.len(),
@@ -695,9 +687,9 @@ impl PostgresSchemaManager {
                     placeholder.join(",")
                 } else {
                     format!("${}", params.len())
-                };
+                }
             }
-        }
+        };
 
         Ok(condition
             .operator()
@@ -714,6 +706,7 @@ impl PostgresSchemaManager {
                 self.build_query(q, params)?;
             }
             QueryValue::Field(field) => self.field_value_to_args(field, params)?,
+            QueryValue::Null => (),          // `is null` or `is not null`
             QueryValue::ColumnName(_) => (), // does not require an entry into the params,
         }
 
@@ -914,11 +907,11 @@ impl PostgresSchemaManager {
             let keys = first_row.keys().cloned().collect::<Vec<String>>();
             let columns = keys
                 .iter()
-                .map(|e| format!("\"{}\"", e))
+                .map(|e| format!("\"{e}\""))
                 .collect::<Vec<String>>()
                 .join(",");
 
-            sql = format!("{} ({}) VALUES ", sql, columns);
+            sql = format!("{sql} ({columns}) VALUES ");
             let mut placeholder_counter = 0;
             for a_row in rows.iter().enumerate() {
                 for col in &keys {
@@ -932,7 +925,7 @@ impl PostgresSchemaManager {
                     .enumerate()
                     .map(|_| {
                         placeholder_counter += 1;
-                        format!("${}", placeholder_counter)
+                        format!("${placeholder_counter}")
                     })
                     .collect::<Vec<String>>()
                     .join(",");
@@ -962,14 +955,14 @@ impl PostgresSchemaManager {
             return match column.name() {
                 QueryColumnName::Name(n) => {
                     let full_name = if let Some(tbl) = column.table() {
-                        format!("\"{}\".\"{}\"", tbl, n)
+                        format!("\"{tbl}\".\"{n}\"")
                     } else {
                         n.clone()
                     };
                     if alias.is_empty() {
-                        Ok(format!("({}({1})) as \"{1}\"", aggregate, full_name))
+                        Ok(format!("({aggregate}({full_name})) as \"{full_name}\""))
                     } else {
-                        Ok(format!("{}({}) as \"{}\"", aggregate, full_name, alias))
+                        Ok(format!("{aggregate}({full_name}) as \"{alias}\""))
                     }
                 }
                 QueryColumnName::SubQuery(query) => {
@@ -977,23 +970,23 @@ impl PostgresSchemaManager {
                     if alias.is_empty() {
                         Ok(sql)
                     } else {
-                        Ok(format!("({}({})) as \"{}\"", aggregate, sql, alias))
+                        Ok(format!("({aggregate}({sql})) as \"{alias}\""))
                     }
                 }
             };
         }
-        return match column.name() {
+        match column.name() {
             QueryColumnName::Name(n) => {
                 let full_name = if let Some(tbl) = column.table() {
-                    format!("\"{}\".\"{}\"", tbl, n)
+                    format!("\"{tbl}\".\"{n}\"")
                 } else {
                     n.clone()
                 };
 
                 if alias.is_empty() {
-                    Ok(format!("{}", full_name))
+                    Ok(full_name.to_string())
                 } else {
-                    Ok(format!("{} as \"{}\"", full_name, alias))
+                    Ok(format!("{full_name} as \"{alias}\""))
                 }
             }
             QueryColumnName::SubQuery(query) => {
@@ -1001,10 +994,10 @@ impl PostgresSchemaManager {
                 if alias.is_empty() {
                     Ok(sql)
                 } else {
-                    Ok(format!("({}) as \"{}\"", sql, alias))
+                    Ok(format!("({sql}) as \"{alias}\""))
                 }
             }
-        };
+        }
     }
 }
 
@@ -1063,7 +1056,7 @@ fn build_field_value_to_args(
             if error.is_some() {
                 return Err(anyhow::anyhow!(error.clone().unwrap()));
             }
-            build_field_value_to_args(&field, params)?
+            build_field_value_to_args(field, params)?
         }
     }
 

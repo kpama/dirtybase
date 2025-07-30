@@ -91,6 +91,6 @@ impl AggregateTrait for OrderAggregate {
     }
 
     async fn apply(&mut self, event: dirtybase_scribe::DispatchedDomainEvent) {
-        println!("applying: {:#?}", event);
+        println!("applying: {event:#?}");
     }
 }

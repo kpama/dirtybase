@@ -16,8 +16,8 @@ pub struct ArcUuid7(Arc<Uuid>);
 impl ArcUuid7 {
     pub fn new(value: Uuid) -> Result<Self, String> {
         if value.get_version_num() != 7 {
-            tracing::error!("uuid is not version 7: {}", value);
-            return Err(format!("uuid is not version 7: {}", value));
+            tracing::error!("uuid is not version 7: {value}");
+            return Err(format!("uuid is not version 7: {value}"));
         }
         Ok(ArcUuid7(Arc::new(value)))
     }

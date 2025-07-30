@@ -62,11 +62,11 @@ impl From<&FieldValue> for AuthUserStatus {
 impl Display for AuthUserStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AuthUserStatus::Pending => write!(f, "{}", AUTH_USER_STATUS_PENDING),
-            AuthUserStatus::Active => write!(f, "{}", AUTH_USER_STATUS_ACTIVE),
-            AuthUserStatus::Inactive => write!(f, "{}", AUTH_USER_STATUS_INACTIVE),
-            AuthUserStatus::Suspended => write!(f, "{}", AUTH_USER_STATUS_SUSPENDED),
-            AuthUserStatus::Unknown => write!(f, "{}", AUTH_USER_STATUS_UNKNOWN),
+            AuthUserStatus::Pending => write!(f, "{AUTH_USER_STATUS_PENDING}",),
+            AuthUserStatus::Active => write!(f, "{AUTH_USER_STATUS_ACTIVE}",),
+            AuthUserStatus::Inactive => write!(f, "{AUTH_USER_STATUS_INACTIVE}",),
+            AuthUserStatus::Suspended => write!(f, "{AUTH_USER_STATUS_SUSPENDED}",),
+            AuthUserStatus::Unknown => write!(f, "{AUTH_USER_STATUS_UNKNOWN}",),
         }
     }
 }

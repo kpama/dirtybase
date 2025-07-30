@@ -42,7 +42,7 @@ impl From<i64> for FieldValue {
 
 impl From<&bool> for FieldValue {
     fn from(value: &bool) -> Self {
-        value.clone().into()
+        (*value).into()
     }
 }
 

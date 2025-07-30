@@ -240,7 +240,7 @@ impl MariadbSchemaManager {
                 if !unique.is_empty() && !to_update.is_empty() {
                     let mut update_values = Vec::new();
                     for entry in to_update {
-                        update_values.push(format!("`{0}` = VALUES(`{0}`)", entry));
+                        update_values.push(format!("`{entry}` = VALUES(`{entry}`)"));
                     }
                     sql = format!(
                         "{} ON DUPLICATE KEY UPDATE {}",
@@ -283,15 +283,15 @@ impl MariadbSchemaManager {
             }
             QueryAction::RenameColumn { old, new } => {
                 let table = query.table();
-                sql = format!("ALTER TABLE {} RENAME COLUMN {} TO {}", table, old, new);
+                sql = format!("ALTER TABLE {table} RENAME COLUMN {old} TO {new}");
             }
             QueryAction::RenameTable(new) => {
                 let table = query.table();
-                sql = format!("ALTER TABLE {} RENAME TO {}", table, new);
+                sql = format!("ALTER TABLE {table} RENAME TO {new}");
             }
             QueryAction::DropColumn(column) => {
                 let table = query.table();
-                sql = format!("ALTER TABLE {} DROP {}", table, column);
+                sql = format!("ALTER TABLE {table} DROP {column}");
             }
             _ => {
                 sql = "".into();
@@ -360,14 +360,12 @@ impl MariadbSchemaManager {
             if !columns.is_empty() {
                 query = format!("{} ({})", query, columns.join(","));
             }
-        } else {
-            if !columns.is_empty() {
-                query = format!("{} ADD {}", query, columns.join(","));
-            }
+        } else if !columns.is_empty() {
+            query = format!("{} ADD {}", query, columns.join(","));
         }
 
         if table.is_new() {
-            query = format!("{} ENGINE='InnoDB';", query);
+            query = format!("{query} ENGINE='InnoDB';");
         }
 
         let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
@@ -458,7 +456,7 @@ impl MariadbSchemaManager {
             }
             ColumnType::Boolean => the_type.push_str("tinyint(1)"),
             ColumnType::Char(length) => {
-                the_type.push_str(&format!("char({}) COLLATE 'utf8mb4_unicode_ci'", length))
+                the_type.push_str(&format!("char({length}) COLLATE 'utf8mb4_unicode_ci'"))
             }
             ColumnType::Datetime => the_type.push_str("datetime"),
             ColumnType::Date => the_type.push_str("DATE"),
@@ -468,7 +466,7 @@ impl MariadbSchemaManager {
             ColumnType::Number | ColumnType::Float => the_type.push_str("double"),
             ColumnType::Binary => the_type.push_str("BLOB"),
             ColumnType::String(length) => {
-                let q = format!("varchar({}) COLLATE 'utf8mb4_unicode_ci'", length);
+                let q = format!("varchar({length}) COLLATE 'utf8mb4_unicode_ci'");
                 the_type.push_str(q.as_str());
             }
             ColumnType::Text => the_type.push_str("longtext"),
@@ -477,7 +475,7 @@ impl MariadbSchemaManager {
                 let c = format!(
                     "ENUM({})",
                     opt.iter()
-                        .map(|e| format!("'{}'", e))
+                        .map(|e| format!("'{e}'"))
                         .collect::<Vec<String>>()
                         .join(","),
                 );
@@ -509,7 +507,7 @@ impl MariadbSchemaManager {
             the_type.push_str(" DEFAULT ");
             match default {
                 ColumnDefault::CreatedAt => the_type.push_str("now()"),
-                ColumnDefault::Custom(d) => the_type.push_str(&format!("'{}'", d)),
+                ColumnDefault::Custom(d) => the_type.push_str(&format!("'{d}'")),
                 ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
                 ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
@@ -563,13 +561,13 @@ impl MariadbSchemaManager {
                 }
                 sql = format!("{} {}", sql, col_names.join(","));
             } else {
-                sql = format!("{} *", sql) // Select all columns by default
+                sql = format!("{sql} *") // Select all columns by default
             }
         }
 
         // join fields
         if let Some(joins) = query.joins() {
-            for (_, a_join) in joins {
+            for a_join in joins.values() {
                 if let Some(columns) = a_join.select_columns() {
                     let mut col_names = Vec::new();
                     for a_field in columns {
@@ -593,14 +591,14 @@ impl MariadbSchemaManager {
 
         // order by
         if let Some(order) = self.build_order_by(query) {
-            sql = format!("{} {}", sql, order);
+            sql = format!("{sql} {order}");
         }
 
         // having
 
         // limit
         if let Some(limit) = query.limit_by() {
-            sql = format!("{} {}", sql, limit);
+            sql = format!("{sql} {limit}");
         }
 
         //  offset
@@ -615,7 +613,7 @@ impl MariadbSchemaManager {
     ) -> Result<String, anyhow::Error> {
         let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
-            for (_, a_join) in joins {
+            for a_join in joins.values() {
                 sql = format!(
                     "{} {} JOIN {} ON {}",
                     sql,
@@ -643,7 +641,7 @@ impl MariadbSchemaManager {
         }
 
         if !wheres.is_empty() {
-            wheres = format!("WHERE {}", wheres);
+            wheres = format!("WHERE {wheres}");
         }
 
         Ok(wheres)
@@ -658,19 +656,12 @@ impl MariadbSchemaManager {
         condition: &Condition,
         params: &mut MySqlArguments,
     ) -> Result<String, anyhow::Error> {
-        let placeholder;
-        match condition.value() {
-            QueryValue::SubQuery(sub) => {
-                //
-                placeholder = self.build_query(sub, params)?;
-            }
-            QueryValue::ColumnName(name) => {
-                placeholder = name.clone();
-            }
+        let placeholder = match condition.value() {
+            QueryValue::SubQuery(sub) => self.build_query(sub, params)?,
+            QueryValue::ColumnName(name) => name.clone(),
             _ => {
                 self.transform_value(condition.value(), params)?;
-                placeholder = if *condition.operator() == Operator::In
-                    || *condition.operator() == Operator::NotIn
+                if *condition.operator() == Operator::In || *condition.operator() == Operator::NotIn
                 {
                     let length = match &condition.value() {
                         QueryValue::Field(FieldValue::Array(v)) => v.len(),
@@ -682,9 +673,9 @@ impl MariadbSchemaManager {
                     placeholder.join(",")
                 } else {
                     "?".to_owned()
-                };
+                }
             }
-        }
+        };
 
         Ok(condition
             .operator()
@@ -701,7 +692,8 @@ impl MariadbSchemaManager {
                 self.build_query(q, params)?;
             }
             QueryValue::Field(field) => self.field_value_to_args(field, params)?,
-            QueryValue::ColumnName(_) => (), // does not require an entry into the params,
+            QueryValue::Null => (),          // `is null` or `is not null`
+            QueryValue::ColumnName(_) => (), // Does not require an entry into the params,
         }
 
         Ok(())
@@ -881,11 +873,11 @@ impl MariadbSchemaManager {
             let placeholders = keys.iter().map(|_| "?").collect::<Vec<&str>>().join(",");
             let columns = keys
                 .iter()
-                .map(|e| format!("`{}`", e))
+                .map(|e| format!("`{e}`"))
                 .collect::<Vec<String>>()
                 .join(",");
 
-            sql = format!("{} ({}) VALUES ", sql, columns);
+            sql = format!("{sql} ({columns}) VALUES ");
 
             for a_row in rows.iter().enumerate() {
                 for col in &keys {
@@ -920,14 +912,14 @@ impl MariadbSchemaManager {
             return match column.name() {
                 QueryColumnName::Name(n) => {
                     let full_name = if let Some(tbl) = column.table() {
-                        format!("`{}`.`{}`", tbl, n)
+                        format!("`{tbl}`.`{n}`")
                     } else {
                         n.clone()
                     };
                     if alias.is_empty() {
-                        Ok(format!("({}({1})) as '{1}'", aggregate, full_name))
+                        Ok(format!("({aggregate}({full_name})) as '{full_name}'"))
                     } else {
-                        Ok(format!("{}({}) as '{}'", aggregate, full_name, alias))
+                        Ok(format!("{aggregate}({full_name}) as '{alias}'"))
                     }
                 }
                 QueryColumnName::SubQuery(query) => {
@@ -935,23 +927,23 @@ impl MariadbSchemaManager {
                     if alias.is_empty() {
                         Ok(sql)
                     } else {
-                        Ok(format!("({}({})) as '{}'", aggregate, sql, alias))
+                        Ok(format!("({aggregate}({sql})) as '{alias}'"))
                     }
                 }
             };
         }
-        return match column.name() {
+        match column.name() {
             QueryColumnName::Name(n) => {
                 let full_name = if let Some(tbl) = column.table() {
-                    format!("`{}`.`{}`", tbl, n)
+                    format!("`{tbl}`.`{n}`")
                 } else {
                     n.clone()
                 };
 
                 if alias.is_empty() {
-                    Ok(format!("{}", full_name))
+                    Ok(full_name.to_string())
                 } else {
-                    Ok(format!("{} as '{}'", full_name, alias))
+                    Ok(format!("{full_name} as '{alias}'"))
                 }
             }
             QueryColumnName::SubQuery(query) => {
@@ -959,10 +951,10 @@ impl MariadbSchemaManager {
                 if alias.is_empty() {
                     Ok(sql)
                 } else {
-                    Ok(format!("({}) as '{}'", sql, alias))
+                    Ok(format!("({sql}) as '{alias}'"))
                 }
             }
-        };
+        }
     }
 }
 
@@ -1021,7 +1013,7 @@ fn build_field_value_to_args(
             if error.is_some() {
                 return Err(anyhow::anyhow!(error.clone().unwrap()));
             }
-            build_field_value_to_args(&field, params)?
+            build_field_value_to_args(field, params)?
         }
     }
 

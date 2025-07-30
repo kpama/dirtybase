@@ -50,11 +50,18 @@ pub type OptionalJsonValueField = Option<serde_json::Value>;
 pub type OptionalJsonField = Option<serde_json::Map<String, serde_json::value::Value>>;
 pub type CreatedAtField = Option<DateTime<Utc>>;
 pub type UpdatedAtField = Option<DateTime<Utc>>;
+pub type DeletedAtField = Option<DateTime<Utc>>;
 pub type DateField = NaiveDate;
 pub type OptionalDateField = Option<NaiveDate>;
 
 pub trait ToColumnAndValue {
     fn to_column_value(&self) -> Result<ColumnAndValue, anyhow::Error>;
+    fn to_field_value(&self) -> FieldValue {
+        match self.to_column_value() {
+            Ok(v) => FieldValue::Object(v),
+            Err(_) => FieldValue::NotSet,
+        }
+    }
 }
 
 pub trait FromColumnAndValue {
@@ -108,6 +115,10 @@ impl StructuredColumnAndValue {
 
     pub fn get(&self, key: &str) -> Option<&FieldValue> {
         self.fields.get(key)
+    }
+
+    pub fn take(&self, key: &str) -> Option<FieldValue> {
+        self.fields.get(key).cloned()
     }
 }
 
@@ -166,5 +177,14 @@ fn build_structure(
 impl ToColumnAndValue for ColumnAndValue {
     fn to_column_value(&self) -> Result<ColumnAndValue, anyhow::Error> {
         Ok(self.clone())
+    }
+}
+
+impl<'a> ToColumnAndValue for HashMap<&'a str, FieldValue> {
+    fn to_column_value(&self) -> Result<ColumnAndValue, anyhow::Error> {
+        Ok(self
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.clone()))
+            .collect::<HashMap<String, FieldValue>>())
     }
 }

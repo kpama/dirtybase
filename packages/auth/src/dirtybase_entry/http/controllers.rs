@@ -19,14 +19,14 @@ pub(crate) async fn login_form_handler(
 
     Html(
             format!("<h1>Login Form</h1>
-          <form method='post' action='{}'>
+          <form method='post' action='{submit_uri}'>
         <label>Username: </label><input type='text' name='username' placeholder='username' value='admin' /> <br/>
         <label>Password: </label><input type='password' name='password' placeholder='password' value='password' /> <br/>
         <button type='submit'>Login</button>
         <p>
              <a href='/auth/register-form'>Register </a>
         </p>
-      </form>", submit_uri),
+      </form>"),
         )
 }
 
@@ -175,7 +175,7 @@ pub(crate) async fn handle_register_request(
         }
     }
 
-    format!("token: {}", token)
+    format!("token: {token}")
 }
 
 pub(crate) async fn handle_api_register_request(

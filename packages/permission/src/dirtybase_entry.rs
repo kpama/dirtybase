@@ -1,0 +1,42 @@
+mod event;
+mod event_handler;
+mod http;
+mod migration;
+mod model;
+mod seeder;
+
+use dirtybase_contract::cli_contract::prelude::ArgMatches;
+use dirtybase_contract::prelude::*;
+
+#[derive(Default)]
+pub struct Extension;
+
+#[dirtybase_contract::async_trait]
+impl dirtybase_contract::ExtensionSetup for Extension {
+    
+    async fn setup(&mut self, _global_context: &Context) {
+        event_handler::setup().await;
+    }
+
+    fn migrations(&self, _global_context: &Context) -> Option<dirtybase_contract::ExtensionMigrations> {
+        migration::setup()
+    }
+
+    fn register_routes(
+        &self,
+        manager: &mut RouterManager,
+    ){
+        http::register_routes(manager);
+    }
+
+
+    async fn on_cli_command(&self, cmd: &str, matches: ArgMatches, _context: Context) -> ArgMatches {
+
+        if cmd == "seed" {
+            seeder::register_seeders().await;
+        }
+
+        matches
+    }
+
+}

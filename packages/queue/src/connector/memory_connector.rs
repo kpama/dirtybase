@@ -6,10 +6,10 @@ impl dirtybase_contract::queue_contract::Connector for MemoryConnector {
     }
 
     fn put(&self, job: i32) {
-        log::debug!("queuing job: {}", job);
+        log::debug!("queuing job: {job}");
     }
 
     fn delete(&self, job: i32) {
-        log::debug!("deleting job: {}", job);
+        log::debug!("deleting job: {job}");
     }
 }

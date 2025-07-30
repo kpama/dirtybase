@@ -8,6 +8,8 @@ mod insert_value;
 pub mod to_raw_values;
 pub use insert_value::InsertValueBuilder;
 
+use crate::db_contract::types::ToColumnAndValue;
+
 use super::types::ColumnAndValue;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -84,10 +86,10 @@ impl Display for FieldValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Null => write!(f, "NULL"),
-            Self::U64(v) => write!(f, "{}", v),
-            Self::I64(v) => write!(f, "{}", v),
-            Self::F64(v) => write!(f, "{}", v),
-            Self::String(v) => write!(f, "{}", v),
+            Self::U64(v) => write!(f, "{v}",),
+            Self::I64(v) => write!(f, "{v}",),
+            Self::F64(v) => write!(f, "{v}",),
+            Self::String(v) => write!(f, "{v}",),
             Self::Boolean(v) => {
                 write!(f, "{}", if *v { 1 } else { 0 })
             }
@@ -96,20 +98,20 @@ impl Display for FieldValue {
                 write!(f, "{}", hex::encode(data))
             }
             Self::Uuid(data) => {
-                write!(f, "{}", data)
+                write!(f, "{data}",)
             }
             Self::Array(v) => {
                 let mut data = "".to_owned();
                 for entry in v {
-                    data = format!("{} {},", data, entry);
+                    data = format!("{data} {entry},");
                 }
 
-                write!(f, "[{}]", data)
+                write!(f, "[{data}]",)
             }
-            Self::DateTime(v) => write!(f, "{}", v),
-            Self::Timestamp(v) => write!(f, "{}", v),
-            Self::Date(v) => write!(f, "{}", v),
-            Self::Time(v) => write!(f, "{}", v),
+            Self::DateTime(v) => write!(f, "{v}",),
+            Self::Timestamp(v) => write!(f, "{v}",),
+            Self::Date(v) => write!(f, "{v}",),
+            Self::Time(v) => write!(f, "{v}",),
             Self::NotSet => write!(f, ""),
             Self::Failable { field, error } => {
                 if error.is_some() {
@@ -156,14 +158,14 @@ where
     }
 }
 
-impl<T> From<Box<T>> for FieldValue
-where
-    T: Into<FieldValue>,
-{
-    fn from(value: Box<T>) -> Self {
-        value.into()
-    }
-}
+// impl<T> From<Box<T>> for FieldValue
+// where
+//     T: Into<FieldValue>,
+// {
+//     fn from(value: Box<T>) -> Self {
+//         value.into()
+//     }
+// }
 
 impl<T, E> From<Result<T, E>> for FieldValue
 where
@@ -178,27 +180,22 @@ where
     }
 }
 
-impl From<HashMap<String, FieldValue>> for FieldValue {
-    fn from(value: HashMap<String, FieldValue>) -> Self {
-        let mut obj = HashMap::new();
-        for entry in value {
-            obj.insert(entry.0, entry.1);
-        }
+// impl From<HashMap<String, FieldValue>> for FieldValue {
+//     fn from(value: HashMap<String, FieldValue>) -> Self {
+//         Self::Object(value)
+//     }
+// }
 
-        Self::Object(obj)
-    }
-}
-
-impl<'a> From<HashMap<&'a str, FieldValue>> for FieldValue {
-    fn from(value: HashMap<&'a str, FieldValue>) -> Self {
-        let mut obj = HashMap::new();
-        for entry in value {
-            obj.insert(entry.0.to_owned(), entry.1);
-        }
-
-        Self::Object(obj)
-    }
-}
+// impl<'a> From<HashMap<&'a str, FieldValue>> for FieldValue {
+//     fn from(value: HashMap<&'a str, FieldValue>) -> Self {
+//         Self::Object(
+//             value
+//                 .into_iter()
+//                 .map(|(k, v)| (k.to_owned(), v))
+//                 .collect::<HashMap<String, FieldValue>>(),
+//         )
+//     }
+// }
 
 impl<A: Into<FieldValue>> FromIterator<A> for FieldValue {
     fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {
@@ -227,5 +224,17 @@ impl From<FieldValue> for ColumnAndValue {
             }
             _ => HashMap::new(),
         }
+    }
+}
+
+// impl From<&HashMap<String, FieldValue>> for FieldValue {
+//     fn from(value: &HashMap<String, FieldValue>) -> Self {
+//         Self::Object(Clone::clone(value))
+//     }
+// }
+
+impl<T: ToColumnAndValue> From<T> for FieldValue {
+    fn from(value: T) -> Self {
+        value.to_field_value()
     }
 }

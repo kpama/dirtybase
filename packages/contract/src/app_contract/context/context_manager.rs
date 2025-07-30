@@ -56,8 +56,8 @@ impl ResourceManager {
     ///
     /// The idle timeout value have some implications
     ///  - value == 0 : The instance will live forever
-    ///  - value < 0  : The instance will live of current request
-    ///  - value > 0  : The instance will be dropped after being idle that long (in seconds)
+    ///  - value < 0 : The instance will live of current request
+    ///  - value > 0 : The instance will be dropped after being idle that long (in seconds)
     pub fn new(name: &str, idle_timeout: i64) -> Self {
         Self {
             name: Arc::new(name.to_string()),
@@ -120,16 +120,18 @@ impl From<i32> for ResourceManager {
     }
 }
 
+type DropFn<T> = Arc<RwLock<Box<dyn FnMut(T) -> BoxFuture<'static, ()> + Send + Sync>>>;
+type SetupFn =
+    Arc<RwLock<Box<dyn FnMut(Context) -> BoxFuture<'static, ResourceManager> + Send + Sync>>>;
+type ResolverFn<T> = Arc<
+    RwLock<Box<dyn FnMut(Context) -> BoxFuture<'static, Result<T, anyhow::Error>> + Send + Sync>>,
+>;
+
 #[derive(Clone)]
 pub struct ContextResourceManager<T: Clone + Send + Sync + 'static> {
-    setup_fn:
-        Arc<RwLock<Box<dyn FnMut(Context) -> BoxFuture<'static, ResourceManager> + Send + Sync>>>,
-    resolver_fn: Arc<
-        RwLock<
-            Box<dyn FnMut(Context) -> BoxFuture<'static, Result<T, anyhow::Error>> + Send + Sync>,
-        >,
-    >,
-    drop_fn: Arc<RwLock<Box<dyn FnMut(T) -> BoxFuture<'static, ()> + Send + Sync>>>,
+    setup_fn: SetupFn,
+    resolver_fn: ResolverFn<T>,
+    drop_fn: DropFn<T>,
     collection: ContextCollection<T>,
 }
 
@@ -143,7 +145,7 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
     ///  1. Setup: a closure that implements `FnMut(Context) -> BoxFuture<ResourceManager>`
     ///
     ///  2. Resolver: a closure the implements `FnMut(Context) -> BoxFuture<T>` where `T` is an
-    ///               instance of the resource.
+    ///     instance of the resource.
     ///
     ///  3. Drop: a closure that implements `FnMut(T) -> BoxFuture<()>` where T is the instance
     ///     that has been dropped ie. remove from he collection of instances
@@ -218,6 +220,7 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
             let mut resolver_lock = self.resolver_fn.write().await;
             let resource = (resolver_lock)(context).await;
 
+            #[allow(clippy::question_mark)]
             if resource.is_err() {
                 return resource;
             }
@@ -275,7 +278,7 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
         tracing::trace!("shutting down manager: {}", self.name_of_t());
         let clean_up_fn = self.drop_fn.clone();
         let mut write_lock = self.collection.write().await;
-        for (_, wrapper) in write_lock.drain().into_iter() {
+        for (_, wrapper) in write_lock.drain() {
             let mut clean_fn_lock = clean_up_fn.write().await;
             (clean_fn_lock)(wrapper.resource()).await;
         }
@@ -326,13 +329,13 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
 impl<T: Clone + Send + Sync + 'static> Drop for ContextResourceManager<T> {
     fn drop(&mut self) {
         // FIXME: use something else other than block_on
-        //        block_on does not work for db over tcp connection
+        //        block_on does not work for db over TCP connection
 
         futures::executor::block_on(async {
             tracing::debug!("shutting down ctx manager: {}", self.name_of_t());
             let clean_up_fn = self.drop_fn.clone();
             let mut write_lock = self.collection.write().await;
-            for (_, wrapper) in write_lock.drain().into_iter() {
+            for (_, wrapper) in write_lock.drain() {
                 let mut clean_fn_lock = clean_up_fn.write().await;
                 (clean_fn_lock)(wrapper.resource()).await;
             }

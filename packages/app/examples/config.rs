@@ -10,7 +10,7 @@ async fn main() -> anyhow::Result<()> {
     let dty_config = DirtyConfig::new();
     let config = DbConfigurations::new(&dty_config).await;
 
-    println!("{:#?}", config);
+    println!("{config:#?}");
 
     Ok(())
 }

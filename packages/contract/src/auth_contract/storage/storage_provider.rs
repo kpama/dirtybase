@@ -12,10 +12,7 @@ pub trait AuthUserStorage: Send + Sync {
         let result = self.find_by_username(username).await;
 
         match result {
-            Ok(option) => match option {
-                Some(_) => true,
-                None => false,
-            },
+            Ok(option) => option.is_some(),
             Err(_) => false,
         }
     }
@@ -23,10 +20,7 @@ pub trait AuthUserStorage: Send + Sync {
         let result = self.find_by_id(id).await;
 
         match result {
-            Ok(option) => match option {
-                Some(_) => true,
-                None => false,
-            },
+            Ok(option) => option.is_some(),
             Err(_) => false,
         }
     }
@@ -34,10 +28,7 @@ pub trait AuthUserStorage: Send + Sync {
         let result = self.find_by_email_hash(hash).await;
 
         match result {
-            Ok(option) => match option {
-                Some(_) => true,
-                None => false,
-            },
+            Ok(option) => option.is_some(),
             Err(_) => false,
         }
     }

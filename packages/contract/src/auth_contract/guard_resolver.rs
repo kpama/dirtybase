@@ -57,7 +57,7 @@ impl GuardResolver {
                 let cb = callback.clone();
                 let name = arc_name.clone();
                 Box::pin(async move {
-                    if &guard_name == name.as_str() {
+                    if guard_name == name.as_str() {
                         let ctx = resolver.context();
                         let result = (cb)(resolver).await;
 

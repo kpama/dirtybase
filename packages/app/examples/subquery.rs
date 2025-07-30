@@ -1,12 +1,6 @@
-use std::collections::HashMap;
-use std::hash::{DefaultHasher, Hash, Hasher};
-
 use dirtybase_app::setup;
 use dirtybase_db::{
-    TableModel,
-    base::{manager::Manager, query::QueryBuilder},
-    field_values::FieldValue,
-    types::DateTimeField,
+    TableModel, base::manager::Manager, field_values::FieldValue, types::DateTimeField,
 };
 use dirtybase_db_macro::DirtyTable;
 use tracing::Level;
@@ -16,7 +10,7 @@ use tracing_subscriber::EnvFilter;
 async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
-        .with_max_level(Level::TRACE)
+        .with_max_level(Level::DEBUG)
         .try_init()
         .expect("could not setup tracing");
 
@@ -38,7 +32,7 @@ async fn main() {
 }
 
 #[derive(Debug, Default, DirtyTable)]
-#[dirty(table = "posts")]
+#[dirty(table = "posts", no_soft_delete)]
 struct PostWithAuthor {
     id: i64,
     title: String,
@@ -47,37 +41,21 @@ struct PostWithAuthor {
 }
 
 #[derive(Debug, Clone, Default, DirtyTable)]
-#[dirty(table = "posts")]
+#[dirty(table = "posts", no_soft_delete)]
 struct Post {
     id: i64,
     title: String,
     author_id: i64,
 }
 
-impl Post {
-    pub fn author_id_hash(&self) -> u64 {
-        calculate_hash(&self.author_id)
-    }
-}
-
 #[derive(Debug, Default, DirtyTable)]
-#[dirty(table = "authors")]
+#[dirty(table = "authors", no_soft_delete)]
 struct Author {
     id: i64,
     first_name: String,
     last_name: String,
-    #[dirty(rel(kind = "has_many"))]
+    #[dirty(rel(kind = "has_many", no_soft_delete))]
     posts: Vec<Post>,
-}
-
-struct AuthorRelation {
-    builder: QueryBuilder,
-}
-
-fn calculate_hash<T: Hash>(t: &T) -> u64 {
-    let mut s = DefaultHasher::new();
-    t.hash(&mut s);
-    s.finish()
 }
 
 impl AuthorRepo {

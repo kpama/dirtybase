@@ -43,7 +43,7 @@ pub(crate) struct TableAttribute {
     pub(crate) id_column: String,
     pub(crate) foreign_name: String,
     pub(crate) no_timestamp: bool,
-    pub(crate) no_softdelete: bool,
+    pub(crate) no_soft_delete: bool,
     pub(crate) created_at_col: String,
     pub(crate) updated_at_col: String,
     pub(crate) deleted_at_col: String,
@@ -57,7 +57,7 @@ impl Default for TableAttribute {
             id_column: "id".to_string(),
             foreign_name: String::new(),
             no_timestamp: false,
-            no_softdelete: false,
+            no_soft_delete: false,
             created_at_col: "created_at".to_string(),
             updated_at_col: "updated_at".to_string(),
             deleted_at_col: "deleted_at".to_string(),
@@ -86,8 +86,8 @@ impl From<&DeriveInput> for TableAttribute {
                             value.no_timestamp = true;
                         }
 
-                        if arg.to_string() == "no_softdelete" {
-                            value.no_softdelete = true;
+                        if arg.to_string() == "no_soft_delete" {
+                            value.no_soft_delete = true;
                         }
 
                         if arg.to_string() == "created_at" {
@@ -172,6 +172,7 @@ pub struct RelationAttribute {
     pub(crate) morph_name: Option<String>,
     pub(crate) morph_type: Option<String>,
     pub(crate) morph_type_col: Option<String>,
+    pub(crate) no_soft_delete: bool,
 }
 
 impl From<HashMap<String, String>> for RelationAttribute {
@@ -185,6 +186,7 @@ impl From<HashMap<String, String>> for RelationAttribute {
             morph_name: val.remove("morph_name"),
             morph_type: val.remove("morph_type"),
             morph_type_col: val.remove("morph_type_col"),
+            no_soft_delete: val.remove("no_soft_delete").is_some(),
         }
     }
 }

@@ -71,7 +71,7 @@ impl OrderByBuilder {
             .collect::<Vec<String>>()
             .join(",");
 
-        format!("ORDER BY {}", orders)
+        format!("ORDER BY {orders}",)
     }
 }
 

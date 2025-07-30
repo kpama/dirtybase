@@ -17,7 +17,7 @@ async fn main() {
     let x = p.to_column_value();
 
     let _manager = make_sqlite_in_memory_manager().await;
-    println!("{:#?}", x);
+    println!("{x:#?}");
     println!("columns: {:#?}", Parent::table_columns());
 
     // println!(Parent::child_column_name_for_child_field());

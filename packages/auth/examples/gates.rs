@@ -27,7 +27,7 @@ async fn main() {
         |user: AuthUser, (post,): (Arc<Post>,)| async move {
             //
             println!("is status: {}", user.status());
-            println!("post: {:#?}", post);
+            println!("post: {post:#?}");
             StatusCode::FORBIDDEN.into()
         },
     )

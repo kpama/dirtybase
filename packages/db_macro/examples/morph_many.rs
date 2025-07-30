@@ -44,6 +44,7 @@ async fn create_tables(manager: &Manager) {
         .create_table_schema(Post::table_name(), |table| {
             table.id(None);
             table.string(Post::col_name_for_title());
+            table.soft_deletable();
         })
         .await;
 
@@ -57,6 +58,7 @@ async fn create_tables(manager: &Manager) {
                 Image::col_name_for_imageable_id(),
                 Image::col_name_for_imageable_type(),
             ]);
+            table.soft_deletable();
         })
         .await;
 }

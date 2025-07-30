@@ -199,7 +199,7 @@ pub(crate) fn pluck_names(
     columns_attributes
         .iter()
         .filter(|c| !c.1.skip_select)
-        .filter(|c| !c.1.relation.is_some())
+        .filter(|c| c.1.relation.is_none())
         .filter(|c| !c.1.flatten)
         .map(|c| c.1.name.clone())
         .collect::<Vec<String>>()
@@ -262,7 +262,7 @@ pub(crate) fn spread_default(
         }
     } else {
         quote! {
-            // Nothing do do
+            // Nothing to do
         }
     }
 }
@@ -300,6 +300,13 @@ pub(crate) fn build_from_handlers(
                                     ::dirtybase_contract::db_contract::field_values::FieldValue::from_ref_option_into(field)
                                 }
                             }
+                    } else if item.1.flatten {
+                            quote! {
+                                pub fn #fn_name <'a> (field: Option<&'a ::dirtybase_contract::db_contract::field_values::FieldValue>) -> #returns {
+                                  let cv =  ::dirtybase_contract::db_contract::field_values::FieldValue::from_ref_option_into::<::std::collections::HashMap<String,::dirtybase_contract::db_contract::field_values::FieldValue>>(field);
+                                  ::dirtybase_contract::db_contract::types::FromColumnAndValue::from_column_value(cv).unwrap_or_default()
+                                }
+                            }
                         }
                         else {
                             quote! {
@@ -332,7 +339,7 @@ pub(crate) fn build_into_handlers(
                 quote! {
                     pub fn #fn_name(&self) ->Option<::dirtybase_contract::db_contract::field_values::FieldValue> {
                         if let Some(value) = &self.#struct_field {
-                            Some(value.into_embeddable())
+                            Some(::dirtybase_contract::db_contract::field_values::FieldValue::from(self))
                         } else {
                             None
                         }
@@ -352,7 +359,7 @@ pub(crate) fn build_into_handlers(
         } else if item.1.embedded {
             quote! {
                 pub fn #fn_name(&self) ->Option<::dirtybase_contract::db_contract::field_values::FieldValue> {
-                     Some(self.#struct_field.into_embeddable())
+                     Some(::dirtybase_contract::db_contract::field_values::FieldValue::from(self))
                     }
                 }
             } else {
@@ -463,7 +470,7 @@ pub(crate) fn build_special_column_methods(
     }
 
     // soft delete
-    if !tbl_attr.no_softdelete {
+    if !tbl_attr.no_soft_delete {
         let name = &tbl_attr.deleted_at_col;
         tokens.push(quote! {
             fn deleted_at_column() -> Option<&'static str> {

@@ -21,7 +21,7 @@ impl JoinQueryBuilder {
     ) -> Self {
         Self {
             table: table.to_owned(),
-            join_clause: format!("{} {} {}", left_table, operator, right_table),
+            join_clause: format!("{left_table} {operator} {right_table}"),
             join_type,
             select_columns: select_columns.map(|columns| {
                 columns

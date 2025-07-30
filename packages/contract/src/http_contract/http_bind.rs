@@ -67,6 +67,7 @@ impl<T: TableModel + 'static> Bind<T> {
             async move {
                 if let Some(field_value) = resolver.http_context_ref().get_a_path_by::<F>(&path) {
                     if let Ok(manager) = resolver.context_ref().get::<Manager>().await {
+                        // TODO: Use the model's repo instance
                         if let Ok(Some(value)) = manager
                             .select_from::<T>(|query| {
                                 query.is_eq(name, field_value);

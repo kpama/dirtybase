@@ -1,14 +1,11 @@
 #![allow(dead_code)]
 
-use dirtybase_db::{
-    TableModel, base::manager::Manager, connector::sqlite::make_sqlite_in_memory_manager,
-};
 use dirtybase_db_macro::DirtyTable;
 
 #[tokio::main]
 async fn main() {}
 
-#[derive(Debug, Default, DirtyTable)]
+#[derive(Debug, Default, Clone, DirtyTable)]
 #[dirty(id_column="foo",updated_at=updated_on, created_at="created_on", deleted_at=deleted_on, table=my_posts)]
 struct Post {
     id: Option<i64>,

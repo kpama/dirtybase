@@ -38,6 +38,7 @@ async fn create_tables(manager: &Manager) {
         .create_table_schema(Employee::table_name(), |table| {
             table.id(None);
             table.string(Employee::col_name_for_name());
+            table.soft_deletable();
         })
         .await;
 
@@ -46,6 +47,7 @@ async fn create_tables(manager: &Manager) {
             table.id(None);
             table.string(PinCode::col_name_for_code());
             table.id_table_fk::<Employee>(true);
+            table.soft_deletable();
         })
         .await;
 }

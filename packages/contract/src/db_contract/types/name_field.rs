@@ -82,8 +82,7 @@ impl From<NameField> for FieldValue {
 impl NameField {
     pub fn new(name: &str) -> Self {
         Self(Arc::new(
-            name.trim()
-                .split_whitespace()
+            name.split_whitespace()
                 .collect::<Vec<&str>>()
                 .join("-")
                 .to_string()
