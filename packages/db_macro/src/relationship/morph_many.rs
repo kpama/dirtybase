@@ -12,7 +12,6 @@ pub(crate) fn build_attribute(
     _field: &syn::Field,
     _input: &DeriveInput,
 ) -> RelationAttribute {
-    
     //
     RelationAttribute::from(attr)
 }
@@ -201,11 +200,11 @@ pub(crate) fn build_entity_append(
 
     let body = if attr.optional {
         quote! {
-                row_entity.#name_ident = Some(map.values().map(#foreign_type::clone).collect::<Vec<#foreign_type>>());
+                row_entity.#name_ident = Some(map.into_values().collect::<Vec<#foreign_type>>());
         }
     } else {
         quote! {
-                row_entity.#name_ident = map.values().map(#foreign_type::clone).collect::<Vec<#foreign_type>>();
+                row_entity.#name_ident = map.into_values().collect::<Vec<#foreign_type>>();
         }
     };
 
@@ -213,7 +212,7 @@ pub(crate) fn build_entity_append(
         //
         if #is_eager {
             //
-            if let Some(map) = #map_name.get(&row_hash) {
+            if let Some(map) = #map_name.remove(&row_hash) {
                 #body
             }
         }

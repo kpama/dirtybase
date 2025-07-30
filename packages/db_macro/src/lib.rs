@@ -1,7 +1,7 @@
 use helpers::*;
 use proc_macro::TokenStream;
 
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::{DeriveInput, parse_macro_input};
 
 use crate::entity_repo::build_entity_repo;
@@ -33,6 +33,13 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let column_name_methods = build_prop_column_names_getter(&columns_attributes);
     let defaults = spread_default(&columns_attributes, &input);
     let entity_repo = build_entity_repo(&input, &columns_attributes, &table_attribute);
+    let mut from_column_for_id = format_ident!("from_column_for_id");
+    for (name, col_attr) in &columns_attributes {
+        if table_attribute.id_field == *name {
+            from_column_for_id = format_ident!("{}", col_attr.from_handler);
+            break;
+        }
+    }
 
     let expanded = quote! {
 

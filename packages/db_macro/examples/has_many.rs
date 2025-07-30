@@ -25,7 +25,7 @@ async fn main() {
     println!("{:#?}", family_repo.with_children().get().await);
 }
 
-#[derive(Debug, Default, Clone, DirtyTable)]
+#[derive(Debug, Default, DirtyTable)]
 struct Family {
     id: Option<i64>,
     name: String,
@@ -34,7 +34,7 @@ struct Family {
     deleted_at: DeletedAtField,
 }
 
-#[derive(Debug, Default, Clone, DirtyTable)]
+#[derive(Debug, Default, DirtyTable)]
 #[dirty(table=family_children)]
 struct Child {
     id: Option<i64>,

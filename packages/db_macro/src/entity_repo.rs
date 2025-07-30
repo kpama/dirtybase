@@ -150,7 +150,7 @@ pub fn build_entity_repo(
 
             #(#with_methods_vec)*
 
-            pub async fn get(&mut self) -> Result<Option<Vec<#ident>>, ::anyhow::Error> {
+            pub async fn get(&mut self) -> Result<Option<Vec<#ident>>, ::dirtybase_contract::anyhow::Error> {
                 let mut rows_map = ::std::collections::HashMap::new();
                 #(#collections_vec)*
                 #append_trash_filter
@@ -177,8 +177,8 @@ pub fn build_entity_repo(
                         }
 
                         // now map relationships
-                        for(_, row_entity) in &mut rows_map {
-                            let row_hash = ::dirtybase_contract::db_contract::table_model::TableModel::entity_hash(row_entity);
+                        for(row_hash, row_entity) in &mut rows_map {
+                            // let row_hash = ::dirtybase_contract::db_contract::table_model::TableModel::entity_hash(row_entity);
                             #(#entity_appends_vec)*
                         }
 
@@ -189,7 +189,7 @@ pub fn build_entity_repo(
                 }
             }
 
-            pub async fn first(&mut self) -> Result<Option<#ident>, ::anyhow::Error> {
+            pub async fn first(&mut self) -> Result<Option<#ident>, ::dirtybase_contract::anyhow::Error> {
                 match self.get().await {
                     Ok(Some(mut list)) => {
                         Ok(list.pop())

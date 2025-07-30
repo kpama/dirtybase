@@ -12,7 +12,6 @@ pub(crate) fn build_attribute(
     _field: &syn::Field,
     _input: &DeriveInput,
 ) -> RelationAttribute {
-    
     //
     RelationAttribute::from(attr)
 }
@@ -205,7 +204,7 @@ pub(crate) fn build_entity_append(
         //
         if #is_eager {
             //
-            if let Some(parent) = #map_name.get(&row_hash).cloned() {
+            if let Some(parent) = #map_name.remove(&row_hash) {
                 #body
             }
         }
