@@ -116,6 +116,10 @@ impl StructuredColumnAndValue {
     pub fn get(&self, key: &str) -> Option<&FieldValue> {
         self.fields.get(key)
     }
+
+    pub fn take(&self, key: &str) -> Option<FieldValue> {
+        self.fields.get(key).cloned()
+    }
 }
 
 impl Default for StructuredColumnAndValue {
