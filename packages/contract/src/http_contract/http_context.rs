@@ -15,6 +15,7 @@ use axum::{
 };
 use axum_extra::extract::{cookie::Cookie, CookieJar};
 use dirtybase_helper::hash::sha256;
+use named_routes_axum::{NamedRoutesService, RoutePath};
 use serde::de::DeserializeOwned;
 use tokio::sync::{Mutex, RwLock};
 
@@ -32,6 +33,7 @@ pub struct HttpContext {
     raw_path_value: Arc<HashMap<String, serde_json::Value>>,
     raw_query_value: Arc<HashMap<String, serde_json::Value>>,
     subdomain: Option<Arc<String>>,
+    named_route_service: NamedRoutesService,
 }
 
 impl HttpContext {
@@ -45,6 +47,14 @@ impl HttpContext {
         instance.ip = instance.ip_from_headers(trusted_headers, trusted_ips);
 
         instance
+    }
+
+    pub fn named_route_service(&self) -> &NamedRoutesService {
+        &self.named_route_service
+    }
+
+    pub fn route_path(&self, name: &str) -> Option<RoutePath> {
+        self.named_route_service.get(name)
     }
 
     pub async fn from_request<T>(req: &Request<T>) -> Self {
@@ -68,8 +78,13 @@ impl HttpContext {
 
         let parts = Arc::new(Mutex::new(p));
 
-        let subdomain = if let Some(host) = req.uri().host() {
-            let pieces = host.split(".").map(String::from).collect::<Vec<String>>();
+        let subdomain = if let Some(host) = req.headers().get("host") {
+            let pieces = host
+                .to_str()
+                .unwrap()
+                .split(".")
+                .map(String::from)
+                .collect::<Vec<String>>();
             if pieces.len() > 1 {
                 pieces.first().cloned().map(Arc::new)
             } else {
@@ -89,6 +104,7 @@ impl HttpContext {
             ip: None,
             info: req.extensions().get::<ConnectInfo<_>>().cloned(),
             cookie_jar: Arc::new(RwLock::new(Some(CookieJar::from_headers(req.headers())))),
+            named_route_service: NamedRoutesService::new(),
         }
     }
 
@@ -178,8 +194,8 @@ impl HttpContext {
         }
 
         // foo.com or 127.0.0.1
-        if let Some(host) = self.uri.host() {
-            full_path.push_str(host);
+        if let Some(host) = self.host() {
+            full_path.push_str(&host);
         }
 
         // /home or /home?a=1&b=2
@@ -195,8 +211,8 @@ impl HttpContext {
     }
 
     pub fn host(&self) -> Option<String> {
-        if let Some(host) = self.uri.host() {
-            return Some(host.to_string());
+        if let Some(host) = self.header("host") {
+            return Some(host.to_str().unwrap_or_default().to_string());
         }
 
         None
