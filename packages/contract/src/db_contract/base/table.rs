@@ -244,10 +244,7 @@ impl TableBlueprint {
         })
     }
 
-    pub fn ulid_table_fk<F: TableModel>(
-        &mut self,
-        cascade_delete: bool,
-    ) -> &mut ColumnBlueprint {
+    pub fn ulid_table_fk<F: TableModel>(&mut self, cascade_delete: bool) -> &mut ColumnBlueprint {
         let foreign_table = F::table_name();
         let id = F::id_column();
         let name = to_fk_column(foreign_table, Some(id));
@@ -262,10 +259,7 @@ impl TableBlueprint {
         })
     }
 
-    pub fn uuid_table_fk<F: TableModel>(
-        &mut self,
-        cascade_delete: bool,
-    ) -> &mut ColumnBlueprint {
+    pub fn uuid_table_fk<F: TableModel>(&mut self, cascade_delete: bool) -> &mut ColumnBlueprint {
         let foreign_table = F::table_name();
         let id = F::id_column();
         let name = to_fk_column(foreign_table, Some(id));
@@ -296,10 +290,7 @@ impl TableBlueprint {
         )
     }
 
-    pub fn id_table_fk<F: TableModel>(
-        &mut self,
-        cascade_delete: bool,
-    ) -> &mut ColumnBlueprint {
+    pub fn id_table_fk<F: TableModel>(&mut self, cascade_delete: bool) -> &mut ColumnBlueprint {
         let foreign_table = F::table_name();
         let id = F::id_column();
         let name = to_fk_column(foreign_table, Some(id));
