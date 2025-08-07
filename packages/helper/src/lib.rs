@@ -1,6 +1,6 @@
 pub mod base64;
 pub mod hash;
-pub mod security;
+pub mod random;
 pub mod snowflake;
 pub mod time;
 pub mod ulid;
