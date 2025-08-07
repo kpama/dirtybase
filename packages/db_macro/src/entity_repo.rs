@@ -79,7 +79,16 @@ pub fn build_entity_repo(
     let mut append_trash_filter = quote! {};
     let mut with_trashed = quote! {};
     let mut trashed_only = quote! {};
-    let is_soft_deletable = !tbl_attr.no_soft_delete;
+    let soft_deletable = !tbl_attr.no_soft_delete;
+    let created_at = format_ident!("{}", tbl_attr.created_at_col);
+    let updated_at = format_ident!("{}", tbl_attr.updated_at_col);
+    let deleted_at = format_ident!("{}", tbl_attr.deleted_at_col);
+    let id_field = format_ident!("{}", tbl_attr.id_field);
+    let id_type = format_ident!(
+        "{}",
+        columns_attributes.get(&tbl_attr.id_field).unwrap().the_type
+    );
+
     let instance = quote! {
         let mut instance = Self {
             builder:  ::dirtybase_contract::db_contract::base::query::QueryBuilder::new(
@@ -91,7 +100,86 @@ pub fn build_entity_repo(
         };
     };
 
-    if is_soft_deletable {
+    // insert
+    let set_created_at = if tbl_attr.no_timestamp {
+        quote! {}
+    } else {
+        quote! {
+            record.#created_at = Some(::dirtybase_helper::time::current_datetime());
+        }
+    };
+    let insert_method = quote! {
+        pub async fn insert(&mut self, mut record: #ident) {
+            #set_created_at
+            self.manager.insert_into::<#ident>(record).await;
+        }
+    };
+
+    // update
+    let set_updated_at = if tbl_attr.no_timestamp {
+        quote! {}
+    } else {
+        quote! {
+            record.#updated_at= Some(::dirtybase_helper::time::current_datetime());
+        }
+    };
+    let update_method = quote! {
+        pub async fn update(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_contract::anyhow::Error>{
+            #set_updated_at
+            let id = record.#id_field.clone();
+            self.manager.update_table::<#ident>(record, |qb| {
+                qb.is_eq(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column(), id.clone());
+            }).await;
+            match self.by_id(id).await? {
+                Some(v) =>Ok(v),
+                None => Err(::dirtybase_contract::anyhow::anyhow!("model not found"))
+            }
+        }
+    };
+
+    let mut restore_method = quote! {};
+
+    // destroy record
+    let destroy_method = quote! {
+        pub async fn destroy(&mut self, record: #ident) -> Result<(), ::dirtybase_contract::anyhow::Error> {
+            let id = record.#id_field.clone();
+            self.manager.delete_from_table::<#ident>(|qb|{
+                qb.is_eq(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column(), id);
+            }).await
+        }
+    };
+
+    let mut delete_method = quote! {
+        pub async fn delete(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_contract::anyhow::Error> {
+            let id = record.#id_field.clone();
+            _= self.manager.delete_from_table::<#ident>(|qb|{
+                qb.is_eq(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column(),  id);
+            }).await?;
+
+            Ok(record)
+        }
+    };
+
+    if soft_deletable {
+        delete_method = quote! {
+            pub async fn delete(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_contract::anyhow::Error>{
+                record.#deleted_at = Some(::dirtybase_helper::time::current_datetime());
+                self.update(record).await
+            }
+        };
+
+        restore_method = quote! {
+            pub async fn restore(&mut self, id: #id_type) {
+                let mut cv = ::std::collections::HashMap::new();
+                cv.insert(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap().to_string(), ());
+                self.manager.update_table::<#ident>(cv, |qb|{
+                    qb.is_eq(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column(), id.clone());
+                }).await;
+
+                self.by_id(id).await;
+            }
+        };
+
         append_trash_filter = quote! {
             if !self.eager.contains(&"_soft_delete".to_string()) {
                 self.builder.is_null(
@@ -198,6 +286,17 @@ pub fn build_entity_repo(
                     _ => Ok(None)
                 }
             }
+
+            pub async fn by_id(&mut self, id: #id_type) -> Result<Option<#ident>, ::dirtybase_contract::anyhow::Error> {
+                self.builder.is_eq(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column(), id);
+                self.first().await
+            }
+
+            #insert_method
+            #update_method
+            #delete_method
+            #destroy_method
+            #restore_method
         }
     }
 }
