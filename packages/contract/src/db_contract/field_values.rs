@@ -149,6 +149,19 @@ where
     }
 }
 
+impl<T> From<&Option<T>> for FieldValue
+where
+    T: Clone + Into<FieldValue>,
+{
+    fn from(value: &Option<T>) -> Self {
+        if let Some(v) = value {
+            v.clone().into()
+        } else {
+            Self::NotSet
+        }
+    }
+}
+
 impl<T> From<Vec<T>> for FieldValue
 where
     T: Into<FieldValue>,
