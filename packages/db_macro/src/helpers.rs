@@ -339,7 +339,7 @@ pub(crate) fn build_into_handlers(
                 quote! {
                     pub fn #fn_name(&self) ->Option<::dirtybase_contract::db_contract::field_values::FieldValue> {
                         if let Some(value) = &self.#struct_field {
-                            Some(::dirtybase_contract::db_contract::field_values::FieldValue::from(self))
+                            Some(::dirtybase_contract::db_contract::field_values::FieldValue::from(value))
                         } else {
                             None
                         }
@@ -359,7 +359,7 @@ pub(crate) fn build_into_handlers(
         } else if item.1.embedded {
             quote! {
                 pub fn #fn_name(&self) ->Option<::dirtybase_contract::db_contract::field_values::FieldValue> {
-                     Some(::dirtybase_contract::db_contract::field_values::FieldValue::from(self))
+                     Some(::dirtybase_contract::db_contract::field_values::FieldValue::from(&self.#struct_field))
                     }
                 }
             } else {
