@@ -537,14 +537,14 @@ impl SqliteSchemaManager {
         if let Some(default) = &column.default {
             the_type.push_str(" DEFAULT ");
             match default {
-                ColumnDefault::CreatedAt => the_type.push_str("CURRENT_TIMESTAMP"),
+                ColumnDefault::CreatedAt => (), // the_type.push_str("CURRENT_TIMESTAMP"),
                 ColumnDefault::Custom(d) => the_type.push_str(&format!("'{d}'")),
                 ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
                 ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
                 ColumnDefault::Uuid => (), // the_type.push_str("GUID()"),
                 ColumnDefault::Ulid => (),
-                ColumnDefault::UpdatedAt => the_type.push_str("CURRENT_TIMESTAMP"),
+                ColumnDefault::UpdatedAt => (), // the_type.push_str("CURRENT_TIMESTAMP"),
                 ColumnDefault::Zero => the_type.push('0'),
             };
         }
