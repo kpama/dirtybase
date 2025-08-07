@@ -204,6 +204,11 @@ impl Manager {
         self.create_insert_query(table_name, rows, true).await
     }
 
+    /// Insert or update if a record exists with the specified `unique` constrains
+    ///
+    /// The `update` slice are the fields that should be updated if the record already exist
+    ///
+    /// The `unique` slice are the fields used to find an existing record
     pub async fn upsert<I: ToColumnAndValue>(
         &self,
         table_name: &str,
