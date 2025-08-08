@@ -1,7 +1,6 @@
 mod config;
 
 pub mod command;
-pub mod model;
 
 use std::convert::Infallible;
 use std::ops::Deref;
@@ -88,8 +87,8 @@ impl App {
     }
 
     /// Setup a quick web application
-    /// Instead of creating an extension, ths method can be used
-    /// to register web routers and middlewares.
+    /// Instead of creating an extension, this method can be used
+    /// to register web routers and middleware.
     pub async fn setup_web<F>(&self, mut callback: F)
     where
         F: FnMut(RouterManager, &mut WebMiddlewareManager) -> RouterManager,

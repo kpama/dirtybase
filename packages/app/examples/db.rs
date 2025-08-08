@@ -51,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 #[derive(Debug, Clone, Default, DirtyTable)]
-#[dirty(id = "user_id")]
+#[dirty(id = "user_id", no_timestamp, no_soft_delete)]
 struct Score {
     user_id: IntegerField,
     points: IntegerField,
