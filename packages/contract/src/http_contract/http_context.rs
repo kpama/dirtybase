@@ -215,6 +215,10 @@ impl HttpContext {
             return Some(host.to_str().unwrap_or_default().to_string());
         }
 
+        if let Some(host) = self.uri.host() {
+            return Some(host.to_string());
+        }
+
         None
     }
 
