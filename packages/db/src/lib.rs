@@ -48,7 +48,7 @@ pub fn make_manager(
     )
 }
 
-pub async fn setup_pool_reslovers() {
+pub async fn setup_pool_resolvers() {
     MariadbPoolManager::register().await;
     MysqlPoolManager::register().await;
     PostgresPoolManager::register().await;
