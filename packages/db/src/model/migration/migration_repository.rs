@@ -1,7 +1,8 @@
 use dirtybase_contract::db_contract::{base::manager::Manager, types::StringField};
+use dirtybase_helper::time::current_datetime;
 use std::collections::{BTreeMap, HashMap};
 
-use super::{BATCH_COLUMN, MigrationEntity, NAME_COLUMN, TABLE_NAME};
+use super::{BATCH_COLUMN, CREATED_AT_COLUMN, MigrationEntity, NAME_COLUMN, TABLE_NAME};
 
 pub struct MigrationRepository {
     manager: Manager,
@@ -92,6 +93,7 @@ impl MigrationRepository {
 
         kv.insert(NAME_COLUMN.to_string(), name.to_string().into());
         kv.insert(BATCH_COLUMN.to_string(), batch.into());
+        kv.insert(CREATED_AT_COLUMN.to_string(), current_datetime().into());
 
         _ = self.manager.insert(TABLE_NAME, kv).await;
 

@@ -1,3 +1,12 @@
+use crate::base::{
+    column::{ColumnBlueprint, ColumnDefault, ColumnType},
+    query::{QueryAction, QueryBuilder},
+    query_conditions::Condition,
+    query_operators::Operator,
+    schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
+    table::TableBlueprint,
+};
+use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAndValue};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use dirtybase_contract::db_contract::{
@@ -6,66 +15,83 @@ use dirtybase_contract::db_contract::{
 };
 use futures::stream::TryStreamExt;
 use sqlx::{
-    Arguments, Column, MySql, Pool, Row,
-    mysql::{MySqlArguments, MySqlRow},
+    Arguments, Column, PgTransaction, Pool, Postgres, Row,
+    postgres::{PgArguments, PgRow},
     types::chrono,
 };
 use std::{collections::HashMap, sync::Arc};
 
-use crate::{
-    base::{
-        column::{ColumnBlueprint, ColumnDefault, ColumnType},
-        query::{QueryAction, QueryBuilder},
-        query_conditions::Condition,
-        query_operators::Operator,
-        schema::{DatabaseKind, RelationalDbTrait, SchemaManagerTrait},
-        table::TableBlueprint,
-    },
-    field_values::FieldValue,
-    query_values::QueryValue,
-    types::ColumnAndValue,
-};
+const LOG_TARGET: &str = "postgresql_db_driver";
+pub const POSTGRES_KIND: &str = "postgres";
 
-const LOG_TARGET: &str = "mysql_db_driver";
-pub const MYSQL_KIND: &str = "mysql";
-
-pub struct MySqlSchemaManager {
-    db_pool: Arc<Pool<MySql>>,
+pub struct PostgresSchemaManager {
+    db_pool: Arc<Pool<Postgres>>,
+    trans: Option<PgTransaction<'static>>,
 }
 
-impl MySqlSchemaManager {
-    pub fn new(db_pool: Arc<Pool<MySql>>) -> Self {
-        Self { db_pool }
+impl PostgresSchemaManager {
+    pub fn new(db_pool: Arc<Pool<Postgres>>) -> Self {
+        Self {
+            db_pool,
+            trans: None,
+        }
+    }
+
+    pub fn new_trans(db_pool: Arc<Pool<Postgres>>, trans: PgTransaction<'static>) -> Self {
+        Self {
+            db_pool,
+            trans: Some(trans),
+        }
     }
 }
 
 #[async_trait]
-impl RelationalDbTrait for MySqlSchemaManager {
+impl RelationalDbTrait for PostgresSchemaManager {
     fn kind(&self) -> DatabaseKind {
-        MYSQL_KIND.into()
+        POSTGRES_KIND.into()
     }
 }
 
 #[async_trait]
-impl SchemaManagerTrait for MySqlSchemaManager {
-    fn fetch_table_for_update(&self, name: &str) -> TableBlueprint {
-        TableBlueprint::new(name)
+impl SchemaManagerTrait for PostgresSchemaManager {
+    async fn begin(&mut self) -> Result<Box<dyn SchemaManagerTrait>, anyhow::Error> {
+        match self.db_pool.begin().await {
+            Ok(trans) => Ok(Box::new(Self::new_trans(self.db_pool.clone(), trans))),
+            Err(e) => Err(e.into()),
+        }
     }
-    async fn has_table(&self, name: &str) -> Result<bool, anyhow::Error> {
-        let query = "SELECT table_name FROM INFORMATION_SCHEMA.TABLES WHERE table_name = ? AND table_schema = ?";
 
-        let database = self
-            .db_pool
-            .connect_options()
-            .as_ref()
-            .get_database()
-            .unwrap()
-            .to_string();
+    async fn commit(&mut self) -> Result<(), anyhow::Error> {
+        if let Some(trans) = self.trans.take() {
+            if let Err(e) = trans.commit().await {
+                return Err(e.into());
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn rollback(&mut self) -> Result<(), anyhow::Error> {
+        if let Some(trans) = self.trans.take() {
+            if let Err(e) = trans.rollback().await {
+                return Err(e.into());
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn has_table(&mut self, name: &str) -> Result<bool, anyhow::Error> {
+        let query = "SELECT EXISTS ( SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1);";
 
         let result = sqlx::query(query)
             .bind(name)
-            .bind(database)
-            .map(|_| true)
+            .map(|row: PgRow| {
+                if let Ok(exists) = row.try_get::<bool, &str>("exists") {
+                    return exists;
+                }
+                false
+            })
             .fetch_one(self.db_pool.as_ref())
             .await;
 
@@ -73,20 +99,24 @@ impl SchemaManagerTrait for MySqlSchemaManager {
     }
 
     async fn stream_result(
-        &self,
+        &mut self,
         query_builder: &QueryBuilder,
         sender: tokio::sync::mpsc::Sender<ColumnAndValue>,
     ) -> Result<(), anyhow::Error> {
-        let mut params = MySqlArguments::default();
+        let mut params = PgArguments::default();
+
         let statement = self.build_query(query_builder, &mut params)?;
 
         let query = sqlx::query_with(&statement, params);
+        // for p in &params {
+        //     query = query.bind::<&str>(p);
+        // }
 
         let mut rows = query.fetch(self.db_pool.as_ref());
         while let Ok(result) = rows.try_next().await {
             if let Some(row) = result {
                 if let Err(e) = sender.send(self.row_to_column_value(&row)).await {
-                    log::error!(target: LOG_TARGET, "could not send mpsc stream: {e}");
+                    log::error!(target: LOG_TARGET, "could not send mpsc stream: {}", &e);
                     return Err(anyhow::anyhow!(e));
                 }
             } else {
@@ -97,35 +127,35 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         Ok(())
     }
 
-    async fn drop_table(&self, name: &str) -> Result<(), anyhow::Error> {
+    async fn drop_table(&mut self, name: &str) -> Result<(), anyhow::Error> {
         if self.has_table(name).await? {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
-            return self.do_execute(query).await;
+            return self.execute(query).await;
         }
 
-        Err(anyhow!("could not drop the table"))
+        Ok(())
     }
 
-    async fn apply(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
+    async fn apply(&mut self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         self.do_apply(table).await
     }
 
-    async fn execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
+    async fn execute(&mut self, query: QueryBuilder) -> anyhow::Result<()> {
         self.do_execute(query).await
     }
 
     async fn fetch_all(
-        &self,
+        &mut self,
         query_builder: &QueryBuilder,
     ) -> Result<Option<Vec<HashMap<String, FieldValue>>>, anyhow::Error> {
         let mut results = Vec::new();
+        let mut params = PgArguments::default();
 
-        let mut params = MySqlArguments::default();
         let statement = self.build_query(query_builder, &mut params)?;
 
         let query = sqlx::query_with(&statement, params);
-        let mut rows = query.fetch(self.db_pool.as_ref());
 
+        let mut rows = query.fetch(self.db_pool.as_ref());
         loop {
             let next = rows.try_next().await;
             match next {
@@ -146,13 +176,13 @@ impl SchemaManagerTrait for MySqlSchemaManager {
     }
 
     async fn fetch_one(
-        &self,
+        &mut self,
         query_builder: &QueryBuilder,
     ) -> Result<Option<ColumnAndValue>, anyhow::Error> {
-        let mut params = MySqlArguments::default();
+        let mut params = PgArguments::default();
         let statement = self.build_query(query_builder, &mut params)?;
-
         let query = sqlx::query_with(&statement, params);
+
         return match query.fetch_optional(self.db_pool.as_ref()).await {
             Ok(result) => match result {
                 Some(row) => Ok(Some(self.row_to_column_value(&row))),
@@ -162,7 +192,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         };
     }
 
-    async fn raw_insert(&self, sql: &str, row: Vec<FieldValue>) -> Result<bool, anyhow::Error> {
+    async fn raw_insert(&mut self, sql: &str, row: Vec<FieldValue>) -> Result<bool, anyhow::Error> {
         let mut query = sqlx::query(sql);
         for field in row {
             query = query.bind(field.to_string());
@@ -173,7 +203,11 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         }
     }
 
-    async fn raw_update(&self, sql: &str, params: Vec<FieldValue>) -> Result<u64, anyhow::Error> {
+    async fn raw_update(
+        &mut self,
+        sql: &str,
+        params: Vec<FieldValue>,
+    ) -> Result<u64, anyhow::Error> {
         let mut query = sqlx::query(sql);
         for p in params {
             query = query.bind(p.to_string());
@@ -185,24 +219,28 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         }
     }
 
-    async fn raw_delete(&self, sql: &str, params: Vec<FieldValue>) -> Result<u64, anyhow::Error> {
+    async fn raw_delete(
+        &mut self,
+        sql: &str,
+        params: Vec<FieldValue>,
+    ) -> Result<u64, anyhow::Error> {
         self.raw_update(sql, params).await
     }
 
     async fn raw_select(
-        &self,
+        &mut self,
         _sql: &str,
         _params: Vec<FieldValue>,
     ) -> Result<Vec<ColumnAndValue>, anyhow::Error> {
         todo!();
     }
 
-    async fn raw_statement(&self, _sql: &str) -> Result<bool, anyhow::Error> {
+    async fn raw_statement(&mut self, _sql: &str) -> Result<bool, anyhow::Error> {
         todo!();
     }
 }
 
-impl MySqlSchemaManager {
+impl PostgresSchemaManager {
     async fn do_apply(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         return if table.view_query.is_some() {
             // working with view table
@@ -213,8 +251,8 @@ impl MySqlSchemaManager {
         };
     }
 
-    async fn do_execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
-        let mut params = MySqlArguments::default();
+    async fn do_execute(&mut self, query: QueryBuilder) -> anyhow::Result<()> {
+        let mut params = PgArguments::default();
 
         let mut sql;
         match query.action() {
@@ -223,7 +261,7 @@ impl MySqlSchemaManager {
                 do_soft_insert,
             } => {
                 sql = format!(
-                    "INSERT {} INTO {} ",
+                    "INSERT {} INTO \"{}\" ",
                     if *do_soft_insert { "IGNORE" } else { "" },
                     query.table()
                 );
@@ -238,18 +276,25 @@ impl MySqlSchemaManager {
                 sql = self.build_insert_data(&mut params, rows, sql)?;
 
                 if !unique.is_empty() && !to_update.is_empty() {
-                    let mut update_values = Vec::new();
-
-                    for entry in to_update {
-                        update_values.push(format!("`{entry}` = VALUES(`{entry}`)"));
-                    }
                     sql = format!(
-                        "{} ON DUPLICATE KEY UPDATE {}",
+                        "{} ON CONFLICT ({}) ",
                         sql,
-                        update_values.join(",")
+                        unique
+                            .iter()
+                            .map(|e| format!("\"{e}\""))
+                            .collect::<Vec<String>>()
+                            .join(",")
                     );
+
+                    let mut update_values = Vec::new();
+                    for entry in to_update {
+                        update_values.push(format!("\"{entry}\" = \"excluded\".\"{entry}\""));
+                    }
+
+                    sql = format!("{} DO UPDATE SET {}", sql, update_values.join(","));
                 }
             }
+
             QueryAction::Update(column_values) => {
                 let mut columns = Vec::new();
                 for entry in column_values {
@@ -258,29 +303,30 @@ impl MySqlSchemaManager {
                         self.field_value_to_args(entry.1, &mut params)?;
                     }
                 }
-                sql = format!("UPDATE `{}` SET ", query.table());
+                sql = format!("UPDATE \"{}\" SET ", query.table());
                 for entry in columns.iter().enumerate() {
+                    let index = entry.0 + 1;
                     if entry.0 > 0 {
-                        sql = format!("{}, `{}` = ? ", sql, *entry.1);
+                        sql = format!("{}, \"{}\" = ${} ", sql, *entry.1, index);
                     } else {
-                        sql = format!("{} `{}` = ? ", sql, *entry.1);
+                        sql = format!("{} \"{}\" = ${} ", sql, *entry.1, index);
                     }
                 }
 
                 // joins
-                sql = format!("{} {}", sql, self.build_join(&query, &mut params)?);
+                sql = format!("{} {}", sql, self.build_join(&query)?);
                 // where
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
             QueryAction::Delete => {
                 sql = format!("DELETE FROM {0} ", query.table());
                 // joins
-                sql = format!("{} {}", sql, self.build_join(&query, &mut params)?);
+                sql = format!("{} {}", sql, self.build_join(&query)?);
                 // where
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
             QueryAction::DropTable => {
-                sql = format!("DROP TABLE IF EXISTS {}", query.table());
+                sql = format!("DROP TABLE IF EXISTS {};", query.table());
             }
             QueryAction::RenameColumn { old, new } => {
                 let table = query.table();
@@ -292,16 +338,33 @@ impl MySqlSchemaManager {
             }
             QueryAction::DropColumn(column) => {
                 let table = query.table();
-                sql = format!("ALTER TABLE {table} DROP {column}");
+                sql = format!("ALTER TABLE {table} DROP COLUMN IF EXISTS {column}");
             }
             _ => {
                 sql = "".into();
             }
         }
 
-        let result = sqlx::query_with(&sql, params)
-            .execute(self.db_pool.as_ref())
-            .await;
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query_with(&sql, params).execute(&mut *trans).await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else {
+                if let Err(e) = trans.rollback().await {
+                    tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                    return Err(e.into());
+                }
+            }
+
+            result
+        } else {
+            sqlx::query_with(&sql, params)
+                .execute(self.db_pool.as_ref())
+                .await
+        };
 
         match result {
             Ok(r) => {
@@ -317,10 +380,10 @@ impl MySqlSchemaManager {
 
     async fn create_or_replace_view(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         if let Some(query) = &table.view_query {
-            let mut params = MySqlArguments::default();
+            let mut params = PgArguments::default();
             let sql = self.build_query(query, &mut params)?;
 
-            let query = format!("CREATE OR REPLACE VIEW `{}` AS ({})", &table.name, sql);
+            let query = format!("CREATE OR REPLACE VIEW \"{}\" AS ({})", &table.name, sql);
 
             let result = sqlx::query_with(&query, params)
                 .execute(self.db_pool.as_ref())
@@ -333,9 +396,8 @@ impl MySqlSchemaManager {
                     log::error!(
                         "Could not create or replace view '{}': {:#?}",
                         &table.name,
-                        &error
+                        error
                     );
-
                     return Err(anyhow::anyhow!(error));
                 }
             }
@@ -345,16 +407,17 @@ impl MySqlSchemaManager {
     }
 
     async fn apply_table_changes(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
+        let mut query = String::new();
         let columns: Vec<String> = table
             .columns()
             .iter()
-            .map(|column| self.create_column(column))
+            .map(|column| self.create_column(column, table.is_new()))
             .collect();
 
-        let mut query = if table.is_new() {
-            format!("CREATE TABLE `{}`", &table.name)
+        query = if table.is_new() {
+            format!("{} CREATE TABLE IF NOT EXISTS \"{}\"", &query, &table.name)
         } else {
-            format!("ALTER TABLE `{}`", &table.name)
+            format!("{} ALTER TABLE IF EXISTS \"{}\"", &query, &table.name)
         };
 
         if table.is_new() {
@@ -362,11 +425,7 @@ impl MySqlSchemaManager {
                 query = format!("{} ({})", query, columns.join(","));
             }
         } else if !columns.is_empty() {
-            query = format!("{} ADD {}", query, columns.join(","));
-        }
-
-        if table.is_new() {
-            query = format!("{query} ENGINE='InnoDB';");
+            query = format!("{} ADD COLUMN IF NOT EXISTS {}", query, columns.join(","));
         }
 
         let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
@@ -407,24 +466,35 @@ impl MySqlSchemaManager {
                 match entry {
                     IndexType::Index(index) | IndexType::Primary(index) => {
                         if index.delete_index() {
-                            sql = format!("DROP INDEX {}", index.name());
+                            sql = format!("DROP INDEX IF EXISTS {}.{}", &table.name, index.name());
                         } else {
                             sql = format!(
-                                "CREATE INDEX IF NOT EXISTS {} ON {} ({})",
+                                "CREATE INDEX IF NOT EXISTS '{}' ON {} ({})",
                                 index.name(),
                                 &table.name,
-                                index.concat_columns()
+                                index
+                                    .columns()
+                                    .iter()
+                                    .map(|col| { format!("\"{col}\"") })
+                                    .collect::<Vec<String>>()
+                                    .join(",")
                             );
                         }
                     }
                     IndexType::Unique(index) => {
                         if index.delete_index() {
-                            sql = format!("DROP INDEX {}", index.name());
+                            sql = format!("DROP INDEX IF EXISTS {}.{}", &table.name, index.name());
                         } else {
                             sql = format!(
-                                "ADD UNIQUE INDEX {} ({})",
+                                "CREATE UNIQUE  INDEX IF NOT EXISTS \"{}\" ON \"{}\" ({})",
                                 index.name(),
-                                index.concat_columns()
+                                &table.name,
+                                index
+                                    .columns()
+                                    .iter()
+                                    .map(|col| { format!("\"{col}\"") })
+                                    .collect::<Vec<String>>()
+                                    .join(",")
                             );
                         }
                     }
@@ -434,9 +504,9 @@ impl MySqlSchemaManager {
                 match index_result {
                     Ok(_) => log::info!("table index created"),
                     Err(e) => {
-                        log::error!("mysql: {}", &sql);
+                        log::error!("postgres: {}", &sql);
                         log::error!("could not create table index: {}", &e);
-                        return Err(anyhow::anyhow!(e));
+                        return Err(anyhow::anyhow!("could not create table index: {}", &e));
                     }
                 }
             }
@@ -445,87 +515,86 @@ impl MySqlSchemaManager {
         Ok(())
     }
 
-    fn create_column(&self, column: &ColumnBlueprint) -> String {
-        let mut entry = format!("`{}`", &column.name);
+    fn create_column(&self, column: &ColumnBlueprint, is_new_table: bool) -> String {
+        let mut entry = format!("\"{}\"", &column.name);
         let mut the_type = " ".to_owned();
 
         // column type
         match column.column_type {
-            ColumnType::AutoIncrementId => {
-                the_type.push_str("bigint(20) AUTO_INCREMENT PRIMARY KEY")
-            }
-            ColumnType::Boolean => the_type.push_str("tinyint(1)"),
-            ColumnType::Char(length) => {
-                the_type.push_str(&format!("char({length}) COLLATE 'utf8mb4_unicode_ci'"))
-            }
-            ColumnType::Datetime => the_type.push_str("datetime"),
-            ColumnType::Timestamp => the_type.push_str("timestamp"),
+            ColumnType::AutoIncrementId => the_type.push_str("BIGSERIAL PRIMARY KEY"),
+            ColumnType::Boolean => the_type.push_str("BOOLEAN"),
+            ColumnType::Char(_) => the_type.push_str("VARCHAR"),
+            ColumnType::Timestamp | ColumnType::Datetime => the_type.push_str("TIMESTAMPTZ"),
             ColumnType::Date => the_type.push_str("DATE"),
-            ColumnType::Integer => the_type.push_str("bigint(20)"),
-            ColumnType::Json => the_type.push_str("json"),
-            ColumnType::Number | ColumnType::Float => the_type.push_str("double"),
-            ColumnType::Binary => the_type.push_str("BLOB"),
+            ColumnType::Integer => the_type.push_str("BIGINT"),
+            ColumnType::Json => the_type.push_str("JSONB"),
+            ColumnType::Number | ColumnType::Float => the_type.push_str("DOUBLE PRECISION"),
+            ColumnType::Binary => the_type.push_str("BYTEA"),
             ColumnType::String(length) => {
-                let q = format!("varchar({length}) COLLATE 'utf8mb4_unicode_ci'");
+                let q = format!("VARCHAR({length})");
                 the_type.push_str(q.as_str());
             }
-            ColumnType::Text => the_type.push_str("longtext"),
-            ColumnType::Uuid => the_type.push_str("BINARY(16)"),
+            ColumnType::Text => the_type.push_str("TEXT"),
+            ColumnType::Uuid => the_type.push_str("UUID"),
             ColumnType::Enum(ref opt) => {
-                let c = format!(
-                    "ENUM({})",
-                    opt.iter()
+                if column.check.is_none() {
+                    let list = opt
+                        .iter()
                         .map(|e| format!("'{e}'"))
                         .collect::<Vec<String>>()
-                        .join(","),
-                );
-                the_type.push_str(c.as_str())
+                        .join(",");
+                    the_type.push_str(&format!(
+                        "VARCHAR(255) CONSTRAINT {0}_chk check (\"{0}\" in ({1}))",
+                        column.name, list
+                    ));
+                } else {
+                    the_type.push_str("VARCHAR(255)"); // the check will be added below
+                }
             }
         };
 
         // column is nullable
         if let Some(nullable) = column.is_nullable {
             if nullable {
-                the_type.push_str(" NULL ");
+                the_type.push_str(" NULL");
             } else {
-                the_type.push_str(" NOT NULL ");
+                the_type.push_str(" NOT NULL");
             }
         }
 
         // column is unique
         if column.is_unique {
-            the_type.push_str(" UNIQUE ");
-        }
-
-        // primary key
-        if column.is_primary {
-            the_type.push_str(" PRIMARY KEY ");
+            the_type.push_str(" UNIQUE");
         }
 
         // column default
         if let Some(default) = &column.default {
             the_type.push_str(" DEFAULT ");
             match default {
-                ColumnDefault::CreatedAt => (), // the_type.push_str("now()"),
+                // ColumnDefault::CreatedAt => (), // the_type.push_str("CURRENT_TIMESTAMP"),
                 ColumnDefault::Custom(d) => the_type.push_str(&format!("'{d}'")),
                 ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
                 ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
-                ColumnDefault::Uuid => (), // Seems to be not supportted the_type.push_str("SYS_GUID()"),
+                ColumnDefault::Uuid => (), // the_type.push_str("SYS_GUID()"),
                 ColumnDefault::Ulid => (),
-                ColumnDefault::UpdatedAt => (), // the_type.push_str("current_timestamp() ON UPDATE CURRENT_TIMESTAMP")
+                // ColumnDefault::UpdatedAt => (), // the_type.push_str("CURRENT_TIMESTAMP"),
                 ColumnDefault::Zero => the_type.push('0'),
             };
         }
 
         // column relationship
         if let Some(relationship) = &column.relationship {
-            the_type.push_str(&format!(
-                ", FOREIGN KEY (`{}`) REFERENCES `{}` (`{}`)",
-                &column.name,
-                &relationship.table(),
-                &relationship.column()
-            ));
+            if is_new_table {
+                the_type.push_str(&format!(
+                    ", FOREIGN KEY (\"{}\") REFERENCES \"{}\" (\"{}\")",
+                    &column.name,
+                    &relationship.table(),
+                    &relationship.column()
+                ));
+            } else {
+                // FIXME: Generate correct sql when altering
+            }
             if relationship.cascade_delete() {
                 the_type.push_str(" ON DELETE CASCADE");
             }
@@ -533,10 +602,25 @@ impl MySqlSchemaManager {
 
         // column constrain check
         if let Some(check) = &column.check {
-            the_type.push_str(&format!(
-                " CONSTRAINT {}_chk CHECK ({})",
-                &column.name, check
-            ));
+            match column.column_type {
+                ColumnType::Enum(ref opt) => {
+                    let list = opt
+                        .iter()
+                        .map(|e| format!("'{e}'"))
+                        .collect::<Vec<String>>()
+                        .join(",");
+                    the_type.push_str(&format!(
+                        " CONSTRAINT {0}_chk CHECK ({1} AND \"{0}\" in ({2}) )",
+                        &column.name, check, list
+                    ));
+                }
+                _ => {
+                    the_type.push_str(&format!(
+                        " CONSTRAINT {}_chk CHECK ({})",
+                        &column.name, check
+                    ));
+                }
+            }
         }
 
         entry.push_str(&the_type);
@@ -546,7 +630,7 @@ impl MySqlSchemaManager {
     fn build_query(
         &self,
         query: &QueryBuilder,
-        params: &mut MySqlArguments,
+        params: &mut PgArguments,
     ) -> Result<String, anyhow::Error> {
         let mut sql = "SELECT".to_owned();
 
@@ -580,7 +664,7 @@ impl MySqlSchemaManager {
         sql = format!("{} FROM {}", sql, query.table());
 
         // joins
-        sql = format!("{} {}", sql, self.build_join(query, params)?);
+        sql = format!("{} {}", sql, self.build_join(query)?);
 
         // wheres
         sql = format!("{} {}", sql, self.build_where_clauses(query, params)?);
@@ -599,17 +683,16 @@ impl MySqlSchemaManager {
             sql = format!("{sql} {limit}");
         }
 
-        //  offset
         // TODO: offset
+
+        if query.is_lock_for_update() {
+            sql = format!("{sql} FOR UPDATE");
+        }
 
         Ok(sql)
     }
 
-    fn build_join(
-        &self,
-        query: &QueryBuilder,
-        _params: &mut MySqlArguments,
-    ) -> Result<String, anyhow::Error> {
+    fn build_join(&self, query: &QueryBuilder) -> Result<String, anyhow::Error> {
         let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
             for a_join in joins.values() {
@@ -626,10 +709,14 @@ impl MySqlSchemaManager {
         Ok(sql)
     }
 
+    fn build_order_by(&self, query: &QueryBuilder) -> Option<String> {
+        query.order_by().map(|order| order.to_string())
+    }
+
     fn build_where_clauses(
         &self,
         query: &QueryBuilder,
-        params: &mut MySqlArguments,
+        params: &mut PgArguments,
     ) -> Result<String, anyhow::Error> {
         let mut wheres = "".to_owned();
         for where_join in query.where_clauses() {
@@ -646,14 +733,10 @@ impl MySqlSchemaManager {
         Ok(wheres)
     }
 
-    fn build_order_by(&self, query: &QueryBuilder) -> Option<String> {
-        query.order_by().map(|order| order.to_string())
-    }
-
     fn transform_condition(
         &self,
         condition: &Condition,
-        params: &mut MySqlArguments,
+        params: &mut PgArguments,
     ) -> Result<String, anyhow::Error> {
         let placeholder = match condition.value() {
             QueryValue::SubQuery(sub) => self.build_query(sub, params)?,
@@ -668,10 +751,10 @@ impl MySqlSchemaManager {
                     };
 
                     let mut placeholder = Vec::new();
-                    placeholder.resize(length, "?");
+                    placeholder.resize(length, format!("${}", params.len()));
                     placeholder.join(",")
                 } else {
-                    "?".to_owned()
+                    format!("${}", params.len())
                 }
             }
         };
@@ -684,7 +767,7 @@ impl MySqlSchemaManager {
     fn transform_value(
         &self,
         value: &QueryValue,
-        params: &mut MySqlArguments,
+        params: &mut PgArguments,
     ) -> Result<(), anyhow::Error> {
         match value {
             QueryValue::SubQuery(q) => {
@@ -698,13 +781,13 @@ impl MySqlSchemaManager {
         Ok(())
     }
 
-    fn row_to_column_value(&self, row: &MySqlRow) -> ColumnAndValue {
+    fn row_to_column_value(&self, row: &PgRow) -> ColumnAndValue {
         let mut this_row = HashMap::new();
 
         for col in row.columns() {
             let name = col.name().to_string();
             match col.type_info().to_string().as_str() {
-                "BOOLEAN" | "TINYINT(1)" => {
+                "BOOLEAN" | "TINYINT(1)" | "BOOL" => {
                     let v: bool = row.try_get::<i8, &str>(col.name()).unwrap_or_default() > 0;
                     this_row.insert(name, FieldValue::Boolean(v));
                 }
@@ -732,7 +815,7 @@ impl MySqlSchemaManager {
                         this_row.insert(name, 0_i32.into());
                     }
                 }
-                "BIGINT" => {
+                "BIGINT" | "INT8" => {
                     let v = row.try_get::<i64, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, v.into());
@@ -740,8 +823,16 @@ impl MySqlSchemaManager {
                         this_row.insert(name, 0_i64.into());
                     }
                 }
+                "FLOAT8" => {
+                    let v = row.try_get::<f64, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(name, v.into());
+                    } else {
+                        this_row.insert(name, 0_f64.into());
+                    }
+                }
                 "TINYINT UNSIGNED" => {
-                    let v = row.try_get::<u8, &str>(col.name());
+                    let v = row.try_get::<i8, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, (v as u32).into());
                     } else {
@@ -749,7 +840,7 @@ impl MySqlSchemaManager {
                     }
                 }
                 "SMALLINT UNSIGNED" => {
-                    let v = row.try_get::<u16, &str>(col.name());
+                    let v = row.try_get::<i16, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, (v as u32).into());
                     } else {
@@ -757,7 +848,7 @@ impl MySqlSchemaManager {
                     }
                 }
                 "INT UNSIGNED" => {
-                    let v = row.try_get::<u32, &str>(col.name());
+                    let v = row.try_get::<i32, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, v.into());
                     } else {
@@ -765,14 +856,14 @@ impl MySqlSchemaManager {
                     }
                 }
                 "BIGINT UNSIGNED" => {
-                    let v = row.try_get::<u64, &str>(col.name());
+                    let v = row.try_get::<i64, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, v.into());
                     } else {
                         this_row.insert(name, 0_u64.into());
                     }
                 }
-                "DOUBLE" | "FLOAT" => {
+                "DOUBLE" | "DOUBLE PRECISION" | "FLOAT" => {
                     let v = row.try_get::<f64, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, v.into());
@@ -787,7 +878,7 @@ impl MySqlSchemaManager {
                         this_row.insert(name, FieldValue::Null);
                     }
                 }
-                "TIMESTAMP" => {
+                "TIMESTAMP" | "TIMESTAMPTZ" => {
                     let v = row.try_get::<chrono::DateTime<chrono::Utc>, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, FieldValue::Timestamp(v));
@@ -827,6 +918,16 @@ impl MySqlSchemaManager {
                         this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
                     }
                 }
+                "JSONB" | "JSON" => {
+                    if let Ok(v) = row.try_get::<serde_json::Value, &str>(col.name()) {
+                        this_row.insert(col.name().to_string(), v.into());
+                    } else {
+                        this_row.insert(
+                            col.name().to_string(),
+                            serde_json::value::Value::Null.into(),
+                        );
+                    }
+                }
                 "NULL" => {
                     if let Ok(v) = row.try_get::<i64, &str>(col.name()) {
                         this_row.insert(name, v.into());
@@ -836,8 +937,16 @@ impl MySqlSchemaManager {
                         this_row.insert(name, v.into());
                     }
                 }
+                "UUID" => {
+                    if let Ok(v) = row.try_get::<sqlx::types::Uuid, &str>(col.name()) {
+                        this_row.insert(name, v.into());
+                    } else {
+                        this_row.insert(name, sqlx::types::Uuid::nil().into());
+                    }
+                }
                 _ => {
                     tracing::debug!(
+                        target: LOG_TARGET,
                         "unsupported field type : {:?} => value: {:#?}",
                         name,
                         col.type_info()
@@ -851,34 +960,28 @@ impl MySqlSchemaManager {
     fn field_value_to_args(
         &self,
         field: &FieldValue,
-        params: &mut MySqlArguments,
+        params: &mut PgArguments,
     ) -> Result<(), anyhow::Error> {
         build_field_value_to_args(field, params)
     }
 
     fn build_insert_data(
         &self,
-        params: &mut MySqlArguments,
+        params: &mut PgArguments,
         rows: &[ColumnAndValue],
         mut sql: String,
     ) -> Result<String, anyhow::Error> {
         if !rows.is_empty() {
-            let keys = rows
-                .first()
-                .unwrap()
-                .keys()
-                .cloned()
-                .collect::<Vec<String>>();
-
-            let placeholders = keys.iter().map(|_| "?").collect::<Vec<&str>>().join(",");
+            let first_row = rows.first().unwrap();
+            let keys = first_row.keys().cloned().collect::<Vec<String>>();
             let columns = keys
                 .iter()
-                .map(|e| format!("`{e}`"))
+                .map(|e| format!("\"{e}\""))
                 .collect::<Vec<String>>()
                 .join(",");
 
             sql = format!("{sql} ({columns}) VALUES ");
-
+            let mut placeholder_counter = 0;
             for a_row in rows.iter().enumerate() {
                 for col in &keys {
                     let field = a_row.1.get(col).unwrap();
@@ -886,6 +989,15 @@ impl MySqlSchemaManager {
                 }
                 let separator = if a_row.0 > 0 { "," } else { "" };
 
+                let placeholders = keys
+                    .iter()
+                    .enumerate()
+                    .map(|_| {
+                        placeholder_counter += 1;
+                        format!("${placeholder_counter}")
+                    })
+                    .collect::<Vec<String>>()
+                    .join(",");
                 sql = format!("{} {} ({})", sql, separator, &placeholders);
             }
         }
@@ -896,7 +1008,7 @@ impl MySqlSchemaManager {
     fn column_to_string(
         &self,
         column: &QueryColumn,
-        params: &mut MySqlArguments,
+        params: &mut PgArguments,
     ) -> Result<String, anyhow::Error> {
         let alias = column.alias().as_ref().cloned().unwrap_or_default().clone();
 
@@ -912,14 +1024,14 @@ impl MySqlSchemaManager {
             return match column.name() {
                 QueryColumnName::Name(n) => {
                     let full_name = if let Some(tbl) = column.table() {
-                        format!("`{tbl}`.`{n}`")
+                        format!("\"{tbl}\".\"{n}\"")
                     } else {
                         n.clone()
                     };
                     if alias.is_empty() {
-                        Ok(format!("({aggregate}({full_name})) as '{full_name}'"))
+                        Ok(format!("({aggregate}({full_name})) as \"{full_name}\""))
                     } else {
-                        Ok(format!("{aggregate}({full_name}) as '{alias}'"))
+                        Ok(format!("{aggregate}({full_name}) as \"{alias}\""))
                     }
                 }
                 QueryColumnName::SubQuery(query) => {
@@ -927,7 +1039,7 @@ impl MySqlSchemaManager {
                     if alias.is_empty() {
                         Ok(sql)
                     } else {
-                        Ok(format!("({aggregate}({sql})) as '{alias}'"))
+                        Ok(format!("({aggregate}({sql})) as \"{alias}\""))
                     }
                 }
             };
@@ -935,7 +1047,7 @@ impl MySqlSchemaManager {
         match column.name() {
             QueryColumnName::Name(n) => {
                 let full_name = if let Some(tbl) = column.table() {
-                    format!("`{tbl}`.`{n}`")
+                    format!("\"{tbl}\".\"{n}\"")
                 } else {
                     n.clone()
                 };
@@ -943,7 +1055,7 @@ impl MySqlSchemaManager {
                 if alias.is_empty() {
                     Ok(full_name.to_string())
                 } else {
-                    Ok(format!("{full_name} as '{alias}'"))
+                    Ok(format!("{full_name} as \"{alias}\""))
                 }
             }
             QueryColumnName::SubQuery(query) => {
@@ -951,7 +1063,7 @@ impl MySqlSchemaManager {
                 if alias.is_empty() {
                     Ok(sql)
                 } else {
-                    Ok(format!("({sql}) as '{alias}'"))
+                    Ok(format!("({sql}) as \"{alias}\""))
                 }
             }
         }
@@ -960,7 +1072,7 @@ impl MySqlSchemaManager {
 
 fn build_field_value_to_args(
     field: &FieldValue,
-    params: &mut MySqlArguments,
+    params: &mut PgArguments,
 ) -> Result<(), anyhow::Error> {
     match field {
         FieldValue::DateTime(dt) => {
@@ -978,7 +1090,6 @@ fn build_field_value_to_args(
         FieldValue::Uuid(d) => {
             _ = Arguments::add(params, d);
         }
-
         FieldValue::Object(d) => {
             _ = Arguments::add(params, sqlx::types::Json(d));
         }

@@ -112,6 +112,7 @@ pub async fn seed_tables(manager: &Manager) {
                             warehouse_id: warehouse.id,
                             product_id: product_id.clone(),
                             quantity: rng.random_range(1.0..=6000.0),
+                            ..Default::default()
                         },
                     )
                     .await;
@@ -168,6 +169,7 @@ pub async fn seed_tables(manager: &Manager) {
                         sales_order_id: order_id.clone(),
                         total: rng.random_range(10.0..=10000.0),
                         paid: rng.random_range(10.0..=10000.0),
+                        ..Default::default()
                     },
                 )
                 .await;

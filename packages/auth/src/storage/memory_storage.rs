@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use busybody::async_trait;
 use dirtybase_contract::{
-    auth_contract::{AuthUser, AuthUserPayload, AuthUserStorage},
+    auth_contract::{AuthUser, AuthUserPayload, AuthUserStorage, StorageResolver},
     db_contract::types::ArcUuid7,
 };
 use tokio::sync::RwLock;
@@ -12,9 +12,21 @@ pub struct AuthUserMemoryStorage {
     storage: RwLock<HashMap<ArcUuid7, AuthUser>>,
 }
 
+pub const NAME: &str = "memory";
+
 impl AuthUserMemoryStorage {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub async fn register() {
+        StorageResolver::register(NAME, |mut resolver| async move {
+            tracing::trace!("setting up memory auth storage");
+            resolver.set_storage(AuthUserMemoryStorage::new());
+
+            resolver
+        })
+        .await;
     }
 }
 

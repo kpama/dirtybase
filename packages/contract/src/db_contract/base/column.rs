@@ -45,8 +45,8 @@ impl ForeignKey {
 pub enum ColumnDefault {
     Custom(String),
     EmptyString,
-    CreatedAt,
-    UpdatedAt,
+    // CreatedAt,
+    // UpdatedAt,
     Zero,
     EmptyObject,
     EmptyArray,
@@ -109,7 +109,7 @@ impl ColumnBlueprint {
     }
 
     pub fn default_is_created_at(&mut self) -> &mut Self {
-        self.default = Some(ColumnDefault::CreatedAt);
+        // self.default = Some(ColumnDefault::CreatedAt);
         self
     }
 
@@ -124,7 +124,7 @@ impl ColumnBlueprint {
     }
 
     pub fn default_is_updated_at(&mut self) -> &mut Self {
-        self.default = Some(ColumnDefault::UpdatedAt);
+        // self.default = Some(ColumnDefault::UpdatedAt);
         self
     }
 
@@ -169,6 +169,11 @@ impl ColumnBlueprint {
 
     pub fn set_check(&mut self, check: &str) -> &mut Self {
         self.check = Some(check.to_string());
+        self
+    }
+
+    pub fn nullable(&mut self) -> &mut Self {
+        self.is_nullable = Some(true);
         self
     }
 

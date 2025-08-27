@@ -6,16 +6,17 @@ use std::{
 use crate::db_contract::{
     event::SchemeWroteEvent,
     field_values::FieldValue,
-    types::{ColumnAndValue, FromColumnAndValue, ToColumnAndValue},
+    types::{ColumnAndValue, ToColumnAndValue},
     DatabaseKindPoolCollection, TableModel,
 };
 
 use super::{
-    query::{EntityQueryBuilder, QueryBuilder},
-    schema::{DatabaseKind, SchemaManagerTrait, SchemaWrapper},
+    query::QueryBuilder,
+    schema::{DatabaseKind, SchemaManagerTrait, SchemaQuery},
     table::TableBlueprint,
 };
-use anyhow::{Ok, Result};
+use anyhow::Result;
+use futures::future::BoxFuture;
 use orsomafo::Dispatchable;
 
 #[derive(Clone)]
@@ -26,6 +27,7 @@ pub struct Manager {
     sticky_duration: i64,
     is_writable: bool,
     last_write_ts: Arc<AtomicI64>,
+    in_trans: bool,
 }
 
 impl Debug for Manager {
@@ -33,9 +35,6 @@ impl Debug for Manager {
         write!(f, "db manager: {}", &self.kind)
     }
 }
-
-// TODO: add: first or create
-// TODO: add: update or create
 
 impl Manager {
     pub fn new(
@@ -52,15 +51,12 @@ impl Manager {
             sticky_duration,
             is_writable,
             last_write_ts: Arc::default(),
+            in_trans: false,
         }
     }
 
-    // pub fn inner_ref(&self) -> Box<dyn SchemaManagerTrait> {
-    //     self.write_schema_manager().as_ref()
-    // }
-
     // Get a table or view for querying
-    pub fn select_from_table<F>(&self, table: &str, callback: F) -> SchemaWrapper
+    pub fn select_from_table<F>(&self, table: &str, callback: F) -> SchemaQuery
     where
         F: FnOnce(&mut QueryBuilder),
     {
@@ -68,13 +64,10 @@ impl Manager {
             QueryBuilder::new(table, super::query::QueryAction::Query { columns: None });
         callback(&mut query_builder);
 
-        SchemaWrapper {
-            query_builder,
-            inner: self.read_schema_manager(),
-        }
+        SchemaQuery::new(query_builder, self.clone())
     }
 
-    pub fn select_from<T>(&self, callback: impl FnOnce(&mut QueryBuilder)) -> SchemaWrapper
+    pub fn select_from<T>(&self, callback: impl FnOnce(&mut QueryBuilder)) -> SchemaQuery
     where
         T: TableModel,
     {
@@ -92,18 +85,8 @@ impl Manager {
         self.table(T::table_name())
     }
 
-    pub fn query_builder<T: FromColumnAndValue + Send + Sync + 'static>(
-        &self,
-        table: &str,
-    ) -> EntityQueryBuilder<T> {
-        EntityQueryBuilder::new(self.table(table), self.read_schema_manager())
-    }
-
-    pub fn execute_query(&self, query_builder: QueryBuilder) -> SchemaWrapper {
-        SchemaWrapper {
-            query_builder,
-            inner: self.read_schema_manager(),
-        }
+    pub fn execute_query(&self, query_builder: QueryBuilder) -> SchemaQuery {
+        SchemaQuery::new(query_builder, self.clone())
     }
 
     // Create a new table
@@ -113,11 +96,11 @@ impl Manager {
         callback: impl FnOnce(&mut TableBlueprint),
     ) -> Result<(), anyhow::Error> {
         if !self.has_table(name).await? {
-            let mut table = self.write_schema_manager().fetch_table_for_update(name);
+            let mut table = TableBlueprint::new(name);
             table.set_is_new(true);
 
             callback(&mut table);
-            self.write_schema_manager().apply(table).await?;
+            self.write_connection().await.apply(table).await?;
             self.dispatch_written_event();
 
             return Ok(());
@@ -132,11 +115,11 @@ impl Manager {
         callback: impl FnOnce(&mut TableBlueprint),
     ) -> Result<(), anyhow::Error> {
         if self.has_table(name).await? {
-            let mut table = self.write_schema_manager().fetch_table_for_update(name);
+            let mut table = TableBlueprint::new(name);
             table.set_is_new(false);
 
             callback(&mut table);
-            self.write_schema_manager().apply(table).await?;
+            self.write_connection().await.apply(table).await?;
             self.dispatch_written_event();
             return Ok(());
         }
@@ -155,9 +138,10 @@ impl Manager {
             super::query::QueryAction::Query { columns: None },
         );
         callback(&mut query);
-        let mut table = self.write_schema_manager().fetch_table_for_update(name);
+        let mut table = TableBlueprint::new(name);
+
         table.view_query = Some(query);
-        self.write_schema_manager().apply(table).await?;
+        self.write_connection().await.apply(table).await?;
         self.dispatch_written_event();
         Ok(())
     }
@@ -242,7 +226,7 @@ impl Manager {
             },
         );
 
-        self.write_schema_manager().execute(query).await?;
+        self.write_connection().await.execute(query).await?;
         self.dispatch_written_event();
         Ok(())
     }
@@ -258,7 +242,8 @@ impl Manager {
             super::query::QueryAction::Update(row.to_column_value()?),
         );
         callback(&mut query);
-        self.write_schema_manager().execute(query).await?;
+
+        self.write_connection().await.execute(query).await?;
         self.dispatch_written_event();
         Ok(())
     }
@@ -278,7 +263,7 @@ impl Manager {
     ) -> Result<()> {
         let mut query = QueryBuilder::new(table_name, super::query::QueryAction::Delete);
         callback(&mut query);
-        self.write_schema_manager().execute(query).await?;
+        self.write_connection().await.execute(query).await?;
         self.dispatch_written_event();
         Ok(())
     }
@@ -290,27 +275,36 @@ impl Manager {
         self.delete(T::table_name(), callback).await
     }
 
-    pub async fn transaction<R>(&self, _callback: impl FnMut(&mut QueryBuilder) -> R) -> Result<R> {
-        todo!()
+    pub async fn transaction<R>(
+        &self,
+        callback: impl FnOnce(Self) -> BoxFuture<'static, Result<R>> + Send,
+    ) -> Result<R>
+    where
+        R: Send + 'static,
+    {
+        let mut trans = self.clone();
+        trans.in_trans = true;
+
+        (callback)(trans).await
     }
 
     pub async fn has_table(&self, name: &str) -> Result<bool, anyhow::Error> {
-        self.read_schema_manager().has_table(name).await
+        self.read_connection().await.has_table(name).await
     }
 
     pub async fn drop_table(&self, table_name: &str) -> Result<(), anyhow::Error> {
-        let _query = QueryBuilder::new(table_name, super::query::QueryAction::DropTable);
-        self.write_schema_manager().drop_table(table_name).await
+        self.write_connection().await.drop_table(table_name).await
     }
 
     pub async fn rename_table(&self, old: &str, new: &str) -> Result<()> {
-        self.write_schema_manager().rename_table(old, new).await?;
+        self.write_connection().await.rename_table(old, new).await?;
         self.dispatch_written_event();
         Ok(())
     }
 
     pub async fn drop_column(&self, table: &str, column: &str) -> Result<()> {
-        self.write_schema_manager()
+        self.write_connection()
+            .await
             .drop_column(table, column)
             .await?;
         self.dispatch_written_event();
@@ -318,19 +312,20 @@ impl Manager {
     }
 
     pub async fn rename_column(&self, table: &str, old: &str, new: &str) -> Result<()> {
-        self.write_schema_manager()
+        self.write_connection()
+            .await
             .rename_column(table, old, new)
             .await?;
         self.dispatch_written_event();
         Ok(())
     }
 
-    pub fn read_schema_manager(&self) -> Box<dyn SchemaManagerTrait + Send> {
-        self.create_schema_manager(false)
+    pub async fn read_connection(&self) -> Box<dyn SchemaManagerTrait + Send> {
+        self.create_schema_manager(false).await
     }
 
-    pub fn write_schema_manager(&self) -> Box<dyn SchemaManagerTrait + Send> {
-        self.create_schema_manager(true)
+    pub async fn write_connection(&self) -> Box<dyn SchemaManagerTrait + Send> {
+        self.create_schema_manager(true).await
     }
 
     async fn create_insert_query<I: ToColumnAndValue, R: IntoIterator<Item = I>>(
@@ -347,7 +342,7 @@ impl Manager {
             },
         );
 
-        self.write_schema_manager().execute(query).await?;
+        self.write_connection().await.execute(query).await?;
         self.dispatch_written_event();
         Ok(())
     }
@@ -358,7 +353,8 @@ impl Manager {
         row: Vec<V>,
     ) -> Result<bool, anyhow::Error> {
         let result = self
-            .write_schema_manager()
+            .write_connection()
+            .await
             .raw_insert(sql, row.into_iter().map(|v| v.into()).collect())
             .await;
         if result.is_ok() {
@@ -373,7 +369,8 @@ impl Manager {
         params: Vec<V>,
     ) -> Result<u64, anyhow::Error> {
         let result = self
-            .write_schema_manager()
+            .write_connection()
+            .await
             .raw_update(sql, params.into_iter().map(|v| v.into()).collect())
             .await;
         if result.is_ok() {
@@ -389,7 +386,8 @@ impl Manager {
         params: Vec<P>,
     ) -> Result<u64, anyhow::Error> {
         let result = self
-            .write_schema_manager()
+            .write_connection()
+            .await
             .raw_delete(sql, params.into_iter().map(|v| v.into()).collect())
             .await;
         if result.is_ok() {
@@ -404,13 +402,14 @@ impl Manager {
         sql: &str,
         params: Vec<P>,
     ) -> Result<Vec<ColumnAndValue>, anyhow::Error> {
-        self.read_schema_manager()
+        self.read_connection()
+            .await
             .raw_select(sql, params.into_iter().map(|v| v.into()).collect())
             .await
     }
 
     pub async fn raw_statement(&self, sql: &str) -> Result<bool, anyhow::Error> {
-        let result = self.write_schema_manager().raw_statement(sql).await;
+        let result = self.write_connection().await.raw_statement(sql).await;
 
         if result.is_ok() {
             self.dispatch_written_event();
@@ -435,8 +434,14 @@ impl Manager {
         &self.kind
     }
 
-    fn create_schema_manager(&self, for_write: bool) -> Box<dyn SchemaManagerTrait + Send> {
-        match self.connections.get(&self.kind) {
+    async fn create_schema_manager(
+        &self,
+        mut for_write: bool,
+    ) -> Box<dyn SchemaManagerTrait + Send> {
+        if self.in_trans {
+            for_write = true;
+        }
+        let mut manager = match self.connections.get(&self.kind) {
             Some(pool) => {
                 if for_write {
                     if let Some(write_pool) = pool.get(&super::schema::ClientType::Write) {
@@ -456,7 +461,8 @@ impl Manager {
                         .last_write_ts
                         .load(std::sync::atomic::Ordering::Relaxed);
                     if self.write_is_sticky && ts - last_ts <= self.sticky_duration {
-                        return self.create_schema_manager(true);
+                        // return self.create_schema_manager(true).await;
+                        return Box::pin(async { self.create_schema_manager(true).await }).await;
                     }
 
                     if let Some(read_pool) = pool.get(&super::schema::ClientType::Read) {
@@ -464,7 +470,7 @@ impl Manager {
                         read_pool.schema_manger()
                     } else {
                         log::trace!("Using {:?}'s write pool for next read query", &self.kind);
-                        self.create_schema_manager(true)
+                        return Box::pin(async { self.create_schema_manager(true).await }).await;
                     }
                 }
             }
@@ -472,7 +478,17 @@ impl Manager {
                 log::error!(target: "dirtybase_db", "could not get pool manager for: {:?}", self.kind);
                 panic!("could not get pool manager for: {:?}", self.kind);
             }
+        };
+
+        if self.in_trans {
+            let result = manager.begin().await;
+            if result.is_ok() {
+                return result.unwrap();
+            }
+            tracing::error!("could not start db transaction: {}", result.err().unwrap());
         }
+
+        manager
     }
 
     fn dispatch_written_event(&self) {

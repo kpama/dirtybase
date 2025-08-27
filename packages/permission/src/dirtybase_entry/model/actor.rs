@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use dirtybase_contract::db_contract::types::{ArcUuid7, DateTimeField, NameField};
+use dirtybase_contract::db_contract::types::{ArcUuid7, DateTimeField};
 use dirtybase_db_macro::DirtyTable;
 use dirtybase_helper::time::current_datetime;
 use serde::{Deserialize, Serialize};

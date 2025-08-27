@@ -6,7 +6,7 @@ use dirtybase_contract::{
     config_contract::{DirtyConfig, TryFromDirtyConfig},
 };
 
-use crate::connector::sqlite::sqlite_schema_manager::SQLITE_KIND;
+use crate::connector::sqlite::sqlite_connector::SQLITE_KIND;
 
 use super::base::schema::{ClientType, DatabaseKind};
 

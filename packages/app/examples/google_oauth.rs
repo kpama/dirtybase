@@ -9,26 +9,28 @@ use axum::{
     response::{Html, Redirect},
 };
 use dirtybase_app::{run, setup};
-use dirtybase_auth::{guards::session_guard, helpers::get_auth_storage};
+use dirtybase_auth::{
+    guards::{openid_guard::openid_client::OpenIdClient, session_guard},
+    helpers::get_auth_storage,
+};
 use dirtybase_contract::{
     ExtensionSetup,
+    http_contract::HttpContext,
     prelude::{ConfigResult, Context, CtxExt, DirtyConfig, RouterManager, TryFromDirtyConfig},
+    session_contract::Session,
 };
-use dirtybase_db::{ types::ArcUuid7};
+use dirtybase_db::types::ArcUuid7;
 use serde::Deserialize;
 use tracing::Level;
-
-// G_CLIENT_ID
-// G_SECRET
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_max_level(Level::ERROR)
+        .with_max_level(Level::DEBUG)
         .try_init()
         .expect("could not setup tracing");
 
-        tracing::debug!("starting up....");
+    tracing::debug!("starting up....");
     let app_service = setup().await.unwrap();
 
     _ = app_service.register(OauthApp).await;
@@ -53,48 +55,40 @@ impl ExtensionSetup for OauthApp {
                 Html("<h1>Hello world.</h1> You need to login for awesomeness <br/> <a href='/test'>Login</a>")
             });
 
-            router.get("/test", |CtxExt(config): CtxExt<OauthConfig>| async move {
-                let client_id= config.client_id;
-                let nonce = ArcUuid7::default().to_uuid25_string();
-                let state = ArcUuid7::default().to_uuid25_string();
-                let params = &[
-                        ("response_type", "code"),
-                        ("client_id", &client_id),
-                        ("scope", "openid profile email"),
-                        ("redirect_uri", "https://rustdev.mansaray.me/google-auth"),
-                        ("state", &state),
-                        ("nonce", &nonce)
-                        ];
-            //     let url =  format!("https://accounts.google.com/o/oauth2/v2/auth?{}&{}", serde_urlencoded::to_string(params).unwrap(),
-            //     "scope=openid%20profile%20email"
-            // );
+            router.get("/test", |CtxExt(config): CtxExt<OauthConfig>, CtxExt(session): CtxExt<Session>| async move {
 
-                let url =  format!("https://accounts.google.com/o/oauth2/v2/auth?{}", serde_urlencoded::to_string(params).unwrap());
+                let client = OpenIdClient::new(&config.client_id, &config.secret);
+                let url_info =  client.build_redirect("https://accounts.google.com/o/oauth2/v2/auth", "https://rustdev.mansaray.me/google-auth", &["email"]);
 
-                Html(format!("<a href='{}'>Login with google</a>",  url))
+                session.put("_openid", &url_info).await;
 
-                //url
-                //  Redirect::temporary(&url)
+                Html(format!("<a href='{}'>Login with google</a>",  url_info.url()))
+
             },  "oauth-login");
 
             router.get_x_with_middleware(
                 "/secure",
-                || async{
-                        Html("<h1>Welcome to the secure page<h1>")
+                |CtxExt(http_ctx): CtxExt<HttpContext>| async move {
+                    let body = if let Some(route) = http_ctx.named_route_service().get("auth:logout") {
+                        format!("<h1>Welcome to the secure page<h1><a href='{}'>Logout</a>", route.redirector().path())
+                    } else {
+                        "<h1>Welcome to the secure page<h1>".to_string()
+                    };
+                    Html(body)
                 },
-                ["auth:oauth"]
+                ["auth:openid"]
             );
 
             router.get_x(
                 "/google-auth",
                 |Query(auth_code): Query<AuthCode>,
-                 Extension(ctx): Extension<Context>,
-                 CtxExt(config): CtxExt<OauthConfig>
+                Extension(ctx): Extension<Context>,
+                CtxExt(config): CtxExt<OauthConfig>
                 | async move {
                     log::error!("in google-auth");
                     let client = reqwest::Client::new();
 
-            if let Ok(response) =  client.post("https://oauth2.googleapis.com/token")
+                    if let Ok(response) =  client.post("https://oauth2.googleapis.com/token")
                         .form(&[
                             ("code", auth_code.code.as_str()),
                             ("client_id", config.client_id.as_str()),
@@ -102,22 +96,18 @@ impl ExtensionSetup for OauthApp {
                             ("redirect_uri",  "https://rustdev.mansaray.me/google-auth"),
                             ("grant_type", "authorization_code")
                         ]).send().await {
-                            let data = 
-                        response.text().await.unwrap();
-                    // _ = fs::write(
-                    //     "user_info.json",
-                    //     &data.as_bytes()
-                    // );
                         // check if the user already has data stored
+                        //
+                        _= fs::write("token.json", response.text().await.unwrap());
 
                         let auth_prov = get_auth_storage(ctx.clone(), None).await.unwrap();
-                        if let Ok(Some(user))= auth_prov.find_by_username("foouser").await {
+                        if let Ok(Some(user))= auth_prov.find_by_username("admin").await {
                             session_guard::log_user_in(user, ctx).await;
                         }
 
-                            return Redirect::temporary("/secure");                     
-                        }
-                         Redirect::temporary("/")
+                        return Redirect::temporary("/secure");                     
+                    }
+                    Redirect::temporary("/")
                 },
             );
         });

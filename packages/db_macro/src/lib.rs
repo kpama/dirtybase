@@ -146,20 +146,6 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
           }
       }
 
-      // // Impl from &Self to FieldValue
-      // impl #ty_generics From<&#name> for ::dirtybase_contract::db_contract::field_values::FieldValue {
-      //     fn from(value: &#name ) -> ::dirtybase_contract::db_contract::field_values::FieldValue {
-      //         ::dirtybase_contract::db_contract::field_values::FieldValue::Object(::dirtybase_contract::db_contract::types::ToColumnAndValue::to_column_value(value).expect("could not convert to field object"))
-      //     }
-      // }
-
-      // // Impl from Self to FieldValue
-      // impl #ty_generics From<#name> for ::dirtybase_contract::db_contract::field_values::FieldValue {
-      //     fn from(value: #name ) -> ::dirtybase_contract::db_contract::field_values::FieldValue {
-      //       ::dirtybase_contract::db_contract::field_values::FieldValue::Object(::dirtybase_contract::db_contract::types::ToColumnAndValue::to_column_value(&value).expect("could not convert to field object"))
-      //     }
-      // }
-
       // Entity repo
       #entity_repo
 
@@ -167,5 +153,79 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
 
     };
 
+    TokenStream::from(expanded)
+}
+
+#[proc_macro_derive(DirtyEmbedded)]
+pub fn derive_dirtybase_embeddable(item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as DeriveInput);
+
+    let name = input.ident.clone();
+    let generics = input.generics.clone();
+    let (_impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+    let columns_attributes = pluck_embedded_columns(&input);
+    let from_cv_for_handlers = names_of_from_cv_handlers(&columns_attributes, "");
+    let into_cv_for_calls = build_into_for_calls(&columns_attributes);
+    let defaults = spread_default(&columns_attributes, &input);
+    let from_cvs = build_from_handlers(&columns_attributes);
+    let into_field_values = build_into_handlers(&columns_attributes);
+
+    let expanded = quote! {
+
+      impl #ty_generics #name  #ty_generics #where_clause {
+
+        #(#from_cvs)*
+
+        #(#into_field_values)*
+      }
+
+      // FromColumnAndValue for T
+      impl #ty_generics ::dirtybase_contract::db_contract::types::FromColumnAndValue  for #name  #ty_generics #where_clause {
+        fn from_column_value(cv: ::dirtybase_contract::db_contract::types::ColumnAndValue) -> Result<Self, ::dirtybase_contract::anyhow::Error>{
+            Ok(Self {
+                #(#from_cv_for_handlers),*,
+                #defaults
+            })
+        }
+      }
+
+      // ToColumnAndValue for T
+      impl #ty_generics ::dirtybase_contract::db_contract::types::ToColumnAndValue for #name  #ty_generics #where_clause {
+        fn to_column_value(&self) -> Result<::dirtybase_contract::db_contract::types::ColumnAndValue, ::dirtybase_contract::anyhow::Error> {
+            Ok(::dirtybase_contract::db_contract::ColumnAndValueBuilder::new()
+                #(.#into_cv_for_calls)*
+                .build())
+        }
+      }
+
+
+      impl #ty_generics ::dirtybase_contract::db_contract::types::ToColumnAndValue for &#name  #ty_generics #where_clause {
+        fn to_column_value(&self) -> Result<::dirtybase_contract::db_contract::types::ColumnAndValue, ::dirtybase_contract::anyhow::Error> {
+            Ok(::dirtybase_contract::db_contract::ColumnAndValueBuilder::new()
+                #(.#into_cv_for_calls)*
+                .build())
+        }
+      }
+
+
+      // Impl From FieldValue
+      impl #ty_generics From<::dirtybase_contract::db_contract::field_values::FieldValue> for #name  #ty_generics #where_clause {
+          fn from(value: ::dirtybase_contract::db_contract::field_values::FieldValue) -> Self {
+             let cv = ::dirtybase_contract::db_contract::types::ColumnAndValue::from(value);
+             if cv.is_empty() {
+                Self::default()
+             } else {
+              ::dirtybase_contract::db_contract::types::FromColumnAndValue::from_column_value(cv).expect("could not convert from field value")
+             }
+          }
+      }
+
+      impl #ty_generics From<&::dirtybase_contract::db_contract::field_values::FieldValue> for #name  #ty_generics #where_clause {
+          fn from(value: &::dirtybase_contract::db_contract::field_values::FieldValue) -> Self {
+            value.clone().into()
+          }
+      }
+
+    };
     TokenStream::from(expanded)
 }

@@ -4,7 +4,6 @@ pub mod field_values;
 pub mod migration;
 pub mod query_column;
 pub mod query_values;
-pub mod relations;
 pub mod table_model;
 pub mod types;
 

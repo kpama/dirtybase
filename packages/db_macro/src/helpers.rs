@@ -30,6 +30,22 @@ pub(crate) fn pluck_columns(
     columns
 }
 
+pub(crate) fn pluck_embedded_columns(input: &DeriveInput) -> HashMap<String, DirtybaseAttributes> {
+    let mut columns = HashMap::new();
+
+    if let Data::Struct(data) = &input.data {
+        if let syn::Fields::Named(fields) = &data.fields {
+            for a_field in fields.named.iter() {
+                if let Some(a_col) = get_real_column_name(a_field, input) {
+                    columns.insert(a_col.0, a_col.1);
+                }
+            }
+        }
+    }
+
+    columns
+}
+
 pub(crate) fn get_real_column_name(
     field: &syn::Field,
     input: &DeriveInput,
@@ -207,7 +223,7 @@ pub(crate) fn pluck_names(
 
 pub(crate) fn names_of_from_cv_handlers(
     columns_attributes: &HashMap<String, DirtybaseAttributes>,
-    table_name: &String,
+    table_name: &str,
 ) -> Vec<TokenStream> {
     columns_attributes
         .iter()
@@ -228,6 +244,12 @@ pub(crate) fn names_of_from_cv_handlers(
                 };
             }
 
+              if table_name.is_empty() {
+                quote! {
+                    #struct_field: Self::#handler(cv.get(#column))
+                }
+              } else {
+
                 quote! {
                     #struct_field: Self::#handler(if cv.contains_key(#column) {
                         cv.get(#column)
@@ -240,6 +262,8 @@ pub(crate) fn names_of_from_cv_handlers(
                         }
                     } )
                 }
+              }
+
         })
         .collect()
 }

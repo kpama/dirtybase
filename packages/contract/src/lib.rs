@@ -16,6 +16,7 @@ pub use anyhow;
 pub use async_trait::async_trait;
 pub use axum;
 pub use busybody;
+pub use dirtybase_helper;
 pub use extension::ExtensionManager;
 pub use extension::ExtensionMigrations;
 pub use extension::ExtensionSetup;
@@ -34,6 +35,7 @@ macro_rules! register_migration {
             $(
                 v.push(Box::new($m));
             )*
+            v.reverse();
             Some(v)
         }
     };
@@ -55,6 +57,7 @@ pub mod prelude {
     pub use async_trait::async_trait;
     pub use busybody;
     pub use busybody::Resolver;
+    pub use dirtybase_helper;
     pub use fama::PipelineBuilderTrait;
     pub use fama::PipelineTrait;
 }

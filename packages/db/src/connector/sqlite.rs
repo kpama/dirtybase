@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
+use sqlite_connector::SQLITE_KIND;
 use sqlite_pool_manager::resolve;
-use sqlite_schema_manager::SQLITE_KIND;
 
 use crate::{
     base::{manager::Manager, schema::DatabaseKind},
@@ -9,8 +9,10 @@ use crate::{
     make_manager,
 };
 
+pub mod sqlite_connector;
 pub mod sqlite_pool_manager;
-pub mod sqlite_schema_manager;
+
+const LOG_TARGET: &str = "sqlite_db_driver";
 
 /// Create a new manager using the configuration provided
 pub async fn make_sqlite_manager(base: ConnectionConfig) -> Manager {

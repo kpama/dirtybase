@@ -22,6 +22,7 @@ async fn main() {
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(no_timestamp, no_soft_delete)]
 struct Family {
     id: Option<i64>,
     name: String,
@@ -31,6 +32,7 @@ struct Family {
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(no_timestamp, no_soft_delete)]
 struct Child {
     id: Option<i64>,
     name: String,

@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use dirtybase_contract::{config_contract::DirtyConfig, prelude::Context};
-use dirtybase_cron::{CronJobManager, CronJobRegisterer, JobHandlerWrapper, config::CronConfig};
+use dirtybase_cron::{CronJobManager, CronJobRegisterer, config::CronConfig};
 use tracing::Level;
 
 #[tokio::main]
@@ -23,11 +23,9 @@ async fn main() {
         .unwrap();
 
     // 3. register a job
-    CronJobRegisterer::register("foo::job", |_reg| {
-        JobHandlerWrapper::new(|_ctx| {
-            Box::pin(async {
-                println!(">>>>>>>> running foo::bar......");
-            })
+    CronJobRegisterer::register("foo::job", |ctx| {
+        Box::pin(async move {
+            println!(">>>>>>>> running {} <<<<<<<", ctx.id());
         })
     })
     .await;

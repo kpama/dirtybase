@@ -45,18 +45,18 @@ impl LoginCredentialBuilder {
         }
     }
 
-    pub fn username(&mut self, username: String) -> &mut Self {
-        self.credential.username = Some(username);
+    pub fn username(&mut self, username: &str) -> &mut Self {
+        self.credential.username = Some(username.to_string());
         self
     }
 
-    pub fn email(&mut self, email: String) -> &mut Self {
-        self.credential.email = Some(email);
+    pub fn email(&mut self, email: &str) -> &mut Self {
+        self.credential.email = Some(email.to_string());
         self
     }
 
-    pub fn password(&mut self, password: String) -> &mut Self {
-        self.credential.password = password;
+    pub fn password(&mut self, password: &str) -> &mut Self {
+        self.credential.password = password.to_string();
         self
     }
     pub fn remember_me(&mut self, remember_me: bool) -> &mut Self {
@@ -88,9 +88,7 @@ mod test {
     pub fn test_builder() {
         let mut builder = LoginCredentialBuilder::new();
 
-        builder
-            .username("foo".to_string())
-            .password("john-doe!!".to_string());
+        builder.username("foo").password("john-doe!!");
 
         let cred = builder.build();
 

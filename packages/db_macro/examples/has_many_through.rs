@@ -27,6 +27,7 @@ async fn main() {
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(no_timestamp, no_soft_delete)]
 struct Customer {
     id: Option<i64>,
     name: String,
@@ -37,12 +38,14 @@ struct Customer {
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(no_timestamp, no_soft_delete)]
 struct Order {
     id: Option<i64>,
     customer_id: i64,
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(no_timestamp)]
 struct Invoice {
     id: Option<i64>,
     order_id: i64,

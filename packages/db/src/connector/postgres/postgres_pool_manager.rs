@@ -10,10 +10,11 @@ use crate::{
         schema::{ClientType, DatabaseKind, SchemaManagerTrait},
     },
     config::{ConfigSet, ConnectionConfig},
+    connector::postgres::LOG_TARGET,
     pool_manager_resolver::DbPoolManagerResolver,
 };
 
-use super::postgres_schema_manager::{POSTGRES_KIND, PostgresSchemaManager};
+use super::postgres_connector::{POSTGRES_KIND, PostgresSchemaManager};
 
 #[derive(Debug)]
 pub struct PostgresPoolManager {
@@ -45,7 +46,7 @@ impl ConnectionPoolTrait for PostgresPoolManager {
         if !self.db_pool.is_closed() {
             self.db_pool.close().await;
         }
-        tracing::trace!("postgres connection closed: {}", self.db_pool.is_closed());
+        tracing::trace!(target: LOG_TARGET,"postgres connection closed: {}", self.db_pool.is_closed());
     }
 }
 
@@ -79,18 +80,19 @@ pub async fn resolve(
 }
 
 pub async fn db_connect(config: &ConnectionConfig) -> anyhow::Result<Pool<Postgres>> {
+    tracing::info!(target: LOG_TARGET,"making a new connection pool");
     match PgPoolOptions::new()
         .max_connections(config.max)
         .connect(&config.url)
         .await
     {
         Ok(conn) => {
-            log::info!("Postgres maximum DB pool connection: {}", config.max);
+            tracing::debug!(target: LOG_TARGET,"maximum DB pool connection: {}", config.max);
             Ok(conn)
         }
         Err(e) => {
             // TODO: Use i18n
-            log::error!("could not connect to postgres: {:#?}", &e);
+            tracing::error!(target: LOG_TARGET,"could not connect to postgres: {:#?}", &e);
             Err(anyhow!(e))
         }
     }

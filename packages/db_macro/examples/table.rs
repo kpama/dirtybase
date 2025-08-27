@@ -5,14 +5,14 @@ use dirtybase_db::TableModel;
 use dirtybase_db::types::ToColumnAndValue;
 
 #[derive(DirtyTable, Default, Clone, Debug)]
-#[dirty(table = "address")]
+#[dirty(table = "address", no_timestamp, no_soft_delete)]
 struct Address {
     id: u64,
     name: Option<String>,
 }
 
 #[derive(DirtyTable, Default, Debug)]
-#[dirty(table = "person", id = "id")]
+#[dirty(table = "person", id = "id", no_timestamp, no_soft_delete)]
 struct Person {
     #[dirty(col = "internal_id")]
     id: u64,

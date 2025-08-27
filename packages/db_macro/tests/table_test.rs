@@ -6,7 +6,7 @@ use std::collections::HashMap;
 #[test]
 fn test_basic_fields() {
     #[derive(Debug, Default, DirtyTable)]
-    #[dirty(table = "example_table")]
+    #[dirty(table = "example_table", no_timestamp, no_soft_delete)]
     struct Example {
         id: u64,
         name: String,
@@ -27,7 +27,7 @@ fn test_basic_fields() {
 #[test]
 fn test_field_skipping() {
     #[derive(Debug, Default, DirtyTable)]
-    #[dirty(table = "example_table")]
+    #[dirty(table = "example_table", no_timestamp, no_soft_delete)]
     struct Example {
         id: u64,
         name: String,
@@ -45,7 +45,7 @@ fn test_field_skipping() {
 #[test]
 fn test_column_name() {
     #[derive(Debug, Default, DirtyTable)]
-    #[dirty(table = "example_table")]
+    #[dirty(table = "example_table", no_timestamp, no_soft_delete)]
     struct Example {
         id: u64,
         name: String,
@@ -66,7 +66,7 @@ fn test_complex_field() {
     type DiscountRange = Vec<u64>;
 
     #[derive(Debug, Default, DirtyTable)]
-    #[dirty(table = "example_table")]
+    #[dirty(table = "example_table", no_soft_delete, no_timestamp)]
     struct Example {
         id: u64,
         name: String,

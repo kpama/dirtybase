@@ -6,7 +6,7 @@ use dirtybase_db_macro::DirtyTable;
 async fn main() {}
 
 #[derive(Debug, Default, Clone, DirtyTable)]
-#[dirty(table = "family", id = "id")]
+#[dirty(table = "family", id = "id", no_timestamp, no_soft_delete)]
 struct Family {
     id: String,
     #[dirty(rel(kind = "has_many", foreign_key = "family_id", local_key = "id"))]
@@ -14,7 +14,7 @@ struct Family {
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
-#[dirty(table = "member", id = "id")]
+#[dirty(table = "member", id = "id", no_timestamp, no_soft_delete)]
 struct Member {
     id: String,
     family_id: String,
@@ -25,7 +25,7 @@ struct Member {
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
-#[dirty(table = "people", id = "id")]
+#[dirty(table = "people", id = "id", no_timestamp, no_soft_delete)]
 pub(crate) struct Person {
     id: String,
     member_id: String,

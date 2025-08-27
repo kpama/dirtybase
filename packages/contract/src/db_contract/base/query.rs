@@ -2,7 +2,7 @@ use crate::db_contract::{
     field_values::FieldValue,
     query_column::{QueryColumn, QueryColumnName},
     query_values::QueryValue,
-    types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue},
+    types::ColumnAndValue,
     TableModel,
 };
 
@@ -13,11 +13,10 @@ use super::{
     query_conditions::Condition,
     query_join_types::JoinType,
     query_operators::Operator,
-    schema::SchemaManagerTrait,
     table::DELETED_AT_FIELD,
     where_join_operators::WhereJoinOperator,
 };
-use std::{collections::HashMap, fmt::Display, marker::PhantomData};
+use std::{collections::HashMap, fmt::Display};
 
 #[derive(Debug)]
 pub enum WhereJoin {
@@ -44,6 +43,7 @@ pub enum QueryAction {
     DropTable,
     RenameTable(String),
     DropColumn(String),
+    HasTable,
     RenameColumn {
         old: String,
         new: String,
@@ -71,6 +71,7 @@ impl Display for QueryAction {
                 QueryAction::DropTable => "DropTable",
                 QueryAction::RenameTable(_) => "RenameTable",
                 QueryAction::DropColumn(_) => "DropColumn",
+                QueryAction::HasTable => "HasTable",
                 QueryAction::RenameColumn { old: _, new: _ } => "RenameColumn",
             }
         )
@@ -86,6 +87,7 @@ pub struct QueryBuilder {
     order_by: Option<OrderByBuilder>,
     limit: Option<LimitBuilder>,
     offset: Option<OffsetBuilder>,
+    lock_for_update: bool, // select * from foo where a=b for update
 }
 
 impl QueryBuilder {
@@ -98,6 +100,7 @@ impl QueryBuilder {
             order_by: None,
             limit: None,
             offset: None,
+            lock_for_update: false,
         }
     }
 
@@ -114,6 +117,19 @@ impl QueryBuilder {
             QueryAction::Query { columns } => columns.is_some(),
             _ => false,
         }
+    }
+
+    /// "FOR UPDATE should be appended to the select?"
+    pub fn is_lock_for_update(&self) -> bool {
+        self.lock_for_update
+    }
+
+    pub fn lock_for_update(&mut self) -> &mut Self {
+        match &mut self.action {
+            QueryAction::Query { columns: _ } => self.lock_for_update = true,
+            _ => (),
+        }
+        self
     }
 
     pub fn sub_query<F>(&mut self, table: &str, mut callback: F) -> QueryValue
@@ -1170,130 +1186,5 @@ impl QueryBuilder {
             &R::prefix_with_tbl(right_field),
             L::column_aliases(left_tbl_columns_prefix),
         )
-    }
-}
-
-pub struct EntityQueryBuilder<T: FromColumnAndValue + Send + Sync + 'static> {
-    query_builder: QueryBuilder,
-    inner: Box<dyn SchemaManagerTrait>,
-    phantom: PhantomData<T>,
-}
-
-impl<T: FromColumnAndValue + Send + Sync + 'static> EntityQueryBuilder<T> {
-    pub fn new(query_builder: QueryBuilder, inner: Box<dyn SchemaManagerTrait>) -> Self {
-        Self {
-            query_builder,
-            inner,
-            phantom: PhantomData,
-        }
-    }
-
-    pub fn query(&mut self) -> &mut QueryBuilder {
-        &mut self.query_builder
-    }
-
-    pub async fn latest(mut self, column: &str) -> Result<Option<T>, anyhow::Error> {
-        self.query_builder.desc(column);
-        self.one().await
-    }
-
-    pub async fn oldest(mut self, column: &str) -> Result<Option<T>, anyhow::Error> {
-        self.query_builder.asc(column);
-        self.one().await
-    }
-
-    pub async fn count(mut self) -> Result<i64, anyhow::Error> {
-        self.query().count_as("*", "count_all");
-        match self.fetch_one().await {
-            Ok(Some(r)) => Ok(i64::from(r.get("count_all").unwrap())),
-            Ok(None) => Ok(0),
-            Err(e) => Err(e),
-        }
-    }
-
-    pub async fn all(self) -> Result<Option<Vec<T>>, anyhow::Error> {
-        let result = self.fetch_all().await;
-        if let Ok(records) = result {
-            match records {
-                Some(rows) => {
-                    let mut data = Vec::new();
-                    for a_row in rows {
-                        data.push(T::from_column_value(a_row.fields())?)
-                    }
-                    Ok(Some(data))
-                }
-                None => Ok(None),
-            }
-        } else {
-            Err(result.err().unwrap())
-        }
-    }
-
-    pub async fn one(self) -> Result<Option<T>, anyhow::Error> {
-        let result = self.fetch_one().await;
-
-        if let Ok(row) = result {
-            match row {
-                Some(r) => Ok(Some(T::from_column_value(r.fields())?)),
-                None => Ok(None),
-            }
-        } else {
-            Err(result.err().unwrap())
-        }
-    }
-
-    pub async fn stream(self) -> tokio_stream::wrappers::ReceiverStream<T> {
-        let (inner_sender, mut inner_receiver) = tokio::sync::mpsc::channel::<ColumnAndValue>(100);
-        let (outer_sender, outer_receiver) = tokio::sync::mpsc::channel::<T>(100);
-
-        tokio::spawn(async move {
-            while let Some(result) = inner_receiver.recv().await {
-                match T::from_column_value(result) {
-                    Ok(d) => {
-                        if let Err(e) = outer_sender.send(d).await {
-                            tracing::error!("error sending transformed row result: {}", e);
-                            break;
-                        }
-                    }
-                    Err(e) => {
-                        tracing::error!("error sending transformed row result: {}", e);
-                    }
-                }
-            }
-        });
-
-        tokio::spawn(async move {
-            _ = self
-                .inner
-                .stream_result(&self.query_builder, inner_sender)
-                .await;
-        });
-
-        tokio_stream::wrappers::ReceiverStream::new(outer_receiver)
-    }
-
-    async fn fetch_all(&self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
-        let results = self.inner.fetch_all(&self.query_builder).await;
-        if let Ok(records) = results {
-            match records {
-                Some(rs) => Ok(Some(StructuredColumnAndValue::from_results(rs))),
-                None => Ok(Some(Vec::new())),
-            }
-        } else {
-            Err(results.err().unwrap())
-        }
-    }
-
-    async fn fetch_one(&self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
-        let result = self.inner.fetch_one(&self.query_builder).await;
-
-        if let Ok(row) = result {
-            match row {
-                Some(r) => Ok(Some(StructuredColumnAndValue::from_a_result(r)?)),
-                None => Ok(None),
-            }
-        } else {
-            Err(result.err().unwrap())
-        }
     }
 }

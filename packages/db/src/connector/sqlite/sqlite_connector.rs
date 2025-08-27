@@ -16,7 +16,7 @@ use dirtybase_contract::db_contract::{
 };
 use futures::stream::TryStreamExt;
 use sqlx::{
-    Arguments, Column, Pool, Row, Sqlite, TypeInfo,
+    Arguments, Column, Pool, Row, Sqlite, SqliteTransaction, TypeInfo,
     sqlite::{SqliteArguments, SqliteRow},
     types::chrono,
 };
@@ -27,11 +27,22 @@ pub const SQLITE_KIND: &str = "sqlite";
 
 pub struct SqliteSchemaManager {
     db_pool: Arc<Pool<Sqlite>>,
+    trans: Option<SqliteTransaction<'static>>,
 }
 
 impl SqliteSchemaManager {
     pub fn new(db_pool: Arc<Pool<Sqlite>>) -> Self {
-        Self { db_pool }
+        Self {
+            db_pool,
+            trans: None,
+        }
+    }
+
+    pub fn new_trans(db_pool: Arc<Pool<Sqlite>>, trans: SqliteTransaction<'static>) -> Self {
+        Self {
+            db_pool,
+            trans: Some(trans),
+        }
     }
 }
 
@@ -44,10 +55,7 @@ impl RelationalDbTrait for SqliteSchemaManager {
 
 #[async_trait]
 impl SchemaManagerTrait for SqliteSchemaManager {
-    fn fetch_table_for_update(&self, name: &str) -> TableBlueprint {
-        TableBlueprint::new(name)
-    }
-    async fn has_table(&self, name: &str) -> Result<bool, anyhow::Error> {
+    async fn has_table(&mut self, name: &str) -> Result<bool, anyhow::Error> {
         let query = "SELECT name FROM sqlite_master WHERE name = ?";
 
         let result = sqlx::query(query)
@@ -59,8 +67,35 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         Ok(result.unwrap_or_default())
     }
 
+    async fn begin(&mut self) -> Result<Box<dyn SchemaManagerTrait>, anyhow::Error> {
+        match self.db_pool.begin().await {
+            Ok(trans) => Ok(Box::new(Self::new_trans(self.db_pool.clone(), trans))),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    async fn commit(&mut self) -> Result<(), anyhow::Error> {
+        if let Some(trans) = self.trans.take() {
+            if let Err(e) = trans.commit().await {
+                return Err(e.into());
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn rollback(&mut self) -> Result<(), anyhow::Error> {
+        if let Some(trans) = self.trans.take() {
+            if let Err(e) = trans.rollback().await {
+                return Err(e.into());
+            }
+        }
+
+        Ok(())
+    }
+
     async fn stream_result(
-        &self,
+        &mut self,
         query_builder: &QueryBuilder,
         sender: tokio::sync::mpsc::Sender<ColumnAndValue>,
     ) -> Result<(), anyhow::Error> {
@@ -83,24 +118,24 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         Ok(())
     }
 
-    async fn drop_table(&self, name: &str) -> Result<(), anyhow::Error> {
+    async fn drop_table(&mut self, name: &str) -> Result<(), anyhow::Error> {
         if self.has_table(name).await? {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
             return self.execute(query).await;
         }
-        Err(anyhow!("could not drop the table"))
+        Ok(())
     }
 
-    async fn apply(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
+    async fn apply(&mut self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         self.do_apply(table).await
     }
 
-    async fn execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
+    async fn execute(&mut self, query: QueryBuilder) -> anyhow::Result<()> {
         self.do_execute(query).await
     }
 
     async fn fetch_all(
-        &self,
+        &mut self,
         query_builder: &QueryBuilder,
     ) -> Result<Option<Vec<HashMap<String, FieldValue>>>, anyhow::Error> {
         let mut results = Vec::new();
@@ -131,7 +166,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
     }
 
     async fn fetch_one(
-        &self,
+        &mut self,
         query_builder: &QueryBuilder,
     ) -> Result<Option<ColumnAndValue>, anyhow::Error> {
         let mut params = SqliteArguments::default();
@@ -148,7 +183,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         };
     }
 
-    async fn raw_insert(&self, sql: &str, row: Vec<FieldValue>) -> Result<bool, anyhow::Error> {
+    async fn raw_insert(&mut self, sql: &str, row: Vec<FieldValue>) -> Result<bool, anyhow::Error> {
         let mut query = sqlx::query(sql);
         for field in row {
             query = query.bind(field.to_string());
@@ -159,7 +194,11 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         }
     }
 
-    async fn raw_update(&self, sql: &str, params: Vec<FieldValue>) -> Result<u64, anyhow::Error> {
+    async fn raw_update(
+        &mut self,
+        sql: &str,
+        params: Vec<FieldValue>,
+    ) -> Result<u64, anyhow::Error> {
         let mut query = sqlx::query(sql);
         for p in params {
             query = query.bind(p.to_string());
@@ -167,16 +206,20 @@ impl SchemaManagerTrait for SqliteSchemaManager {
 
         match query.execute(self.db_pool.as_ref()).await {
             Ok(v) => Ok(v.rows_affected()),
-            Err(e) => Err(e.into()),
+            Err(e) => Err(anyhow::anyhow!(e)),
         }
     }
 
-    async fn raw_delete(&self, sql: &str, params: Vec<FieldValue>) -> Result<u64, anyhow::Error> {
+    async fn raw_delete(
+        &mut self,
+        sql: &str,
+        params: Vec<FieldValue>,
+    ) -> Result<u64, anyhow::Error> {
         self.raw_update(sql, params).await
     }
 
     async fn raw_select(
-        &self,
+        &mut self,
         sql: &str,
         params: Vec<FieldValue>,
     ) -> Result<Vec<ColumnAndValue>, anyhow::Error> {
@@ -207,7 +250,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         Ok(results)
     }
 
-    async fn raw_statement(&self, sql: &str) -> Result<bool, anyhow::Error> {
+    async fn raw_statement(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
         let query = sqlx::query(sql);
 
         match query.execute(self.db_pool.as_ref()).await {
@@ -218,7 +261,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
 }
 
 impl SqliteSchemaManager {
-    async fn do_apply(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
+    async fn do_apply(&mut self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         return if table.view_query.is_some() {
             // working with view table
             self.create_or_replace_view(table).await
@@ -228,7 +271,7 @@ impl SqliteSchemaManager {
         };
     }
 
-    async fn do_execute(&self, query: QueryBuilder) -> anyhow::Result<()> {
+    async fn do_execute(&mut self, query: QueryBuilder) -> anyhow::Result<()> {
         let mut params = SqliteArguments::default();
 
         let mut sql;
@@ -310,24 +353,41 @@ impl SqliteSchemaManager {
             }
             QueryAction::DropColumn(column) => {
                 let table = query.table();
-                sql = format!("ALTER TABLE '{table}' DROP '{column}'");
+                sql = format!("ALTER TABLE '{table}' DROP COLUMN '{column}'");
             }
             _ => {
                 sql = "".into();
             }
         }
 
-        let result = sqlx::query_with(&sql, params)
-            .execute(self.db_pool.as_ref())
-            .await;
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query_with(&sql, params).execute(&mut *trans).await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else {
+                if let Err(e) = trans.rollback().await {
+                    tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                    return Err(e.into());
+                }
+            }
+
+            result
+        } else {
+            sqlx::query_with(&sql, params)
+                .execute(self.db_pool.as_ref())
+                .await
+        };
 
         match result {
             Ok(r) => {
-                log::debug!("{} result: {:#?}", query.action(), r);
+                log::debug!(target: LOG_TARGET,"{} result: {:#?}", query.action(), r);
                 Ok(())
             }
             Err(e) => {
-                log::error!("{} failed: {}", query.action(), e);
+                log::error!(target: LOG_TARGET, "{} failed: {}", query.action(), e);
                 Err(anyhow!(e))
             }
         }
@@ -366,7 +426,7 @@ impl SqliteSchemaManager {
         let columns: Vec<String> = table
             .columns()
             .iter()
-            .map(|column| self.create_column(column, &mut foreign))
+            .map(|column| self.create_column(column, &mut foreign, table.is_new()))
             .collect();
 
         let mut query = if table.is_new() {
@@ -386,7 +446,7 @@ impl SqliteSchemaManager {
                 format!("{} ADD {}", query, columns.join(","))
             } else {
                 format!(
-                    "{} ADD ({}, {})",
+                    "{} ADD COLUMN {} {}",
                     query,
                     columns.join(","),
                     foreign.join(",")
@@ -471,7 +531,12 @@ impl SqliteSchemaManager {
         Ok(())
     }
 
-    fn create_column(&self, column: &ColumnBlueprint, foreign: &mut Vec<String>) -> String {
+    fn create_column(
+        &self,
+        column: &ColumnBlueprint,
+        foreign: &mut Vec<String>,
+        is_new_table: bool,
+    ) -> String {
         let mut entry = format!("`{}`", &column.name);
         let mut the_type = " ".to_owned();
 
@@ -509,7 +574,7 @@ impl SqliteSchemaManager {
                         column.name, list
                     ));
                 } else {
-                    the_type.push_str("varchar(255)"); // the check will be added below
+                    the_type.push_str("varchar(255)"); // The check will be added below
                 }
             }
         };
@@ -537,14 +602,14 @@ impl SqliteSchemaManager {
         if let Some(default) = &column.default {
             the_type.push_str(" DEFAULT ");
             match default {
-                ColumnDefault::CreatedAt => (), // the_type.push_str("CURRENT_TIMESTAMP"),
+                // ColumnDefault::CreatedAt => (), // the_type.push_str("CURRENT_TIMESTAMP"),
                 ColumnDefault::Custom(d) => the_type.push_str(&format!("'{d}'")),
                 ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
                 ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
                 ColumnDefault::Uuid => (), // the_type.push_str("GUID()"),
                 ColumnDefault::Ulid => (),
-                ColumnDefault::UpdatedAt => (), // the_type.push_str("CURRENT_TIMESTAMP"),
+                // ColumnDefault::UpdatedAt => (), // the_type.push_str("CURRENT_TIMESTAMP"),
                 ColumnDefault::Zero => the_type.push('0'),
             };
         }
@@ -552,12 +617,21 @@ impl SqliteSchemaManager {
         // column relationship
         if let Some(relationship) = &column.relationship {
             let mut f = "".to_string();
-            f.push_str(&format!(
-                "FOREIGN KEY (`{}`) REFERENCES `{}` (`{}`)",
-                &column.name,
-                &relationship.table(),
-                &relationship.column()
-            ));
+            let st = if is_new_table {
+                format!(
+                    "FOREIGN KEY (`{}`) REFERENCES `{}` (`{}`)",
+                    &column.name,
+                    &relationship.table(),
+                    &relationship.column()
+                )
+            } else {
+                format!(
+                    "REFERENCES `{}` (`{}`)",
+                    &relationship.table(),
+                    &relationship.column()
+                )
+            };
+            f.push_str(&st);
             if relationship.cascade_delete() {
                 f.push_str(" ON DELETE CASCADE");
             }
@@ -647,6 +721,11 @@ impl SqliteSchemaManager {
         }
 
         // TODO: offset
+
+        // Not supported in sqlite
+        // if query.is_lock_for_update() {
+        //     sql = format!("{sql} FOR UPDATE");
+        // }
 
         Ok(sql)
     }
@@ -851,6 +930,7 @@ impl SqliteSchemaManager {
                 }
                 _ => {
                     tracing::debug!(
+                        target: LOG_TARGET,
                         "unsupported field type : {:?} => value: {:#?}",
                         name,
                         col.type_info()

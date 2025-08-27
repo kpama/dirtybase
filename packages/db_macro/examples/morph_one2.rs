@@ -13,6 +13,7 @@ async fn main() {
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(no_timestamp, no_soft_delete)]
 struct Post {
     id: Option<i64>,
     title: String,
@@ -21,6 +22,7 @@ struct Post {
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(no_timestamp, no_soft_delete)]
 struct Image {
     id: Option<i64>,
     location: String,

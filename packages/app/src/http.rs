@@ -166,7 +166,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             web_app = middleware_manager.apply(web_app, order);
         }
 
-        // call extensions request handler
+        // Call extensions request handler
         // First middleware to run
         web_app = web_app.middleware(|mut req, next| async {
             let cookie = CookieJar::from_headers(req.headers());
@@ -193,7 +193,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             let id = ArcUuid7::default();
             let span = tracing::trace_span!("http", ctx_id = id.to_string(), data = field::Empty);
 
-            // light copy of the request without the "body"
+            // Light copy of the request without the "body"
             tracing::dispatcher::get_default(|dispatch| {
                 if let Some(id) = span.id() {
                     if let Some(current) = dispatch.current_span().id() {

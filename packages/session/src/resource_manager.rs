@@ -4,22 +4,21 @@ use dirtybase_contract::{
 };
 
 use crate::{
-    SessionConfig, SessionStorageResolver,
+    SessionConfig, SessionExtension, SessionStorageResolver,
     storage::{database::DatabaseStorage, dummy::DummyStorage, memory::MemoryStorage},
 };
 
 pub async fn register_resource_manager() {
-    // register resolver for the various storage providers
+    // Register resolver for the various storage providers
     register_storages().await;
 
     ContextResourceManager::<SessionStorageProvider>::register(
         |context| {
             //
             Box::pin(async move {
-                let config = context
-                    .get_config::<SessionConfig>("session")
+                let config = SessionExtension::config_from_ctx(&context)
                     .await
-                    .unwrap();
+                    .unwrap_or_default();
                 let name = context
                     .tenant()
                     .await
@@ -34,37 +33,33 @@ pub async fn register_resource_manager() {
         |context| {
             //
             Box::pin(async move {
-                let config = context
-                    .get_config::<SessionConfig>("session")
-                    .await
-                    .unwrap();
+                let config = context.get::<SessionConfig>().await.unwrap_or_default();
+                let lifetime = config.lifetime();
                 let provider = SessionStorageResolver::new(context.clone(), config)
                     .get_provider()
                     .await?;
                 let storage = provider.clone();
-                if let Ok(config) = context.get_config::<SessionConfig>("session").await {
-                    let lifetime = config.lifetime();
-                    let id = "session::storage".into();
-                    let _ctx = dirtybase_cron::CronJob::schedule(
-                        "every 25 minutes",
-                        move |_| {
-                            Box::pin({
-                                let storage = storage.clone();
-                                async move {
-                                    storage.gc(lifetime).await;
-                                }
-                            })
-                        },
-                        id,
-                    )
-                    .await;
-                }
+                let id = "session::storage".into();
+                let ctx = dirtybase_cron::CronJob::schedule(
+                    "every 25 minutes",
+                    move |_| {
+                        Box::pin({
+                            let storage = storage.clone();
+                            async move {
+                                storage.gc(lifetime).await;
+                                tracing::trace!("session gc executed");
+                            }
+                        })
+                    },
+                    id,
+                )
+                .await;
+                tracing::trace!("session gc scheduled: {}", ctx.is_ok());
 
                 Ok(provider)
             })
         },
         |_provider| {
-            //
             Box::pin(async {
                 // TODO: Close the storage driver
             })

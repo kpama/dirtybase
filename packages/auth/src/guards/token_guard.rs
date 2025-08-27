@@ -5,7 +5,7 @@ use dirtybase_contract::{
 
 pub const TOKEN_GUARD: &str = "token";
 
-pub async fn authenticate(resolver: GuardResolver) -> GuardResponse {
+pub async fn guard(resolver: GuardResolver) -> GuardResponse {
     tracing::info!(">>>> In Token Authentication guard");
 
     if let Some(header) = resolver.headers_ref().get("authorization") {

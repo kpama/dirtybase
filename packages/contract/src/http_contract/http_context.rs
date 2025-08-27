@@ -113,7 +113,7 @@ impl HttpContext {
         self.uri.path()
     }
 
-    /// Tries to return the dynamic path(s) in the URI
+    /// Tries to return the dynamic path in the URI
     pub async fn get_path<T>(&self) -> Result<Path<T>, PathRejection>
     where
         T: DeserializeOwned + Send,
@@ -122,7 +122,7 @@ impl HttpContext {
         Path::<T>::from_request_parts(&mut lock, &()).await
     }
 
-    /// Tries to return the query value in the URi
+    /// Tries to return the query value in the URI
     pub async fn get_query<T>(&self) -> Result<Query<T>, QueryRejection>
     where
         T: DeserializeOwned + Send,
@@ -159,7 +159,7 @@ impl HttpContext {
         None
     }
 
-    /// Returns all the dynamic path names in the URI
+    /// Returns all the dynamic pathnames in the URI
     pub fn get_path_names(&self) -> Vec<String> {
         self.raw_path_value.keys().cloned().collect()
     }
@@ -189,8 +189,14 @@ impl HttpContext {
         let mut full_path = String::new();
 
         // http:// or https://
-        if let Some(scheme) = self.uri.scheme_str() {
+        if let Some(scheme) = self.uri.scheme() {
             full_path.push_str(&format!("{scheme}://",));
+        } else if let Some(value) = self.header("x-forwarded-scheme") {
+            let scheme = value.to_str().unwrap_or_default();
+            full_path.push_str(&format!("{scheme}://"));
+        } else if let Some(value) = self.header("x-forwarded-proto") {
+            let scheme = value.to_str().unwrap_or_default();
+            full_path.push_str(&format!("{scheme}://"));
         }
 
         // foo.com or 127.0.0.1
@@ -298,9 +304,6 @@ impl HttpContext {
         for a_name in &names {
             match a_name.to_lowercase().as_ref() {
                 "x-forwarded-for" => {
-                    if trusted.is_empty() {
-                        continue;
-                    }
                     if let Some(mut values) = self.x_forwarded_ips() {
                         ip = values.pop_front();
                         if ip.is_none() || accept_all {

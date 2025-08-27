@@ -24,3 +24,5 @@ dirtybase_db = { path = "../db", version = "*" }
 dirtybase_helper = { path = "../helper", version = "*" }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 rand = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

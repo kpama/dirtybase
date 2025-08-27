@@ -352,15 +352,11 @@ impl TableBlueprint {
     }
 
     pub fn created_at(&mut self) -> &mut ColumnBlueprint {
-        self.timestamp(CREATED_AT_FIELD)
-            .set_is_nullable(false)
-            .default_is_created_at()
+        self.timestamp(CREATED_AT_FIELD).set_is_nullable(false)
     }
 
     pub fn updated_at(&mut self) -> &mut ColumnBlueprint {
-        self.timestamp(UPDATED_AT_FIELD)
-            .set_is_nullable(false)
-            .default_is_updated_at()
+        self.timestamp(UPDATED_AT_FIELD).set_is_nullable(true)
     }
 
     pub fn timestamps(&mut self) {

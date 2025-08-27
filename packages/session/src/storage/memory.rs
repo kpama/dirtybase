@@ -60,8 +60,6 @@ impl SessionStorage for MemoryStorage {
     }
 }
 
-pub async fn resolver(
-    _resolver: SessionStorageResolver,
-) -> Result<SessionStorageProvider, anyhow::Error> {
+pub async fn resolver(_: SessionStorageResolver) -> Result<SessionStorageProvider, anyhow::Error> {
     Ok(SessionStorageProvider::new(MemoryStorage::default()))
 }

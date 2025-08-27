@@ -8,9 +8,10 @@ pub struct Extension;
 #[dirtybase_contract::async_trait]
 impl ExtensionSetup for Extension {
     async fn setup(&mut self, context: &Context) {
-        if let Ok(config) = context.get_config::<CronConfig>("dty::cron").await {
-            context.set(config).await;
-        }
+        _ = context
+            .get_config_once::<CronConfig>("cron")
+            .await
+            .expect("could not load cron configuration");
 
         register_resource_manager().await;
     }

@@ -7,14 +7,14 @@ use futures::future::BoxFuture;
 use crate::{CronJob, JobContext, JobId, config::JobConfig};
 
 pub struct JobHandlerWrapper {
-    handler: Box<dyn FnMut(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static>,
+    handler: Box<dyn Fn(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static>,
     config: Option<JobConfig>,
     id: Option<JobId>,
 }
 
 impl JobHandlerWrapper {
     pub fn new(
-        handler: impl FnMut(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        handler: impl Fn(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     ) -> Self {
         Self {
             handler: Box::new(handler),
@@ -25,7 +25,7 @@ impl JobHandlerWrapper {
 
     pub fn inner(
         self,
-    ) -> Box<dyn FnMut(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static> {
+    ) -> Box<dyn Fn(JobContext) -> BoxFuture<'static, ()> + Send + Sync + 'static> {
         self.handler
     }
 
@@ -75,19 +75,20 @@ impl CronJobRegisterer {
 
     pub async fn register<F>(job_id: impl Into<JobId>, callback: F)
     where
-        F: Clone + Fn(Self) -> JobHandlerWrapper + Send + 'static,
+        F: Clone + Fn(JobContext) -> BoxFuture<'static, ()> + Sync + Send + 'static, //JobHandlerWrapper + Send + 'static,
     {
         let middleware = Self::get_middleware().await;
         let job_id = job_id.into();
+        let callback2 = || Box::pin(async move { JobHandlerWrapper::new(callback) });
         middleware
             .next(move |reg, next| {
-                let cb = callback.clone();
                 let id = job_id.clone();
+                let cb = callback2.clone();
 
                 Box::pin(async move {
                     if *reg.config_ref().id_ref() == id {
                         let config = reg.config();
-                        let mut wrapper = (cb)(reg);
+                        let mut wrapper = (cb)().await;
                         wrapper.id = Some(id);
                         wrapper.config = Some(config);
                         return Ok(wrapper);

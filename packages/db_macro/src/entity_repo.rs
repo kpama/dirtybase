@@ -84,10 +84,19 @@ pub fn build_entity_repo(
     let updated_at = format_ident!("{}", tbl_attr.updated_at_col);
     let deleted_at = format_ident!("{}", tbl_attr.deleted_at_col);
     let id_field = format_ident!("{}", tbl_attr.id_field);
-    let id_type = format_ident!(
-        "{}",
-        columns_attributes.get(&tbl_attr.id_field).unwrap().the_type
-    );
+    let id_field_attr = columns_attributes.get(&tbl_attr.id_field).unwrap();
+    let id_type = format_ident!("{}", id_field_attr.the_type);
+
+    // makes a copy of the current record ID value
+    let pluck_rec_id = if id_field_attr.optional {
+        quote! {
+            let id = record.#id_field.clone().unwrap();
+        }
+    } else {
+        quote! {
+            let id = record.#id_field.clone();
+        }
+    };
 
     let instance = quote! {
         let mut instance = Self {
@@ -105,13 +114,20 @@ pub fn build_entity_repo(
         quote! {}
     } else {
         quote! {
-            record.#created_at = Some(::dirtybase_helper::time::current_datetime());
+            record.#created_at = Some(::dirtybase_contract::dirtybase_helper::time::current_datetime());
         }
     };
     let insert_method = quote! {
-        pub async fn insert(&mut self, mut record: #ident) {
+        pub async fn insert(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_contract::anyhow::Error> {
             #set_created_at
-            self.manager.insert_into::<#ident>(record).await;
+            #pluck_rec_id
+
+           _ = self.manager.insert_into::<#ident>(record).await?;
+
+            match self.by_id(id).await? {
+                Some(v) => Ok(v),
+                None => Err(::dirtybase_contract::anyhow::anyhow!("could not retrieve inserted model"))
+            }
         }
     };
 
@@ -120,19 +136,24 @@ pub fn build_entity_repo(
         quote! {}
     } else {
         quote! {
-            record.#updated_at= Some(::dirtybase_helper::time::current_datetime());
+            record.#updated_at= Some(::dirtybase_contract::dirtybase_helper::time::current_datetime());
         }
     };
     let update_method = quote! {
         pub async fn update(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_contract::anyhow::Error>{
             #set_updated_at
-            let id = record.#id_field.clone();
-            self.manager.update_table::<#ident>(record, |qb| {
-                qb.is_eq(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column(), id.clone());
-            }).await;
+            #pluck_rec_id
+
+            _ = self.manager.update_table::<#ident>(record, |qb| {
+                qb.is_eq(
+                    <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
+                    <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column()
+                    ), id.clone());
+            }).await?;
+
             match self.by_id(id).await? {
                 Some(v) =>Ok(v),
-                None => Err(::dirtybase_contract::anyhow::anyhow!("model not found"))
+                None => Err(::dirtybase_contract::anyhow::anyhow!("could not retrieve updated model"))
             }
         }
     };
@@ -142,18 +163,25 @@ pub fn build_entity_repo(
     // destroy record
     let destroy_method = quote! {
         pub async fn destroy(&mut self, record: #ident) -> Result<(), ::dirtybase_contract::anyhow::Error> {
-            let id = record.#id_field.clone();
+            #pluck_rec_id
+
             self.manager.delete_from_table::<#ident>(|qb|{
-                qb.is_eq(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column(), id);
+                qb.is_eq(
+                    <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
+                    <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column())
+                    , id);
             }).await
         }
     };
 
     let mut delete_method = quote! {
         pub async fn delete(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_contract::anyhow::Error> {
-            let id = record.#id_field.clone();
-            _= self.manager.delete_from_table::<#ident>(|qb|{
-                qb.is_eq(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column(),  id);
+            #pluck_rec_id
+
+            _ = self.manager.delete_from_table::<#ident>(|qb|{
+                qb.is_eq(
+
+                    <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column(),  id);
             }).await?;
 
             Ok(record)
@@ -163,20 +191,23 @@ pub fn build_entity_repo(
     if soft_deletable {
         delete_method = quote! {
             pub async fn delete(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_contract::anyhow::Error>{
-                record.#deleted_at = Some(::dirtybase_helper::time::current_datetime());
+                record.#deleted_at = Some(::dirtybase_contract::dirtybase_helper::time::current_datetime());
                 self.update(record).await
             }
         };
 
         restore_method = quote! {
-            pub async fn restore(&mut self, id: #id_type) {
-                let mut cv = ::std::collections::HashMap::new();
-                cv.insert(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap().to_string(), ());
-                self.manager.update_table::<#ident>(cv, |qb|{
-                    qb.is_eq(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column(), id.clone());
-                }).await;
+            pub async fn restore(&mut self, id: #id_type) -> Result<Option<#ident>, ::dirtybase_contract::anyhow::Error> {
+                let name = <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap().to_string();
 
-                self.by_id(id).await;
+                let mut cv = ::std::collections::HashMap::new();
+                cv.insert(name, ::dirtybase_contract::db_contract::field_values::FieldValue::Null);
+
+                _ = self.manager.update_table::<#ident>(cv, |qb|{
+                    qb.is_eq(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column(), id.clone());
+                }).await?;
+
+                self.by_id(id).await
             }
         };
 
@@ -287,8 +318,61 @@ pub fn build_entity_repo(
                 }
             }
 
+            pub async fn latest(&mut self)-> Result<Option<#ident>, ::dirtybase_contract::anyhow::Error>  {
+                self.builder.desc(
+                  <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
+                        <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column())
+                );
+
+                self.first().await
+            }
+
+            pub async fn oldest(&mut self)-> Result<Option<#ident>, ::dirtybase_contract::anyhow::Error>  {
+                self.builder.asc(
+                  <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
+                        <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column())
+                );
+
+                self.first().await
+            }
+
+            pub async fn count(&mut self)-> Result<i64, ::dirtybase_contract::anyhow::Error> {
+                #append_trash_filter
+
+                let id_column = <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
+                        <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column());
+
+                self.builder.count_as(
+                    &id_column,
+                    "_count_all"
+                );
+
+                let result = self.manager.execute_query(self.builder.clone()).fetch_one().await;
+                *self = Self::new(&self.manager);
+
+                if let Ok(row) = result {
+                    match row {
+                        Some(r) => {
+                           let count = if let Some(v) = r.get("_count_all") {
+                                ::std::primitive::i64::from(v)
+                            } else {
+                                0
+                            };
+                           Ok(count)
+                        }
+                        None => Ok(0),
+                    }
+                  } else {
+                        Err(result.err().unwrap())
+                  }
+
+            }
+
             pub async fn by_id(&mut self, id: #id_type) -> Result<Option<#ident>, ::dirtybase_contract::anyhow::Error> {
-                self.builder.is_eq(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column(), id);
+                self.builder.is_eq(
+                  <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
+                        <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column()),
+                    id);
                 self.first().await
             }
 

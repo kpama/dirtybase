@@ -3,11 +3,13 @@ use super::{
     table::TableBlueprint,
 };
 use crate::db_contract::{
+    base::manager::Manager,
     field_values::FieldValue,
     types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue},
 };
 use anyhow::Result;
 use async_trait::async_trait;
+use futures::future::BoxFuture;
 use std::{
     fmt::{Debug, Display},
     sync::Arc,
@@ -85,32 +87,35 @@ pub trait RelationalDbTrait: SchemaManagerTrait {
 
 #[async_trait]
 pub trait SchemaManagerTrait: Send + Sync {
-    // update an existing table
-    fn fetch_table_for_update(&self, name: &str) -> TableBlueprint;
-
     // commit schema changes
-    async fn apply(&self, table: TableBlueprint) -> Result<()>;
+    async fn apply(&mut self, table: TableBlueprint) -> Result<()>;
 
-    async fn execute(&self, query_builder: QueryBuilder) -> Result<()>;
+    async fn execute(&mut self, query_builder: QueryBuilder) -> Result<()>;
+
+    async fn begin(&mut self) -> Result<Box<dyn SchemaManagerTrait>, anyhow::Error>;
+
+    async fn commit(&mut self) -> Result<(), anyhow::Error>;
+
+    async fn rollback(&mut self) -> Result<(), anyhow::Error>;
 
     async fn fetch_all(
-        &self,
+        &mut self,
         query_builder: &QueryBuilder,
     ) -> Result<Option<Vec<ColumnAndValue>>, anyhow::Error>;
 
     async fn stream_result(
-        &self,
+        &mut self,
         query_builder: &QueryBuilder,
         sender: tokio::sync::mpsc::Sender<ColumnAndValue>,
     ) -> Result<()>;
 
     async fn fetch_one(
-        &self,
+        &mut self,
         query_builder: &QueryBuilder,
     ) -> Result<Option<ColumnAndValue>, anyhow::Error>;
 
     async fn fetch_one_to<T: FromColumnAndValue>(
-        &self,
+        &mut self,
         query_builder: &QueryBuilder,
     ) -> Result<Option<T>, anyhow::Error>
     where
@@ -128,7 +133,10 @@ pub trait SchemaManagerTrait: Send + Sync {
         }
     }
 
-    async fn fetch_all_to<T>(&self, query: &QueryBuilder) -> Result<Option<Vec<T>>, anyhow::Error>
+    async fn fetch_all_to<T>(
+        &mut self,
+        query: &QueryBuilder,
+    ) -> Result<Option<Vec<T>>, anyhow::Error>
     where
         Self: Sized,
         T: FromColumnAndValue,
@@ -149,11 +157,11 @@ pub trait SchemaManagerTrait: Send + Sync {
     }
 
     // Checks if a table exist in the database
-    async fn has_table(&self, name: &str) -> Result<bool, anyhow::Error>;
+    async fn has_table(&mut self, name: &str) -> Result<bool, anyhow::Error>;
 
-    async fn drop_table(&self, name: &str) -> Result<()>;
+    async fn drop_table(&mut self, name: &str) -> Result<()>;
 
-    async fn rename_table(&self, old: &str, new: &str) -> Result<()> {
+    async fn rename_table(&mut self, old: &str, new: &str) -> Result<()> {
         self.execute(QueryBuilder::new(
             old,
             QueryAction::RenameTable(new.to_string()),
@@ -161,7 +169,7 @@ pub trait SchemaManagerTrait: Send + Sync {
         .await
     }
 
-    async fn drop_column(&self, table: &str, column: &str) -> Result<()> {
+    async fn drop_column(&mut self, table: &str, column: &str) -> Result<()> {
         self.execute(QueryBuilder::new(
             table,
             QueryAction::DropColumn(column.to_string()),
@@ -169,7 +177,7 @@ pub trait SchemaManagerTrait: Send + Sync {
         .await
     }
 
-    async fn rename_column(&self, table: &str, old: &str, new: &str) -> Result<()> {
+    async fn rename_column(&mut self, table: &str, old: &str, new: &str) -> Result<()> {
         self.execute(QueryBuilder::new(
             table,
             QueryAction::RenameColumn {
@@ -180,36 +188,55 @@ pub trait SchemaManagerTrait: Send + Sync {
         .await
     }
 
-    async fn raw_insert(&self, sql: &str, values: Vec<FieldValue>) -> Result<bool, anyhow::Error>;
+    async fn raw_insert(
+        &mut self,
+        sql: &str,
+        values: Vec<FieldValue>,
+    ) -> Result<bool, anyhow::Error>;
 
-    async fn raw_update(&self, sql: &str, params: Vec<FieldValue>) -> Result<u64, anyhow::Error>;
+    async fn raw_update(
+        &mut self,
+        sql: &str,
+        params: Vec<FieldValue>,
+    ) -> Result<u64, anyhow::Error>;
 
-    async fn raw_delete(&self, sql: &str, values: Vec<FieldValue>) -> Result<u64, anyhow::Error>;
+    async fn raw_delete(
+        &mut self,
+        sql: &str,
+        values: Vec<FieldValue>,
+    ) -> Result<u64, anyhow::Error>;
 
     async fn raw_select(
-        &self,
+        &mut self,
         sql: &str,
         params: Vec<FieldValue>,
     ) -> Result<Vec<ColumnAndValue>, anyhow::Error>;
 
-    async fn raw_statement(&self, sql: &str) -> Result<bool, anyhow::Error>;
+    async fn raw_statement(&mut self, sql: &str) -> Result<bool, anyhow::Error>;
 }
 
-pub struct SchemaWrapper {
+pub struct SchemaQuery {
     pub(crate) query_builder: QueryBuilder,
-    pub(crate) inner: Box<dyn SchemaManagerTrait>,
+    pub(crate) manager: Manager,
 }
 
-impl SchemaWrapper {
-    pub fn new(qb: QueryBuilder, schema_manager: Box<dyn SchemaManagerTrait>) -> Self {
+impl SchemaQuery {
+    pub fn new(qb: QueryBuilder, manager: Manager) -> Self {
         Self {
             query_builder: qb,
-            inner: schema_manager,
+            manager,
         }
     }
 
-    pub async fn fetch_all(self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
-        let results = self.inner.fetch_all(&self.query_builder).await;
+    pub async fn fetch_all(
+        mut self,
+    ) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
+        let results = self
+            .manager
+            .read_connection()
+            .await
+            .fetch_all(&self.query_builder)
+            .await;
         if let Ok(records) = results {
             match records {
                 Some(rs) => Ok(Some(StructuredColumnAndValue::from_results(rs))),
@@ -220,22 +247,25 @@ impl SchemaWrapper {
         }
     }
 
-    pub async fn all(self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
+    pub async fn all(mut self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
         self.fetch_all().await
     }
 
-    pub async fn get(self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
+    pub async fn get(mut self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
         self.fetch_all().await
     }
 
-    pub async fn get_to<T: FromColumnAndValue>(self) -> Result<Option<Vec<T>>, anyhow::Error> {
+    pub async fn get_to<T: FromColumnAndValue>(mut self) -> Result<Option<Vec<T>>, anyhow::Error> {
         self.fetch_all_to().await
     }
 
-    pub async fn fetch_one(self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
-        // self.query_builder.limit(1); // We shouldn't be doing this. It affects joins
-
-        let result = self.inner.fetch_one(&self.query_builder).await;
+    pub async fn fetch_one(mut self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
+        let result = self
+            .manager
+            .read_connection()
+            .await
+            .fetch_one(&self.query_builder)
+            .await;
 
         if let Ok(row) = result {
             match row {
@@ -247,15 +277,15 @@ impl SchemaWrapper {
         }
     }
 
-    pub async fn first(self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
+    pub async fn first(mut self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
         self.fetch_one().await
     }
 
-    pub async fn first_to<T: FromColumnAndValue>(self) -> Result<Option<T>, anyhow::Error> {
+    pub async fn first_to<T: FromColumnAndValue>(mut self) -> Result<Option<T>, anyhow::Error> {
         self.fetch_one_to().await
     }
 
-    pub async fn fetch_one_to<T: FromColumnAndValue>(self) -> Result<Option<T>, anyhow::Error>
+    pub async fn fetch_one_to<T: FromColumnAndValue>(mut self) -> Result<Option<T>, anyhow::Error>
     where
         Self: Sized,
     {
@@ -271,7 +301,7 @@ impl SchemaWrapper {
         }
     }
 
-    pub async fn fetch_all_to<T>(self) -> Result<Option<Vec<T>>, anyhow::Error>
+    pub async fn fetch_all_to<T>(mut self) -> Result<Option<Vec<T>>, anyhow::Error>
     where
         Self: Sized,
         T: FromColumnAndValue,
@@ -291,18 +321,23 @@ impl SchemaWrapper {
         }
     }
 
-    pub async fn stream(self) -> tokio_stream::wrappers::ReceiverStream<ColumnAndValue> {
+    pub async fn stream(mut self) -> tokio_stream::wrappers::ReceiverStream<ColumnAndValue> {
         let (sender, receiver) = tokio::sync::mpsc::channel::<ColumnAndValue>(100);
 
         tokio::spawn(async move {
-            _ = self.inner.stream_result(&self.query_builder, sender).await;
+            _ = self
+                .manager
+                .read_connection()
+                .await
+                .stream_result(&self.query_builder, sender)
+                .await;
         });
 
         tokio_stream::wrappers::ReceiverStream::new(receiver)
     }
 
     pub async fn stream_to<T: FromColumnAndValue + Send + Sync + 'static>(
-        self,
+        mut self,
     ) -> tokio_stream::wrappers::ReceiverStream<T> {
         let (inner_sender, mut inner_receiver) = tokio::sync::mpsc::channel::<ColumnAndValue>(100);
         let (outer_sender, outer_receiver) = tokio::sync::mpsc::channel::<T>(100);
@@ -329,7 +364,9 @@ impl SchemaWrapper {
 
         tokio::spawn(async move {
             _ = self
-                .inner
+                .manager
+                .read_connection()
+                .await
                 .stream_result(&self.query_builder, inner_sender)
                 .await;
         });

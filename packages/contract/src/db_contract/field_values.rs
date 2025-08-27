@@ -240,12 +240,6 @@ impl From<FieldValue> for ColumnAndValue {
     }
 }
 
-// impl From<&HashMap<String, FieldValue>> for FieldValue {
-//     fn from(value: &HashMap<String, FieldValue>) -> Self {
-//         Self::Object(Clone::clone(value))
-//     }
-// }
-
 impl<T: ToColumnAndValue> From<T> for FieldValue {
     fn from(value: T) -> Self {
         value.to_field_value()

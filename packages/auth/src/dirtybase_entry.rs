@@ -10,27 +10,26 @@ use dirtybase_contract::{
 };
 use middlewares::setup_middlewares;
 
-use crate::{AuthConfig, DATABASE_STORAGE, guards::register_guards, register_storages};
+use crate::{AuthConfig, guards::register_guards, register_storages, storage};
 
 #[derive(Debug, Default)]
-pub struct Extension {
+pub struct AuthExtension {
     is_enable: bool,
     is_db_storage: bool,
 }
 
 #[dirtybase_contract::async_trait]
-impl ExtensionSetup for Extension {
-    async fn setup(&mut self, global_context: &Context) {
-        let global_config = global_context
-            .get_config::<AuthConfig>("auth")
+impl ExtensionSetup for AuthExtension {
+    async fn setup(&mut self, ctx: &Context) {
+        let global_config = Self::config_from_ctx(&ctx)
             .await
-            .unwrap();
+            .expect("could not load auth config");
 
         self.is_enable = global_config.is_enabled();
-        self.is_db_storage = global_config.storage_ref().as_str() == DATABASE_STORAGE;
+        self.is_db_storage =
+            global_config.storage_ref().as_str() == storage::database_storage::NAME;
 
-        global_context
-            .container()
+        ctx.container()
             .resolver::<Gate>(|sc| {
                 tracing::info!("calling the gate resolver: {}", sc.id());
                 Box::pin(async {
@@ -51,7 +50,7 @@ impl ExtensionSetup for Extension {
         register_guards().await;
     }
 
-    fn migrations(&self, _global_context: &Context) -> Option<ExtensionMigrations> {
+    fn migrations(&self, _: &Context) -> Option<ExtensionMigrations> {
         if !self.is_enable {
             return None;
         }
@@ -73,5 +72,17 @@ impl ExtensionSetup for Extension {
 
     fn register_routes(&self, manager: &mut RouterManager) {
         http::register_routes(manager)
+    }
+}
+
+impl AuthExtension {
+    pub async fn config_from_ctx(ctx: &Context) -> Result<AuthConfig, anyhow::Error> {
+        let config = ctx.get_config("auth").await;
+
+        if config.is_err() {
+            tracing::error!("could not fetch auth config: {:?}", config.as_ref().err());
+        }
+
+        config
     }
 }

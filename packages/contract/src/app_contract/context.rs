@@ -98,6 +98,33 @@ impl Context {
         C::from_config(&DirtyConfig::new(), self).await
     }
 
+    pub async fn get_config_once<C>(&self, key: &str) -> Result<C, anyhow::Error>
+    where
+        C: DeserializeOwned + Clone + Sync + Send + TryFromDirtyConfig<Returns = C> + 'static,
+    {
+        let result = self.get::<C>().await;
+
+        if result.is_ok() {
+            return result;
+        }
+
+        let config = self.get_config::<C>(key).await;
+
+        if config.is_ok() {
+            self.set(config.as_ref().unwrap().clone()).await;
+        }
+
+        config
+    }
+
+    pub async fn load_config<C>(&self, key: &str) -> Result<(), anyhow::Error>
+    where
+        C: DeserializeOwned + Clone + Sync + Send + TryFromDirtyConfig<Returns = C> + 'static,
+    {
+        let result = self.get_config_once(key).await;
+        result.map(|_: C| ())
+    }
+
     pub fn container(&self) -> busybody::ServiceContainer {
         self.sc.clone()
     }

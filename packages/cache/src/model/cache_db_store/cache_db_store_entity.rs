@@ -4,7 +4,7 @@ use dirtybase_db_macro::DirtyTable;
 use crate::cache_manager::cache_entry::CacheEntry;
 
 #[derive(Debug, Clone, Default, DirtyTable)]
-#[dirty(table = "cache")]
+#[dirty(table = "cache", no_timestamp, no_soft_delete)]
 pub struct CacheDbStoreEntity {
     id: OptionalIntegerField,
     #[dirty(flatten)]
