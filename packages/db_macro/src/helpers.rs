@@ -13,16 +13,16 @@ pub(crate) fn pluck_columns(
 ) -> HashMap<String, DirtybaseAttributes> {
     let mut columns = HashMap::new();
 
-    if let Data::Struct(data) = &input.data
-        && let syn::Fields::Named(fields) = &data.fields
-    {
-        for a_field in fields.named.iter() {
-            if let Some(a_col) = get_real_column_name(a_field, input) {
-                if tbl_attr.id_field == a_col.0 && tbl_attr.id_column != a_col.1.name {
-                    tbl_attr.id_column = a_col.1.name.clone();
-                }
+    if let Data::Struct(data) = &input.data {
+        if let syn::Fields::Named(fields) = &data.fields {
+            for a_field in fields.named.iter() {
+                if let Some(a_col) = get_real_column_name(a_field, input) {
+                    if tbl_attr.id_field == a_col.0 && tbl_attr.id_column != a_col.1.name {
+                        tbl_attr.id_column = a_col.1.name.clone();
+                    }
 
-                columns.insert(a_col.0, a_col.1);
+                    columns.insert(a_col.0, a_col.1);
+                }
             }
         }
     }
@@ -33,12 +33,12 @@ pub(crate) fn pluck_columns(
 pub(crate) fn pluck_embedded_columns(input: &DeriveInput) -> HashMap<String, DirtybaseAttributes> {
     let mut columns = HashMap::new();
 
-    if let Data::Struct(data) = &input.data
-        && let syn::Fields::Named(fields) = &data.fields
-    {
-        for a_field in fields.named.iter() {
-            if let Some(a_col) = get_real_column_name(a_field, input) {
-                columns.insert(a_col.0, a_col.1);
+    if let Data::Struct(data) = &input.data {
+        if let syn::Fields::Named(fields) = &data.fields {
+            for a_field in fields.named.iter() {
+                if let Some(a_col) = get_real_column_name(a_field, input) {
+                    columns.insert(a_col.0, a_col.1);
+                }
             }
         }
     }
@@ -162,10 +162,10 @@ pub(crate) fn attribute_to_attribute_type(
             _ => (),
         };
 
-        if let Some(x) = walker.next()
-            && x.to_string() == ","
-        {
-            attribute_to_attribute_type(walker, field, dirty_attribute, input);
+        if let Some(x) = walker.next() {
+            if x.to_string() == "," {
+                attribute_to_attribute_type(walker, field, dirty_attribute, input);
+            }
         }
     }
 
@@ -186,22 +186,22 @@ fn walk_and_find_type(p: &TypePath, dirty_attribute: &mut DirtybaseAttributes) {
         dirty_attribute.optional = true;
 
         if let PathArguments::AngleBracketed(a) = &p.path.segments[0].arguments {
-            if let GenericArgument::Type(syn::Type::Path(p)) = &a.args[0]
-                && let Some(f) = p.path.get_ident()
-            {
-                dirty_attribute.the_type = f.to_string();
-            } else {
-                walk_and_find_type(p, dirty_attribute);
+            if let GenericArgument::Type(syn::Type::Path(p)) = &a.args[0] {
+                if let Some(f) = p.path.get_ident() {
+                    dirty_attribute.the_type = f.to_string();
+                } else {
+                    walk_and_find_type(p, dirty_attribute);
+                }
             }
         }
     } else {
         let name = p.path.segments[0].ident.to_string();
-        if name == "Vec"
-            && let PathArguments::AngleBracketed(a) = &p.path.segments[0].arguments
-        {
-            if let GenericArgument::Type(syn::Type::Path(p)) = &a.args[0] {
-                dirty_attribute.the_type = p.path.segments[0].ident.to_string();
-                dirty_attribute.is_vec = true;
+        if name == "Vec" {
+            if let PathArguments::AngleBracketed(a) = &p.path.segments[0].arguments {
+                if let GenericArgument::Type(syn::Type::Path(p)) = &a.args[0] {
+                    dirty_attribute.the_type = p.path.segments[0].ident.to_string();
+                    dirty_attribute.is_vec = true;
+                }
             }
         } else {
             dirty_attribute.the_type = p.path.segments[0].ident.to_string();
