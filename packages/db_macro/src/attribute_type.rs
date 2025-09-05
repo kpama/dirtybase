@@ -78,63 +78,63 @@ impl From<&DeriveInput> for TableAttribute {
         );
 
         for attr in &input.attrs {
-            if let Meta::List(the_list) = &attr.meta {
-                if the_list.path.is_ident("dirty") {
-                    let mut walker = the_list.tokens.clone().into_iter();
-                    while let Some(arg) = walker.next() {
-                        if arg.to_string() == "no_timestamp" {
-                            value.no_timestamp = true;
-                        }
+            if let Meta::List(the_list) = &attr.meta
+                && the_list.path.is_ident("dirty")
+            {
+                let mut walker = the_list.tokens.clone().into_iter();
+                while let Some(arg) = walker.next() {
+                    if arg.to_string() == "no_timestamp" {
+                        value.no_timestamp = true;
+                    }
 
-                        if arg.to_string() == "no_soft_delete" {
-                            value.no_soft_delete = true;
-                        }
+                    if arg.to_string() == "no_soft_delete" {
+                        value.no_soft_delete = true;
+                    }
 
-                        if arg.to_string() == "created_at" {
-                            _ = walker.next();
-                            if let Some(name) = walker.next() {
-                                value.created_at_col = name.to_string().replace('\"', "");
-                            }
+                    if arg.to_string() == "created_at" {
+                        _ = walker.next();
+                        if let Some(name) = walker.next() {
+                            value.created_at_col = name.to_string().replace('\"', "");
                         }
+                    }
 
-                        if arg.to_string() == "updated_at" {
-                            _ = walker.next();
-                            if let Some(name) = walker.next() {
-                                value.updated_at_col = name.to_string().replace('\"', "");
-                            }
+                    if arg.to_string() == "updated_at" {
+                        _ = walker.next();
+                        if let Some(name) = walker.next() {
+                            value.updated_at_col = name.to_string().replace('\"', "");
                         }
+                    }
 
-                        if arg.to_string() == "deleted_at" {
-                            _ = walker.next();
-                            if let Some(name) = walker.next() {
-                                value.deleted_at_col = name.to_string().replace('\"', "");
-                            }
+                    if arg.to_string() == "deleted_at" {
+                        _ = walker.next();
+                        if let Some(name) = walker.next() {
+                            value.deleted_at_col = name.to_string().replace('\"', "");
                         }
+                    }
 
-                        if arg.to_string() == "table" {
-                            _ = walker.next();
-                            if let Some(name) = walker.next() {
-                                value.table_name = name.to_string().replace('\"', "");
-                            }
+                    if arg.to_string() == "table" {
+                        _ = walker.next();
+                        if let Some(name) = walker.next() {
+                            value.table_name = name.to_string().replace('\"', "");
                         }
-                        if arg.to_string() == "id" {
-                            _ = walker.next();
-                            if let Some(name) = walker.next() {
-                                value.id_field = name.to_string().replace('\"', "");
-                            }
+                    }
+                    if arg.to_string() == "id" {
+                        _ = walker.next();
+                        if let Some(name) = walker.next() {
+                            value.id_field = name.to_string().replace('\"', "");
                         }
-                        if arg.to_string() == "id_column" {
-                            _ = walker.next();
-                            if let Some(name) = walker.next() {
-                                value.id_column = name.to_string().replace('\"', "");
-                            }
+                    }
+                    if arg.to_string() == "id_column" {
+                        _ = walker.next();
+                        if let Some(name) = walker.next() {
+                            value.id_column = name.to_string().replace('\"', "");
                         }
+                    }
 
-                        if arg.to_string() == "foreign_name" {
-                            _ = walker.next();
-                            if let Some(name) = walker.next() {
-                                value.foreign_name = name.to_string().replace('\"', "");
-                            }
+                    if arg.to_string() == "foreign_name" {
+                        _ = walker.next();
+                        if let Some(name) = walker.next() {
+                            value.foreign_name = name.to_string().replace('\"', "");
                         }
                     }
                 }

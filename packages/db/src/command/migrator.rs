@@ -101,10 +101,10 @@ impl Migrator {
 
     async fn repo(&self, manager: &Manager) -> MigrationRepository {
         let repo = MigrationRepository::new(manager.clone());
-        if let Err(e) = repo.init().await {
-            if e.to_string() != "migrations already exist" {
-                tracing::error!("could not initialize migrator: {}", e);
-            }
+        if let Err(e) = repo.init().await
+            && e.to_string() != "migrations already exist"
+        {
+            tracing::error!("could not initialize migrator: {}", e);
         }
 
         repo

@@ -110,8 +110,8 @@ impl Context {
 
         let config = self.get_config::<C>(key).await;
 
-        if config.is_ok() {
-            self.set(config.as_ref().unwrap().clone()).await;
+        if let Ok(config) = &config {
+            self.set(config.clone()).await;
         }
 
         config

@@ -208,7 +208,10 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
                 .await;
         }
 
-        Err(anyhow!("resource not found"))
+        Err(anyhow!(format!(
+            "resource {} not found",
+            std::any::type_name::<T>()
+        )))
     }
 
     async fn get_resource(

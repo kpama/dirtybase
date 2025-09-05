@@ -48,14 +48,14 @@ pub async fn guard(resolver: GuardResolver) -> GuardResponse {
         let cookie_id = auth_session.cookie_key().unwrap();
         let user_id = auth_session.user_id().unwrap();
 
-        if let Some(cookie) = http_context.get_cookie(cookie_id).await {
-            if cookie.value() == hash {
-                if let Ok(Some(user)) = resolver.storage_ref().find_by_id(user_id.clone()).await {
-                    return GuardResponse::success(user);
-                } else {
-                    session.invalidate(resolver.context_ref()).await;
-                    return fail_resp;
-                }
+        if let Some(cookie) = http_context.get_cookie(cookie_id).await
+            && cookie.value() == hash
+        {
+            if let Ok(Some(user)) = resolver.storage_ref().find_by_id(user_id.clone()).await {
+                return GuardResponse::success(user);
+            } else {
+                session.invalidate(resolver.context_ref()).await;
+                return fail_resp;
             }
         }
     }
@@ -75,7 +75,7 @@ pub async fn log_user_in(user: AuthUser, ctx: Context) -> bool {
             .await;
         return true;
     }
-    return false;
+    false
 }
 
 pub async fn authenticate(ctx: Context, cred: LoginCredential) -> bool {

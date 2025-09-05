@@ -4,6 +4,10 @@ pub fn hash_str(subject: &str) -> String {
     hash_bytes(subject.as_bytes())
 }
 
+pub fn hash_string(subject: String) -> String {
+    hash_bytes(subject.as_bytes())
+}
+
 pub fn hash_bytes(subject: &[u8]) -> String {
     let mut hash = Sha256::new();
     hash.update(subject);

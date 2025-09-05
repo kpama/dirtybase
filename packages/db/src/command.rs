@@ -73,11 +73,11 @@ pub(crate) fn setup_commands(mut manager: CliCommandManager) -> CliCommandManage
 
     manager.register(seed, |_, matches, context| {
         Box::pin(async move {
-            if let Some(name) = matches.get_one::<String>("name") {
-                if let Ok(manager) = context.get::<Manager>().await {
-                    let seeder = SeederRegisterer::new(name, manager, context.clone());
-                    seeder.seed().await;
-                }
+            if let Some(name) = matches.get_one::<String>("name")
+                && let Ok(manager) = context.get::<Manager>().await
+            {
+                let seeder = SeederRegisterer::new(name, manager, context.clone());
+                seeder.seed().await;
             }
             Ok(())
         })

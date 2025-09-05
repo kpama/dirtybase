@@ -13,15 +13,17 @@ async fn main() {
         .expect("could not setup tracing");
 
     // 1. Setup the configuration using the default config template
-    let base_config = DirtyConfig::new();
-    let config = base_config
-        .optional_file("./config_template/cron.toml", Some("DTY_CRON"))
-        .build()
-        .await
-        .unwrap()
-        .try_deserialize::<CronConfig>()
-        .unwrap();
+    let base_config = DirtyConfig::new_at_dir("packages/cron/config_template"); // Using the template version of the config
+    let config = CronConfig::from(
+        base_config
+            .optional_file("cron.toml", Some("DTY_CRON"))
+            .build()
+            .await
+            .unwrap(),
+    );
 
+    println!("{:#?}", &config);
+    return;
     // 3. register a job
     CronJobRegisterer::register("foo::job", |ctx| {
         Box::pin(async move {

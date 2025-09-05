@@ -20,5 +20,5 @@ pub async fn do_redirect(Path(provider): Path<OpenIdProvider>) -> impl IntoRespo
 }
 
 pub async fn handle_callback() -> impl IntoResponse {
-    ()
+    //
 }

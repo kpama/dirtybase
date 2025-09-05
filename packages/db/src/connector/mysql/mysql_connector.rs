@@ -67,20 +67,20 @@ impl SchemaManagerTrait for MySqlSchemaManager {
     }
 
     async fn commit(&mut self) -> Result<(), anyhow::Error> {
-        if let Some(trans) = self.trans.take() {
-            if let Err(e) = trans.commit().await {
-                return Err(e.into());
-            }
+        if let Some(trans) = self.trans.take()
+            && let Err(e) = trans.commit().await
+        {
+            return Err(e.into());
         }
 
         Ok(())
     }
 
     async fn rollback(&mut self) -> Result<(), anyhow::Error> {
-        if let Some(trans) = self.trans.take() {
-            if let Err(e) = trans.rollback().await {
-                return Err(e.into());
-            }
+        if let Some(trans) = self.trans.take()
+            && let Err(e) = trans.rollback().await
+        {
+            return Err(e.into());
         }
 
         Ok(())
@@ -349,11 +349,9 @@ impl MySqlSchemaManager {
                     tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
                     return Err(e.into());
                 }
-            } else {
-                if let Err(e) = trans.rollback().await {
-                    tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
-                    return Err(e.into());
-                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
             }
 
             result

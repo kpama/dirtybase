@@ -1,9 +1,10 @@
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use busstop::async_trait;
 use dirtybase_contract::{
     app_contract::Context,
     config_contract::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
+    prelude::config::Config,
 };
 use english_to_cron::str_cron_syntax;
 
@@ -14,7 +15,7 @@ pub struct CronConfig {
     #[serde(default)]
     enable: bool,
     #[serde(default)]
-    jobs: HashMap<String, JobConfig>,
+    jobs: Vec<JobConfig>,
 }
 
 impl CronConfig {
@@ -27,18 +28,62 @@ impl CronConfig {
         self
     }
 
-    pub fn set_jobs(&mut self, jobs: HashMap<String, JobConfig>) -> &mut Self {
+    pub fn set_jobs(&mut self, jobs: Vec<JobConfig>) -> &mut Self {
         self.jobs = jobs;
         self
     }
 
-    pub fn jobs(&self) -> &HashMap<String, JobConfig> {
+    pub fn jobs(&self) -> &Vec<JobConfig> {
         &self.jobs
     }
 
-    pub fn add_job(&mut self, name: &str, config: JobConfig) -> &mut Self {
-        self.jobs.insert(name.to_string(), config);
+    pub fn add_job(&mut self, config: JobConfig) -> &mut Self {
+        self.jobs.push(config);
         self
+    }
+}
+
+impl From<Config> for CronConfig {
+    fn from(config: Config) -> Self {
+        let enable = config.get_bool("enable").unwrap_or_default();
+        let jobs: Vec<JobConfig> = config
+            .get_table("jobs")
+            .map(|a_job_config| {
+                a_job_config
+                    .iter()
+                    .map(|(id, entry)| {
+                        let mut job = JobConfig {
+                            id: id.to_string().into(),
+                            ..JobConfig::default()
+                        };
+                        let obj = entry.clone().into_table().unwrap_or_default();
+
+                        if let Some(enable) = obj.get("enable").cloned() {
+                            job.enable = enable.into_bool().unwrap_or_default();
+                        }
+
+                        if let Some(schedule) = obj.get("schedule").cloned() {
+                            job.schedule = Arc::new(schedule.to_string());
+                        }
+                        if let Some(args) = obj.get("args").cloned() {
+                            job.args = Some(Arc::new(
+                                args.to_string()
+                                    .split(',')
+                                    .map(String::from)
+                                    .collect::<Vec<String>>(),
+                            ));
+                        }
+
+                        if let Some(des) = obj.get("description").cloned() {
+                            job.description = Some(Arc::new(des.to_string()));
+                        }
+
+                        job
+                    })
+                    .collect::<Vec<JobConfig>>()
+            })
+            .unwrap_or_default();
+        Self { enable, jobs }
     }
 }
 
@@ -46,12 +91,12 @@ impl CronConfig {
 impl TryFromDirtyConfig for CronConfig {
     type Returns = Self;
     async fn from_config(config: &DirtyConfig, _ctx: &Context) -> ConfigResult<Self::Returns> {
-        Ok(config
+        let built = config
             .optional_file("cron.toml", Some("DTY_CRON"))
             .build()
             .await
-            .expect("could not create cron configuration")
-            .try_deserialize::<Self>()?)
+            .expect("could not create cron configuration");
+        Ok(Self::from(built))
     }
 }
 
@@ -61,7 +106,7 @@ pub struct JobConfig {
     id: JobId,
     schedule: Arc<String>,
     description: Option<Arc<String>>,
-    _args: Option<Arc<Vec<String>>>,
+    args: Option<Arc<Vec<String>>>,
 }
 
 impl JobConfig {
@@ -69,7 +114,7 @@ impl JobConfig {
         id: impl Into<JobId>,
         schedule: T,
         enable: bool,
-        _args: Option<Vec<String>>,
+        args: Option<Vec<String>>,
         description: Option<String>,
     ) -> Self {
         Self {
@@ -77,12 +122,16 @@ impl JobConfig {
             schedule: Arc::new(schedule.to_string()),
             enable,
             description: description.map(Arc::new),
-            _args: _args.map(Arc::new),
+            args: args.map(Arc::new),
         }
     }
 
     pub fn is_enable(&self) -> bool {
         self.enable
+    }
+
+    pub fn args(&self) -> Option<&Arc<Vec<String>>> {
+        self.args.as_ref()
     }
 
     pub fn set_enable(&mut self, enable: bool) -> &mut Self {

@@ -23,25 +23,23 @@ pub async fn handle_auth_middleware(
     };
     tracing::debug!("current auth guard: {}", guard_name);
 
-    if let Ok(config) = AuthExtension::config_from_ctx(&context).await {
-        if let Some(storage) = StorageResolver::from_context(context.clone())
+    if let Ok(config) = AuthExtension::config_from_ctx(&context).await
+        && let Some(storage) = StorageResolver::from_context(context.clone())
             .await
             .get_provider(config.storage_ref())
             .await
-        {
-            let result =
-                GuardResolver::new(req.headers().clone(), context.clone(), storage.clone())
-                    .guard(guard_name)
-                    .await;
+    {
+        let result = GuardResolver::new(req.headers().clone(), context.clone(), storage.clone())
+            .guard(guard_name)
+            .await;
 
-            if !result.is_success() {
-                return result.response().unwrap_or_else(|| {
-                    GuardResponse::unauthorized().response().unwrap() // NOTE: unwrap is okay here
-                });
-            }
-
-            return next.run(req).await;
+        if !result.is_success() {
+            return result.response().unwrap_or_else(|| {
+                GuardResponse::unauthorized().response().unwrap() // NOTE: unwrap is okay here
+            });
         }
+
+        return next.run(req).await;
     }
 
     (StatusCode::UNAUTHORIZED, ()).into_response()

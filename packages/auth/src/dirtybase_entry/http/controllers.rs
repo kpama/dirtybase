@@ -60,22 +60,22 @@ pub(crate) async fn handle_login_request(
         let hash = sha256::hash_str(&cred.email().cloned().unwrap_or(":::nothing:::".to_string()));
         storage.find_by_email_hash(&hash).await
     };
-    if let Ok(Some(user)) = result {
-        if user.verify_password(cred.password()) {
-            let auth_session = AuthSession::from_session(&session).await;
-            http_ctx
-                .set_cookie(AuthSession::new(user.id()).to_cookie(&session).await)
-                .await;
+    if let Ok(Some(user)) = result
+        && user.verify_password(cred.password())
+    {
+        let auth_session = AuthSession::from_session(&session).await;
+        http_ctx
+            .set_cookie(AuthSession::new(user.id()).to_cookie(&session).await)
+            .await;
 
-            let mut response = ().into_response();
+        let mut response = ().into_response();
 
-            response.headers_mut().append(
-                header::LOCATION,
-                header::HeaderValue::from_str(auth_session.redirect()).unwrap(),
-            );
-            *response.status_mut() = StatusCode::SEE_OTHER;
-            return response;
-        }
+        response.headers_mut().append(
+            header::LOCATION,
+            header::HeaderValue::from_str(auth_session.redirect()).unwrap(),
+        );
+        *response.status_mut() = StatusCode::SEE_OTHER;
+        return response;
     }
 
     let bdy = Body::empty();
@@ -120,12 +120,11 @@ pub(crate) async fn handle_get_auth_token(
 
     let mut res = ApiResponse::<String>::default();
 
-    if let Ok(Some(user)) = result {
-        if user.verify_password(cred.password()) {
-            if let Some(token) = user.generate_token() {
-                res.set_data(token);
-            }
-        }
+    if let Ok(Some(user)) = result
+        && user.verify_password(cred.password())
+        && let Some(token) = user.generate_token()
+    {
+        res.set_data(token);
     }
 
     if !res.has_data() {

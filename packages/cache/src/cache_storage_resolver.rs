@@ -129,10 +129,9 @@ impl CacheStorageResolver {
                         .context_ref()
                         .get_config::<CacheConfig>("session")
                         .await
+                        && config.storage_ref() == *name.as_ref()
                     {
-                        if config.storage_ref() == *name.as_ref() {
-                            resolver = (cb)(resolver).await;
-                        }
+                        resolver = (cb)(resolver).await;
                     }
 
                     if !resolver.has_provider() {

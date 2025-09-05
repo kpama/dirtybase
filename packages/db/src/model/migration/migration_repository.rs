@@ -56,20 +56,18 @@ impl MigrationRepository {
             })
             .fetch_one_to::<MigrationEntity>()
             .await
-        {
-            if let Ok(Some(collection)) = self
+            && let Ok(Some(collection)) = self
                 .manager
                 .select_from_table(TABLE_NAME, |q| {
                     q.is_eq(BATCH_COLUMN, last.batch).desc("created_at");
                 })
                 .fetch_all_to::<MigrationEntity>()
                 .await
-            {
-                return collection
-                    .into_iter()
-                    .map(|m| (m.name.clone(), m))
-                    .collect::<BTreeMap<StringField, MigrationEntity>>();
-            }
+        {
+            return collection
+                .into_iter()
+                .map(|m| (m.name.clone(), m))
+                .collect::<BTreeMap<StringField, MigrationEntity>>();
         }
 
         BTreeMap::new()

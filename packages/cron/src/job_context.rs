@@ -32,8 +32,8 @@ impl JobContext {
         &self.id
     }
 
-    pub fn service_container(&self) -> &Arc<busybody::ServiceContainer> {
-        &self.container
+    pub fn service_container(&self) -> Arc<busybody::ServiceContainer> {
+        self.container.clone()
     }
 
     pub async fn send(&self, cmd: CronJobCommand) -> Result<(), SendError<CronJobCommand>> {

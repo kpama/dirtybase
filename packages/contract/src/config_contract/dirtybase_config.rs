@@ -39,7 +39,11 @@ impl DirtyConfig {
     }
 
     pub fn new_at_dir<D: AsRef<Path>>(dir: D) -> Self {
+        let path = dir.as_ref().join("");
         load_dot_env(Some(dir));
+
+        let p = path.to_str().to_owned().unwrap_or_default().to_string();
+        env::set_var(CONFIG_DIR_KEY, p);
 
         Self { ..Self::default() }
     }

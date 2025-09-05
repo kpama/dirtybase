@@ -1,6 +1,6 @@
 use dirtybase_contract::prelude::ContextResourceManager;
 
-use crate::{CronJobManager, CronJobRegisterer, JobHandlerWrapper};
+use crate::{CronJobManager, CronJobRegisterer};
 
 pub async fn register_resource_manager() {
     // dummy job

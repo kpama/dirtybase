@@ -3,7 +3,7 @@ use super::base::{aggregate::Aggregate, query::QueryBuilder};
 #[derive(Debug, Clone, PartialEq)]
 pub enum QueryColumnName {
     Name(String),
-    SubQuery(QueryBuilder),
+    SubQuery(Box<QueryBuilder>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -65,7 +65,7 @@ impl<T: ToString> From<T> for QueryColumnName {
 
 impl From<QueryBuilder> for QueryColumnName {
     fn from(value: QueryBuilder) -> Self {
-        Self::SubQuery(value)
+        Self::SubQuery(Box::new(value))
     }
 }
 

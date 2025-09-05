@@ -180,7 +180,7 @@ impl ToColumnAndValue for ColumnAndValue {
     }
 }
 
-impl<'a> ToColumnAndValue for HashMap<&'a str, FieldValue> {
+impl ToColumnAndValue for HashMap<&str, FieldValue> {
     fn to_column_value(&self) -> Result<ColumnAndValue, anyhow::Error> {
         Ok(self
             .iter()

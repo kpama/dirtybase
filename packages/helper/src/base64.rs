@@ -15,9 +15,7 @@ pub fn decode(input: &str) -> Result<Vec<u8>, base64ct::Error> {
         return result;
     }
 
-    result = url_decode_unpadded(input);
-
-    return result;
+    url_decode_unpadded(input)
 }
 
 pub fn url_encode(input: &[u8]) -> String {

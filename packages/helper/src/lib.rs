@@ -1,8 +1,10 @@
 pub mod base64;
 pub mod hash;
+pub mod hmac;
 pub mod random;
 pub mod snowflake;
 pub mod time;
 pub mod ulid;
 pub mod uuid;
 pub use cruet;
+pub use hex;

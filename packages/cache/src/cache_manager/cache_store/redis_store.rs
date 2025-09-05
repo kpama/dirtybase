@@ -15,9 +15,9 @@ pub struct RedisStore {
 
 impl RedisStore {
     async fn tag_key(&self, key: &str, tags: Option<&[String]>) {
-        if tags.is_some() {
+        if let Some(tags) = tags {
             let mut client = self.redis_client.write().await;
-            for a_tag in tags.unwrap() {
+            for a_tag in tags {
                 _ = client.sadd::<&String, &str, bool>(a_tag, key).await;
             }
         }
@@ -63,9 +63,9 @@ impl CacheStoreTrait for RedisStore {
         let entry = CacheEntry::new(key.clone(), value, expiration);
 
         if let Ok(data) = serde_json::to_string(&entry) {
-            let result = if expiration.is_some() {
+            let result = if let Some(expiration) = expiration {
                 let options = redis::SetOptions::default()
-                    .with_expiration(redis::SetExpiry::EX(expiration.unwrap() as u64));
+                    .with_expiration(redis::SetExpiry::EX(expiration as u64));
                 client
                     .set_options::<&String, String, bool>(&key, data, options)
                     .await
@@ -111,10 +111,10 @@ impl CacheStoreTrait for RedisStore {
         let entry = CacheEntry::new(key.clone(), value, expiration);
 
         if let Ok(data) = serde_json::to_string(&entry) {
-            let options = if expiration.is_some() {
+            let options = if let Some(expiration) = expiration {
                 redis::SetOptions::default()
                     .conditional_set(redis::ExistenceCheck::NX)
-                    .with_expiration(redis::SetExpiry::EX(expiration.unwrap() as u64))
+                    .with_expiration(redis::SetExpiry::EX(expiration as u64))
             } else {
                 redis::SetOptions::default().conditional_set(redis::ExistenceCheck::NX)
             };
@@ -142,9 +142,9 @@ impl CacheStoreTrait for RedisStore {
 
     async fn flush(&self, tags: Option<&[String]>) -> bool {
         // At the moment, we are not going to flush/delete all entries in the database
-        if tags.is_some() {
+        if let Some(tags) = tags {
             let mut client = self.redis_client.write().await;
-            for a_tag in tags.unwrap() {
+            for a_tag in tags {
                 if let Ok(lists) = client.smembers::<&String, Vec<String>>(a_tag).await {
                     for a_key in lists {
                         _ = client.unlink::<String, bool>(a_key).await;

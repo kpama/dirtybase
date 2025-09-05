@@ -312,7 +312,11 @@ impl QueryBuilder {
         let mut builder = QueryBuilder::new(table, QueryAction::Query { columns: None });
         callback(&mut builder);
 
-        let col = QueryColumn::new(QueryColumnName::SubQuery(builder), Some(table), alias);
+        let col = QueryColumn::new(
+            QueryColumnName::SubQuery(Box::new(builder)),
+            Some(table),
+            alias,
+        );
 
         self.select(col)
     }

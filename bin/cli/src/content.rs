@@ -131,10 +131,10 @@ pub(crate) fn dump_stubs(path: &Path) {
 }
 
 pub(crate) fn dump_a_stub(name: &str, path_buf: &PathBuf) {
-    if let Some(stub) = stubs().get(name) {
-        if !path_buf.exists() {
-            _ = std::fs::write(path_buf, stub);
-        }
+    if let Some(stub) = stubs().get(name)
+        && !path_buf.exists()
+    {
+        _ = std::fs::write(path_buf, stub);
     }
 }
 

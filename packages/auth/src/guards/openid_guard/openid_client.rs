@@ -21,11 +21,11 @@ pub struct RedirectInfo {
 
 impl RedirectInfo {
     pub fn new(endpoint: &str, redirect_uri: &str) -> Self {
-        let mut info = Self::default();
-        info.to = endpoint.to_string();
-        info.redirect_uri = redirect_uri.to_string();
-
-        info
+        Self {
+            to: endpoint.to_string(),
+            redirect_uri: redirect_uri.to_string(),
+            ..Default::default()
+        }
     }
 
     pub fn set_client_id(&mut self, client_id: &str) -> &mut Self {

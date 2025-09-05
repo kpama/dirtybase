@@ -17,7 +17,7 @@ pub struct SessionExtension;
 #[async_trait]
 impl ExtensionSetup for SessionExtension {
     async fn setup(&mut self, ctx: &Context) {
-        if let Ok(config) = Self::config_from_ctx(&ctx).await {
+        if let Ok(config) = Self::config_from_ctx(ctx).await {
             ctx.set(config).await;
         }
 

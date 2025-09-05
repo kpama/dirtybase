@@ -38,16 +38,16 @@ impl CacheManager {
         R: serde::de::DeserializeOwned,
     {
         let key = self.prefix_a_key(key);
-        if let Some(entry) = self.store.get(&key).await {
-            if entry.still_hot() {
-                return match serde_json::from_value(entry.value) {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        log::error!("Error parsing cache data. {e}");
-                        None
-                    }
-                };
-            }
+        if let Some(entry) = self.store.get(&key).await
+            && entry.still_hot()
+        {
+            return match serde_json::from_value(entry.value) {
+                Ok(v) => Some(v),
+                Err(e) => {
+                    log::error!("Error parsing cache data. {e}");
+                    None
+                }
+            };
         }
 
         None
@@ -87,10 +87,10 @@ impl CacheManager {
         if let Some(map) = self.store.many(&the_keys).await {
             let mut built = HashMap::new();
             for entry in map {
-                if entry.still_hot() {
-                    if let Ok(value) = serde_json::from_value(entry.value) {
-                        built.insert(entry.key.clone(), value);
-                    }
+                if entry.still_hot()
+                    && let Ok(value) = serde_json::from_value(entry.value)
+                {
+                    built.insert(entry.key.clone(), value);
                 }
             }
 

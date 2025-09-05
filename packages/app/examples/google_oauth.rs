@@ -19,7 +19,6 @@ use dirtybase_contract::{
     prelude::{ConfigResult, Context, CtxExt, DirtyConfig, RouterManager, TryFromDirtyConfig},
     session_contract::Session,
 };
-use dirtybase_db::types::ArcUuid7;
 use serde::Deserialize;
 use tracing::Level;
 

@@ -62,20 +62,20 @@ impl SchemaManagerTrait for PostgresSchemaManager {
     }
 
     async fn commit(&mut self) -> Result<(), anyhow::Error> {
-        if let Some(trans) = self.trans.take() {
-            if let Err(e) = trans.commit().await {
-                return Err(e.into());
-            }
+        if let Some(trans) = self.trans.take()
+            && let Err(e) = trans.commit().await
+        {
+            return Err(e.into());
         }
 
         Ok(())
     }
 
     async fn rollback(&mut self) -> Result<(), anyhow::Error> {
-        if let Some(trans) = self.trans.take() {
-            if let Err(e) = trans.rollback().await {
-                return Err(e.into());
-            }
+        if let Some(trans) = self.trans.take()
+            && let Err(e) = trans.rollback().await
+        {
+            return Err(e.into());
         }
 
         Ok(())
@@ -352,11 +352,9 @@ impl PostgresSchemaManager {
                     tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
                     return Err(e.into());
                 }
-            } else {
-                if let Err(e) = trans.rollback().await {
-                    tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
-                    return Err(e.into());
-                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
             }
 
             result
@@ -742,6 +740,7 @@ impl PostgresSchemaManager {
             QueryValue::SubQuery(sub) => self.build_query(sub, params)?,
             QueryValue::ColumnName(name) => name.clone(),
             _ => {
+                let current_total = params.len();
                 self.transform_value(condition.value(), params)?;
                 if *condition.operator() == Operator::In || *condition.operator() == Operator::NotIn
                 {
@@ -750,8 +749,11 @@ impl PostgresSchemaManager {
                         _ => 1,
                     };
 
-                    let mut placeholder = Vec::new();
-                    placeholder.resize(length, format!("${}", params.len()));
+                    let mut placeholder = Vec::with_capacity(length);
+
+                    for count in 1..=length {
+                        placeholder.push(format!("${}", current_total + count));
+                    }
                     placeholder.join(",")
                 } else {
                     format!("${}", params.len())

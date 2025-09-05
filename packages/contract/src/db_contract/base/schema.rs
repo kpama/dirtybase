@@ -9,7 +9,6 @@ use crate::db_contract::{
 };
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::future::BoxFuture;
 use std::{
     fmt::{Debug, Display},
     sync::Arc,
@@ -228,9 +227,7 @@ impl SchemaQuery {
         }
     }
 
-    pub async fn fetch_all(
-        mut self,
-    ) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
+    pub async fn fetch_all(self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
         let results = self
             .manager
             .read_connection()
@@ -247,19 +244,19 @@ impl SchemaQuery {
         }
     }
 
-    pub async fn all(mut self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
+    pub async fn all(self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
         self.fetch_all().await
     }
 
-    pub async fn get(mut self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
+    pub async fn get(self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
         self.fetch_all().await
     }
 
-    pub async fn get_to<T: FromColumnAndValue>(mut self) -> Result<Option<Vec<T>>, anyhow::Error> {
+    pub async fn get_to<T: FromColumnAndValue>(self) -> Result<Option<Vec<T>>, anyhow::Error> {
         self.fetch_all_to().await
     }
 
-    pub async fn fetch_one(mut self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
+    pub async fn fetch_one(self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
         let result = self
             .manager
             .read_connection()
@@ -277,15 +274,15 @@ impl SchemaQuery {
         }
     }
 
-    pub async fn first(mut self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
+    pub async fn first(self) -> Result<Option<StructuredColumnAndValue>, anyhow::Error> {
         self.fetch_one().await
     }
 
-    pub async fn first_to<T: FromColumnAndValue>(mut self) -> Result<Option<T>, anyhow::Error> {
+    pub async fn first_to<T: FromColumnAndValue>(self) -> Result<Option<T>, anyhow::Error> {
         self.fetch_one_to().await
     }
 
-    pub async fn fetch_one_to<T: FromColumnAndValue>(mut self) -> Result<Option<T>, anyhow::Error>
+    pub async fn fetch_one_to<T: FromColumnAndValue>(self) -> Result<Option<T>, anyhow::Error>
     where
         Self: Sized,
     {
@@ -301,7 +298,7 @@ impl SchemaQuery {
         }
     }
 
-    pub async fn fetch_all_to<T>(mut self) -> Result<Option<Vec<T>>, anyhow::Error>
+    pub async fn fetch_all_to<T>(self) -> Result<Option<Vec<T>>, anyhow::Error>
     where
         Self: Sized,
         T: FromColumnAndValue,
@@ -321,7 +318,7 @@ impl SchemaQuery {
         }
     }
 
-    pub async fn stream(mut self) -> tokio_stream::wrappers::ReceiverStream<ColumnAndValue> {
+    pub async fn stream(self) -> tokio_stream::wrappers::ReceiverStream<ColumnAndValue> {
         let (sender, receiver) = tokio::sync::mpsc::channel::<ColumnAndValue>(100);
 
         tokio::spawn(async move {
@@ -337,7 +334,7 @@ impl SchemaQuery {
     }
 
     pub async fn stream_to<T: FromColumnAndValue + Send + Sync + 'static>(
-        mut self,
+        self,
     ) -> tokio_stream::wrappers::ReceiverStream<T> {
         let (inner_sender, mut inner_receiver) = tokio::sync::mpsc::channel::<ColumnAndValue>(100);
         let (outer_sender, outer_receiver) = tokio::sync::mpsc::channel::<T>(100);

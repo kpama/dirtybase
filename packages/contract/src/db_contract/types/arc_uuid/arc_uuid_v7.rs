@@ -126,6 +126,13 @@ impl TryFrom<String> for ArcUuid7 {
     }
 }
 
+impl TryFrom<&String> for ArcUuid7 {
+    type Error = String;
+    fn try_from(value: &String) -> Result<Self, Self::Error> {
+        value.try_into()
+    }
+}
+
 impl<'de> Deserialize<'de> for ArcUuid7 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

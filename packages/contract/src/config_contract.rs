@@ -1,6 +1,7 @@
 use std::{
     env,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 mod dirtybase_config;
 
@@ -29,6 +30,25 @@ pub(crate) const LOADED_FLAG_KEY: &str = "DTY_ENV_LOADED";
 pub(crate) const LOADED_FLAG_VALUE: &str = "DTY_YES";
 
 pub type ConfigResult<C> = Result<C, anyhow::Error>;
+
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
+pub struct ByteArray(
+    #[serde(
+        deserialize_with = "field_to_vec_u8",
+        serialize_with = "vec_u8_to_field"
+    )]
+    Arc<Vec<u8>>,
+);
+
+impl ByteArray {
+    pub fn new(bytes: Vec<u8>) -> Self {
+        Self(bytes.into())
+    }
+
+    pub fn to_slice(&self) -> &[u8] {
+        &self.0
+    }
+}
 
 #[async_trait::async_trait]
 pub trait TryFromDirtyConfig {

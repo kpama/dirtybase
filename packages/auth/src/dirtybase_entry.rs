@@ -21,7 +21,7 @@ pub struct AuthExtension {
 #[dirtybase_contract::async_trait]
 impl ExtensionSetup for AuthExtension {
     async fn setup(&mut self, ctx: &Context) {
-        let global_config = Self::config_from_ctx(&ctx)
+        let global_config = Self::config_from_ctx(ctx)
             .await
             .expect("could not load auth config");
 

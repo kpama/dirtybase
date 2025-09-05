@@ -69,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
 
     // let manager = make_postgres_manager(base_config).await;
 
-    create_tables(&manager).await;
+    _ = create_tables(&manager).await;
     seed_tables(&manager).await;
 
     Ok(())

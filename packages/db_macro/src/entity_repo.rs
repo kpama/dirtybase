@@ -87,6 +87,23 @@ pub fn build_entity_repo(
     let id_field_attr = columns_attributes.get(&tbl_attr.id_field).unwrap();
     let id_type = format_ident!("{}", id_field_attr.the_type);
 
+    let mut column_names: Vec<proc_macro2::TokenStream> = Vec::new();
+
+    for item in columns_attributes {
+        if item.1.relation.is_some() {
+            continue;
+        }
+
+        let fn_name = format_ident!("col_{}", item.0);
+        let col_name = &item.1.name;
+        let full_name = format!("{}.{}", &tbl_attr.table_name, col_name);
+        column_names.push(quote! {
+                pub fn #fn_name() -> &'static str {
+                     #full_name
+                }
+        })
+    }
+
     // makes a copy of the current record ID value
     let pluck_rec_id = if id_field_attr.optional {
         quote! {
@@ -376,11 +393,16 @@ pub fn build_entity_repo(
                 self.first().await
             }
 
+            pub fn table_name() -> &'static str {
+               <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::table_name()
+            }
+
             #insert_method
             #update_method
             #delete_method
             #destroy_method
             #restore_method
+            #(#column_names)*
         }
     }
 }

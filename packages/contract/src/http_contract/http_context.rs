@@ -232,7 +232,7 @@ impl HttpContext {
         self.subdomain.clone()
     }
 
-    pub async fn get_cookie(&self, name: &str) -> Option<Cookie> {
+    pub async fn get_cookie(&self, name: &str) -> Option<Cookie<'_>> {
         let r_lock = self.cookie_jar.read().await;
         r_lock.as_ref().unwrap().get(name).cloned()
     }
