@@ -465,7 +465,7 @@ impl MySqlSchemaManager {
                 match entry {
                     IndexType::Index(index) | IndexType::Primary(index) => {
                         if index.delete_index() {
-                            sql = format!("DROP INDEX {}", index.name());
+                            sql = format!("DROP INDEX IF EXISTS {}", index.name());
                         } else {
                             sql = format!(
                                 "CREATE INDEX IF NOT EXISTS {} ON {} ({})",
@@ -477,11 +477,12 @@ impl MySqlSchemaManager {
                     }
                     IndexType::Unique(index) => {
                         if index.delete_index() {
-                            sql = format!("DROP INDEX {}", index.name());
+                            sql = format!("DROP INDEX IF EXISTS {}", index.name());
                         } else {
                             sql = format!(
-                                "ADD UNIQUE INDEX {} ({})",
+                                "CREATE UNIQUE INDEX IF NOT EXISTS {} ON {} ({})",
                                 index.name(),
+                                &table.name,
                                 index.concat_columns()
                             );
                         }
