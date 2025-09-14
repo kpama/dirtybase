@@ -1,5 +1,7 @@
 use std::{ops::Deref, sync::Arc};
 
+use dirtybase_helper::hash::sha256;
+
 use crate::{
     auth_contract::{AuthUser, AuthUserPayload},
     db_contract::types::ArcUuid7,
@@ -32,6 +34,20 @@ pub trait AuthUserStorage: Send + Sync {
             Err(_) => false,
         }
     }
+
+    async fn exists_by_email(&self, email: &str) -> bool {
+        let result = self.find_by_email(email).await;
+        match result {
+            Ok(op) => op.is_some(),
+            Err(_) => false,
+        }
+    }
+
+    async fn find_by_email(&self, email: &str) -> Result<Option<AuthUser>, anyhow::Error> {
+        let email_hash = sha256::hash_str(email);
+        self.find_by_email_hash(&email_hash).await
+    }
+
     async fn find_by_id(&self, id: ArcUuid7) -> Result<Option<AuthUser>, anyhow::Error>;
     async fn find_by_username(&self, username: &str) -> Result<Option<AuthUser>, anyhow::Error>;
     async fn find_by_email_hash(&self, hash: &str) -> Result<Option<AuthUser>, anyhow::Error>;
