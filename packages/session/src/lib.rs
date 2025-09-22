@@ -2,12 +2,10 @@ mod config;
 mod dirtybase_entry;
 mod resource_manager;
 mod session_resolver;
-mod session_storage_resolver;
 pub mod storage;
 
 pub use config::*;
 pub use dirtybase_entry::*;
-pub use session_storage_resolver::*;
 
 pub use dirtybase_entry::SessionExtension as Extension;
 

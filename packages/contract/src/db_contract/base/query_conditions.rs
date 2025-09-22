@@ -1,8 +1,10 @@
+use serde::{Deserialize, Serialize};
+
 use crate::db_contract::query_values::QueryValue;
 
 use super::query_operators::Operator;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Condition {
     pub column: String,
     pub operator: Operator,

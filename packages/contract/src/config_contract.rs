@@ -67,15 +67,32 @@ fn load_dot_env<P: AsRef<Path>>(mut dir: Option<P>) {
         PathBuf::new().join("./")
     };
 
-    if !path.is_dir() {
-        // panic!("Directory to find .env files does not exist");
+    if let Err(e) = dotenvy::from_filename(path.join(".env.defaults")) {
+        if !e.not_found() {
+            eprintln!(".env.defaults error : {:#?}", e);
+        }
+    }
+    if let Err(e) = dotenvy::from_filename_override(path.join(".env.prod")) {
+        if !e.not_found() {
+            panic!(".env.prod error : {:#?}", e);
+        }
+    }
+    if let Err(e) = dotenvy::from_filename_override(path.join(".env.stage")) {
+        if !e.not_found() {
+            panic!(".env.stage error : {:#?}", e);
+        }
+    }
+    if let Err(e) = dotenvy::from_filename_override(path.join(".env")) {
+        if !e.not_found() {
+            panic!(".env error : {:#?}", e);
+        }
     }
 
-    let _ = dotenvy::from_filename(path.join(".env.defaults"));
-    let _ = dotenvy::from_filename_override(path.join(".env.prod"));
-    let _ = dotenvy::from_filename_override(path.join(".env.stage"));
-    let _ = dotenvy::from_filename_override(path.join(".env"));
-    let _ = dotenvy::from_filename_override(path.join(".env.dev"));
+    if let Err(e) = dotenvy::from_filename_override(path.join(".env.dev")) {
+        if !e.not_found() {
+            panic!(".env.dev : {:#?}", e);
+        }
+    }
 
     env::set_var(LOADED_FLAG_KEY, LOADED_FLAG_VALUE);
 }

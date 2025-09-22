@@ -1,12 +1,14 @@
+use serde::{Deserialize, Serialize};
+
 use super::base::{aggregate::Aggregate, query::QueryBuilder};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum QueryColumnName {
     Name(String),
     SubQuery(Box<QueryBuilder>),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct QueryColumn {
     name: QueryColumnName,
     table: Option<String>,

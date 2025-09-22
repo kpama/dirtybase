@@ -4,11 +4,11 @@ use dirtybase_contract::{
         base::manager::Manager,
         types::{JsonField, OptionalDateTimeField, OptionalStringField},
     },
-    session_contract::{SessionData, SessionId, SessionStorage, SessionStorageProvider},
+    session_contract::{
+        SessionData, SessionId, SessionStorage, SessionStorageProvider, SessionStorageResolver,
+    },
 };
 use dirtybase_helper::time::{current_datetime, now_ts};
-
-use crate::SessionStorageResolver;
 
 pub const NAME: &str = "database";
 

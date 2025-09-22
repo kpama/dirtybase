@@ -141,15 +141,24 @@ pub(crate) async fn handle_get_user_by_id(
     storage.find_by_id(id).await.into()
 }
 
-pub(crate) async fn register_form_handler() -> impl IntoResponse {
+pub(crate) async fn register_form_handler(
+    CtxExt(http_context): CtxExt<HttpContext>,
+) -> impl IntoResponse {
+    let do_signup_route = http_context
+        .named_route_service()
+        .get("auth:do-signup-form")
+        .unwrap();
     Html(
-        "<h1>Register Form</h1><form method='post' action='/auth/do-registration'>
+        format!(
+        "<h1>Register Form</h1><form method='post' action='{}'>
     <label>Username: </label><input type='text' name='username' placeholder='username' /> <br/>
     <label>Email: </label><input type='text' name='email' placeholder='email' /> <br/>
     <label>Password: </label><input type='password' name='password' placeholder='password' /> <br/>
     <label>Confirm Password: </label><input type='password' name='confirm_password' placeholder='password' /> <br/>
     <button type='submit'>Register</button>
   </form>",
+         do_signup_route.redirector().path()
+        )
     )
 }
 

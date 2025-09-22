@@ -1,6 +1,8 @@
 use std::fmt::Display;
 
-#[derive(Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct IndexProp {
     columns: Vec<String>,
     to_delete: bool,
@@ -38,7 +40,7 @@ impl IndexProp {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum IndexType {
     Primary(IndexProp),
     Unique(IndexProp),

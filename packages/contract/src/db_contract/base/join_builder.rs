@@ -1,8 +1,10 @@
+use serde::{Deserialize, Serialize};
+
 use crate::db_contract::query_column::QueryColumn;
 
 use super::query_join_types::JoinType;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct JoinQueryBuilder {
     table: String,
     join_clause: String,

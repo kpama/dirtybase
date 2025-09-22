@@ -2,11 +2,13 @@ mod extension;
 
 pub mod app_contract;
 pub mod auth_contract;
+pub mod cache_contract;
 pub mod cli_contract;
 pub mod config_contract;
 pub mod db_contract;
 pub mod dot_env_man;
 pub mod http_contract;
+pub mod lock_contract;
 pub mod multitenant_contract;
 pub mod permission_contract;
 pub mod queue_contract;

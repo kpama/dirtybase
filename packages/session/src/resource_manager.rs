@@ -1,10 +1,10 @@
 use dirtybase_contract::{
     app_contract::ContextResourceManager,
-    session_contract::{SessionStorage, SessionStorageProvider},
+    session_contract::{SessionStorage, SessionStorageProvider, SessionStorageResolver},
 };
 
 use crate::{
-    SessionConfig, SessionExtension, SessionStorageResolver,
+    SessionConfig, SessionExtension,
     storage::{database::DatabaseStorage, dummy::DummyStorage, memory::MemoryStorage},
 };
 
@@ -35,8 +35,8 @@ pub async fn register_resource_manager() {
             Box::pin(async move {
                 let config = context.get::<SessionConfig>().await.unwrap_or_default();
                 let lifetime = config.lifetime();
-                let provider = SessionStorageResolver::new(context.clone(), config)
-                    .get_provider()
+                let provider = SessionStorageResolver::new(context.clone())
+                    .get_provider(config.storage().to_string())
                     .await?;
                 let storage = provider.clone();
                 let id = "session::storage".into();

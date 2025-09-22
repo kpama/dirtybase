@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use crate::db_contract::field_values::FieldValue;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ColumnBlueprint {
     pub name: String,
     pub after: Option<String>,
@@ -13,7 +15,7 @@ pub struct ColumnBlueprint {
     pub check: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ForeignKey {
     table: String,
     column: String,
@@ -41,7 +43,7 @@ impl ForeignKey {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ColumnDefault {
     Custom(String),
     EmptyString,
@@ -54,7 +56,7 @@ pub enum ColumnDefault {
     Ulid,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ColumnType {
     AutoIncrementId,
     Boolean,

@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::db_contract::{
     field_values::FieldValue,
     query_column::{QueryColumn, QueryColumnName},
@@ -24,7 +26,7 @@ pub enum WhereJoin {
     Or,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum QueryAction {
     Query {
         columns: Option<Vec<QueryColumn>>,
@@ -78,7 +80,7 @@ impl Display for QueryAction {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct QueryBuilder {
     where_clauses: Vec<WhereJoinOperator>,
     table: String,

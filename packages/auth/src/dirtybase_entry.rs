@@ -16,6 +16,7 @@ use crate::{AuthConfig, guards::register_guards, register_storages, storage};
 pub struct AuthExtension {
     is_enable: bool,
     is_db_storage: bool,
+    allow_self_signup: bool,
 }
 
 #[dirtybase_contract::async_trait]
@@ -28,14 +29,12 @@ impl ExtensionSetup for AuthExtension {
         self.is_enable = global_config.is_enabled();
         self.is_db_storage =
             global_config.storage_ref().as_str() == storage::database_storage::NAME;
+        self.allow_self_signup = global_config.allow_self_signup();
 
         ctx.container()
             .resolver::<Gate>(|sc| {
-                tracing::info!("calling the gate resolver: {}", sc.id());
-                Box::pin(async {
-                    //..
-                    Gate::new(sc)
-                })
+                tracing::info!("called the gate resolver: {}", sc.id());
+                Box::pin(async { Gate::new(sc) })
             })
             .await;
 
@@ -71,7 +70,7 @@ impl ExtensionSetup for AuthExtension {
     }
 
     fn register_routes(&self, manager: &mut RouterManager) {
-        http::register_routes(manager)
+        http::register_routes(manager, self.allow_self_signup)
     }
 }
 

@@ -171,15 +171,6 @@ where
     }
 }
 
-// impl<T> From<Box<T>> for FieldValue
-// where
-//     T: Into<FieldValue>,
-// {
-//     fn from(value: Box<T>) -> Self {
-//         value.into()
-//     }
-// }
-
 impl<T, E> From<Result<T, E>> for FieldValue
 where
     T: Into<FieldValue>,
@@ -192,23 +183,6 @@ where
         }
     }
 }
-
-// impl From<HashMap<String, FieldValue>> for FieldValue {
-//     fn from(value: HashMap<String, FieldValue>) -> Self {
-//         Self::Object(value)
-//     }
-// }
-
-// impl<'a> From<HashMap<&'a str, FieldValue>> for FieldValue {
-//     fn from(value: HashMap<&'a str, FieldValue>) -> Self {
-//         Self::Object(
-//             value
-//                 .into_iter()
-//                 .map(|(k, v)| (k.to_owned(), v))
-//                 .collect::<HashMap<String, FieldValue>>(),
-//         )
-//     }
-// }
 
 impl<A: Into<FieldValue>> FromIterator<A> for FieldValue {
     fn from_iter<T: IntoIterator<Item = A>>(iter: T) -> Self {

@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::db_contract::TableModel;
 
 use super::{
@@ -19,7 +21,7 @@ pub const CREATED_AT_FIELD: &str = "created_at";
 pub const UPDATED_AT_FIELD: &str = "updated_at";
 pub const DELETED_AT_FIELD: &str = "deleted_at";
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TableBlueprint {
     pub name: String,
     pub new_name: Option<String>,

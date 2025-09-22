@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use super::query_conditions::Condition;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WhereJoinOperator {
     None(Condition),
     And(Condition),

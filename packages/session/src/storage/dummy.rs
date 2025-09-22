@@ -1,9 +1,7 @@
 use anyhow::Ok;
 use dirtybase_contract::session_contract::{
-    SessionData, SessionId, SessionStorage, SessionStorageProvider,
+    SessionData, SessionId, SessionStorage, SessionStorageProvider, SessionStorageResolver,
 };
-
-use crate::SessionStorageResolver;
 
 pub const NAME: &str = "dummy";
 
