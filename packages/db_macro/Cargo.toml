@@ -9,7 +9,8 @@ edition = { workspace = true }
 proc-macro = true
 
 [dependencies]
-dirtybase_contract = { path = "../contract", version = "*" }
+# dirtybase_contract = { path = "../contract", version = "*" }
+dirtybase_shared_type = { path = "../shared_type", version = "*" }
 busybody = { workspace = true }
 quote = { workspace = true }
 syn = { workspace = true }

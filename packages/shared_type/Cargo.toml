@@ -1,0 +1,24 @@
+[package]
+name = "dirtybase_shared_type"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+dirtybase_helper = { path = "../helper", version = "*" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+hex = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }
+ulid = { workspace = true }
+validator = { workspace = true }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+cruet = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
+tokio-stream = { workspace = true }
+tokio-util = { workspace = true, features = ["full"] }
+orsomafo = { workspace = true }
+futures = { workspace = true }
+futures-util = { workspace = true }
+log = { workspace = true }

@@ -3,7 +3,7 @@ use std::sync::Arc;
 pub use ulid::*;
 
 pub type UlidString = String;
-pub type ArcUlid = Arc<str>;
+pub type ArcUlid = Arc<String>;
 
 pub fn generate_ulid() -> UlidString {
     Ulid::new().to_string().to_lowercase()

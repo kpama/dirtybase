@@ -4,11 +4,12 @@ use super::{
 };
 use crate::db_contract::{
     base::manager::Manager,
-    field_values::FieldValue,
+    // field_values::FieldValue,
     types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue},
 };
 use anyhow::Result;
 use async_trait::async_trait;
+use dirtybase_shared_type::db::field_values::FieldValue;
 use std::{
     fmt::{Debug, Display},
     sync::Arc,

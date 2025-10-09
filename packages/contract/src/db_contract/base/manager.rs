@@ -5,9 +5,10 @@ use std::{
 
 use crate::db_contract::{
     event::SchemeWroteEvent,
-    field_values::FieldValue,
+    // field_values::FieldValue,
     types::{ColumnAndValue, ToColumnAndValue},
-    DatabaseKindPoolCollection, TableModel,
+    DatabaseKindPoolCollection,
+    // TableModel,
 };
 
 use super::{
@@ -16,6 +17,7 @@ use super::{
     table::TableBlueprint,
 };
 use anyhow::Result;
+use dirtybase_shared_type::db::{field_values::FieldValue, TableModel};
 use futures::future::BoxFuture;
 use orsomafo::Dispatchable;
 

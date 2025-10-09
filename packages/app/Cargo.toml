@@ -18,6 +18,7 @@ dirtybase_permission = { path = "../permission", version = "*" }
 dirtybase_session = { path = "../session", version = "*" }
 dirtybase_multitenant = { path = "../multitenant", version = "*", optional = true }
 dirtybase_encrypt = { path = "../encrypt", version = "*" }
+dirtybase_shared_type = { path = "../shared_type", version = "*" }
 simple-middleware = { workspace = true }
 anyhow = { workspace = true }
 validator = { workspace = true }
@@ -58,7 +59,7 @@ axum-extra = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tera = { workspace = true, optional = true }
-reqwest = { workspace = true}
+reqwest = { workspace = true }
 serde_urlencoded = { workspace = true }
 
 

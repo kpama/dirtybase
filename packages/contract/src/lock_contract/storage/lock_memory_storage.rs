@@ -3,8 +3,9 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
-use dirtybase_contract::lock_contract::{LockData, storage::LockStorage};
 use tokio::sync::RwLock;
+
+use crate::lock_contract::{storage::LockStorage, LockData};
 
 type Storage = Arc<RwLock<HashMap<String, LockData>>>;
 
@@ -29,17 +30,15 @@ impl LockStorage for LockMemoryStorage {
         let r_lock = self.0.read().await;
         Ok(r_lock.get(key).cloned())
     }
-    async fn restore(&self, key: &str, owner: &str) -> Result<Option<LockData>, anyhow::Error> {
-        // TODO: DO RESTORING
-        self.get(key).await
-    }
+
     async fn set(&self, lock: LockData) -> Result<LockData, anyhow::Error> {
         let mut w_lock = self.0.write().await;
         w_lock.insert(lock.key().to_string(), lock.clone());
         Ok(lock)
     }
+
     async fn delete(&self, lock: LockData) -> Result<(), anyhow::Error> {
-        let existing = if let Ok(Some(existing)) = self.get(lock.key()).await {
+        let existing = if let Some(existing) = self.get(&lock.key()).await? {
             existing
         } else {
             return Ok(());
@@ -50,7 +49,8 @@ impl LockStorage for LockMemoryStorage {
         }
 
         let mut w_lock = self.0.write().await;
-        _ = w_lock.remove(lock.key());
+        _ = w_lock.remove(lock.key().as_str());
+
         Ok(())
     }
 }
@@ -64,14 +64,14 @@ mod test {
         let storage = LockMemoryStorage::new().await;
         let lock_data = storage.set(LockData::new("test:lock-mem-set", 1)).await;
         assert!(lock_data.is_ok());
-        assert_eq!(lock_data.unwrap().key(), "test:lock-mem-set");
+        assert_eq!(lock_data.unwrap().key().as_str(), "test:lock-mem-set");
     }
 
     #[tokio::test]
     async fn test_get_mem_storage() {
         let storage = LockMemoryStorage::new().await;
         let lock_data = storage.set(LockData::new("test:mem-get", 1)).await.unwrap();
-        assert_eq!(lock_data.key(), "test:mem-get");
+        assert_eq!(lock_data.key().as_str(), "test:mem-get");
         let existing = storage.get("test:mem-get").await.unwrap().unwrap();
         assert_eq!(lock_data.key(), existing.key());
         assert_eq!(lock_data.expires(), existing.expires());

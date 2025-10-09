@@ -104,7 +104,7 @@ pub fn build_entity_repo(
         })
     }
 
-    // makes a copy of the current record ID value
+    // Makes a copy of the current record ID value
     let pluck_rec_id = if id_field_attr.optional {
         quote! {
             let id = record.#id_field.clone().unwrap();
@@ -117,9 +117,9 @@ pub fn build_entity_repo(
 
     let instance = quote! {
         let mut instance = Self {
-            builder:  ::dirtybase_contract::db_contract::base::query::QueryBuilder::new(
-                <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::table_name(),
-                        ::dirtybase_contract::db_contract::base::query::QueryAction::Query {columns: None}
+            builder:  ::dirtybase_shared_type::db::base::query::QueryBuilder::new(
+                <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::table_name(),
+                        ::dirtybase_shared_type::db::base::query::QueryAction::Query {columns: None}
                     ),
             manager: manager.clone(),
             eager: Vec::new(),
@@ -131,11 +131,11 @@ pub fn build_entity_repo(
         quote! {}
     } else {
         quote! {
-            record.#created_at = Some(::dirtybase_contract::dirtybase_helper::time::current_datetime());
+            record.#created_at = Some(::dirtybase_shared_type::dirtybase_helper::time::current_datetime());
         }
     };
     let insert_method = quote! {
-        pub async fn insert(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_contract::anyhow::Error> {
+        pub async fn insert(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_shared_type::anyhow::Error> {
             #set_created_at
             #pluck_rec_id
 
@@ -143,7 +143,7 @@ pub fn build_entity_repo(
 
             match self.by_id(id).await? {
                 Some(v) => Ok(v),
-                None => Err(::dirtybase_contract::anyhow::anyhow!("could not retrieve inserted model"))
+                None => Err(::dirtybase_shared_type::anyhow::anyhow!("could not retrieve inserted model"))
             }
         }
     };
@@ -153,24 +153,24 @@ pub fn build_entity_repo(
         quote! {}
     } else {
         quote! {
-            record.#updated_at= Some(::dirtybase_contract::dirtybase_helper::time::current_datetime());
+            record.#updated_at= Some(::dirtybase_shared_type::dirtybase_helper::time::current_datetime());
         }
     };
     let update_method = quote! {
-        pub async fn update(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_contract::anyhow::Error>{
+        pub async fn update(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_shared_type::anyhow::Error>{
             #set_updated_at
             #pluck_rec_id
 
             _ = self.manager.update_table::<#ident>(record, |qb| {
                 qb.is_eq(
-                    <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
-                    <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column()
+                    <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::prefix_with_tbl(
+                    <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::id_column()
                     ), id.clone());
             }).await?;
 
             match self.by_id(id).await? {
                 Some(v) =>Ok(v),
-                None => Err(::dirtybase_contract::anyhow::anyhow!("could not retrieve updated model"))
+                None => Err(::dirtybase_shared_type::anyhow::anyhow!("could not retrieve updated model"))
             }
         }
     };
@@ -179,26 +179,26 @@ pub fn build_entity_repo(
 
     // destroy record
     let destroy_method = quote! {
-        pub async fn destroy(&mut self, record: #ident) -> Result<(), ::dirtybase_contract::anyhow::Error> {
+        pub async fn destroy(&mut self, record: #ident) -> Result<(), ::dirtybase_shared_type::anyhow::Error> {
             #pluck_rec_id
 
             self.manager.delete_from_table::<#ident>(|qb|{
                 qb.is_eq(
-                    <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
-                    <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column())
+                    <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::prefix_with_tbl(
+                    <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::id_column())
                     , id);
             }).await
         }
     };
 
     let mut delete_method = quote! {
-        pub async fn delete(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_contract::anyhow::Error> {
+        pub async fn delete(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_shared_type::anyhow::Error> {
             #pluck_rec_id
 
             _ = self.manager.delete_from_table::<#ident>(|qb|{
                 qb.is_eq(
 
-                    <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column(),  id);
+                    <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::id_column(),  id);
             }).await?;
 
             Ok(record)
@@ -207,21 +207,21 @@ pub fn build_entity_repo(
 
     if soft_deletable {
         delete_method = quote! {
-            pub async fn delete(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_contract::anyhow::Error>{
-                record.#deleted_at = Some(::dirtybase_contract::dirtybase_helper::time::current_datetime());
+            pub async fn delete(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_shared_type::anyhow::Error>{
+                record.#deleted_at = Some(::dirtybase_shared_type::dirtybase_helper::time::current_datetime());
                 self.update(record).await
             }
         };
 
         restore_method = quote! {
-            pub async fn restore(&mut self, id: #id_type) -> Result<Option<#ident>, ::dirtybase_contract::anyhow::Error> {
-                let name = <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap().to_string();
+            pub async fn restore(&mut self, id: #id_type) -> Result<Option<#ident>, ::dirtybase_shared_type::anyhow::Error> {
+                let name = <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap().to_string();
 
                 let mut cv = ::std::collections::HashMap::new();
-                cv.insert(name, ::dirtybase_contract::db_contract::field_values::FieldValue::Null);
+                cv.insert(name, ::dirtybase_shared_type::db::field_values::FieldValue::Null);
 
                 _ = self.manager.update_table::<#ident>(cv, |qb|{
-                    qb.is_eq(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column(), id.clone());
+                    qb.is_eq(<#ident as ::dirtybase_shared_type::db::table_model::TableModel>::id_column(), id.clone());
                 }).await?;
 
                 self.by_id(id).await
@@ -231,8 +231,8 @@ pub fn build_entity_repo(
         append_trash_filter = quote! {
             if !self.eager.contains(&"_soft_delete".to_string()) {
                 self.builder.is_null(
-                    <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
-                        <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                    <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::prefix_with_tbl(
+                        <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
                         )
                 );
             }
@@ -253,8 +253,8 @@ pub fn build_entity_repo(
                 let flag_soft = "_soft_delete".to_string();
                 if !self.eager.contains(&flag_soft) {
                     self.builder.is_not_null(
-                        <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
-                            <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                        <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::prefix_with_tbl(
+                            <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
                             )
                         );
                     self.eager.push(flag_soft);
@@ -268,14 +268,14 @@ pub fn build_entity_repo(
     quote! {
         #[derive(Debug, Clone)]
         pub struct #repo_name {
-            builder: ::dirtybase_contract::db_contract::base::query::QueryBuilder,
-            manager: ::dirtybase_contract::db_contract::base::manager::Manager,
+            builder: ::dirtybase_shared_type::db::base::query::QueryBuilder,
+            manager: ::dirtybase_shared_type::db::base::manager::Manager,
             eager: Vec<String>,
         }
 
 
         impl #repo_name {
-            pub fn new(manager: &::dirtybase_contract::db_contract::base::manager::Manager) -> Self {
+            pub fn new(manager: &::dirtybase_shared_type::db::base::manager::Manager) -> Self {
                 #instance
                 instance
             }
@@ -286,14 +286,14 @@ pub fn build_entity_repo(
 
             #(#with_methods_vec)*
 
-            pub async fn get(&mut self) -> Result<Option<Vec<#ident>>, ::dirtybase_contract::anyhow::Error> {
+            pub async fn get(&mut self) -> Result<Option<Vec<#ident>>, ::dirtybase_shared_type::anyhow::Error> {
                 let mut rows_map = ::std::collections::HashMap::new();
                 #(#collections_vec)*
                 #append_trash_filter
 
                 self
                     .builder
-                    .select_multiple(&<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::table_query_col_aliases(None));
+                    .select_multiple(&<#ident as ::dirtybase_shared_type::db::table_model::TableModel>::table_query_col_aliases(None));
 
                 let result = self.manager.execute_query(self.builder.clone()).all().await;
 
@@ -303,8 +303,8 @@ pub fn build_entity_repo(
                     Ok(Some(list)) => {
                         for row in &list {
                             if let Some(row_entity) = #ident::from_struct_column_value(row,
-                                Some(<#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::table_name())) {
-                                let row_hash = ::dirtybase_contract::db_contract::table_model::TableModel::entity_hash(&row_entity);
+                                Some(<#ident as ::dirtybase_shared_type::db::table_model::TableModel>::table_name())) {
+                                let row_hash = ::dirtybase_shared_type::db::table_model::TableModel::entity_hash(&row_entity);
                                 rows_map.insert(row_hash, row_entity);
 
                                 //joins
@@ -314,7 +314,6 @@ pub fn build_entity_repo(
 
                         // now map relationships
                         for(row_hash, row_entity) in &mut rows_map {
-                            // let row_hash = ::dirtybase_contract::db_contract::table_model::TableModel::entity_hash(row_entity);
                             #(#entity_appends_vec)*
                         }
 
@@ -325,7 +324,7 @@ pub fn build_entity_repo(
                 }
             }
 
-            pub async fn first(&mut self) -> Result<Option<#ident>, ::dirtybase_contract::anyhow::Error> {
+            pub async fn first(&mut self) -> Result<Option<#ident>, ::dirtybase_shared_type::anyhow::Error> {
                 match self.get().await {
                     Ok(Some(mut list)) => {
                         Ok(list.pop())
@@ -335,29 +334,29 @@ pub fn build_entity_repo(
                 }
             }
 
-            pub async fn latest(&mut self)-> Result<Option<#ident>, ::dirtybase_contract::anyhow::Error>  {
+            pub async fn latest(&mut self)-> Result<Option<#ident>, ::dirtybase_shared_type::anyhow::Error>  {
                 self.builder.desc(
-                  <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
-                        <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column())
+                  <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::prefix_with_tbl(
+                        <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::id_column())
                 );
 
                 self.first().await
             }
 
-            pub async fn oldest(&mut self)-> Result<Option<#ident>, ::dirtybase_contract::anyhow::Error>  {
+            pub async fn oldest(&mut self)-> Result<Option<#ident>, ::dirtybase_shared_type::anyhow::Error>  {
                 self.builder.asc(
-                  <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
-                        <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column())
+                  <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::prefix_with_tbl(
+                        <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::id_column())
                 );
 
                 self.first().await
             }
 
-            pub async fn count(&mut self)-> Result<i64, ::dirtybase_contract::anyhow::Error> {
+            pub async fn count(&mut self)-> Result<i64, ::dirtybase_shared_type::anyhow::Error> {
                 #append_trash_filter
 
-                let id_column = <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
-                        <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column());
+                let id_column = <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::prefix_with_tbl(
+                        <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::id_column());
 
                 self.builder.count_as(
                     &id_column,
@@ -385,16 +384,16 @@ pub fn build_entity_repo(
 
             }
 
-            pub async fn by_id(&mut self, id: #id_type) -> Result<Option<#ident>, ::dirtybase_contract::anyhow::Error> {
+            pub async fn by_id(&mut self, id: #id_type) -> Result<Option<#ident>, ::dirtybase_shared_type::anyhow::Error> {
                 self.builder.is_eq(
-                  <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
-                        <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column()),
+                  <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::prefix_with_tbl(
+                        <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::id_column()),
                     id);
                 self.first().await
             }
 
             pub fn table_name() -> &'static str {
-               <#ident as ::dirtybase_contract::db_contract::table_model::TableModel>::table_name()
+               <#ident as ::dirtybase_shared_type::db::table_model::TableModel>::table_name()
             }
 
             #insert_method

@@ -32,9 +32,9 @@ pub(crate) fn generate_join_method(
         let foreign_type = format_ident!("{}", &attr.the_type);
 
         // local column
-        let mut parent_col = quote! {<#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::foreign_id_column()};
+        let mut parent_col = quote! {<#foreign_type as ::dirtybase_shared_type::db::table_model::TableModel>::foreign_id_column()};
         // parent column
-        let mut foreign_col = quote! { <#foreign_type  as ::dirtybase_contract::db_contract::table_model::TableModel>::id_column() };
+        let mut foreign_col = quote! { <#foreign_type  as ::dirtybase_shared_type::db::table_model::TableModel>::id_column() };
 
         // parent key
         if let Some(field) = &attribute.local_col {
@@ -51,8 +51,8 @@ pub(crate) fn generate_join_method(
         } else {
             quote! {
                  self.builder.is_null(
-                    <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
-                        <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                    <#foreign_type as ::dirtybase_shared_type::db::table_model::TableModel>::prefix_with_tbl(
+                        <#foreign_type as ::dirtybase_shared_type::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
                     )
                 );
             }
@@ -92,8 +92,8 @@ pub(crate) fn generate_join_method(
                         let name = #name.to_string();
                         if !self.eager.contains(&name) {
                             self.builder.is_not_null(
-                                <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::prefix_with_tbl(
-                                    <#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                                <#foreign_type as ::dirtybase_shared_type::db::table_model::TableModel>::prefix_with_tbl(
+                                    <#foreign_type as ::dirtybase_shared_type::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
                                 )
                             );
                             self.builder.inner_join_table_and_select::<#parent,#foreign_type>(#parent_col, #foreign_col, None);
@@ -140,7 +140,7 @@ pub(crate) fn build_row_processor(
        //
        if #is_eager {
             if let Some(entity) = #foreign_type::from_struct_column_value(row,
-                 Some(<#foreign_type as ::dirtybase_contract::db_contract::table_model::TableModel>::table_name())) {
+                 Some(<#foreign_type as ::dirtybase_shared_type::db::table_model::TableModel>::table_name())) {
                 #map_name.insert(row_hash ,entity);
             }
        }

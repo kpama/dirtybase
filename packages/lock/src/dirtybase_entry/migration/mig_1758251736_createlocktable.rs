@@ -17,6 +17,7 @@ impl Migration for Mig1758251736CreateLockTable {
                 bp.string("key").set_is_unique(true).set_is_nullable(false);
                 bp.string("owner").set_is_nullable(false);
                 bp.integer("expires").set_is_nullable(false).set_default(5);
+                bp.json("data");
             })
             .await
     }

@@ -78,13 +78,8 @@ impl HttpContext {
 
         let parts = Arc::new(Mutex::new(p));
 
-        let subdomain = if let Some(host) = req.headers().get("host") {
-            let pieces = host
-                .to_str()
-                .unwrap()
-                .split(".")
-                .map(String::from)
-                .collect::<Vec<String>>();
+        let subdomain = if let Some(host) = req.uri().host() {
+            let pieces = host.split(".").map(String::from).collect::<Vec<String>>();
             if pieces.len() > 1 {
                 pieces.first().cloned().map(Arc::new)
             } else {

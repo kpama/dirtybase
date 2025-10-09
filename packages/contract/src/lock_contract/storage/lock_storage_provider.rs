@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::lock_contract::{storage::LockStorage, LockData};
 
+#[derive(Clone)]
 pub struct LockStorageProvider(Arc<Box<dyn LockStorage>>);
 
 impl LockStorageProvider {
@@ -21,10 +22,6 @@ impl LockStorage for LockStorageProvider {
 
     async fn set(&self, lock: LockData) -> Result<LockData, anyhow::Error> {
         self.0.set(lock).await
-    }
-
-    async fn restore(&self, key: &str, owner: &str) -> Result<Option<LockData>, anyhow::Error> {
-        self.0.restore(key, owner).await
     }
 
     async fn delete(&self, lock: LockData) -> Result<(), anyhow::Error> {

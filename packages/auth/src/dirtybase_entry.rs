@@ -32,9 +32,9 @@ impl ExtensionSetup for AuthExtension {
         self.allow_self_signup = global_config.allow_self_signup();
 
         ctx.container()
-            .resolver::<Gate>(|sc| {
+            .resolver(|sc| async move {
                 tracing::info!("called the gate resolver: {}", sc.id());
-                Box::pin(async { Gate::new(sc) })
+                Gate::new(sc)
             })
             .await;
 

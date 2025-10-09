@@ -7,4 +7,5 @@ edition.workspace = true
 dirtybase_contract = { path = "../contract", version = "*" }
 dirtybase_helper = { path = "../helper", version = "*" }
 dirtybase_db_macro = { path = "../db_macro", version = "*" }
+dirtybase_shared_type = { path = "../shared_type", version = "*" }
 serde = { workspace = true }

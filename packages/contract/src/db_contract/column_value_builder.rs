@@ -1,6 +1,11 @@
 use std::cell::RefCell;
 
-use super::{field_values::FieldValue, types::ColumnAndValue};
+use dirtybase_shared_type::db::field_values::FieldValue;
+
+use super::{
+    // field_values::FieldValue,
+    types::ColumnAndValue,
+};
 
 pub struct ColumnAndValueBuilder {
     data: RefCell<ColumnAndValue>,

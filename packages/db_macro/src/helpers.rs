@@ -255,7 +255,7 @@ pub(crate) fn names_of_from_cv_handlers(
                         cv.get(#column)
                     } else {
                         match cv.get(#table_name) {
-                          Some(::dirtybase_contract::db_contract::field_values::FieldValue::Object(c)) => {
+                          Some(::dirtybase_shared_type::db::field_values::FieldValue::Object(c)) => {
                                c.get(#column).clone()
                           },
                           _ => None
@@ -307,35 +307,35 @@ pub(crate) fn build_from_handlers(
                     if item.1.optional {
                         if item.1.is_vec {
                         quote! {
-                            pub fn #fn_name <'a>(field: Option<&'a ::dirtybase_contract::db_contract::field_values::FieldValue>) -> Option<Vec<#returns>> {
-                                ::dirtybase_contract::db_contract::field_values::FieldValue::from_ref_option_into_option(field)
+                            pub fn #fn_name <'a>(field: Option<&'a ::dirtybase_shared_type::db::field_values::FieldValue>) -> Option<Vec<#returns>> {
+                                ::dirtybase_shared_type::db::field_values::FieldValue::from_ref_option_into_option(field)
                             }
                         }
                         } else {
                             quote! {
-                                pub fn #fn_name <'a>(field: Option<&'a ::dirtybase_contract::db_contract::field_values::FieldValue>) -> Option<#returns> {
-                                ::dirtybase_contract::db_contract::field_values::FieldValue::from_ref_option_into_option(field)
+                                pub fn #fn_name <'a>(field: Option<&'a ::dirtybase_shared_type::db::field_values::FieldValue>) -> Option<#returns> {
+                                ::dirtybase_shared_type::db::field_values::FieldValue::from_ref_option_into_option(field)
                                 }
                             }
                         }
                     } else if item.1.is_vec {
                             quote! {
-                                pub fn #fn_name <'a> (field: Option<&'a ::dirtybase_contract::db_contract::field_values::FieldValue>) -> Vec<#returns> {
-                                    ::dirtybase_contract::db_contract::field_values::FieldValue::from_ref_option_into(field)
+                                pub fn #fn_name <'a> (field: Option<&'a ::dirtybase_shared_type::db::field_values::FieldValue>) -> Vec<#returns> {
+                                    ::dirtybase_shared_type::db::field_values::FieldValue::from_ref_option_into(field)
                                 }
                             }
                     } else if item.1.flatten {
                             quote! {
-                                pub fn #fn_name <'a> (field: Option<&'a ::dirtybase_contract::db_contract::field_values::FieldValue>) -> #returns {
-                                  let cv =  ::dirtybase_contract::db_contract::field_values::FieldValue::from_ref_option_into::<::std::collections::HashMap<String,::dirtybase_contract::db_contract::field_values::FieldValue>>(field);
-                                  ::dirtybase_contract::db_contract::types::FromColumnAndValue::from_column_value(cv).unwrap_or_default()
+                                pub fn #fn_name <'a> (field: Option<&'a ::dirtybase_shared_type::db::field_values::FieldValue>) -> #returns {
+                                  let cv =  ::dirtybase_shared_type::db::field_values::FieldValue::from_ref_option_into::<::std::collections::HashMap<String,::dirtybase_shared_type::db::field_values::FieldValue>>(field);
+                                  ::dirtybase_shared_type::db::types::FromColumnAndValue::from_column_value(cv).unwrap_or_default()
                                 }
                             }
                         }
                         else {
                             quote! {
-                                pub fn #fn_name <'a> (field: Option<&'a ::dirtybase_contract::db_contract::field_values::FieldValue>) -> #returns {
-                                    ::dirtybase_contract::db_contract::field_values::FieldValue::from_ref_option_into(field)
+                                pub fn #fn_name <'a> (field: Option<&'a ::dirtybase_shared_type::db::field_values::FieldValue>) -> #returns {
+                                    ::dirtybase_shared_type::db::field_values::FieldValue::from_ref_option_into(field)
                                 }
                         }
                     });
@@ -361,9 +361,9 @@ pub(crate) fn build_into_handlers(
         built.push(if item.1.optional {
             if item.1.embedded {
                 quote! {
-                    pub fn #fn_name(&self) ->Option<::dirtybase_contract::db_contract::field_values::FieldValue> {
+                    pub fn #fn_name(&self) ->Option<::dirtybase_shared_type::db::field_values::FieldValue> {
                         if let Some(value) = &self.#struct_field {
-                            Some(::dirtybase_contract::db_contract::field_values::FieldValue::from(value))
+                            Some(::dirtybase_shared_type::db::field_values::FieldValue::from(value))
                         } else {
                             None
                         }
@@ -371,7 +371,7 @@ pub(crate) fn build_into_handlers(
                 }
             } else {
                 quote! {
-                    pub fn #fn_name(&self) ->Option<::dirtybase_contract::db_contract::field_values::FieldValue> {
+                    pub fn #fn_name(&self) ->Option<::dirtybase_shared_type::db::field_values::FieldValue> {
                         if let Some(value) = &self.#struct_field {
                             Some(value.clone().into())
                         } else {
@@ -382,13 +382,13 @@ pub(crate) fn build_into_handlers(
             }
         } else if item.1.embedded {
             quote! {
-                pub fn #fn_name(&self) ->Option<::dirtybase_contract::db_contract::field_values::FieldValue> {
-                     Some(::dirtybase_contract::db_contract::field_values::FieldValue::from(&self.#struct_field))
+                pub fn #fn_name(&self) ->Option<::dirtybase_shared_type::db::field_values::FieldValue> {
+                     Some(::dirtybase_shared_type::db::field_values::FieldValue::from(&self.#struct_field))
                     }
                 }
             } else {
                 quote! {
-                    pub fn #fn_name(&self) ->Option<::dirtybase_contract::db_contract::field_values::FieldValue> {
+                    pub fn #fn_name(&self) ->Option<::dirtybase_shared_type::db::field_values::FieldValue> {
                         Some(self.#struct_field.clone().into())
                     }
                 }
@@ -413,7 +413,7 @@ pub(crate) fn build_into_for_calls(
         if item.1.flatten {
             let prop_name = format_ident!("{}", &item.1.name);
             built.push(quote! {
-                merge_column_value(::dirtybase_contract::db_contract::types::ToColumnAndValue::to_column_value(&self.#prop_name).expect("could not flatten type"))
+                merge_column_value(::dirtybase_shared_type::db::types::ToColumnAndValue::to_column_value(&self.#prop_name).expect("could not flatten type"))
             });
             continue;
         }
