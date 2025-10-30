@@ -9,23 +9,19 @@ use super::GateResponse;
 #[derive(Debug, Clone)]
 pub(crate) struct GateBeforeMiddleware {
     pub(crate) sc: ServiceContainer,
-    ability: Arc<String>,
+    ability: u64,
 }
 
 impl GateBeforeMiddleware {
-    pub(crate) fn new(sc: ServiceContainer, ability: &str) -> Self {
+    pub(crate) fn new(sc: ServiceContainer, ability_hash: u64) -> Self {
         Self {
             sc,
-            ability: Arc::new(ability.to_string()),
+            ability: ability_hash,
         }
     }
 
-    pub fn ability_ref(&self) -> &str {
-        self.ability.as_str()
-    }
-
-    pub fn ability(&self) -> Arc<String> {
-        self.ability.clone()
+    pub fn ability(&self) -> u64 {
+        self.ability
     }
 
     pub async fn handle(self) -> Option<GateResponse> {

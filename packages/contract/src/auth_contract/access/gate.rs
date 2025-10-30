@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    hash::{DefaultHasher, Hash, Hasher},
     sync::{Arc, OnceLock},
 };
 
@@ -15,7 +16,7 @@ use super::{
 };
 
 type GateCollection = HashMap<
-    String,
+    u64,
     Arc<
         Box<
             dyn Fn(ServiceContainer) -> BoxFuture<'static, Option<GateResponse>>
@@ -48,8 +49,10 @@ impl Gate {
     {
         let rw_lock = GATE_COLLECTION.get_or_init(RwLock::default);
         let mut w_lock = rw_lock.write().await;
+        let mut hasher = DefaultHasher::new();
+        ability.as_ref().hash(&mut hasher);
         w_lock.insert(
-            ability.as_ref().to_string(),
+            hasher.finish(),
             Arc::new(Box::new(move |c| {
                 let cc = c.clone();
                 let h = handler.clone();
@@ -111,8 +114,10 @@ impl Gate {
 
     /// Check the specified ability returning a `GateResponse`
     pub async fn response(&self, ability: impl AsRef<str>) -> GateResponse {
-        let name = ability.as_ref();
-        let result = GateBeforeMiddleware::new(self.sc.clone(), name)
+        let mut hasher = DefaultHasher::new();
+        ability.as_ref().hash(&mut hasher);
+        let hash = hasher.finish();
+        let result = GateBeforeMiddleware::new(self.sc.clone(), hash)
             .handle()
             .await;
         if let Some(r) = result {
@@ -121,7 +126,7 @@ impl Gate {
 
         if let Some(rw_lock) = GATE_COLLECTION.get() {
             let r_lock = rw_lock.read().await;
-            if let Some(callback) = r_lock.get(name) {
+            if let Some(callback) = r_lock.get(&hash) {
                 let result = callback(self.sc.clone()).await;
                 if let Some(r) = result {
                     return r;
@@ -129,7 +134,7 @@ impl Gate {
             }
         }
 
-        let result = GateAfterMiddleware::new(self.sc.clone(), name)
+        let result = GateAfterMiddleware::new(self.sc.clone(), hash)
             .handle()
             .await;
 
