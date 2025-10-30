@@ -10,7 +10,7 @@ use std::{
     ops::Deref,
 };
 
-use dirtybase_shared_type::db::field_values::FieldValue;
+use dirtybase_common::db::field_values::FieldValue;
 pub use request_tenant_resolver::*;
 use serde::{Deserialize, Serialize};
 pub use tenant_context::*;

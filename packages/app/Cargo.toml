@@ -18,7 +18,7 @@ dirtybase_permission = { path = "../permission", version = "*" }
 dirtybase_session = { path = "../session", version = "*" }
 dirtybase_multitenant = { path = "../multitenant", version = "*", optional = true }
 dirtybase_encrypt = { path = "../encrypt", version = "*" }
-dirtybase_shared_type = { path = "../shared_type", version = "*" }
+dirtybase_common = { path = "../common", version = "*" }
 simple-middleware = { workspace = true }
 anyhow = { workspace = true }
 validator = { workspace = true }

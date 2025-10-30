@@ -32,9 +32,9 @@ pub(crate) fn generate_join_method(
 
     // parent col
     let mut parent_col =
-        quote! {<#parent as ::dirtybase_shared_type::db::table_model::TableModel>::id_column()};
+        quote! {<#parent as ::dirtybase_common::db::table_model::TableModel>::id_column()};
     // foreign col
-    let mut foreign_col = quote! { <#parent as ::dirtybase_shared_type::db::table_model::TableModel>::foreign_id_column() };
+    let mut foreign_col = quote! { <#parent as ::dirtybase_common::db::table_model::TableModel>::foreign_id_column() };
 
     if let Some(RelType::HasMany { attribute }) = &attr.relation {
         // parent col
@@ -52,8 +52,8 @@ pub(crate) fn generate_join_method(
         } else {
             quote! {
                  self.builder.is_null(
-                    <#foreign_type as ::dirtybase_shared_type::db::table_model::TableModel>::prefix_with_tbl(
-                        <#foreign_type as ::dirtybase_shared_type::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                    <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
+                        <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
                     )
                 );
             }
@@ -93,8 +93,8 @@ pub(crate) fn generate_join_method(
                         let name = #name.to_string();
                         if !self.eager.contains(&name) {
                             self.builder.is_not_null(
-                                <#foreign_type as ::dirtybase_shared_type::db::table_model::TableModel>::prefix_with_tbl(
-                                    <#foreign_type as ::dirtybase_shared_type::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                                <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
+                                    <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
                                 )
                             );
                             self.builder.inner_join_table_and_select::<#parent,#foreign_type>(#parent_col, #foreign_col, None);
@@ -140,13 +140,13 @@ pub(crate) fn build_row_processor(
        //
        if #is_eager {
             if let Some(entity) = #foreign_type::from_struct_column_value(row,
-                 Some(<#foreign_type as ::dirtybase_shared_type::db::table_model::TableModel>::table_name())) {
+                 Some(<#foreign_type as ::dirtybase_common::db::table_model::TableModel>::table_name())) {
                 if !#map_name.contains_key(&row_hash) {
                     #map_name.insert(row_hash, ::std::collections::HashMap::new());
                 }
 
                 if let Some(entry) = #map_name.get_mut(&row_hash) {
-                   entry.insert(::dirtybase_shared_type::db::table_model::TableModel::entity_hash(&entity), entity);
+                   entry.insert(::dirtybase_common::db::table_model::TableModel::entity_hash(&entity), entity);
                 }
             }
        }

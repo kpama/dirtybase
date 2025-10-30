@@ -1,5 +1,5 @@
 [package]
-name = "dirtybase_shared_type"
+name = "dirtybase_common"
 version.workspace = true
 edition.workspace = true
 

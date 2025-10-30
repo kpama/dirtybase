@@ -24,7 +24,7 @@ crypto = { version = "0.5.1", features = ["aead", "password-hash", "digest"] }
 argon2 = { version = "0.5.3" }
 dashmap = { version = "6.1.0" }
 anyhow = { version = "1.0.99" }
-clap = { version = "4.5.47", features = ["derive", "unstable-doc"] }
+clap = { version = "4.5.51", features = ["derive", "unstable-doc"] }
 dotenv = { version = "0.15.0" }
 serde = { version = "1.0.228", features = ["derive", "rc"] }
 serde_json = { version = "1.0.145", features = ["raw_value"] }
@@ -60,20 +60,20 @@ jwt = { version = "0.16.0" }
 jsonwebtoken = { version = "10.0.0", features = ["rust_crypto"] }
 sha2 = { version = "0.10.9" }
 quote = { version = "1.0.41" }
-syn = { version = "2.0.106", features = ["extra-traits"] }
+syn = { version = "2.0.108", features = ["extra-traits"] }
 dotenvy = { version = "0.15.7" }
-busybody = { version = "1.0.10" }
+busybody = { version = "1.0.11" }
 orsomafo = { version = "0.5.0" }
 fama = { version = "0.4.6" }
 busstop = { version = "0.2.7" }
-redis = { version = "0.32.5", features = [
+redis = { version = "0.32.7", features = [
 	"tokio-comp",
 	"aio",
 	# "tls-native-tls",
 	"cluster-async",
 ] }
 lettre = { version = "0.11" }
-config = "0.15.16"
+config = "0.15.18"
 deadpool = "0.12.3"
 deadpool-redis = { version = "0.22.0" }
 cron = { version = "0.15.0" }
@@ -118,5 +118,5 @@ snowflaker = { version = "0.3.6", features = ["dynamic"] }
 ipnet = { version = "2.11.0" }
 cookie = { version = "0.18.1" }
 tera = { version = "1.20.0" }
-reqwest = { version = "0.12.22", features = ["json"] }
+reqwest = { version = "0.12.24", features = ["json"] }
 serde_urlencoded = { version = "0.7.1" }

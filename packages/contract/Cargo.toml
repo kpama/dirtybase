@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 dirtybase_helper = { path = "../helper", version = "*" }
 dirtybase_db_macro = { path = "../db_macro", version = "*" }
-dirtybase_shared_type = { path = "../shared_type", version = "*" }
+dirtybase_common = { path = "../common", version = "*" }
 clap = { workspace = true, features = ["unstable-doc"] }
 async-trait = { workspace = true }
 serde = { workspace = true }

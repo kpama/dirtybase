@@ -1,1 +1,1 @@
-pub use dirtybase_shared_type::db::base::*;
+pub use dirtybase_common::db::base::*;

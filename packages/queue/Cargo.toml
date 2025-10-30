@@ -7,6 +7,6 @@ edition.workspace = true
 
 [dependencies]
 dirtybase_contract = { path = "../contract", version = "*" }
-dirtybase_shared_type = { path = "../shared_type", version = "*" }
+dirtybase_common = { path = "../common", version = "*" }
 tokio = { workspace = true }
 log = { workspace = true }

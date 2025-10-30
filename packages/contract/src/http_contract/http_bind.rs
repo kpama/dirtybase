@@ -1,7 +1,7 @@
 use std::{future::Future, ops::Deref, sync::Arc};
 
 use axum::extract::{rejection::PathRejection, Path};
-use dirtybase_shared_type::db::{field_values::FieldValue, TableModel};
+use dirtybase_common::db::{field_values::FieldValue, TableModel};
 use serde::de::DeserializeOwned;
 
 use crate::{
