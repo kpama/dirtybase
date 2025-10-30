@@ -51,8 +51,16 @@ impl Gate {
         let mut w_lock = rw_lock.write().await;
         let mut hasher = DefaultHasher::new();
         ability.as_ref().hash(&mut hasher);
+        let hash = hasher.finish();
+
+        tracing::trace!(
+            "defining gate for ability: {}, hash: {}",
+            &ability.as_ref(),
+            hash
+        );
+
         w_lock.insert(
-            hasher.finish(),
+            hash,
             Arc::new(Box::new(move |c| {
                 let cc = c.clone();
                 let h = handler.clone();
@@ -117,6 +125,13 @@ impl Gate {
         let mut hasher = DefaultHasher::new();
         ability.as_ref().hash(&mut hasher);
         let hash = hasher.finish();
+
+        tracing::trace!(
+            "gate checking ability: {}, hash: {}",
+            &ability.as_ref(),
+            hash
+        );
+
         let result = GateBeforeMiddleware::new(self.sc.clone(), hash)
             .handle()
             .await;
