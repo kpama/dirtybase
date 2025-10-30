@@ -39,7 +39,7 @@ impl Gate {
     }
 
     /// Register a new permission handler
-    pub async fn define<F, R, Args>(ability: &str, handler: F)
+    pub async fn define<F, R, Args>(ability: impl AsRef<str>, handler: F)
     where
         F: Clone + Handler<Args, Output = Option<R>> + Send + Sync + 'static,
         Args: Clone + Resolver + 'static + Send,
@@ -49,7 +49,7 @@ impl Gate {
         let rw_lock = GATE_COLLECTION.get_or_init(RwLock::default);
         let mut w_lock = rw_lock.write().await;
         w_lock.insert(
-            ability.to_string(),
+            ability.as_ref().to_string(),
             Arc::new(Box::new(move |c| {
                 let cc = c.clone();
                 let h = handler.clone();
@@ -110,8 +110,9 @@ impl Gate {
     }
 
     /// Check the specified ability returning a `GateResponse`
-    pub async fn response(&self, ability: &str) -> GateResponse {
-        let result = GateBeforeMiddleware::new(self.sc.clone(), ability)
+    pub async fn response(&self, ability: impl AsRef<str>) -> GateResponse {
+        let name = ability.as_ref();
+        let result = GateBeforeMiddleware::new(self.sc.clone(), name)
             .handle()
             .await;
         if let Some(r) = result {
@@ -120,7 +121,7 @@ impl Gate {
 
         if let Some(rw_lock) = GATE_COLLECTION.get() {
             let r_lock = rw_lock.read().await;
-            if let Some(callback) = r_lock.get(ability) {
+            if let Some(callback) = r_lock.get(name) {
                 let result = callback(self.sc.clone()).await;
                 if let Some(r) = result {
                     return r;
@@ -128,7 +129,7 @@ impl Gate {
             }
         }
 
-        let result = GateAfterMiddleware::new(self.sc.clone(), ability)
+        let result = GateAfterMiddleware::new(self.sc.clone(), name)
             .handle()
             .await;
 
@@ -144,7 +145,7 @@ impl Gate {
     /// parameters passed to the ability's guard
     pub async fn response_when<P: Clone + Send + Sync + 'static>(
         &self,
-        ability: &str,
+        ability: impl AsRef<str>,
         params: P,
     ) -> GateResponse {
         let sc = if self.sc.is_task_proxy() {
@@ -163,23 +164,23 @@ impl Gate {
     }
 
     /// Check if the specified ability is allows in the current context
-    pub async fn allows(&self, ability: &str) -> bool {
+    pub async fn allows(&self, ability: impl AsRef<str>) -> bool {
         self.response(ability).await == true
     }
 
     /// Check if the specified ability is allow
-    pub async fn can(&self, ability: &str) -> bool {
+    pub async fn can(&self, ability: impl AsRef<str>) -> bool {
         self.allows(ability).await
     }
 
     /// Checks if the specified ability is not allow in the current context
-    pub async fn cannot(&self, ability: &str) -> bool {
+    pub async fn cannot(&self, ability: impl AsRef<str>) -> bool {
         !self.allows(ability).await
     }
 
     /// Checks if multiple abilities are allowed in the current context.
     /// All ability must be allow or else all fail
-    pub async fn all(&self, abilities: &[&str]) -> bool {
+    pub async fn all(&self, abilities: &[impl AsRef<str>]) -> bool {
         for ability in abilities {
             if !self.allows(ability).await {
                 return false;
@@ -190,7 +191,7 @@ impl Gate {
 
     /// Checks if one or more abilities in the slice is allow.
     /// True will be return if at least an ability is allowed.
-    pub async fn any(&self, abilities: &[&str]) -> bool {
+    pub async fn any(&self, abilities: &[impl AsRef<str>]) -> bool {
         for ability in abilities {
             if self.allows(ability).await {
                 return true;
@@ -224,21 +225,21 @@ impl Gate {
     /// The provided parameters are passed to the guard
     pub async fn denies_when<P: Clone + Send + Sync + 'static>(
         &self,
-        ability: &str,
+        ability: impl AsRef<str>,
         params: P,
     ) -> bool {
         !self.allows_when(ability, params).await
     }
 
     /// Alias to `all`
-    pub async fn check(&self, abilities: &[&str]) -> bool {
+    pub async fn check(&self, abilities: &[impl AsRef<str>]) -> bool {
         self.all(abilities).await
     }
 
     /// Alias for `allows_when`
     pub async fn check_when<P: Clone + Send + Sync + 'static>(
         &self,
-        abilities: &[&str],
+        abilities: &[impl AsRef<str>],
         params: P,
     ) -> bool {
         self.all_when(abilities, params).await
@@ -247,7 +248,7 @@ impl Gate {
     /// Alias for `allows_when`
     pub async fn all_when<P: Clone + Send + Sync + 'static>(
         &self,
-        abilities: &[&str],
+        abilities: &[impl AsRef<str>],
         params: P,
     ) -> bool {
         for ability in abilities {
@@ -262,7 +263,7 @@ impl Gate {
     /// Alias for `response_when`
     pub async fn allows_when<P: Clone + Send + Sync + 'static>(
         &self,
-        ability: &str,
+        ability: impl AsRef<str>,
         params: P,
     ) -> bool {
         self.response_when(ability, params).await == true
