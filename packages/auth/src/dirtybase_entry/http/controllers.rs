@@ -1,13 +1,16 @@
 use dirtybase_contract::{
     app_contract::{CtxExt, RequestContext},
-    auth_contract::{AuthUser, AuthUserPayload, LoginCredential},
+    auth_contract::{AuthUser, AuthUserPayload, AuthUserStorageProvider, LoginCredential},
     axum::response::Html,
+    db_contract::types::ArcUuid7,
     http_contract::{HttpContext, api::ApiResponse, named_routes_axum, prelude::*},
     session_contract::Session,
 };
-use dirtybase_helper::{hash::sha256, security::random_bytes_hex};
+use dirtybase_helper::hash::sha256;
 
-use crate::{AuthConfig, helpers::get_auth_storage};
+use crate::{
+    AuthConfig, guards::session_guard::auth_session::AuthSession, helpers::get_auth_storage,
+};
 
 pub(crate) async fn login_form_handler(
     RequestContext(context): RequestContext,
@@ -23,6 +26,9 @@ pub(crate) async fn login_form_handler(
         <label>Username: </label><input type='text' name='username' placeholder='username' value='admin' /> <br/>
         <label>Password: </label><input type='password' name='password' placeholder='password' value='password' /> <br/>
         <button type='submit'>Login</button>
+        <p>
+            <a href='/test'>Login With Google</a>
+        </p>
         <p>
              <a href='/auth/register-form'>Register </a>
         </p>
@@ -43,7 +49,8 @@ pub(crate) async fn handle_login_request(
         return bdy.into_response();
     };
 
-    let mut session = ctx.get::<Session>().await.unwrap();
+    // FIXME: handle error...
+    let session = ctx.get::<Session>().await.unwrap();
 
     let result = if cred.username().is_some() {
         storage
@@ -53,47 +60,42 @@ pub(crate) async fn handle_login_request(
         let hash = sha256::hash_str(&cred.email().cloned().unwrap_or(":::nothing:::".to_string()));
         storage.find_by_email_hash(&hash).await
     };
-    if let Ok(Some(user)) = result {
-        if user.verify_password(cred.password()) {
-            // 1. generate cookie id
-            let cookie_key = random_bytes_hex(4);
-            // 2. generate auth hash
-            let hash = random_bytes_hex(16);
-            // 3. store hash in the session and cookie
-            let previous_path = session
-                .get::<String>("_auth_prev_path")
-                .await
-                .unwrap_or_default();
-            session = session.invalidate().await;
-            ctx.set(session.clone()).await;
-            session.put("auth_hash", &hash).await;
-            session.put("auth_cookie_key", &cookie_key).await;
-            session.put("auth_user_id", user.id()).await;
-            let cookie = session.make_session_cookie(&cookie_key, hash); // FIXME: Build the cookie instance!!!!
-            http_ctx.set_cookie(cookie).await;
+    if let Ok(Some(user)) = result
+        && user.verify_password(cred.password())
+    {
+        let auth_session = AuthSession::from_session(&session).await;
+        http_ctx
+            .set_cookie(AuthSession::new(user.id()).to_cookie(&session).await)
+            .await;
 
-            let bdy = Body::empty();
+        let mut response = ().into_response();
 
-            let mut response = bdy.into_response();
-
-            response.headers_mut().append(
-                header::LOCATION,
-                header::HeaderValue::from_str(&previous_path).unwrap(),
-            );
-            *response.status_mut() = StatusCode::SEE_OTHER;
-            return response;
-
-            // return Html(format!(
-            //     "Welcome: {}, session id in cookie",
-            //     user.username_ref(),
-            // ));
-        }
+        response.headers_mut().append(
+            header::LOCATION,
+            header::HeaderValue::from_str(auth_session.redirect()).unwrap(),
+        );
+        *response.status_mut() = StatusCode::SEE_OTHER;
+        return response;
     }
 
-    // Html("Auth failed".to_string()).into_response()
-    // Response::new(Body::from(Html("".to_string())))
     let bdy = Body::empty();
     bdy.into_response()
+}
+
+pub(crate) async fn handle_logout_request(
+    RequestContext(ctx): RequestContext,
+) -> impl IntoResponse {
+    let session = ctx.get::<Session>().await.unwrap();
+    let auth_session = AuthSession::from_session(&session).await;
+    _ = auth_session.delete(session, &ctx).await;
+
+    let mut response = ().into_response();
+    response.headers_mut().append(
+        header::LOCATION,
+        header::HeaderValue::from_str("/").unwrap(),
+    );
+    *response.status_mut() = StatusCode::FOUND;
+    response
 }
 
 pub(crate) async fn handle_get_auth_token(
@@ -118,12 +120,11 @@ pub(crate) async fn handle_get_auth_token(
 
     let mut res = ApiResponse::<String>::default();
 
-    if let Ok(Some(user)) = result {
-        if user.verify_password(cred.password()) {
-            if let Some(token) = user.generate_token() {
-                res.set_data(token);
-            }
-        }
+    if let Ok(Some(user)) = result
+        && user.verify_password(cred.password())
+        && let Some(token) = user.generate_token()
+    {
+        res.set_data(token);
     }
 
     if !res.has_data() {
@@ -133,15 +134,31 @@ pub(crate) async fn handle_get_auth_token(
     res
 }
 
-pub(crate) async fn register_form_handler() -> impl IntoResponse {
+pub(crate) async fn handle_get_user_by_id(
+    Path(id): Path<ArcUuid7>,
+    CtxExt(storage): CtxExt<AuthUserStorageProvider>,
+) -> ApiResponse<AuthUser> {
+    storage.find_by_id(id).await.into()
+}
+
+pub(crate) async fn register_form_handler(
+    CtxExt(http_context): CtxExt<HttpContext>,
+) -> impl IntoResponse {
+    let do_signup_route = http_context
+        .named_route_service()
+        .get("auth:do-signup-form")
+        .unwrap();
     Html(
-        "<h1>Register Form</h1><form method='post' action='/auth/do-registration'>
+        format!(
+        "<h1>Register Form</h1><form method='post' action='{}'>
     <label>Username: </label><input type='text' name='username' placeholder='username' /> <br/>
     <label>Email: </label><input type='text' name='email' placeholder='email' /> <br/>
     <label>Password: </label><input type='password' name='password' placeholder='password' /> <br/>
     <label>Confirm Password: </label><input type='password' name='confirm_password' placeholder='password' /> <br/>
     <button type='submit'>Register</button>
   </form>",
+         do_signup_route.redirector().path()
+        )
     )
 }
 

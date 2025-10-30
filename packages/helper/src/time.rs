@@ -5,6 +5,9 @@ pub struct Time {
     now: DateTime<Utc>,
 }
 
+// NOTE: Most methods below takes self because time is not mutable.
+//       We can however create generate a new time from an existing one
+
 impl Time {
     pub fn now() -> Self {
         Self { now: Utc::now() }

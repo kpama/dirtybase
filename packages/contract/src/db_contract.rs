@@ -1,26 +1,9 @@
 pub mod base;
-pub mod event;
-pub mod field_values;
 pub mod migration;
-pub mod query_column;
-pub mod query_values;
-pub mod relations;
-pub mod table_model;
-pub mod types;
 
-mod column_value_builder;
 mod seeder_registerer;
 
-use std::collections::HashMap;
+pub use dirtybase_common::db::table_model::*;
+pub use dirtybase_common::db::*;
 
-use base::{
-    connection::ConnectionPoolTrait,
-    schema::{ClientType, DatabaseKind},
-};
-pub use column_value_builder::*;
 pub use seeder_registerer::*;
-pub use table_model::*;
-
-pub type PoolManagerSet = HashMap<ClientType, Box<dyn ConnectionPoolTrait>>;
-
-pub type DatabaseKindPoolCollection = HashMap<DatabaseKind, PoolManagerSet>;

@@ -4,7 +4,7 @@ use dirtybase_helper::time::now;
 type CacheContent = serde_json::Value;
 
 #[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize, DirtyTable)]
-#[dirty(id = "key")]
+#[dirty(id = "key", no_timestamp, no_soft_delete)]
 pub struct CacheEntry {
     pub key: String,
     pub value: CacheContent,

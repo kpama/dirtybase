@@ -9,4 +9,4 @@ pub use config::*;
 pub use dirtybase_entry::*;
 pub use storage::*;
 
-pub const AUTH_USER_TABLE: &str = "auth_users";
+pub use dirtybase_entry::AuthExtension as Extension;

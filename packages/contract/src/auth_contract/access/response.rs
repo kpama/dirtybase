@@ -124,13 +124,13 @@ mod test {
     fn test_compare_allowed() {
         let resp = GateResponse::allow();
 
-        assert!(resp);
+        assert!(resp == true);
     }
 
     #[test]
     fn test_compare_denied() {
         let resp = GateResponse::deny();
 
-        assert!(resp);
+        assert!(resp == false);
     }
 }

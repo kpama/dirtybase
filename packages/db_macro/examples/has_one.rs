@@ -14,6 +14,7 @@ async fn main() {
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(no_timestamp, no_soft_delete)]
 struct Employee {
     id: Option<i64>,
     name: String,
@@ -22,6 +23,7 @@ struct Employee {
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(no_timestamp, no_soft_delete)]
 struct PinCode {
     id: Option<i64>,
     code: String,

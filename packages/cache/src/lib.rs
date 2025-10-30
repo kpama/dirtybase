@@ -17,11 +17,10 @@ pub use dirtybase_entry::*;
 pub use resource_manager::*;
 
 pub async fn setup(context: &Context) {
-    let cache_config = context
-        .get_config::<CacheConfig>("cache")
+    context
+        .load_config::<CacheConfig>("cache")
         .await
         .expect("could not configure cache manager");
-    context.set(cache_config).await;
 
     register_resource_manager().await;
 }

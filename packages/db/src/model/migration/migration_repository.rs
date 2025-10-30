@@ -1,7 +1,8 @@
 use dirtybase_contract::db_contract::{base::manager::Manager, types::StringField};
+use dirtybase_helper::time::current_datetime;
 use std::collections::{BTreeMap, HashMap};
 
-use super::{BATCH_COLUMN, MigrationEntity, NAME_COLUMN, TABLE_NAME};
+use super::{BATCH_COLUMN, CREATED_AT_COLUMN, MigrationEntity, NAME_COLUMN, TABLE_NAME};
 
 pub struct MigrationRepository {
     manager: Manager,
@@ -55,20 +56,18 @@ impl MigrationRepository {
             })
             .fetch_one_to::<MigrationEntity>()
             .await
-        {
-            if let Ok(Some(collection)) = self
+            && let Ok(Some(collection)) = self
                 .manager
                 .select_from_table(TABLE_NAME, |q| {
                     q.is_eq(BATCH_COLUMN, last.batch).desc("created_at");
                 })
                 .fetch_all_to::<MigrationEntity>()
                 .await
-            {
-                return collection
-                    .into_iter()
-                    .map(|m| (m.name.clone(), m))
-                    .collect::<BTreeMap<StringField, MigrationEntity>>();
-            }
+        {
+            return collection
+                .into_iter()
+                .map(|m| (m.name.clone(), m))
+                .collect::<BTreeMap<StringField, MigrationEntity>>();
         }
 
         BTreeMap::new()
@@ -92,6 +91,7 @@ impl MigrationRepository {
 
         kv.insert(NAME_COLUMN.to_string(), name.to_string().into());
         kv.insert(BATCH_COLUMN.to_string(), batch.into());
+        kv.insert(CREATED_AT_COLUMN.to_string(), current_datetime().into());
 
         _ = self.manager.insert(TABLE_NAME, kv).await;
 

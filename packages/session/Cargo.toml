@@ -8,6 +8,7 @@ dirtybase_db_macro = { path = "../db_macro", version = "*" }
 dirtybase_contract = { path = "../contract", version = "*" }
 dirtybase_helper = { path = "../helper", version = "*" }
 dirtybase_cron = { path = "../cron", version = "*" }
+dirtybase_common = { path = "../common", version = "*" }
 simple-middleware = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

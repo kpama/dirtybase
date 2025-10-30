@@ -7,8 +7,6 @@ use anyhow::anyhow;
 use futures::future::BoxFuture;
 use tokio::{sync::RwLock, time::sleep};
 
-use crate::db_contract::base::helper::generate_arc_ulid;
-
 use super::Context;
 
 type ContextCollection<T> = Arc<RwLock<HashMap<String, ResourceWrapper<T>>>>;
@@ -64,32 +62,6 @@ impl ResourceManager {
             idle: idle_timeout,
         }
     }
-
-    /// Create an instance by only specifying the idle timeout
-    ///
-    /// A random name will be generated
-    pub fn idle(idle_timeout: i64) -> Self {
-        Self {
-            name: generate_arc_ulid(),
-            idle: idle_timeout,
-        }
-    }
-
-    /// Create an instance that will be dropped after the current request
-    pub fn request_scoped() -> Self {
-        Self {
-            name: generate_arc_ulid(),
-            idle: -1,
-        }
-    }
-
-    ///  Create an instance that lives forever
-    pub fn forever() -> Self {
-        Self {
-            name: generate_arc_ulid(),
-            idle: 0,
-        }
-    }
 }
 
 /// Convert from (String, i64) to ResourceManager
@@ -99,24 +71,17 @@ impl From<(String, i64)> for ResourceManager {
     }
 }
 
-/// Convert from (&str, i64) to ResourceManager
-impl From<(&str, i64)> for ResourceManager {
-    fn from((name, idle_timeout): (&str, i64)) -> Self {
+/// Convert from (&String, i64) to ResourceManager
+impl From<(&String, i64)> for ResourceManager {
+    fn from((name, idle_timeout): (&String, i64)) -> Self {
         Self::new(name, idle_timeout)
     }
 }
 
-/// Convert from i64 to ResourceManager
-impl From<i64> for ResourceManager {
-    fn from(value: i64) -> Self {
-        Self::idle(value)
-    }
-}
-
-/// Convert from i32 to ResourceManager
-impl From<i32> for ResourceManager {
-    fn from(value: i32) -> Self {
-        Self::idle(value as i64)
+/// Convert from (&str, i64) to ResourceManager
+impl From<(&str, i64)> for ResourceManager {
+    fn from((name, idle_timeout): (&str, i64)) -> Self {
+        Self::new(name, idle_timeout)
     }
 }
 
@@ -148,7 +113,7 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
     ///     instance of the resource.
     ///
     ///  3. Drop: a closure that implements `FnMut(T) -> BoxFuture<()>` where T is the instance
-    ///     that has been dropped ie. remove from he collection of instances
+    ///     that has been dropped/removed from he collection of instances
     ///
     pub async fn new<S, F, C>(setup_fn: S, resolver_fn: F, drop_fn: C) -> Self
     where
@@ -163,7 +128,6 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
             collection: ContextCollection::default(),
         };
 
-        // FIXME: look into a deadlock situation happening when we drop the instance of this struct
         instance.handle_shutdown_signal().await
     }
 
@@ -179,16 +143,55 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
     }
 
     /// Register a resource that will only last for a scope request/command
-    pub async fn scoped<R>(resolver_fn: R)
+    pub async fn scoped<R>(name: &str, resolver_fn: R)
     where
         R: FnMut(Context) -> BoxFuture<'static, Result<T, anyhow::Error>> + Send + Sync + 'static,
     {
+        Self::scoped_with_drop(name, resolver_fn, |_| {
+            Box::pin(async {
+                // we never reach here
+            })
+        })
+        .await;
+    }
+
+    pub async fn scoped_with_drop<R, C>(name: &str, resolver_fn: R, drop_fn: C)
+    where
+        R: FnMut(Context) -> BoxFuture<'static, Result<T, anyhow::Error>> + Send + Sync + 'static,
+        C: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+    {
+        let scoped = ResourceManager::new(name, -1);
         Self::register(
-            move |_| Box::pin(async { ResourceManager::request_scoped() }),
+            move |_| {
+                let s = scoped.clone();
+                Box::pin(async move {
+                    //
+                    s.clone()
+                })
+            },
+            resolver_fn,
+            drop_fn,
+        )
+        .await;
+    }
+
+    pub async fn forever<R>(name: &str, resolver_fn: R)
+    where
+        R: FnMut(Context) -> BoxFuture<'static, Result<T, anyhow::Error>> + Send + Sync + 'static,
+    {
+        let scoped = ResourceManager::new(name, 0);
+        Self::register(
+            move |_| {
+                let s = scoped.clone();
+                Box::pin(async move {
+                    //
+                    s.clone()
+                })
+            },
             resolver_fn,
             |_| {
                 Box::pin(async {
-                    // we never reach here
+                    // does nothing
                 })
             },
         )
@@ -205,7 +208,10 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
                 .await;
         }
 
-        Err(anyhow!("resource not found"))
+        Err(anyhow!(format!(
+            "resource {} not found",
+            std::any::type_name::<T>()
+        )))
     }
 
     async fn get_resource(
@@ -328,9 +334,6 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
 
 impl<T: Clone + Send + Sync + 'static> Drop for ContextResourceManager<T> {
     fn drop(&mut self) {
-        // FIXME: use something else other than block_on
-        //        block_on does not work for db over TCP connection
-
         futures::executor::block_on(async {
             tracing::debug!("shutting down ctx manager: {}", self.name_of_t());
             let clean_up_fn = self.drop_fn.clone();
@@ -394,7 +397,7 @@ mod test {
     #[tokio::test]
     async fn test_idle_time_expired() {
         let manager = ContextResourceManager::new(
-            |_| Box::pin(async { ResourceManager::idle(100) }),
+            |_| Box::pin(async { ("counter", 100).into() }),
             |_| Box::pin(async { Ok(100) }),
             |_| Box::pin(async {}),
         )
@@ -413,7 +416,7 @@ mod test {
     #[tokio::test]
     async fn test_idle_time_not_expired() {
         let manager = ContextResourceManager::new(
-            |_| Box::pin(async { 20.into() }),
+            |_| Box::pin(async { ("counter", 20).into() }),
             |_| Box::pin(async { Ok(100) }),
             |_| Box::pin(async {}),
         )

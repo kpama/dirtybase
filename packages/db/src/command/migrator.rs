@@ -46,11 +46,12 @@ impl Migrator {
         for entry in &self.migrations {
             let name = entry.id();
             if !repo.exist(&name).await {
-                tracing::debug!(target: LOG_TARGET, "migrating {} up", entry.id());
+                tracing::debug!(target: LOG_TARGET, "migrating {} up", &name);
                 entry.up(manager).await?;
 
                 if let Err(e) = repo.create(&name, batch).await {
                     tracing::error!(target: LOG_TARGET,"could not create migration entry: {:?}", e);
+                    break;
                 }
             } else {
                 tracing::debug!(target: LOG_TARGET, "migration already exist: {:?}", &name);
@@ -100,7 +101,9 @@ impl Migrator {
 
     async fn repo(&self, manager: &Manager) -> MigrationRepository {
         let repo = MigrationRepository::new(manager.clone());
-        if let Err(e) = repo.init().await {
+        if let Err(e) = repo.init().await
+            && e.to_string() != "migrations already exist"
+        {
             tracing::error!("could not initialize migrator: {}", e);
         }
 

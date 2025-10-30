@@ -2,7 +2,7 @@ use dirtybase_db::{TableModel, connector::sqlite::make_sqlite_in_memory_manager}
 use dirtybase_db_macro::DirtyTable;
 
 #[derive(Debug, Default, Clone, DirtyTable)]
-#[dirty(id = "name")]
+#[dirty(id = "name", no_timestamp, no_soft_delete)]
 struct User {
     name: String,
     // name2: Option<String>,

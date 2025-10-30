@@ -1,7 +1,7 @@
 use std::{fmt::Display, sync::Arc};
 
 use busybody::async_trait;
-use dirtybase_helper::security::random_bytes_hex;
+use dirtybase_helper::random::random_bytes_hex;
 
 use super::SessionData;
 
@@ -49,7 +49,7 @@ pub trait SessionStorage: Send + Sync {
     /// Retrieves the data with the specified key
     async fn get(&self, id: &SessionId) -> SessionData;
 
-    /// Deletes and return the data with with specify key
+    /// Deletes and return the data with specify key
     async fn remove(&self, id: &SessionId) -> Option<SessionData>;
 
     async fn gc(&self, lifetime: i64);
@@ -60,8 +60,8 @@ pub struct SessionStorageProvider(Arc<Box<dyn SessionStorage>>);
 
 #[async_trait]
 impl SessionStorage for SessionStorageProvider {
-    async fn store(&self, id: SessionId, value: SessionData) {
-        self.0.store(id, value).await;
+    async fn store(&self, id: SessionId, data: SessionData) {
+        self.0.store(id, data).await;
     }
 
     async fn get(&self, id: &SessionId) -> SessionData {

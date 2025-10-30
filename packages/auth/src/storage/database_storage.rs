@@ -1,11 +1,19 @@
 use anyhow::anyhow;
 use busybody::async_trait;
 use dirtybase_contract::{
-    auth_contract::{AuthUser, AuthUserPayload, AuthUserStorage},
-    db_contract::{base::manager::Manager, types::ArcUuid7},
+    auth_contract::{AuthUser, AuthUserPayload, AuthUserStorage, StorageResolver},
+    db_contract::{
+        base::{
+            manager::Manager,
+            table::{CREATED_AT_FIELD, UPDATED_AT_FIELD},
+        },
+        types::{ArcUuid7, ToColumnAndValue},
+    },
 };
+use dirtybase_helper::time::current_datetime;
 
-use crate::AUTH_USER_TABLE;
+pub const AUTH_USER_TABLE: &str = "auth_users";
+pub const NAME: &str = "database";
 
 pub struct AuthUserDatabaseStorage {
     manager: Manager,
@@ -15,23 +23,39 @@ impl AuthUserDatabaseStorage {
     pub fn new(manager: Manager) -> Self {
         Self { manager }
     }
+
+    pub async fn register() {
+        StorageResolver::register(NAME, |mut resolver| async move {
+            tracing::trace!("setting up database auth storage");
+            if let Ok(manager) = resolver.context_ref().get::<Manager>().await {
+                resolver.set_storage(AuthUserDatabaseStorage::new(manager));
+            }
+
+            resolver
+        })
+        .await;
+    }
 }
 
 #[async_trait]
 impl AuthUserStorage for AuthUserDatabaseStorage {
-    async fn store(&self, mut payload: AuthUserPayload) -> Result<AuthUser, anyhow::Error> {
+    async fn store(&self, payload: AuthUserPayload) -> Result<AuthUser, anyhow::Error> {
         let existing_id = payload.id.clone();
         let id = existing_id.clone().unwrap_or_default();
 
+        let mut cv = payload.to_column_value().unwrap();
+
         if existing_id.is_some() {
+            cv.insert(UPDATED_AT_FIELD.to_string(), current_datetime().into());
             self.manager
-                .update(AUTH_USER_TABLE, payload, |q| {
+                .update(AUTH_USER_TABLE, cv, |q| {
                     q.is_eq("id", &id);
                 })
                 .await?;
         } else {
-            payload.id = Some(id.clone());
-            self.manager.insert(AUTH_USER_TABLE, payload).await?;
+            cv.insert("id".to_string(), id.clone().into());
+            cv.insert(CREATED_AT_FIELD.to_string(), current_datetime().into());
+            self.manager.insert(AUTH_USER_TABLE, cv).await?;
         }
         match self
             .manager

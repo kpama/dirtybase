@@ -189,8 +189,7 @@ impl CacheDbStoreRepository {
     }
 
     async fn insert_tags(&self, tags: Option<&[String]>) -> bool {
-        if tags.is_some() {
-            let tags = tags.unwrap();
+        if let Some(tags) = tags {
             let rows: Vec<HashMap<String, FieldValue>> = tags
                 .iter()
                 .map(|t| {
@@ -222,9 +221,8 @@ impl CacheDbStoreRepository {
 
     async fn tag_key(&self, tags: Option<&[String]>, cache_key: &str) -> bool {
         self.insert_tags(tags).await;
-        if tags.is_some() {
+        if let Some(tags) = tags {
             let rows = tags
-                .unwrap()
                 .iter()
                 .map(|a_tag| {
                     HashMap::from([

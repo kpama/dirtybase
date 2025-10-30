@@ -2,7 +2,7 @@ use dirtybase_contract::auth_contract::AuthUserStatus;
 use dirtybase_contract::db_contract::base::manager::Manager;
 use dirtybase_contract::db_contract::migration::Migration;
 
-use crate::AUTH_USER_TABLE;
+use crate::storage::database_storage::AUTH_USER_TABLE;
 
 pub struct Mig1740151519CreateAuthUserTable;
 

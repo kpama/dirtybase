@@ -4,6 +4,7 @@ use dirtybase_db_macro::DirtyTable;
 use super::{actor::Actor, permission::Permission, role::Role};
 
 #[derive(Debug, Default, DirtyTable)]
+#[dirty(no_soft_delete, no_timestamp)]
 pub struct RolePermission {
     id: OptionalInternalIdField,
     role_id: Option<ArcUuid7>, // The permission could be applied directly on the actor

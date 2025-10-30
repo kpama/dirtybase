@@ -1,10 +1,8 @@
 enable = false
 
 
-# Jobs 
-
-[jobs.0]
+[jobs.foo] # Jobs 
 enable = true
 schedule = "0/10 * * * * * *"
-id = "foo::job"
-description = "This is the description of what foo:job does...."
+description = "This is the description for cron foo" 
+args = "arg1, arg2"                                                # A comma separated list of arguments to be passed to the job

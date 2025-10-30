@@ -12,7 +12,7 @@ async fn main() -> anyhow::Result<()> {
         .try_init()
         .expect("could not setup tracing");
 
-    dirtybase_db::setup_pool_reslovers().await;
+    dirtybase_db::setup_pool_resolvers().await;
 
     let base_config = ConnectionConfig {
         url: "postgres://dbuser:dbpassword@postgres/dirtybase".to_string(),
@@ -51,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 #[derive(Debug, Clone, Default, DirtyTable)]
-#[dirty(id = "user_id")]
+#[dirty(id = "user_id", no_timestamp, no_soft_delete)]
 struct Score {
     user_id: IntegerField,
     points: IntegerField,

@@ -1,7 +1,5 @@
 use dirtybase_app::setup;
-use dirtybase_db::{
-    TableModel, base::manager::Manager, field_values::FieldValue, types::DateTimeField,
-};
+use dirtybase_db::{base::manager::Manager, types::DateTimeField};
 use dirtybase_db_macro::DirtyTable;
 use tracing::Level;
 use tracing_subscriber::EnvFilter;
@@ -20,10 +18,7 @@ async fn main() {
 
     if let Ok(manager) = app_service.global_context().await.get::<Manager>().await {
         let mut author_repo = AuthorRepo::new(&manager);
-        println!(
-            "author: {:#?}",
-            author_repo.with_posts().by_id(1).get().await
-        );
+        println!("author: {:#?}", author_repo.with_posts().by_id(1).await);
 
         manager.close().await;
     }
@@ -32,7 +27,7 @@ async fn main() {
 }
 
 #[derive(Debug, Default, DirtyTable)]
-#[dirty(table = "posts", no_soft_delete)]
+#[dirty(table = "posts", no_soft_delete, no_timestamp)]
 struct PostWithAuthor {
     id: i64,
     title: String,
@@ -41,7 +36,7 @@ struct PostWithAuthor {
 }
 
 #[derive(Debug, Clone, Default, DirtyTable)]
-#[dirty(table = "posts", no_soft_delete)]
+#[dirty(table = "posts", no_soft_delete, no_timestamp)]
 struct Post {
     id: i64,
     title: String,
@@ -49,19 +44,11 @@ struct Post {
 }
 
 #[derive(Debug, Default, DirtyTable)]
-#[dirty(table = "authors", no_soft_delete)]
+#[dirty(table = "authors", no_soft_delete, no_timestamp)]
 struct Author {
     id: i64,
     first_name: String,
     last_name: String,
     #[dirty(rel(kind = "has_many", no_soft_delete))]
     posts: Vec<Post>,
-}
-
-impl AuthorRepo {
-    pub fn by_id(&mut self, id: impl Into<FieldValue>) -> &mut Self {
-        self.builder
-            .is_eq(Author::prefix_with_tbl(Author::col_name_for_id()), id);
-        self
-    }
 }

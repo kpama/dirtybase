@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
+use mysql_connector::MYSQL_KIND;
 use mysql_pool_manager::resolve;
-use mysql_schema_manager::MYSQL_KIND;
+
+const LOG_TARGET: &str = "mysql_db_driver";
 
 use crate::{
     base::{manager::Manager, schema::DatabaseKind},
@@ -9,8 +11,8 @@ use crate::{
     make_manager,
 };
 
+pub mod mysql_connector;
 pub mod mysql_pool_manager;
-pub mod mysql_schema_manager;
 
 /// Create a new manager using the configuration provided
 pub async fn make_mysql_manager(base: ConnectionConfig) -> Manager {

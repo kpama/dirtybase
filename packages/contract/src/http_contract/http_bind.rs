@@ -1,10 +1,13 @@
 use std::{future::Future, ops::Deref, sync::Arc};
 
 use axum::extract::{rejection::PathRejection, Path};
+use dirtybase_common::db::{field_values::FieldValue, TableModel};
 use serde::de::DeserializeOwned;
 
 use crate::{
-    db_contract::{base::manager::Manager, field_values::FieldValue, TableModel},
+    db_contract::{
+        base::manager::Manager, // , field_values::FieldValue, TableModel
+    },
     prelude::Context,
 };
 
@@ -255,7 +258,7 @@ impl ModelBindResolver {
                 .await
                 .get()
                 .await
-                .unwrap() // should never failed as we just registered the instance
+                .unwrap() // Should never failed as we just registered the instance
         }
     }
 }

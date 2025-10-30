@@ -9,7 +9,8 @@ edition = { workspace = true }
 proc-macro = true
 
 [dependencies]
-dirtybase_contract = { path = "../contract", version = "*" }
+# dirtybase_contract = { path = "../contract", version = "*" }
+dirtybase_common = { path = "../common", version = "*" }
 busybody = { workspace = true }
 quote = { workspace = true }
 syn = { workspace = true }
@@ -24,3 +25,5 @@ dirtybase_db = { path = "../db", version = "*" }
 dirtybase_helper = { path = "../helper", version = "*" }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 rand = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

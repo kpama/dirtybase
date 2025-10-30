@@ -83,7 +83,9 @@ impl CliMiddlewareManager {
                 move |(a, b, c), _| {
                     let result = (handler)(a, b, c);
                     Box::pin(async move {
-                        _ = result.await;
+                        if let Err(e) = result.await {
+                            tracing::error!("command error: {}", e);
+                        }
                     })
                 },
             )

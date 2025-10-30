@@ -4,11 +4,11 @@ use dirtybase_contract::{
         base::manager::Manager,
         types::{JsonField, OptionalDateTimeField, OptionalStringField},
     },
-    session_contract::{SessionData, SessionId, SessionStorage, SessionStorageProvider},
+    session_contract::{
+        SessionData, SessionId, SessionStorage, SessionStorageProvider, SessionStorageResolver,
+    },
 };
-use dirtybase_helper::time::now_ts;
-
-use crate::SessionStorageResolver;
+use dirtybase_helper::time::{current_datetime, now_ts};
 
 pub const NAME: &str = "database";
 
@@ -28,11 +28,12 @@ impl DatabaseStorage {
 
 #[async_trait::async_trait]
 impl SessionStorage for DatabaseStorage {
-    async fn store(&self, id: SessionId, value: SessionData) {
-        let mut model = SessionTable::from(value);
+    async fn store(&self, id: SessionId, data: SessionData) {
+        let mut model = SessionTable::from(data);
         model.id = Some(id.to_string());
+        model.created_at = Some(current_datetime());
 
-        let result = self
+        _ = self
             .manager
             .upsert(
                 SessionTable::table_name(),
@@ -41,10 +42,9 @@ impl SessionStorage for DatabaseStorage {
                     SessionTable::col_name_for_data(),
                     SessionTable::col_name_for_expires(),
                 ],
-                &["id"],
+                &[SessionTable::col_name_for_id()],
             )
             .await;
-        tracing::trace!("session store data: {:?}", result);
     }
 
     async fn get(&self, id: &SessionId) -> SessionData {
@@ -73,6 +73,7 @@ impl SessionStorage for DatabaseStorage {
 
         Some(old)
     }
+
     async fn gc(&self, lifetime: i64) {
         _ = self
             .manager
@@ -86,11 +87,10 @@ impl SessionStorage for DatabaseStorage {
 }
 
 #[derive(Debug, dirtybase_db_macro::DirtyTable, Default, Clone)]
-#[dirty(table = "sessions")]
+#[dirty(table = "sessions", no_timestamp, no_soft_delete)]
 pub struct SessionTable {
     id: OptionalStringField,
     data: JsonField,
-    #[dirty(skip_insert)]
     created_at: OptionalDateTimeField,
     expires: Option<i64>,
 }

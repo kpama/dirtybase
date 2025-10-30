@@ -9,10 +9,11 @@ use crate::{
         schema::{ClientType, DatabaseKind, SchemaManagerTrait},
     },
     config::{ConfigSet, ConnectionConfig},
+    connector::mysql::LOG_TARGET,
     pool_manager_resolver::DbPoolManagerResolver,
 };
 
-use super::mysql_schema_manager::{MYSQL_KIND, MySqlSchemaManager};
+use super::mysql_connector::{MYSQL_KIND, MySqlSchemaManager};
 
 #[derive(Debug)]
 pub struct MysqlPoolManager {
@@ -43,7 +44,7 @@ impl ConnectionPoolTrait for MysqlPoolManager {
         if !self.db_pool.is_closed() {
             self.db_pool.close().await;
         }
-        tracing::trace!("mysql connection closed: {}", self.db_pool.is_closed());
+        tracing::trace!(target: LOG_TARGET,"mysql connection closed: {}", self.db_pool.is_closed());
     }
 }
 
@@ -84,12 +85,12 @@ pub async fn db_connect(config: &ConnectionConfig) -> anyhow::Result<Pool<MySql>
     {
         Ok(conn) => {
             // TODO: Use i18n
-            log::info!("MySql maximum DB pool connection: {}", config.max);
+            tracing::debug!(target: LOG_TARGET,"maximum DB pool connection: {}", config.max);
             Ok(conn)
         }
         Err(e) => {
             // TODO: Use i18n
-            log::error!("could not connect to mysql: {e:?}");
+            tracing::error!(target: LOG_TARGET,"could not connect to mysql: {e:?}");
             Err(anyhow!(e))
         }
     }

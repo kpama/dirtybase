@@ -6,6 +6,7 @@ use crate::{
         schema::{ClientType, DatabaseKind},
     },
     config::{ConfigSet, ConnectionConfig},
+    connector::sqlite::LOG_TARGET,
     pool_manager_resolver::DbPoolManagerResolver,
 };
 use anyhow::anyhow;
@@ -16,7 +17,7 @@ use sqlx::{
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
 };
 
-use super::sqlite_schema_manager::{SQLITE_KIND, SqliteSchemaManager};
+use super::sqlite_connector::{SQLITE_KIND, SqliteSchemaManager};
 
 #[derive(Debug)]
 pub struct SqlitePoolManager {
@@ -49,7 +50,7 @@ impl ConnectionPoolTrait for SqlitePoolManager {
         if !self.db_pool.is_closed() {
             self.db_pool.close().await;
         }
-        tracing::trace!("sqlite connection closed: {}", self.db_pool.is_closed());
+        tracing::trace!(target: LOG_TARGET,"connection closed: {}", self.db_pool.is_closed());
     }
 }
 
@@ -102,12 +103,12 @@ pub async fn db_connect(config: &ConnectionConfig) -> anyhow::Result<Pool<Sqlite
         .await
     {
         Ok(conn) => {
-            log::info!("Maximum DB pool connection: {}", config.max);
+            tracing::debug!(target:LOG_TARGET,"maximum DB pool connection: {}", config.max);
             Ok(conn)
         }
         Err(e) => {
             // TODO: Use i18n
-            log::error!("could not connect to the database: {:#?}", &e);
+            tracing::error!("could not connect to the database: {:#?}", &e);
             Err(anyhow!(e))
         }
     }

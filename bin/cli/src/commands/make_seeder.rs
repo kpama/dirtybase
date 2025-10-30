@@ -58,11 +58,11 @@ pub fn make(package: Option<&String>, name: &str) {
     );
     _ = std::fs::write(&path, built);
 
-    if let Ok(mut entry_content) = read_entry_file(&path_buf) {
-        if !entry_content.contains("mod seeder;") {
-            entry_content.insert_str(0, "mod seeder;\r\n");
-            _ = update_entry_file(&path_buf, entry_content);
-        }
+    if let Ok(mut entry_content) = read_entry_file(&path_buf)
+        && !entry_content.contains("mod seeder;")
+    {
+        entry_content.insert_str(0, "mod seeder;\r\n");
+        _ = update_entry_file(&path_buf, entry_content);
     }
 
     if package.is_some() {

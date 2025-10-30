@@ -13,7 +13,7 @@ use crate::{
     pool_manager_resolver::DbPoolManagerResolver,
 };
 
-use super::mariadb_schema_manager::{MARIADB_KIND, MariadbSchemaManager};
+use super::mariadb_connector::{MARIADB_KIND, MariadbSchemaManager};
 
 #[derive(Debug)]
 pub struct MariadbPoolManager {
@@ -44,7 +44,7 @@ impl ConnectionPoolTrait for MariadbPoolManager {
         if !self.db_pool.is_closed() {
             self.db_pool.close().await;
         }
-        tracing::trace!("mariadb connection closed: {}", self.db_pool.is_closed());
+        tracing::trace!(target: LOG_TARGET,"mariadb connection closed: {}", self.db_pool.is_closed());
     }
 }
 
@@ -85,12 +85,12 @@ pub async fn db_connect(config: &ConnectionConfig) -> anyhow::Result<Pool<MySql>
     {
         Ok(conn) => {
             // TODO: Use i18n
-            log::info!(target: LOG_TARGET,"maximum DB pool connection: {}", config.max);
+            tracing::debug!(target: LOG_TARGET,"maximum DB pool connection: {}", config.max);
             Ok(conn)
         }
         Err(e) => {
             // TODO: Use i18n
-            log::error!(target: LOG_TARGET,"could not connect to mariadb: {e:?}");
+            tracing::error!(target: LOG_TARGET,"could not connect to mariadb: {e:?}");
             Err(anyhow!(e))
         }
     }

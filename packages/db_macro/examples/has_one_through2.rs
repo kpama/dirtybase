@@ -13,6 +13,7 @@ async fn main() {
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(no_timestamp, no_soft_delete)]
 struct Mechanic {
     id: Option<i64>,
     name: String,
@@ -20,14 +21,15 @@ struct Mechanic {
       kind = "has_one_through",
       pivot = Car,
       pivot_through_col= id,
-      through_col= car_id 
+      through_col= car_id
     ))]
     owner: Option<Owner>,
     #[dirty(rel(kind = has_one))]
-    car: Option<Car>
+    car: Option<Car>,
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(no_timestamp, no_soft_delete)]
 struct Car {
     id: Option<i64>,
     model: String,
@@ -35,6 +37,7 @@ struct Car {
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
+#[dirty(no_timestamp, no_soft_delete)]
 struct Owner {
     id: Option<i64>,
     name: String,

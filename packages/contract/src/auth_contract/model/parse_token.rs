@@ -17,12 +17,12 @@ pub struct ParseToken {
 }
 
 impl ParseToken {
-    pub fn base(&self) -> &String {
-        &self.base
+    pub fn base(&self) -> &str {
+        self.base.as_str()
     }
 
-    pub fn hash(&self) -> &String {
-        &self.hash
+    pub fn hash(&self) -> &str {
+        &self.hash.as_str()
     }
 
     pub fn id(&self) -> ArcUuid7 {
@@ -44,12 +44,20 @@ impl ParseToken {
 
 impl Display for ParseToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}|{}|xxxxxxxxxxx", &self.base, &self.hash)
+        write!(f, "{}|{}|..xx", &self.base, &self.hash)
     }
 }
 impl Debug for ParseToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self)
+    }
+}
+
+impl TryFrom<&str> for ParseToken {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        value.to_string().try_into()
     }
 }
 

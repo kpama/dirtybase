@@ -6,7 +6,7 @@ use dirtybase_db::{
 use dirtybase_db_macro::DirtyTable;
 
 #[derive(DirtyTable, Default, Debug)]
-#[dirty(id = "id", table = "users")]
+#[dirty(id = "id", table = "users", no_timestamp, no_soft_delete)]
 struct Person {
     id: Option<i64>,
     is_admin: bool,
@@ -17,7 +17,7 @@ struct Person {
 }
 
 #[derive(Debug, DirtyTable, Default)]
-#[dirty(id = "id", table = "orders")]
+#[dirty(id = "id", table = "orders", no_timestamp, no_soft_delete)]
 struct Order {
     id: i64,
     #[dirty(skip)]

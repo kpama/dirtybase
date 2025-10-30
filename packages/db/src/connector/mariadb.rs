@@ -1,12 +1,12 @@
+pub mod mariadb_connector;
 pub mod mariadb_pool_manager;
-pub mod mariadb_schema_manager;
 
 use std::collections::HashMap;
 
+use mariadb_connector::MARIADB_KIND;
 use mariadb_pool_manager::resolve;
-use mariadb_schema_manager::MARIADB_KIND;
 
-const LOG_TARGET: &str = "mariadb_db_driver";
+const LOG_TARGET: &str = "maria_db_driver";
 
 use crate::{
     base::{manager::Manager, schema::DatabaseKind},

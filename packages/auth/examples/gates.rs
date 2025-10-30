@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use dirtybase_auth::{MEMORY_STORAGE, helpers::get_auth_storage};
+use dirtybase_auth::helpers::get_auth_storage;
+use dirtybase_auth::memory_storage::NAME as MEMORY_STORAGE;
 use dirtybase_contract::{
     ExtensionSetup,
     auth_contract::{AuthUser, AuthUserPayload, AuthUserStatus, Gate, GateResponse},

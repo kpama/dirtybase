@@ -2,7 +2,7 @@ enable = true
 default = "sqlite"
 # drop the connection after an hour of idleness
 # value is in seconds
-idle_timeout = 0
+idle_timeout = 300 # 5 minutes
 
 [clients]
 

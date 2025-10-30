@@ -6,12 +6,11 @@ use dirtybase_contract::{
     config_contract::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
 };
 
-pub const MEMORY_STORAGE: &str = "memory";
-pub const DATABASE_STORAGE: &str = "database";
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct AuthConfig {
     enable: bool,
     storage: Arc<String>,
+    allow_self_signup: bool,
     signin_form_route: Arc<String>,
     auth_route: Arc<String>,
 }
@@ -21,6 +20,7 @@ impl Default for AuthConfig {
         Self {
             enable: false,
             storage: "memory".to_string().into(),
+            allow_self_signup: false,
             signin_form_route: Arc::new(String::from("auth:signin-form")),
             auth_route: Arc::new(String::from("auth::do-signin")),
         }
@@ -46,6 +46,10 @@ impl TryFromDirtyConfig for AuthConfig {
 impl AuthConfig {
     pub fn is_enabled(&self) -> bool {
         self.enable
+    }
+
+    pub fn allow_self_signup(&self) -> bool {
+        self.allow_self_signup
     }
 
     pub fn signin_form_route(&self) -> Arc<String> {

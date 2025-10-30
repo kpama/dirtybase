@@ -75,7 +75,7 @@ impl RouterManager {
     pub fn insecure_api(
         &mut self,
         prefix: Option<&str>,
-        callback: fn(&mut RouterBuilder),
+        mut callback: impl FnMut(&mut RouterBuilder),
     ) -> &mut Self {
         let mut builder =
             RouterBuilder::new(Some(&self.generate_prefix(RouteType::InsecureApi, prefix)));

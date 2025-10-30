@@ -12,8 +12,10 @@ use super::cache_entry::CacheEntry;
 
 #[async_trait]
 pub trait CacheStoreTrait: Send + Sync {
+    /// Get an entry
     async fn get(&self, key: &str) -> Option<CacheEntry>;
 
+    /// Get multiple entries
     async fn many(&self, keys: &[String]) -> Option<Vec<CacheEntry>>;
 
     /// Add the entry if it does not already exist
@@ -25,6 +27,7 @@ pub trait CacheStoreTrait: Send + Sync {
         tags: Option<&[String]>,
     ) -> bool;
 
+    // Add multiple entries
     async fn put_many(
         &self,
         kv: HashMap<String, serde_json::Value>,

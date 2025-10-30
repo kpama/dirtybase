@@ -2,11 +2,9 @@ use std::{collections::HashMap, sync::Arc};
 
 use busybody::async_trait;
 use dirtybase_contract::session_contract::{
-    SessionData, SessionId, SessionStorage, SessionStorageProvider,
+    SessionData, SessionId, SessionStorage, SessionStorageProvider, SessionStorageResolver,
 };
 use tokio::sync::RwLock;
-
-use crate::SessionStorageResolver;
 
 pub const NAME: &str = "memory";
 
@@ -60,8 +58,6 @@ impl SessionStorage for MemoryStorage {
     }
 }
 
-pub async fn resolver(
-    _resolver: SessionStorageResolver,
-) -> Result<SessionStorageProvider, anyhow::Error> {
+pub async fn resolver(_: SessionStorageResolver) -> Result<SessionStorageProvider, anyhow::Error> {
     Ok(SessionStorageProvider::new(MemoryStorage::default()))
 }

@@ -15,6 +15,7 @@ use axum::{
 };
 use axum_extra::extract::{cookie::Cookie, CookieJar};
 use dirtybase_helper::hash::sha256;
+use named_routes_axum::{NamedRoutesService, RoutePath};
 use serde::de::DeserializeOwned;
 use tokio::sync::{Mutex, RwLock};
 
@@ -32,6 +33,7 @@ pub struct HttpContext {
     raw_path_value: Arc<HashMap<String, serde_json::Value>>,
     raw_query_value: Arc<HashMap<String, serde_json::Value>>,
     subdomain: Option<Arc<String>>,
+    named_route_service: NamedRoutesService,
 }
 
 impl HttpContext {
@@ -45,6 +47,14 @@ impl HttpContext {
         instance.ip = instance.ip_from_headers(trusted_headers, trusted_ips);
 
         instance
+    }
+
+    pub fn named_route_service(&self) -> &NamedRoutesService {
+        &self.named_route_service
+    }
+
+    pub fn route_path(&self, name: &str) -> Option<RoutePath> {
+        self.named_route_service.get(name)
     }
 
     pub async fn from_request<T>(req: &Request<T>) -> Self {
@@ -89,6 +99,7 @@ impl HttpContext {
             ip: None,
             info: req.extensions().get::<ConnectInfo<_>>().cloned(),
             cookie_jar: Arc::new(RwLock::new(Some(CookieJar::from_headers(req.headers())))),
+            named_route_service: NamedRoutesService::new(),
         }
     }
 
@@ -97,7 +108,7 @@ impl HttpContext {
         self.uri.path()
     }
 
-    /// Tries to return the dynamic path(s) in the URI
+    /// Tries to return the dynamic path in the URI
     pub async fn get_path<T>(&self) -> Result<Path<T>, PathRejection>
     where
         T: DeserializeOwned + Send,
@@ -106,7 +117,7 @@ impl HttpContext {
         Path::<T>::from_request_parts(&mut lock, &()).await
     }
 
-    /// Tries to return the query value in the URi
+    /// Tries to return the query value in the URI
     pub async fn get_query<T>(&self) -> Result<Query<T>, QueryRejection>
     where
         T: DeserializeOwned + Send,
@@ -143,7 +154,7 @@ impl HttpContext {
         None
     }
 
-    /// Returns all the dynamic path names in the URI
+    /// Returns all the dynamic pathnames in the URI
     pub fn get_path_names(&self) -> Vec<String> {
         self.raw_path_value.keys().cloned().collect()
     }
@@ -173,13 +184,19 @@ impl HttpContext {
         let mut full_path = String::new();
 
         // http:// or https://
-        if let Some(scheme) = self.uri.scheme_str() {
+        if let Some(scheme) = self.uri.scheme() {
             full_path.push_str(&format!("{scheme}://",));
+        } else if let Some(value) = self.header("x-forwarded-scheme") {
+            let scheme = value.to_str().unwrap_or_default();
+            full_path.push_str(&format!("{scheme}://"));
+        } else if let Some(value) = self.header("x-forwarded-proto") {
+            let scheme = value.to_str().unwrap_or_default();
+            full_path.push_str(&format!("{scheme}://"));
         }
 
         // foo.com or 127.0.0.1
-        if let Some(host) = self.uri.host() {
-            full_path.push_str(host);
+        if let Some(host) = self.host() {
+            full_path.push_str(&host);
         }
 
         // /home or /home?a=1&b=2
@@ -195,6 +212,10 @@ impl HttpContext {
     }
 
     pub fn host(&self) -> Option<String> {
+        if let Some(host) = self.header("host") {
+            return Some(host.to_str().unwrap_or_default().to_string());
+        }
+
         if let Some(host) = self.uri.host() {
             return Some(host.to_string());
         }
@@ -206,7 +227,7 @@ impl HttpContext {
         self.subdomain.clone()
     }
 
-    pub async fn get_cookie(&self, name: &str) -> Option<Cookie> {
+    pub async fn get_cookie(&self, name: &str) -> Option<Cookie<'_>> {
         let r_lock = self.cookie_jar.read().await;
         r_lock.as_ref().unwrap().get(name).cloned()
     }
@@ -278,9 +299,6 @@ impl HttpContext {
         for a_name in &names {
             match a_name.to_lowercase().as_ref() {
                 "x-forwarded-for" => {
-                    if trusted.is_empty() {
-                        continue;
-                    }
                     if let Some(mut values) = self.x_forwarded_ips() {
                         ip = values.pop_front();
                         if ip.is_none() || accept_all {

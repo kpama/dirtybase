@@ -23,3 +23,7 @@ jsonwebtoken = { workspace = true }
 simple-middleware = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+serde_urlencoded = { workspace = true }
+
+[features]
+openid = []

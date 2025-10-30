@@ -33,7 +33,7 @@ impl CronJobManager {
         let mut w_lock = self.contexts.write().await;
         w_lock.drain();
 
-        for config in cron_config.jobs().values() {
+        for config in cron_config.jobs() {
             if !config.is_enable() {
                 continue;
             }

@@ -64,95 +64,89 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
         match route_type {
             RouteType::Api => {
-                if app.config().web_enable_api_routes() {
-                    if let Some(mut api_router) =
+                if app.config().web_enable_api_routes()
+                    && let Some(mut api_router) =
                         builder.into_router_wrapper(&mut middleware_manager)
-                    {
-                        // now add global middleware for this collection
-                        if let Some(order) = app.config().middleware().api_route() {
-                            api_router = middleware_manager.apply(api_router, order);
-                        }
+                {
+                    // now add global middleware for this collection
+                    if let Some(order) = app.config().middleware().api_route() {
+                        api_router = middleware_manager.apply(api_router, order);
+                    }
 
-                        let cors = config.web_api_routes_cors();
-                        if prefix.is_empty() {
-                            router = router.merge(api_router.into_router().layer(cors));
-                        } else {
-                            router = router.nest(&prefix, api_router.into_router().layer(cors));
-                        }
+                    let cors = config.web_api_routes_cors();
+                    if prefix.is_empty() {
+                        router = router.merge(api_router.into_router().layer(cors));
+                    } else {
+                        router = router.nest(&prefix, api_router.into_router().layer(cors));
                     }
                 }
             }
             RouteType::InsecureApi => {
-                if app.config().web_enable_insecure_api_routes() {
-                    if let Some(mut insecure_api_router) =
+                if app.config().web_enable_insecure_api_routes()
+                    && let Some(mut insecure_api_router) =
                         builder.into_router_wrapper(&mut middleware_manager)
-                    {
-                        if let Some(order) = app.config().middleware().insecure_api_route() {
-                            insecure_api_router =
-                                middleware_manager.apply(insecure_api_router, order);
-                        }
+                {
+                    if let Some(order) = app.config().middleware().insecure_api_route() {
+                        insecure_api_router = middleware_manager.apply(insecure_api_router, order);
+                    }
 
-                        let cors = config.web_insecure_api_routes_cors();
-                        if prefix.is_empty() {
-                            router = router.merge(insecure_api_router.into_router().layer(cors));
-                        } else {
-                            router =
-                                router.nest(&prefix, insecure_api_router.into_router().layer(cors));
-                        }
+                    let cors = config.web_insecure_api_routes_cors();
+                    if prefix.is_empty() {
+                        router = router.merge(insecure_api_router.into_router().layer(cors));
+                    } else {
+                        router =
+                            router.nest(&prefix, insecure_api_router.into_router().layer(cors));
                     }
                 }
             }
             RouteType::Backend => {
-                if app.config().web_enable_admin_routes() {
-                    if let Some(mut backend_router) =
+                if app.config().web_enable_admin_routes()
+                    && let Some(mut backend_router) =
                         builder.into_router_wrapper(&mut middleware_manager)
-                    {
-                        if let Some(order) = app.config().middleware().admin_route() {
-                            backend_router = middleware_manager.apply(backend_router, order);
-                        }
+                {
+                    if let Some(order) = app.config().middleware().admin_route() {
+                        backend_router = middleware_manager.apply(backend_router, order);
+                    }
 
-                        let cors = config.web_backend_routes_cors();
-                        if prefix.is_empty() {
-                            router = router.merge(backend_router.into_router().layer(cors));
-                        } else {
-                            router = router.nest(&prefix, backend_router.into_router().layer(cors));
-                        }
+                    let cors = config.web_backend_routes_cors();
+                    if prefix.is_empty() {
+                        router = router.merge(backend_router.into_router().layer(cors));
+                    } else {
+                        router = router.nest(&prefix, backend_router.into_router().layer(cors));
                     }
                 }
             }
             RouteType::General => {
-                if app.config().web_enable_general_routes() {
-                    if let Some(mut general_router) =
+                if app.config().web_enable_general_routes()
+                    && let Some(mut general_router) =
                         builder.into_router_wrapper(&mut middleware_manager)
-                    {
-                        if let Some(order) = app.config().middleware().general_route() {
-                            general_router = middleware_manager.apply(general_router, order);
-                        }
+                {
+                    if let Some(order) = app.config().middleware().general_route() {
+                        general_router = middleware_manager.apply(general_router, order);
+                    }
 
-                        let cors = config.web_general_routes_cors();
-                        if prefix.is_empty() {
-                            router = router.merge(general_router.into_router().layer(cors));
-                        } else {
-                            router = router.nest(&prefix, general_router.into_router().layer(cors));
-                        }
+                    let cors = config.web_general_routes_cors();
+                    if prefix.is_empty() {
+                        router = router.merge(general_router.into_router().layer(cors));
+                    } else {
+                        router = router.nest(&prefix, general_router.into_router().layer(cors));
                     }
                 }
             }
             RouteType::Dev => {
-                if app.config().web_enable_dev_routes() {
-                    if let Some(mut dev_router) =
+                if app.config().web_enable_dev_routes()
+                    && let Some(mut dev_router) =
                         builder.into_router_wrapper(&mut middleware_manager)
-                    {
-                        if let Some(order) = app.config().middleware().general_route() {
-                            dev_router = middleware_manager.apply(dev_router, order);
-                        }
+                {
+                    if let Some(order) = app.config().middleware().general_route() {
+                        dev_router = middleware_manager.apply(dev_router, order);
+                    }
 
-                        let cors = config.web_dev_routes_cors();
-                        if prefix.is_empty() {
-                            router = router.merge(dev_router.into_router().layer(cors));
-                        } else {
-                            router = router.nest(&prefix, dev_router.into_router().layer(cors));
-                        }
+                    let cors = config.web_dev_routes_cors();
+                    if prefix.is_empty() {
+                        router = router.merge(dev_router.into_router().layer(cors));
+                    } else {
+                        router = router.nest(&prefix, dev_router.into_router().layer(cors));
                     }
                 }
             }
@@ -166,7 +160,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             web_app = middleware_manager.apply(web_app, order);
         }
 
-        // call extensions request handler
+        // Call extensions request handler
         // First middleware to run
         web_app = web_app.middleware(|mut req, next| async {
             let cookie = CookieJar::from_headers(req.headers());
@@ -193,12 +187,12 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             let id = ArcUuid7::default();
             let span = tracing::trace_span!("http", ctx_id = id.to_string(), data = field::Empty);
 
-            // light copy of the request without the "body"
+            // Light copy of the request without the "body"
             tracing::dispatcher::get_default(|dispatch| {
-                if let Some(id) = span.id() {
-                    if let Some(current) = dispatch.current_span().id() {
-                        dispatch.record_follows_from(&id, current)
-                    }
+                if let Some(id) = span.id()
+                    && let Some(current) = dispatch.current_span().id()
+                {
+                    dispatch.record_follows_from(&id, current)
                 }
             });
 
@@ -216,17 +210,16 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
                 // 1. Find the tenant
                 #[cfg(feature = "multitenant")]
-                if let Ok(manager) = context.get::<RequestTenantResolverProvider>().await {
-                    if let Some(raw_id) = manager
+                if let Ok(manager) = context.get::<RequestTenantResolverProvider>().await
+                    && let Some(raw_id) = manager
                         .pluck_id_str_from_request(&http_ctx, TenantIdLocation::Subdomain)
                         .await
-                    {
-                        tracing::trace!("current tenant Id: {}", &raw_id);
-                        if let Ok(_manager) = context.get::<TenantStorageProvider>().await {
-                            tracing::trace!("validate tenant id and try fetching data");
-                            // let tenant = manager.by_id(raw_id).await;
-                            // tracing::trace!("found tenant record: {}", tenant.is_some());
-                        }
+                {
+                    tracing::trace!("current tenant Id: {}", &raw_id);
+                    if let Ok(_manager) = context.get::<TenantStorageProvider>().await {
+                        tracing::trace!("validate tenant id and try fetching data");
+                        // let tenant = manager.by_id(raw_id).await;
+                        // tracing::trace!("found tenant record: {}", tenant.is_some());
                     }
                 }
 
@@ -359,12 +352,12 @@ fn decrypt_cookies(
 
     let mut jar = CookieJar::new();
     for entry in cookie_jar.iter() {
-        if let Ok(data) = dirtybase_helper::base64::decode(entry.value()) {
-            if let Ok(val) = encryptor.decrypt(&data) {
-                let mut new_entry = entry.clone();
-                new_entry.set_value(String::from_utf8(val).unwrap_or_default());
-                jar = jar.add(new_entry);
-            }
+        if let Ok(data) = dirtybase_helper::base64::decode(entry.value())
+            && let Ok(val) = encryptor.decrypt(&data)
+        {
+            let mut new_entry = entry.clone();
+            new_entry.set_value(String::from_utf8(val).unwrap_or_default());
+            jar = jar.add(new_entry);
         }
     }
     req.headers_mut().remove(COOKIE);

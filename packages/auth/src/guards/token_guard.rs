@@ -5,7 +5,7 @@ use dirtybase_contract::{
 
 pub const TOKEN_GUARD: &str = "token";
 
-pub async fn authenticate(resolver: GuardResolver) -> GuardResponse {
+pub async fn guard(resolver: GuardResolver) -> GuardResponse {
     tracing::info!(">>>> In Token Authentication guard");
 
     if let Some(header) = resolver.headers_ref().get("authorization") {
@@ -15,13 +15,13 @@ pub async fn authenticate(resolver: GuardResolver) -> GuardResponse {
             //FIXME: change this to an actual JWT token
 
             let token = cred.token().to_string();
-            if token.contains("|") {
-                if let Ok(token) = ParseToken::try_from(token) {
-                    let result = resolver.storage_ref().find_by_id(token.id()).await;
-                    // TODO: check if this user is verified. May via another middleware...
-                    if let Ok(Some(user)) = result {
-                        return GuardResponse::success(user);
-                    }
+            if token.contains("|")
+                && let Ok(token) = ParseToken::try_from(token)
+            {
+                let result = resolver.storage_ref().find_by_id(token.id()).await;
+                // TODO: check if this user is verified. May via another middleware...
+                if let Ok(Some(user)) = result {
+                    return GuardResponse::success(user);
                 }
             }
         }
