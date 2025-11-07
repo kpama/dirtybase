@@ -1,62 +1,62 @@
-use crate::{
-    db_contract::types::{ArcUuid7, NameField},
-    prelude::model::{
-        ActorPayload, ActorRolePayload, ActorTrait, PermissionPayload, PermissionTrait,
-        RolePayload, RolePermissionPayload, RoleTrait,
-    },
+use crate::prelude::model::{
+    Actor, ActorRole, FetchActorOption, FetchActorPayload, FetchActorRoleOption,
+    FetchActorRolePayload, FetchPermissionOption, FetchPermissionPayload, FetchRoleOption,
+    FetchRolePayload, FetchRolePermissionOption, FetchRolePermissionPayload, Permission,
+    PersistActorPayload, PersistActorRolePayload, PersistPermissionPayload, PersistRolePayload,
+    PersistRolePermission, Role, RolePermission,
 };
 
 #[async_trait::async_trait]
 pub trait PermissionStorage: Send + Sync {
     // - actor
-    async fn store_actor(&self, payload: ActorPayload) -> Result<impl ActorTrait, anyhow::Error>;
+    async fn save_actor(&self, payload: PersistActorPayload) -> Result<Actor, anyhow::Error>;
 
-    async fn find_actor_by_id(
+    async fn fetch_actor(
         &self,
-        id: ArcUuid7,
-        with_trash: bool,
-    ) -> Result<Option<impl ActorTrait>, anyhow::Error>;
-    async fn find_actor_by_user_id(
-        &self,
-        user_id: ArcUuid7,
-        with_trash: bool,
-    ) -> Result<Option<impl ActorTrait>, anyhow::Error>;
+        payload: FetchActorPayload,
+        option: Option<FetchActorOption>,
+    ) -> Result<Option<Actor>, anyhow::Error>;
 
     // - role
-    async fn store_role(&self, payload: RolePayload) -> Result<impl RoleTrait, anyhow::Error>;
-    async fn find_role_by_id(
+    async fn save_role(&self, payload: PersistRolePayload) -> Result<Role, anyhow::Error>;
+    async fn find_role(
         &self,
-        id: ArcUuid7,
-        with_trash: bool,
-    ) -> Result<Option<impl RoleTrait>, anyhow::Error>;
-    async fn find_role_by_name(
-        &self,
-        name: NameField,
-        with_trash: bool,
-    ) -> Result<Option<impl RoleTrait>, anyhow::Error>;
+        payload: FetchRolePayload,
+        option: Option<FetchRoleOption>,
+    ) -> Result<Option<Role>, anyhow::Error>;
 
     // - permission
-    async fn store_permission(
+    async fn save_permission(
         &self,
-        payload: PermissionPayload,
-    ) -> Result<impl PermissionTrait, anyhow::Error>;
-    async fn find_permission_by_id(
+        payload: PersistPermissionPayload,
+    ) -> Result<Permission, anyhow::Error>;
+    async fn find_permission(
         &self,
-        id: ArcUuid7,
-        with_trash: bool,
-    ) -> Result<Option<impl PermissionTrait>, anyhow::Error>;
-    async fn find_permission_by_name(
-        &self,
-        name: NameField,
-        with_trash: bool,
-    ) -> Result<Option<impl PermissionTrait>, anyhow::Error>;
+        payload: FetchPermissionPayload,
+        option: Option<FetchPermissionOption>,
+    ) -> Result<Option<Permission>, anyhow::Error>;
 
     // - actor role
-    async fn store_actor_role(&self, payload: ActorRolePayload) -> Result<(), anyhow::Error>;
+    async fn save_actor_role(
+        &self,
+        payload: PersistActorRolePayload,
+    ) -> Result<ActorRole, anyhow::Error>;
+    async fn find_actor_role(
+        &self,
+        payload: FetchActorRolePayload,
+        option: Option<FetchActorRoleOption>,
+    ) -> Result<Option<ActorRole>, anyhow::Error>;
 
     // - role permission
-    async fn store_role_permission(
+    async fn save_role_permission(
         &self,
-        payload: RolePermissionPayload,
+        payload: PersistRolePermission,
+        option: Option<FetchRolePermissionOption>,
     ) -> Result<(), anyhow::Error>;
+
+    async fn find_role_permission(
+        &self,
+        payload: FetchRolePermissionPayload,
+        option: FetchRolePermissionOption,
+    ) -> Result<Option<RolePermission>, anyhow::Error>;
 }

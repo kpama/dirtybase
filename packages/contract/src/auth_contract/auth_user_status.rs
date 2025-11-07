@@ -4,13 +4,14 @@ use std::fmt::Display;
 
 // use crate::db_contract::field_values::FieldValue;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Copy, Clone)]
+#[derive(Serialize, Default, Deserialize, Debug, PartialEq, Copy, Clone)]
 pub enum AuthUserStatus {
     #[serde(rename = "active")]
     Active,
     #[serde(rename = "inactive")]
     Inactive,
     #[serde(rename = "pending")]
+    #[default]
     Pending,
     #[serde(rename = "suspended")]
     Suspended,
@@ -69,11 +70,5 @@ impl Display for AuthUserStatus {
             AuthUserStatus::Suspended => write!(f, "{AUTH_USER_STATUS_SUSPENDED}",),
             AuthUserStatus::Unknown => write!(f, "{AUTH_USER_STATUS_UNKNOWN}",),
         }
-    }
-}
-
-impl Default for AuthUserStatus {
-    fn default() -> Self {
-        Self::Pending
     }
 }

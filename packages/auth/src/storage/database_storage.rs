@@ -13,19 +13,20 @@ use dirtybase_contract::{
 use dirtybase_helper::time::current_datetime;
 
 pub const AUTH_USER_TABLE: &str = "auth_users";
-pub const NAME: &str = "database";
 
 pub struct AuthUserDatabaseStorage {
     manager: Manager,
 }
 
 impl AuthUserDatabaseStorage {
+    pub const NAME: &str = "database";
+
     pub fn new(manager: Manager) -> Self {
         Self { manager }
     }
 
     pub async fn register() {
-        StorageResolver::register(NAME, |mut resolver| async move {
+        StorageResolver::register(Self::NAME, |mut resolver| async move {
             tracing::trace!("setting up database auth storage");
             if let Ok(manager) = resolver.context_ref().get::<Manager>().await {
                 resolver.set_storage(AuthUserDatabaseStorage::new(manager));

@@ -12,15 +12,15 @@ pub struct AuthUserMemoryStorage {
     storage: RwLock<HashMap<ArcUuid7, AuthUser>>,
 }
 
-pub const NAME: &str = "memory";
-
 impl AuthUserMemoryStorage {
+    pub const NAME: &str = "memory";
+
     pub fn new() -> Self {
         Self::default()
     }
 
     pub async fn register() {
-        StorageResolver::register(NAME, |mut resolver| async move {
+        StorageResolver::register(Self::NAME, |mut resolver| async move {
             tracing::trace!("setting up memory auth storage");
             resolver.set_storage(AuthUserMemoryStorage::new());
 

@@ -43,7 +43,10 @@ pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
 
     // core extensions
     app.register(dirtybase_session::Extension).await;
+    // TODO: Make the auth and permission extensions optional !?!?!?
     app.register(dirtybase_auth::Extension::default()).await;
+    app.register(dirtybase_permission::Extension::default())
+        .await;
     app.register(dirtybase_db::Extension).await;
     app.register(dirtybase_encrypt::Extension).await;
     // the core app

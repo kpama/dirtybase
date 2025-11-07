@@ -22,7 +22,7 @@ use crate::db_contract::{
 };
 
 #[derive(Default, Clone, Serialize, Deserialize)]
-pub struct TenantId(ArcUuid7);
+struct TenantId(ArcUuid7);
 
 impl Display for TenantId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

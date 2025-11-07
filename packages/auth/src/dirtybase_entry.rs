@@ -27,8 +27,8 @@ impl ExtensionSetup for AuthExtension {
             .expect("could not load auth config");
 
         self.is_enable = global_config.is_enabled();
-        self.is_db_storage =
-            global_config.storage_ref().as_str() == storage::database_storage::NAME;
+        self.is_db_storage = global_config.storage_ref().as_str()
+            == storage::database_storage::AuthUserDatabaseStorage::NAME;
         self.allow_self_signup = global_config.allow_self_signup();
 
         ctx.container()

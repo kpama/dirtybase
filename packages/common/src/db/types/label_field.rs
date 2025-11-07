@@ -82,18 +82,31 @@ impl From<LabelField> for FieldValue {
 
 impl LabelField {
     pub fn new(name: &str) -> Self {
-        Self(Arc::new(
-            name.split_whitespace()
-                .collect::<Vec<&str>>()
-                .join("-")
-                .to_string()
-                .to_lowercase(),
-        ))
+        Self(Arc::new(String::from_iter(name.chars().take(255))))
     }
 }
 
 impl From<LabelField> for NameField {
     fn from(value: LabelField) -> Self {
         NameField::from(value.as_str())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_label_field1() {
+        let name = LabelField::new("The Quick Brown");
+
+        assert_eq!(name.as_str(), "The Quick Brown");
+    }
+
+    #[test]
+    fn test_label_field2() {
+        let name = LabelField::new(&"a".repeat(256));
+        assert_eq!(name.len(), 255);
+        assert_eq!(name.as_str(), "a".repeat(255));
     }
 }

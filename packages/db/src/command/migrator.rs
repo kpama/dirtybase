@@ -105,6 +105,7 @@ impl Migrator {
             && e.to_string() != "migrations already exist"
         {
             tracing::error!("could not initialize migrator: {}", e);
+            panic!("could not initialize migrator: {}", e);
         }
 
         repo

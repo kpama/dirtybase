@@ -104,7 +104,13 @@ impl SchemaManagerTrait for MariadbSchemaManager {
             .fetch_one(self.db_pool.as_ref())
             .await;
 
-        result.map_err(|e| anyhow::anyhow!(e))
+        match result {
+            Ok(v) => Ok(v),
+            Err(e) => match e {
+                sqlx::Error::RowNotFound => Ok(false),
+                _ => Err(anyhow::anyhow!(e)),
+            },
+        }
     }
 
     async fn stream_result(

@@ -5,6 +5,8 @@ use std::{
 
 use anyhow::anyhow;
 use crypto::aead::rand_core::RngCore;
+use dirtybase_common::db::types::StringField;
+use dirtybase_db_macro::DirtyTable;
 use dirtybase_helper::{hash::sha256, time::current_datetime};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -13,10 +15,7 @@ use crate::{
     auth_contract::{auth_user_status::AuthUserStatus, generate_salt},
     db_contract::{
         base::helper::generate_ulid,
-        types::{
-            ArcUuid7, BooleanField, FromColumnAndValue, IntegerField, OptionalDateTimeField,
-            ToColumnAndValue,
-        },
+        types::{ArcUuid7, BooleanField, IntegerField, OptionalDateTimeField, ToColumnAndValue},
         ColumnAndValueBuilder,
     },
 };
@@ -28,18 +27,19 @@ use argon2::{
 
 use super::ParseToken;
 
-#[derive(Clone, Validate, Serialize, Deserialize)]
+#[derive(Clone, Validate, Serialize, DirtyTable, Deserialize)]
+#[dirty(table = "auth_users")]
 pub struct AuthUser {
     id: Option<ArcUuid7>,
     #[validate(length(min = 4, max = 255))]
-    username: Arc<String>,
-    email_hash: Arc<String>,
+    username: StringField,
+    email_hash: StringField,
     status: AuthUserStatus,
     reset_password: BooleanField,
     #[serde(skip_deserializing, skip_serializing)]
-    password: Arc<String>,
+    password: StringField,
     #[serde(skip_deserializing, skip_serializing)]
-    salt: Arc<String>,
+    salt: StringField,
     login_attempt: IntegerField,
     verified_at: OptionalDateTimeField,
     #[serde(skip_deserializing)]
@@ -245,75 +245,6 @@ impl Display for AuthUser {
             "-- guest user --".to_string()
         };
         write!(f, "{id}")
-    }
-}
-
-impl FromColumnAndValue for AuthUser {
-    fn from_column_value(
-        mut cv: crate::db_contract::types::ColumnAndValue,
-    ) -> Result<Self, anyhow::Error> {
-        let mut user = Self::default();
-
-        if let Some(v) = cv.remove("id") {
-            user.id = v.into();
-        }
-
-        if let Some(v) = cv.remove("username") {
-            user.username = v.into();
-        }
-
-        if let Some(v) = cv.remove("email_hash") {
-            user.email_hash = v.into();
-        }
-        if let Some(v) = cv.remove("verified_at") {
-            user.verified_at = v.into();
-        }
-
-        if let Some(v) = cv.remove("status") {
-            user.status = v.into();
-        }
-
-        if let Some(v) = cv.remove("reset_password") {
-            user.reset_password = v.into();
-        }
-
-        if let Some(v) = cv.remove("password") {
-            user.password = v.into();
-        }
-        if let Some(v) = cv.remove("salt") {
-            user.salt = v.into();
-        }
-
-        if let Some(v) = cv.remove("login_attempt") {
-            user.login_attempt = v.into();
-        }
-
-        if let Some(v) = cv.remove("last_login_at") {
-            user.last_login_at = v.into();
-        }
-
-        if let Some(v) = cv.remove("created_at") {
-            user.created_at = v.into();
-        }
-        if let Some(v) = cv.remove("updated_at") {
-            user.updated_at = v.into();
-        }
-        if let Some(v) = cv.remove("deleted_at") {
-            user.deleted_at = v.into();
-        }
-
-        // remove database specific field
-        cv.remove("internal_id");
-
-        if !cv.is_empty() {
-            tracing::error!("not handling all of column value entries: {:?}", cv);
-            return Err(anyhow::anyhow!(
-                "not handling all of column value entries: {:?}",
-                cv
-            ));
-        }
-
-        Ok(user)
     }
 }
 

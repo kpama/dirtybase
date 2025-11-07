@@ -1,22 +1,13 @@
-use serde::{Deserialize, Serialize};
-
 mod actor;
+mod actor_role;
 mod permission;
 mod role;
+mod role_permission;
+mod tenant;
 
 pub use actor::*;
+pub use actor_role::*;
 pub use permission::*;
 pub use role::*;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum PermissionRecordAction {
-    SoftDelete,
-    SoftRestore,
-    PermDelete,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum PermissionRelAction {
-    Add,
-    Remove,
-}
+pub use role_permission::*;
+pub use tenant::*;
