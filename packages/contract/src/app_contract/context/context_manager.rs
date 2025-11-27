@@ -43,6 +43,7 @@ impl<T: Clone + Sync + Sync + 'static> ResourceWrapper<T> {
 }
 
 /// Stores a unique name and idle timeout value for the instance of this resource
+/// Idle time is in seconds
 #[derive(Debug, Clone)]
 pub struct ResourceManager {
     name: Arc<String>,
@@ -54,7 +55,7 @@ impl ResourceManager {
     ///
     /// The idle timeout value have some implications
     ///  - value == 0 : The instance will live forever
-    ///  - value < 0 : The instance will live of current request
+    ///  - value < 0 : The instance will live only for the current request
     ///  - value > 0 : The instance will be dropped after being idle that long (in seconds)
     pub fn new(name: &str, idle_timeout: i64) -> Self {
         Self {
@@ -281,10 +282,11 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
     }
 
     async fn drop_all(&self) {
-        tracing::trace!("shutting down manager: {}", self.name_of_t());
+        tracing::trace!("::::::shutting down manager: {}", self.name_of_t());
         let clean_up_fn = self.drop_fn.clone();
         let mut write_lock = self.collection.write().await;
-        for (_, wrapper) in write_lock.drain() {
+        for (x, wrapper) in write_lock.drain() {
+            tracing::error!("dropping instance of {} named {}", self.name_of_t(), x);
             let mut clean_fn_lock = clean_up_fn.write().await;
             (clean_fn_lock)(wrapper.resource()).await;
         }
@@ -334,15 +336,18 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
 
 impl<T: Clone + Send + Sync + 'static> Drop for ContextResourceManager<T> {
     fn drop(&mut self) {
-        futures::executor::block_on(async {
-            tracing::debug!("shutting down ctx manager: {}", self.name_of_t());
-            let clean_up_fn = self.drop_fn.clone();
-            let mut write_lock = self.collection.write().await;
-            for (_, wrapper) in write_lock.drain() {
-                let mut clean_fn_lock = clean_up_fn.write().await;
-                (clean_fn_lock)(wrapper.resource()).await;
-            }
-        });
+        // FIXME: Need to complete this better so that is does not block in some cases. For example
+        // when using mariadb database connection.
+
+        // futures::executor::block_on(async {
+        //     tracing::debug!("shutting down ctx manager: {}", self.name_of_t());
+        //     let clean_up_fn = self.drop_fn.clone();
+        //     let mut write_lock = self.collection.write().await;
+        //     for (_, wrapper) in write_lock.drain() {
+        //         let mut clean_fn_lock = clean_up_fn.write().await;
+        //         (clean_fn_lock)(wrapper.resource()).await;
+        //     }
+        // });
     }
 }
 
