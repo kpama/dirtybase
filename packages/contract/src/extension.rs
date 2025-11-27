@@ -49,7 +49,7 @@ pub trait ExtensionSetup: Send + Sync {
     /// Shutdown when the application is shutting down
     async fn shutdown(&mut self, global_context: &Context) {
         log::debug!("shutting down extension: {}", self.id());
-        // logic to run when the server is shutting down
+        // Logic to run when the server is shutting down
     }
 
     /// Register HTTP routes
@@ -73,22 +73,22 @@ pub trait ExtensionSetup: Send + Sync {
         (resp, cookie_jar)
     }
 
-    /// Calls for a cli command
+    /// Calls for a CLI command
     async fn on_cli_command(&self, cmd: &str, matches: ArgMatches, context: Context) -> ArgMatches {
         matches
     }
 
-    /// Register web Middlewares
+    /// Register web middleware
     fn register_web_middlewares(&self, mut manager: WebMiddlewareManager) -> WebMiddlewareManager {
         manager
     }
 
-    // Register cli middlewares
+    // Register CLI middleware
     fn register_cli_middlewares(&self, mut manager: CliMiddlewareManager) -> CliMiddlewareManager {
         manager
     }
 
-    /// register cli sub commands
+    /// register CLI sub commands
     fn register_cli_commands(&self, mut manager: CliCommandManager) -> CliCommandManager {
         manager
     }
