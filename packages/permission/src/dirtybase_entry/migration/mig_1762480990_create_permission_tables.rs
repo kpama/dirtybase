@@ -18,7 +18,8 @@ impl Migration for Mig1762480990CreatePermissionTables {
                 bp.uuid_as_id(Some(Tenant::id_column()));
                 bp.string(Tenant::col_name_for_name());
                 bp.sized_string(Tenant::col_name_for_domain(), 512);
-                bp.boolean(Tenant::col_name_for_is_global());
+                bp.boolean(Tenant::col_name_for_is_global())
+                    .set_default(false);
                 bp.timestamps();
                 bp.soft_deletable();
             })
