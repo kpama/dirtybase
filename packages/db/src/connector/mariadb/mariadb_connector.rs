@@ -1073,6 +1073,18 @@ fn build_field_value_to_args(
             let v = *v as i64;
             _ = Arguments::add(params, v);
         }
+        FieldValue::I32(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I16(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::U32(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I8(v) => {
+            _ = Arguments::add(params, v);
+        }
         FieldValue::Null => {
             _ = Arguments::add(params, "NULL");
         }
