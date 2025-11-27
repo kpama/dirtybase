@@ -8,7 +8,7 @@ use dirtybase_contract::{
 
 use crate::storage::TenantStorageDriver;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct MultitenantConfig {
     enable: bool,
     id_location: TenantIdLocation,
