@@ -15,10 +15,10 @@ pub struct Extension;
 impl dirtybase_contract::ExtensionSetup for Extension {
     async fn setup(&mut self, context: &Context) {
         event_handler::setup().await;
-        let _config = context
-            .get_config::<MultitenantConfig>("dirtybase::multitenant")
+        _ = context
+            .load_config::<MultitenantConfig>("multitenant")
             .await
-            .unwrap();
+            .expect("could not load multi tenant configuration");
     }
 
     fn migrations(&self, _context: &Context) -> Option<dirtybase_contract::ExtensionMigrations> {
