@@ -23,7 +23,7 @@ const LOG_TARGET: &str = "db::migrator";
 
 impl Migrator {
     pub async fn new(context: Option<Context>) -> Self {
-        let mut migrations = Vec::new();
+        let mut migrations = Vec::with_capacity(100);
         let context = if let Some(ctx) = context {
             ctx
         } else {
