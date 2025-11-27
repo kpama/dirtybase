@@ -18,7 +18,11 @@ pub enum FieldValue {
     Null,
     NotSet,
     U64(u64),
+    U32(u32),
     I64(i64),
+    I32(i32),
+    I16(i16),
+    I8(i8),
     F64(f64),
     String(String),
     Boolean(bool),
@@ -87,7 +91,11 @@ impl Display for FieldValue {
         match self {
             Self::Null => write!(f, "NULL"),
             Self::U64(v) => write!(f, "{v}",),
+            Self::U32(v) => write!(f, "{v}",),
+            Self::I32(v) => write!(f, "{v}",),
+            Self::I16(v) => write!(f, "{v}",),
             Self::I64(v) => write!(f, "{v}",),
+            Self::I8(v) => write!(f, "{v}",),
             Self::F64(v) => write!(f, "{v}",),
             Self::String(v) => write!(f, "{v}",),
             Self::Boolean(v) => {
