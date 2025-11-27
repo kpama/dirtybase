@@ -63,9 +63,8 @@ impl CronJobManager {
 
     pub async fn end(&self) {
         let mut w_lock = self.contexts.write().await;
-        for (_, ctx) in w_lock.iter() {
+        for (_, ctx) in w_lock.drain() {
             _ = ctx.send(crate::event::CronJobCommand::Exit).await;
         }
-        w_lock.drain();
     }
 }
