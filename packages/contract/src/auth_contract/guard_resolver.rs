@@ -56,7 +56,7 @@ impl GuardResolver {
             .next(move |(resolver, guard_name), next| {
                 let cb = callback.clone();
                 let name = arc_name.clone();
-                Box::pin(async move {
+                async move {
                     if guard_name == name.as_str() {
                         let ctx = resolver.context();
                         let result = (cb)(resolver).await;
@@ -68,7 +68,7 @@ impl GuardResolver {
                         return result;
                     }
                     next.call((resolver, guard_name)).await
-                })
+                }
             })
             .await;
     }
@@ -84,11 +84,10 @@ impl GuardResolver {
         if let Some(r) = busybody::helpers::service_container().get().await {
             r
         } else {
-            let manager =
-                simple_middleware::Manager::<(Self, String), GuardResponse>::last(|(_, _), _| {
-                    Box::pin(async move { GuardResponse::forbid() })
-                })
-                .await;
+            let manager = simple_middleware::Manager::<(Self, String), GuardResponse>::last(
+                |(_, _), _| async move { GuardResponse::forbid() },
+            )
+            .await;
             busybody::helpers::service_container()
                 .set(manager)
                 .await

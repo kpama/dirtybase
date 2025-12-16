@@ -39,12 +39,12 @@ impl StorageResolver {
             .next(move |(resolver, name), next| {
                 let cb = callback.clone();
                 let n = arc_name.clone();
-                Box::pin(async move {
+                async move {
                     if name == *n {
                         return (cb)(resolver).await;
                     }
                     next.call((resolver, name)).await
-                })
+                }
             })
             .await;
     }
@@ -58,13 +58,11 @@ impl StorageResolver {
             let manager = simple_middleware::Manager::<
                 (Self, String),
                 Result<LockStorageProvider, anyhow::Error>,
-            >::last(|(_, name), _| {
-                Box::pin(async move {
-                    Err(anyhow::anyhow!(
-                        "no register lock storage provider for: {}",
-                        name
-                    ))
-                })
+            >::last(|(_, name), _| async move {
+                Err(anyhow::anyhow!(
+                    "no register lock storage provider for: {}",
+                    name
+                ))
             })
             .await;
 

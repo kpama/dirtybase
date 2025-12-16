@@ -40,13 +40,13 @@ impl SessionStorageResolver {
             .next(move |(resolver, n), next| {
                 let cb = callback.clone();
                 let name = arc_name.clone();
-                Box::pin(async move {
+                async move {
                     if n == *name.as_ref() {
                         return (cb)(resolver).await;
                     }
 
                     next.call((resolver, n)).await
-                })
+                }
             })
             .await;
     }
@@ -60,10 +60,8 @@ impl SessionStorageResolver {
             let manager = simple_middleware::Manager::<
                 (Self, String),
                 Result<SessionStorageProvider, anyhow::Error>,
-            >::last(|(_, name), _| {
-                Box::pin(
-                    async move { Err(anyhow!("could not get storage provider for: {}", name)) },
-                )
+            >::last(|(_, name), _| async move {
+                Err(anyhow!("could not get storage provider for: {}", name))
             })
             .await;
             busybody::helpers::service_container()
