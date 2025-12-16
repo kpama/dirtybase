@@ -23,7 +23,7 @@ pub(crate) struct SalesOrder {
     pub id: UlidField,
     pub customer_id: UlidField,
     #[dirty(rel = "belongs_to")]
-    pub cusotmer: Option<Customer>,
+    pub customer: Option<Customer>,
 }
 
 #[derive(Debug, Clone, Default, DirtyTable, serde::Serialize)]
