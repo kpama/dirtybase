@@ -8,14 +8,22 @@ pub struct PermissionStorageResolver {
 }
 
 impl PermissionStorageResolver {
+    /// Creates a new `Resolver` instance
     pub fn new(context: Context) -> Self {
         Self { context }
     }
 
+    /// Returns an reference to the context instance
     pub fn context(&self) -> &Context {
         &self.context
     }
 
+    /// Tries to get the provider with the specified name
+    pub async fn get_provider(self, name: String) -> Result<PermStorageProvider, anyhow::Error> {
+        Self::get_middleware().await.send((self, name)).await
+    }
+
+    /// Registers a provider's resolver for the specified name
     pub async fn register<F, Fut>(name: &str, callback: F)
     where
         F: Clone + Fn(Self) -> Fut + Send + Sync + 'static,
