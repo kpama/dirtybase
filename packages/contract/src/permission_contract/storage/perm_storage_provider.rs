@@ -12,8 +12,11 @@ use crate::prelude::model::{
 #[async_trait::async_trait]
 pub trait PermissionStorage: Send + Sync {
     // - actor
+
+    /// Saves and returns the actor saved instance
     async fn save_actor(&self, payload: PersistActorPayload) -> Result<Actor, anyhow::Error>;
 
+    /// Fetches an actor
     async fn fetch_actor(
         &self,
         payload: FetchActorPayload,
@@ -21,7 +24,11 @@ pub trait PermissionStorage: Send + Sync {
     ) -> Result<Option<Actor>, anyhow::Error>;
 
     // - role
+
+    /// Saves a Role and returns the saved instance
     async fn save_role(&self, payload: PersistRolePayload) -> Result<Role, anyhow::Error>;
+
+    /// Fetches a Role
     async fn find_role(
         &self,
         payload: FetchRolePayload,
@@ -29,10 +36,14 @@ pub trait PermissionStorage: Send + Sync {
     ) -> Result<Option<Role>, anyhow::Error>;
 
     // - permission
+
+    /// Saves a Permission and returns the saved instance
     async fn save_permission(
         &self,
         payload: PersistPermissionPayload,
     ) -> Result<Permission, anyhow::Error>;
+
+    /// Fetches a Permission
     async fn find_permission(
         &self,
         payload: FetchPermissionPayload,
@@ -40,8 +51,11 @@ pub trait PermissionStorage: Send + Sync {
     ) -> Result<Option<Permission>, anyhow::Error>;
 
     // - tenant
+
+    /// Saves a Tenant and returns the saved instance
     async fn save_tenant(&self, payload: PersistTenantPayload) -> Result<Tenant, anyhow::Error>;
 
+    // Fetches a Tenant
     async fn find_tenant(
         &self,
         payload: FetchTenantPayload,
@@ -49,10 +63,14 @@ pub trait PermissionStorage: Send + Sync {
     ) -> Result<Option<Tenant>, anyhow::Error>;
 
     // - actor role
+
+    /// Saves an Actor's Role
     async fn save_actor_role(
         &self,
         payload: PersistActorRolePayload,
     ) -> Result<ActorRole, anyhow::Error>;
+
+    /// Fetches an Actor's Roles
     async fn find_actor_role(
         &self,
         payload: FetchActorRolePayload,
@@ -60,12 +78,15 @@ pub trait PermissionStorage: Send + Sync {
     ) -> Result<Option<ActorRole>, anyhow::Error>;
 
     // - role permission
+
+    /// Saves a Role's Permission
     async fn save_role_permission(
         &self,
         payload: PersistRolePermission,
         option: Option<FetchRolePermissionOption>,
     ) -> Result<(), anyhow::Error>;
 
+    /// Fetches a Role's Permission
     async fn find_role_permission(
         &self,
         payload: FetchRolePermissionPayload,
