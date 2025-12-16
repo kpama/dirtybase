@@ -12,16 +12,12 @@ impl StorageResolver {
         Self { context }
     }
 
-    pub async fn from_context(context: Context) -> Self {
+    pub fn from_context(context: Context) -> Self {
         Self::new(context)
     }
 
-    pub fn context_ref(&self) -> &Context {
+    pub fn context(&self) -> &Context {
         &self.context
-    }
-
-    pub fn context(&self) -> Context {
-        self.context.clone()
     }
 
     pub async fn get_provider(self, name: String) -> Result<LockStorageProvider, anyhow::Error> {
