@@ -1,9 +1,10 @@
 use crate::prelude::model::{
     Actor, ActorRole, FetchActorOption, FetchActorPayload, FetchActorRoleOption,
     FetchActorRolePayload, FetchPermissionOption, FetchPermissionPayload, FetchRoleOption,
-    FetchRolePayload, FetchRolePermissionOption, FetchRolePermissionPayload, Permission,
-    PersistActorPayload, PersistActorRolePayload, PersistPermissionPayload, PersistRolePayload,
-    PersistRolePermission, Role, RolePermission,
+    FetchRolePayload, FetchRolePermissionOption, FetchRolePermissionPayload, FetchTenantOption,
+    FetchTenantPayload, Permission, PersistActorPayload, PersistActorRolePayload,
+    PersistPermissionPayload, PersistRolePayload, PersistRolePermission, PersistTenantPayload,
+    Role, RolePermission, Tenant,
 };
 
 #[async_trait::async_trait]
@@ -35,6 +36,15 @@ pub trait PermissionStorage: Send + Sync {
         payload: FetchPermissionPayload,
         option: Option<FetchPermissionOption>,
     ) -> Result<Option<Permission>, anyhow::Error>;
+
+    // - tenant
+    async fn save_tenant(&self, payload: PersistTenantPayload) -> Result<Tenant, anyhow::Error>;
+
+    async fn find_tenant(
+        &self,
+        payload: FetchTenantPayload,
+        option: Option<FetchTenantOption>,
+    ) -> Result<Option<Tenant>, anyhow::Error>;
 
     // - actor role
     async fn save_actor_role(

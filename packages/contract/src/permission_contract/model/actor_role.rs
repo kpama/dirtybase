@@ -95,7 +95,7 @@ pub struct FetchActorRoleOption {
     pub check_trashed: bool,
     pub with_role: bool,
     pub with_actor: bool,
-    pub with_tenant: bool, // FIXME: Move tenant model to permission contract?
+    pub with_tenant: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Default, Serialize, Deserialize, DirtyTable)]
 #[dirty(table = "perm_permissions")]
 pub struct Permission {
-    id: ArcUuid7,
+    id: Option<ArcUuid7>,
     name: NameField,
     label: LabelField,
     description: StringField,
@@ -15,8 +15,8 @@ pub struct Permission {
 }
 
 impl Permission {
-    pub fn id(&self) -> &ArcUuid7 {
-        &self.id
+    pub fn id(&self) -> Option<&ArcUuid7> {
+        self.id.as_ref()
     }
 
     pub fn name(&self) -> &NameField {
