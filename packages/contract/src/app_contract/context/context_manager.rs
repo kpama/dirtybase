@@ -282,7 +282,7 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
     }
 
     async fn drop_all(&self) {
-        tracing::trace!("::::::shutting down manager: {}", self.name_of_t());
+        tracing::trace!("shutting down manager: {}", self.name_of_t());
         let clean_up_fn = self.drop_fn.clone();
         let mut write_lock = self.collection.write().await;
         for (x, wrapper) in write_lock.drain() {
@@ -331,23 +331,6 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
         });
 
         self
-    }
-}
-
-impl<T: Clone + Send + Sync + 'static> Drop for ContextResourceManager<T> {
-    fn drop(&mut self) {
-        // FIXME: Need to complete this better so that is does not block in some cases. For example
-        // when using mariadb database connection.
-
-        // futures::executor::block_on(async {
-        //     tracing::debug!("shutting down ctx manager: {}", self.name_of_t());
-        //     let clean_up_fn = self.drop_fn.clone();
-        //     let mut write_lock = self.collection.write().await;
-        //     for (_, wrapper) in write_lock.drain() {
-        //         let mut clean_fn_lock = clean_up_fn.write().await;
-        //         (clean_fn_lock)(wrapper.resource()).await;
-        //     }
-        // });
     }
 }
 
