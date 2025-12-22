@@ -15,8 +15,9 @@ use dirtybase_contract::{
 #[cfg(feature = "multitenant")]
 use dirtybase_contract::multitenant_contract::{
     RequestTenantResolverProvider, RequestTenantResolverTrait, TenantIdLocation,
-    TenantStorageProvider,
 };
+#[cfg(feature = "permission")]
+use dirtybase_contract::permission_contract::PermStorageProvider;
 
 use dirtybase_db::types::ArcUuid7;
 use dirtybase_encrypt::Encrypter;
@@ -173,7 +174,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             next.run(req).await
         });
 
-        // proxy container
+        // Proxy container
         // this should be the last middleware registered.
         // It sets up the current request specific context, tenant ID if the feature is enabled
         let trusted_headers = Arc::new(app.config_ref().web_proxy_trusted_headers());
@@ -187,7 +188,6 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             let id = ArcUuid7::default();
             let span = tracing::trace_span!("http", ctx_id = id.to_string(), data = field::Empty);
 
-            // Light copy of the request without the "body"
             tracing::dispatcher::get_default(|dispatch| {
                 if let Some(id) = span.id()
                     && let Some(current) = dispatch.current_span().id()
@@ -215,9 +215,9 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                         .pluck_id_str_from_request(&http_ctx, TenantIdLocation::Subdomain)
                         .await
                 {
-                    tracing::trace!("current tenant Id: {}", &raw_id);
-                    if let Ok(_manager) = context.get::<TenantStorageProvider>().await {
-                        tracing::trace!("validate tenant id and try fetching data");
+                    tracing::trace!("current tenant ID: {}", &raw_id);
+                    if let Ok(_provider) = context.get::<PermStorageProvider>().await {
+                        tracing::trace!("validate tenant id and try fetching tenants configs");
                         // let tenant = manager.by_id(raw_id).await;
                         // tracing::trace!("found tenant record: {}", tenant.is_some());
                     }
