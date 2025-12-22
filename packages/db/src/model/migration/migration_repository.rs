@@ -48,6 +48,24 @@ impl MigrationRepository {
             .await
     }
 
+    pub async fn get_batch(&self, batch: i64) -> BTreeMap<StringField, MigrationEntity> {
+        if let Ok(Some(collection)) = self
+            .manager
+            .select_from_table(TABLE_NAME, |q| {
+                q.is_eq(BATCH_COLUMN, batch).desc("created_at");
+            })
+            .fetch_all_to::<MigrationEntity>()
+            .await
+        {
+            return collection
+                .into_iter()
+                .map(|m| (m.name.clone(), m))
+                .collect::<BTreeMap<StringField, MigrationEntity>>();
+        }
+
+        BTreeMap::new()
+    }
+
     pub async fn get_last_batch(&self) -> BTreeMap<StringField, MigrationEntity> {
         if let Ok(Some(last)) = self
             .manager
@@ -80,6 +98,14 @@ impl MigrationRepository {
                 q.is_eq(BATCH_COLUMN, batch);
             })
             .await;
+    }
+
+    pub async fn delete(&self, name: &str) -> Result<(), anyhow::Error> {
+        self.manager()
+            .delete(TABLE_NAME, |q| {
+                q.is_eq(NAME_COLUMN, name);
+            })
+            .await
     }
 
     pub async fn create(
