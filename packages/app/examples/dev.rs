@@ -3,6 +3,8 @@ use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
 use dirtybase_contract::auth_contract::{AuthUserPayload, LoginCredential};
 use dirtybase_contract::cli_contract::CliMiddlewareManager;
+use dirtybase_contract::multitenant_contract::model::{Tenant, TenantStatus};
+use dirtybase_contract::multitenant_contract::{TenantManager, TenantStorage};
 use dirtybase_contract::{
     app_contract::{Context, ContextResourceManager, CtxExt},
     prelude::*,
@@ -38,7 +40,7 @@ impl ExtensionSetup for App {
             |_| {
                 Box::pin(async {
                     //
-                    ("global points".to_string(), 50).into()
+                    Ok(("global points".to_string(), 50).into())
                 })
             },
             |_| {
@@ -113,7 +115,7 @@ impl ExtensionSetup for App {
     }
 
     async fn on_web_request(&self, req: Request, context: Context, _cookie: &CookieJar) -> Request {
-        let tenant = context.tenant().await.unwrap();
+        let tenant = context.tenant_context().await.unwrap();
 
         let _id = tenant.id().to_string();
         req

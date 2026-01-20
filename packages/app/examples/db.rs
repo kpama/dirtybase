@@ -1,6 +1,8 @@
 use dirtybase_db::{
-    TableModel, config::ConnectionConfig, connector::postgres::make_postgres_manager,
-    types::IntegerField,
+    TableModel,
+    config::ConnectionConfig,
+    connector::postgres::make_postgres_manager,
+    types::{ArcUuid7, IntegerField},
 };
 use dirtybase_db_macro::DirtyTable;
 use tracing::Level;
@@ -11,6 +13,10 @@ async fn main() -> anyhow::Result<()> {
         .with_max_level(Level::INFO)
         .try_init()
         .expect("could not setup tracing");
+
+    let x = ArcUuid7::default();
+    println!("{:?} = {}", &x, x.to_uuid25_string());
+    return Ok(());
 
     dirtybase_db::setup_pool_resolvers().await;
 

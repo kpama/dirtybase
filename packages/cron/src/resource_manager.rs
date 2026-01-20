@@ -12,17 +12,11 @@ pub async fn register_resource_manager() {
     .await;
 
     ContextResourceManager::<CronJobManager>::register(
-        |context| {
+        |_context| {
             Box::pin(async move {
-                let name = context
-                    .tenant()
-                    .await
-                    .expect("could not get tenant")
-                    .id()
-                    .to_string();
-
-                let duration = 0; // if context.is_global() { 0 } else { 5 };
-                (name, duration).into()
+                let name = "global"; // Cron job is always on the global contenxt
+                let duration = 0; // Run forever;
+                Ok((name, duration).into())
             })
         },
         |_context| {

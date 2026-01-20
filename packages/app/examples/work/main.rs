@@ -24,27 +24,25 @@ async fn main() -> anyhow::Result<()> {
     let manager = make_sqlite_manager(base_config).await;
 
     let result = manager
-        .transaction(|manager| {
-            Box::pin(async move {
-                let mut row = HashMap::new();
-                row.insert("name".to_string(), "Customer32".into());
-                if let Ok(Some(c)) = manager
-                    .select_from_table("customers", |qb| {
-                        qb.lock_for_update();
-                        qb.is_eq("internal_id", 1);
+        .transaction(|manager| async move {
+            let mut row = HashMap::new();
+            row.insert("name".to_string(), "Customer32".into());
+            if let Ok(Some(c)) = manager
+                .select_from_table("customers", |qb| {
+                    qb.lock_for_update();
+                    qb.is_eq("internal_id", 1);
+                })
+                .fetch_one()
+                .await
+            {
+                _ = manager
+                    .update("customers", row, |qb| {
+                        qb.is_eq("internal_id", c.get("internal_id").cloned().unwrap());
                     })
-                    .fetch_one()
-                    .await
-                {
-                    let result = manager
-                        .update("customers", row, |qb| {
-                            qb.is_eq("internal_id", c.get("internal_id").cloned().unwrap());
-                        })
-                        .await?;
-                    println!("{:#?}", c);
-                }
-                Ok(())
-            })
+                    .await?;
+                println!("{:#?}", c);
+            }
+            Ok(())
         })
         .await;
 

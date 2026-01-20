@@ -50,11 +50,7 @@ impl ExtensionSetup for AuthExtension {
     }
 
     fn migrations(&self, _: &Context) -> Option<ExtensionMigrations> {
-        if !self.is_enable {
-            return None;
-        }
-
-        if self.is_db_storage {
+        if self.is_db_storage && self.is_enable {
             return migration::setup();
         }
 

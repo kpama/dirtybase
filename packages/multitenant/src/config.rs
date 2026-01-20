@@ -1,3 +1,4 @@
+use dirtybase_common::anyhow::{self, Context as AnyhowCtx};
 use dirtybase_contract::{
     app_contract::Context,
     async_trait,
@@ -6,13 +7,12 @@ use dirtybase_contract::{
     serde,
 };
 
-use crate::storage::TenantStorageDriver;
-
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct MultitenantConfig {
     enable: bool,
     id_location: TenantIdLocation,
-    storage: TenantStorageDriver,
+    db_config_set: String,
+    storage: String,
 }
 
 impl Default for MultitenantConfig {
@@ -20,7 +20,8 @@ impl Default for MultitenantConfig {
         Self {
             enable: Default::default(),
             id_location: Default::default(),
-            storage: TenantStorageDriver::Dummy,
+            db_config_set: Default::default(),
+            storage: Default::default(),
         }
     }
 }
@@ -33,11 +34,11 @@ impl TryFromDirtyConfig for MultitenantConfig {
             .optional_file("multitenant.toml", Some("DTY_MULTITENANT"))
             .build()
             .await
-            .expect("could not configure multitenant configuration")
+            .context("could not configure multitenant configuration")?
             .try_deserialize()
         {
             Ok(config) => Ok(config),
-            Err(_) => Ok(Self::default()),
+            Err(e) => Err(anyhow::anyhow!("could not load multitenant config: {}", e)),
         }
     }
 }
@@ -47,14 +48,15 @@ impl MultitenantConfig {
         self.enable
     }
 
-    pub fn id_location(&self) -> TenantIdLocation {
-        self.id_location.clone()
-    }
-    pub fn id_location_ref(&self) -> &TenantIdLocation {
+    pub fn id_location(&self) -> &TenantIdLocation {
         &self.id_location
     }
 
-    // pub async fn from_dirty_config(base: &DirtyConfig) -> Self {
-    //     Self::from_config(base).await.unwrap()
-    // }
+    pub fn db_config_set(&self) -> &str {
+        &self.db_config_set
+    }
+
+    pub fn storage(&self) -> &str {
+        &self.storage
+    }
 }

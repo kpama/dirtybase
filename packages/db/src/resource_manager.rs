@@ -1,3 +1,4 @@
+use anyhow::Context as AnyhowCtx;
 use dirtybase_contract::{
     app_contract::ContextResourceManager, db_contract::base::manager::Manager,
     prelude::ResourceManager,
@@ -14,11 +15,16 @@ pub(crate) async fn register_resource_manager() {
                 let config = context
                     .get_config_once::<DbConfig>("database")
                     .await
-                    .unwrap();
+                    .context("could not get database configuration")?;
                 let timeout = config.idle_timeout();
 
-                let name = context.tenant().await.unwrap_or_default().id().to_string();
-                ResourceManager::new(&name, timeout)
+                let name = context
+                    .tenant_context()
+                    .await
+                    .context("coult not get tenant context")?
+                    .id()
+                    .to_string();
+                Ok(ResourceManager::new(&name, timeout))
             })
         },
         |context| {

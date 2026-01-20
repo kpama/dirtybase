@@ -71,11 +71,6 @@ impl From<&DeriveInput> for TableAttribute {
         let mut value = Self::default();
 
         value.table_name = table_name;
-        value.foreign_name = format!(
-            "{}_{}",
-            cruet::string::singularize::to_singular(&value.table_name),
-            &value.id_column
-        );
 
         for attr in &input.attrs {
             if let Meta::List(the_list) = &attr.meta
@@ -139,6 +134,14 @@ impl From<&DeriveInput> for TableAttribute {
                     }
                 }
             }
+        }
+
+        if value.foreign_name.is_empty() {
+            value.foreign_name = format!(
+                "{}_{}",
+                cruet::string::singularize::to_singular(&value.table_name),
+                &value.id_column
+            );
         }
 
         value

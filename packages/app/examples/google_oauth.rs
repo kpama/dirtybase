@@ -87,7 +87,7 @@ impl ExtensionSetup for OauthApp {
                     log::error!("in google-auth");
                     let client = reqwest::Client::new();
 
-                    if let Ok(response) =  client.post("https://oauth2.googleapis.com/token")
+                    if let Ok(response) =  client.post("https://oauth2.googleapis.com/token")  
                         .form(&[
                             ("code", auth_code.code.as_str()),
                             ("client_id", config.client_id.as_str()),

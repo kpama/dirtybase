@@ -18,7 +18,6 @@ use super::{
 };
 use crate::db::{TableModel, field_values::FieldValue};
 use anyhow::Result;
-use futures::future::BoxFuture;
 use orsomafo::Dispatchable;
 
 #[derive(Clone)]
@@ -277,12 +276,11 @@ impl Manager {
         self.delete(T::table_name(), callback).await
     }
 
-    pub async fn transaction<R>(
-        &self,
-        callback: impl FnOnce(Self) -> BoxFuture<'static, Result<R>> + Send,
-    ) -> Result<R>
+    /// Run statement in a transaction
+    pub async fn transaction<R, Fut>(&self, callback: impl FnOnce(Self) -> Fut) -> Result<R>
     where
         R: Send + 'static,
+        Fut: Future<Output = Result<R>>,
     {
         let mut trans = self.clone();
         trans.in_trans = true;

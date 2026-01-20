@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-dirtybase_contract = { path = "../contract", version = "*" }
+dirtybase_contract = { workspace = true }
 cron = { workspace = true }
 chrono = { workspace = true }
 tokio = { workspace = true }
