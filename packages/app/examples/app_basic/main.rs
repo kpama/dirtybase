@@ -1,12 +1,13 @@
 use axum::{
+    Extension,
     body::Body,
     response::{Html, IntoResponse, Response},
 };
 use dirtybase_contract::{
     app_contract::CtxExt,
     http_contract::{RouterManager, WebMiddlewareManager},
+    prelude::Context,
 };
-use dirtybase_db::base::manager::Manager;
 use tower_service::Service;
 
 #[tokio::main]
@@ -15,8 +16,6 @@ async fn main() -> anyhow::Result<()> {
     let app_service = dirtybase_app::setup().await?;
 
     app_service.register(MyApp).await;
-
-    // app_service.init().await;
 
     dirtybase_app::run(app_service).await
 }
@@ -34,9 +33,11 @@ impl dirtybase_app::contract::ExtensionSetup for MyApp {
                     .get_x("/one", another_one)
                     .get("/new", my_world, "new-test")
                     .get("/new2", || async { "Hello from new two" }, "new2")
-                    .get_x("/middleware", || async { "Testing middleware features" });
-
-                // middleware.apply(router, ["example1", "auth:normal"])
+                    .get_x_with_middleware(
+                        "/middleware",
+                        || async { "Testing middleware features" },
+                        ["example1", "auth:normal"],
+                    );
             })
             .api("/jj".into(), |router| {
                 router.get("/people", || async { "List of people" }, "api-people");
@@ -53,10 +54,10 @@ impl dirtybase_app::contract::ExtensionSetup for MyApp {
     }
 }
 
-async fn handle_home(CtxExt(manager): CtxExt<Manager>) -> impl IntoResponse {
+async fn handle_home(Extension(context): Extension<Context>) -> impl IntoResponse {
     Html(format!(
-        "Hello world!!: {}",
-        manager.has_table("core_user").await.unwrap(),
+        "Hello world!!. Your request ID is {}",
+        context.id()
     ))
 }
 
