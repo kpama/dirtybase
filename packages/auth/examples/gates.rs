@@ -1,15 +1,22 @@
 use std::sync::Arc;
 
 use dirtybase_auth::helpers::get_auth_storage;
-use dirtybase_auth::memory_storage::NAME as MEMORY_STORAGE;
+use dirtybase_auth::memory_storage::AuthUserMemoryStorage;
 use dirtybase_contract::{
     ExtensionSetup,
     auth_contract::{AuthUser, AuthUserPayload, AuthUserStatus, Gate, GateResponse},
     prelude::{Context, StatusCode},
 };
+use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        // .with_max_level(Level::DEBUG)
+        .try_init()
+        .expect("could not setup tracing");
+
     let context = Context::make_global().await;
     dirtybase_auth::Extension::default().setup(&context).await;
 
@@ -35,7 +42,7 @@ async fn main() {
     .await;
     register_gates().await;
 
-    let storage = get_auth_storage(context.clone(), Some(MEMORY_STORAGE))
+    let storage = get_auth_storage(context.clone(), Some(AuthUserMemoryStorage::NAME))
         .await
         .expect("could not resolve the auth storage provider");
 
@@ -68,7 +75,7 @@ async fn main() {
 }
 
 async fn register_gates() {
-    Gate::define("can-delete-records", || async {
+    Gate::define(PostPermission::DeleteRecords, || async {
         //
         GateResponse::allow().into()
     })
@@ -84,5 +91,17 @@ struct Post {
 impl Default for Post {
     fn default() -> Self {
         Self { id: 44 }
+    }
+}
+
+enum PostPermission {
+    DeleteRecords,
+}
+
+impl AsRef<str> for PostPermission {
+    fn as_ref(&self) -> &str {
+        match self {
+            PostPermission::DeleteRecords => "can-delete-records",
+        }
     }
 }

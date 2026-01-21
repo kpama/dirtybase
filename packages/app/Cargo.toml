@@ -6,19 +6,19 @@ edition.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dirtybase_db = { path = "../db", version = "*" }
-dirtybase_db_macro = { path = "../db_macro", version = "*" }
-dirtybase_cache = { path = "../cache", version = "*" }
-dirtybase_mail = { path = "../mail", version = "*" }
-dirtybase_contract = { path = "../contract", version = "*" }
-dirtybase_helper = { path = "../helper", version = "*" }
-dirtybase_cron = { path = "../cron", version = "*" }
-dirtybase_auth = { path = "../auth", version = "*" }
-dirtybase_permission = { path = "../permission", version = "*" }
-dirtybase_session = { path = "../session", version = "*" }
-dirtybase_multitenant = { path = "../multitenant", version = "*", optional = true }
-dirtybase_encrypt = { path = "../encrypt", version = "*" }
-dirtybase_common = { path = "../common", version = "*" }
+dirtybase_db = { workspace = true }
+dirtybase_db_macro = { workspace = true }
+dirtybase_cache = {workspace = true}
+dirtybase_mail = {workspace = true}
+dirtybase_contract = {workspace = true }
+dirtybase_helper = {workspace = true }
+dirtybase_cron = {workspace = true}
+dirtybase_auth = { workspace = true}
+dirtybase_permission = { workspace = true, optional = true }
+dirtybase_session = { workspace = true }
+dirtybase_multitenant = { workspace = true, optional = true }
+dirtybase_encrypt = { workspace = true, version = "*" }
+dirtybase_common = { workspace = true, version = "*" }
 simple-middleware = { workspace = true }
 anyhow = { workspace = true }
 validator = { workspace = true }
@@ -64,7 +64,8 @@ serde_urlencoded = { workspace = true }
 
 
 [features]
-multitenant = ["dep:dirtybase_multitenant"]
+permission = ["dep:dirtybase_permission"]
+multitenant = ["dep:dirtybase_multitenant", "permission"]
 template = ["dep:tera"]
 embed_template = ["template"]
 full = ["multitenant", "template"]

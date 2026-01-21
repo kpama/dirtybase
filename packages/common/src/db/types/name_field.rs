@@ -14,7 +14,8 @@ pub struct NameField(Arc<String>);
 
 impl Validate for NameField {
     fn validate(&self) -> Result<(), validator::ValidationErrors> {
-        if self.0.trim().is_empty() || self.0.len() > 255 {
+        let s = self.0.trim();
+        if s.is_empty() || s.len() > 255 {
             let mut error = validator::ValidationErrors::new();
             let mut msg = ValidationError::new("length");
             msg = msg.with_message("Length must be between 1 and 255".into());
@@ -81,13 +82,13 @@ impl From<NameField> for FieldValue {
 
 impl NameField {
     pub fn new(name: &str) -> Self {
-        Self(Arc::new(
-            name.split_whitespace()
-                .collect::<Vec<&str>>()
-                .join("-")
-                .to_string()
-                .to_lowercase(),
-        ))
+        let name = name
+            .split_whitespace()
+            .collect::<Vec<&str>>()
+            .join("-")
+            .to_string()
+            .to_lowercase();
+        Self(Arc::new(String::from_iter(name.chars().take(255))))
     }
 }
 

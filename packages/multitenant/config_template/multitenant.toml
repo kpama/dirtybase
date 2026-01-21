@@ -1,11 +1,17 @@
 enable = true
 
+# Where the ID should be pluck from in an HTTP request
 # options: domain, subdomain, header, query
 id_location = "subdomain"
 
+# The attribute field use as an ID
+# options: id, name, token
+id = "token"
+
+# Where tenants data is store
 # option: database, dummy 
 storage = "memory"
 
-# for a custom storage driver use the following
+# For a custom storage driver use the following
 # Note: You will need to turn off the above "storage" entry
 # storage.custom=""

@@ -13,11 +13,8 @@ use dirtybase_contract::{
 };
 
 #[cfg(feature = "multitenant")]
-use dirtybase_contract::multitenant_contract::{
-    RequestTenantResolverProvider, RequestTenantResolverTrait, TenantIdLocation,
-    TenantStorageProvider,
-};
-
+use dirtybase_contract::multitenant_contract::TenantManager;
+#[cfg(feature = "permission")]
 use dirtybase_db::types::ArcUuid7;
 use dirtybase_encrypt::Encrypter;
 use named_routes_axum::RouterWrapper;
@@ -68,7 +65,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                     && let Some(mut api_router) =
                         builder.into_router_wrapper(&mut middleware_manager)
                 {
-                    // now add global middleware for this collection
+                    // Now add global middleware for this collection
                     if let Some(order) = app.config().middleware().api_route() {
                         api_router = middleware_manager.apply(api_router, order);
                     }
@@ -173,9 +170,9 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             next.run(req).await
         });
 
-        // proxy container
+        // Proxy container
         // this should be the last middleware registered.
-        // It sets up the current request specific context, tenant ID if the feature is enabled
+        // It sets up the current request specific context, tenant if the feature is enabled
         let trusted_headers = Arc::new(app.config_ref().web_proxy_trusted_headers());
         let trusted_ips = Arc::new(TrustedIp::form_collection(
             app.config_ref().web_trusted_proxies(),
@@ -185,9 +182,8 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             let trusted_headers = trusted_headers.clone();
             let trusted_ips = trusted_ips.clone();
             let id = ArcUuid7::default();
-            let span = tracing::trace_span!("http", ctx_id = id.to_string(), data = field::Empty);
+            let span = tracing::trace_span!("http", id = id.as_u128(), data = field::Empty);
 
-            // Light copy of the request without the "body"
             tracing::dispatcher::get_default(|dispatch| {
                 if let Some(id) = span.id()
                     && let Some(current) = dispatch.current_span().id()
@@ -210,16 +206,30 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
                 // 1. Find the tenant
                 #[cfg(feature = "multitenant")]
-                if let Ok(manager) = context.get::<RequestTenantResolverProvider>().await
-                    && let Some(raw_id) = manager
-                        .pluck_id_str_from_request(&http_ctx, TenantIdLocation::Subdomain)
-                        .await
                 {
-                    tracing::trace!("current tenant Id: {}", &raw_id);
-                    if let Ok(_manager) = context.get::<TenantStorageProvider>().await {
-                        tracing::trace!("validate tenant id and try fetching data");
-                        // let tenant = manager.by_id(raw_id).await;
-                        // tracing::trace!("found tenant record: {}", tenant.is_some());
+                    use dirtybase_multitenant::MultitenantConfig;
+                    let multitenant_config: MultitenantConfig = context
+                        .get_config("multitenant")
+                        .await
+                        .expect("could not fetch the multitenant config");
+                    if let Ok(manager) = context.get::<TenantManager>().await
+                        && multitenant_config.is_enabled()
+                    {
+                        match manager.find_tenant_from_http(&context).await {
+                            Ok(Some(tenant)) => {
+                                tracing::debug!("got tenant: {:#?}", &tenant);
+                                // TODO: Announce that a new tenant has been set to the context
+                                context.set(tenant).await;
+                            }
+                            Ok(None) => {
+                                // TOD0: Return a 403 response
+                                tracing::debug!("did not find the tenant");
+                            }
+                            Err(e) => {
+                                // TOD0: Return a 500 response
+                                tracing::error!("error fetching tenant: {:?} ", e);
+                            }
+                        }
                     }
                 }
 

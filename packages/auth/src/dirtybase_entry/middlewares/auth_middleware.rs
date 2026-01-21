@@ -4,6 +4,8 @@ use dirtybase_contract::{
     http_contract::prelude::*,
 };
 
+const AUTH_MIDDLEWARE_LOG: &str = "auth_middleware";
+
 use crate::{AuthExtension, guards::session_guard::SESSION_GUARD};
 
 pub async fn handle_auth_middleware(
@@ -17,11 +19,15 @@ pub async fn handle_auth_middleware(
         guard_name = SESSION_GUARD
     }
 
+    tracing::debug!(
+        target = AUTH_MIDDLEWARE_LOG,
+        "current auth guard: {}",
+        guard_name
+    );
     let Some(context) = req.extensions().get::<Context>().cloned() else {
-        tracing::error!(target = "auth middleware", "could not get context");
+        tracing::error!(target = AUTH_MIDDLEWARE_LOG, "could not get context");
         return (StatusCode::UNAUTHORIZED, ()).into_response();
     };
-    tracing::debug!("current auth guard: {}", guard_name);
 
     if let Ok(config) = AuthExtension::config_from_ctx(&context).await
         && let Some(storage) = StorageResolver::from_context(context.clone())

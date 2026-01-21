@@ -46,14 +46,11 @@ impl ForeignKey {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ColumnDefault {
     Custom(String),
+    Boolean(bool),
     EmptyString,
-    // CreatedAt,
-    // UpdatedAt,
     Zero,
     EmptyObject,
     EmptyArray,
-    Uuid,
-    Ulid,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -110,23 +107,12 @@ impl ColumnBlueprint {
         self
     }
 
-    pub fn default_is_created_at(&mut self) -> &mut Self {
-        // self.default = Some(ColumnDefault::CreatedAt);
+    pub fn default_is_true(&mut self) -> &mut Self {
+        self.default = Some(ColumnDefault::Boolean(true));
         self
     }
-
-    pub fn default_is_uuid(&mut self) -> &mut Self {
-        self.default = Some(ColumnDefault::Uuid);
-        self
-    }
-
-    pub fn default_is_ulid(&mut self) -> &mut Self {
-        self.default = Some(ColumnDefault::Ulid);
-        self
-    }
-
-    pub fn default_is_updated_at(&mut self) -> &mut Self {
-        // self.default = Some(ColumnDefault::UpdatedAt);
+    pub fn default_is_false(&mut self) -> &mut Self {
+        self.default = Some(ColumnDefault::Boolean(false));
         self
     }
 

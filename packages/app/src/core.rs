@@ -1,7 +1,5 @@
 mod config;
 
-pub mod command;
-
 use std::convert::Infallible;
 use std::ops::Deref;
 

@@ -1,3 +1,4 @@
+use anyhow::Context as AnyhowCtx;
 use dirtybase_contract::{
     app_contract::ContextResourceManager,
     session_contract::{SessionStorage, SessionStorageProvider, SessionStorageResolver},
@@ -20,14 +21,14 @@ pub async fn register_resource_manager() {
                     .await
                     .unwrap_or_default();
                 let name = context
-                    .tenant()
+                    .tenant_context()
                     .await
-                    .expect("could not get tenant")
+                    .context("could not get tenant context")?
                     .id()
                     .to_string();
                 let duration = if context.is_global() { 0 } else { 5 };
                 context.set(config).await;
-                (name, duration).into()
+                Ok((name, duration).into())
             })
         },
         |context| {

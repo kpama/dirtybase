@@ -104,7 +104,13 @@ impl SchemaManagerTrait for MariadbSchemaManager {
             .fetch_one(self.db_pool.as_ref())
             .await;
 
-        result.map_err(|e| anyhow::anyhow!(e))
+        match result {
+            Ok(v) => Ok(v),
+            Err(e) => match e {
+                sqlx::Error::RowNotFound => Ok(false),
+                _ => Err(anyhow::anyhow!(e)),
+            },
+        }
     }
 
     async fn stream_result(
@@ -246,7 +252,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
 }
 
 impl MariadbSchemaManager {
-    async fn do_apply(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
+    async fn do_apply(&mut self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         return if table.view_query.is_some() {
             // working with view table
             self.create_or_replace_view(table).await
@@ -401,7 +407,7 @@ impl MariadbSchemaManager {
         Ok(())
     }
 
-    async fn apply_table_changes(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
+    async fn apply_table_changes(&mut self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         let columns: Vec<String> = table
             .columns()
             .iter()
@@ -426,7 +432,22 @@ impl MariadbSchemaManager {
             query = format!("{query} ENGINE='InnoDB';");
         }
 
-        let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query(&query).execute(&mut *trans).await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
+
+            result
+        } else {
+            sqlx::query(&query).execute(self.db_pool.as_ref()).await
+        };
 
         match result {
             Ok(_) => {
@@ -565,15 +586,15 @@ impl MariadbSchemaManager {
         if let Some(default) = &column.default {
             the_type.push_str(" DEFAULT ");
             match default {
-                // ColumnDefault::CreatedAt => (), // the_type.push_str("now()"),
                 ColumnDefault::Custom(d) => the_type.push_str(&format!("'{d}'")),
                 ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
                 ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
-                ColumnDefault::Uuid => (), //the_type.push_str("UUID_v7()"),
-                ColumnDefault::Ulid => (),
-                // ColumnDefault::UpdatedAt => (), // the_type.push_str("current_timestamp() ON UPDATE CURRENT_TIMESTAMP")
                 ColumnDefault::Zero => the_type.push('0'),
+                ColumnDefault::Boolean(v) => {
+                    let value = if *v { '1' } else { '0' };
+                    the_type.push(value);
+                }
             };
         }
 
@@ -1065,6 +1086,18 @@ fn build_field_value_to_args(
         }
         FieldValue::U64(v) => {
             let v = *v as i64;
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I32(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I16(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::U32(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I8(v) => {
             _ = Arguments::add(params, v);
         }
         FieldValue::Null => {

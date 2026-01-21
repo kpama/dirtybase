@@ -84,7 +84,9 @@ pub fn build_entity_repo(
     let updated_at = format_ident!("{}", tbl_attr.updated_at_col);
     let deleted_at = format_ident!("{}", tbl_attr.deleted_at_col);
     let id_field = format_ident!("{}", tbl_attr.id_field);
-    let id_field_attr = columns_attributes.get(&tbl_attr.id_field).unwrap();
+    let id_field_attr = columns_attributes
+        .get(&tbl_attr.id_field)
+        .expect("could not get entity ID field");
     let id_type = format_ident!("{}", id_field_attr.the_type);
 
     let mut column_names: Vec<proc_macro2::TokenStream> = Vec::new();
@@ -107,7 +109,7 @@ pub fn build_entity_repo(
     // Makes a copy of the current record ID value
     let pluck_rec_id = if id_field_attr.optional {
         quote! {
-            let id = record.#id_field.clone().unwrap();
+            let id = record.#id_field.clone().expect("expected a 'Some' ID but found 'None'");
         }
     } else {
         quote! {
@@ -181,7 +183,10 @@ pub fn build_entity_repo(
     let destroy_method = quote! {
         pub async fn destroy(&mut self, record: #ident) -> Result<(), ::dirtybase_common::anyhow::Error> {
             #pluck_rec_id
+            self.destroy_by_id(id).await
+        }
 
+        pub async fn destroy_by_id(&mut self, id: #id_type) -> Result<(), ::dirtybase_common::anyhow::Error> {
             self.manager.delete_from_table::<#ident>(|qb|{
                 qb.is_eq(
                     <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
@@ -194,14 +199,19 @@ pub fn build_entity_repo(
     let mut delete_method = quote! {
         pub async fn delete(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_common::anyhow::Error> {
             #pluck_rec_id
-
-            _ = self.manager.delete_from_table::<#ident>(|qb|{
-                qb.is_eq(
-
-                    <#ident as ::dirtybase_common::db::table_model::TableModel>::id_column(),  id);
-            }).await?;
+            _ = self.delete_by_id(id).await?;
 
             Ok(record)
+        }
+
+        pub async fn delete_by_id(&mut self, id: #id_type ) -> Result<(), ::dirtybase_common::anyhow::Error> {
+            _ = self.manager.delete_from_table::<#ident>(|qb|{
+                qb.is_eq(
+                    <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
+                    <#ident as ::dirtybase_common::db::table_model::TableModel>::id_column())
+                    ,id);
+            }).await?;
+            Ok(())
         }
     };
 
@@ -211,17 +221,30 @@ pub fn build_entity_repo(
                 record.#deleted_at = Some(::dirtybase_common::dirtybase_helper::time::current_datetime());
                 self.update(record).await
             }
+
+            pub async fn delete_by_id(&mut self, id: #id_type ) -> Result<(), ::dirtybase_common::anyhow::Error> {
+                if let Some(record) = self.by_id(id).await? {
+                    _ = self.delete(record).await?;
+                }
+                Ok(())
+            }
         };
 
         restore_method = quote! {
             pub async fn restore(&mut self, id: #id_type) -> Result<Option<#ident>, ::dirtybase_common::anyhow::Error> {
-                let name = <#ident as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap().to_string();
+                let name = <#ident as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect("could not get entity `deleted at` column").to_string();
 
                 let mut cv = ::std::collections::HashMap::new();
-                cv.insert(name, ::dirtybase_common::db::field_values::FieldValue::Null);
+                cv.insert(
+                    <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(name),
+                     ::dirtybase_common::db::field_values::FieldValue::Null
+                    );
 
                 _ = self.manager.update_table::<#ident>(cv, |qb|{
-                    qb.is_eq(<#ident as ::dirtybase_common::db::table_model::TableModel>::id_column(), id.clone());
+                    qb.is_eq(
+                            <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
+                        <#ident as ::dirtybase_common::db::table_model::TableModel>::id_column()),
+                        id.clone());
                 }).await?;
 
                 self.by_id(id).await
@@ -232,7 +255,7 @@ pub fn build_entity_repo(
             if !self.eager.contains(&"_soft_delete".to_string()) {
                 self.builder.is_null(
                     <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
-                        <#ident as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                        <#ident as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect("deleted at column is require")
                         )
                 );
             }
@@ -254,7 +277,7 @@ pub fn build_entity_repo(
                 if !self.eager.contains(&flag_soft) {
                     self.builder.is_not_null(
                         <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
-                            <#ident as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                            <#ident as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect("deleted at column is require")
                             )
                         );
                     self.eager.push(flag_soft);
@@ -379,9 +402,14 @@ pub fn build_entity_repo(
                         None => Ok(0),
                     }
                   } else {
-                        Err(result.err().unwrap())
+                        Err(result.err().expect("could not run 'count' query"))
                   }
 
+            }
+
+            pub fn filter(&mut self, mut callback: impl FnOnce(&mut ::dirtybase_common::db::base::query::QueryBuilder)) -> &mut Self {
+                callback(&mut self.builder);
+                self
             }
 
             pub async fn by_id(&mut self, id: #id_type) -> Result<Option<#ident>, ::dirtybase_common::anyhow::Error> {
