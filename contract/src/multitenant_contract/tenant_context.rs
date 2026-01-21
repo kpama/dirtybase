@@ -40,6 +40,13 @@ impl TenantContext {
         self.id.clone()
     }
 
+    pub fn tenant_name(&self) -> &str {
+        if let Some(t) = &self.tenant {
+            return t.name();
+        }
+        "--global tenant--"
+    }
+
     pub fn id_as_string(&self) -> String {
         self.id.to_string()
     }
