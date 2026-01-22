@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    future::Future,
     sync::{atomic::AtomicI64, Arc},
 };
 
@@ -123,33 +124,37 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
     ///  3. Drop: a closure that implements `FnMut(T) -> BoxFuture<()>` where T is the instance
     ///     that has been dropped/removed from he collection of instances
     ///
-    pub async fn new<S, F, C>(setup_fn: S, resolver_fn: F, drop_fn: C) -> Self
+    pub async fn new<S, SR, F, FR, C, CR>(
+        mut setup_fn: S,
+        mut resolver_fn: F,
+        mut drop_fn: C,
+    ) -> Self
     where
-        S: FnMut(Context) -> BoxFuture<'static, Result<ResourceManager, anyhow::Error>>
-            + Send
-            + Sync
-            + 'static,
-        F: FnMut(Context) -> BoxFuture<'static, Result<T, anyhow::Error>> + Send + Sync + 'static,
-        C: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        S: FnMut(Context) -> SR + Send + Sync + 'static,
+        SR: Future<Output = Result<ResourceManager, anyhow::Error>> + Send + 'static,
+        F: FnMut(Context) -> FR + Send + Sync + 'static,
+        FR: Future<Output = Result<T, anyhow::Error>> + Send + 'static,
+        C: FnMut(T) -> CR + Send + Sync + 'static,
+        CR: Future<Output = ()> + Send + 'static,
     {
         let instance = Self {
-            setup_fn: Arc::new(RwLock::new(Box::new(setup_fn))),
-            resolver_fn: Arc::new(RwLock::new(Box::new(resolver_fn))),
-            drop_fn: Arc::new(RwLock::new(Box::new(drop_fn))),
+            setup_fn: Arc::new(RwLock::new(Box::new(move |ctx| Box::pin(setup_fn(ctx))))),
+            resolver_fn: Arc::new(RwLock::new(Box::new(move |ctx| Box::pin(resolver_fn(ctx))))),
+            drop_fn: Arc::new(RwLock::new(Box::new(move |t| Box::pin(drop_fn(t))))),
             collection: ContextCollection::default(),
         };
 
         instance.handle_shutdown_signal().await
     }
 
-    pub async fn register<S, F, C>(setup_fn: S, resolver_fn: F, drop_fn: C)
+    pub async fn register<S, SR, F, FR, C, CR>(setup_fn: S, resolver_fn: F, drop_fn: C)
     where
-        S: FnMut(Context) -> BoxFuture<'static, Result<ResourceManager, anyhow::Error>>
-            + Send
-            + Sync
-            + 'static,
-        F: FnMut(Context) -> BoxFuture<'static, Result<T, anyhow::Error>> + Send + Sync + 'static,
-        C: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        S: FnMut(Context) -> SR + Send + Sync + 'static,
+        SR: Future<Output = Result<ResourceManager, anyhow::Error>> + Send + 'static,
+        F: FnMut(Context) -> FR + Send + Sync + 'static,
+        FR: Future<Output = Result<T, anyhow::Error>> + Send + 'static,
+        C: FnMut(T) -> CR + Send + Sync + 'static,
+        CR: Future<Output = ()> + Send + 'static,
     {
         let instance = Self::new(setup_fn, resolver_fn, drop_fn).await;
 
@@ -157,31 +162,29 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
     }
 
     /// Register a resource that will only last for a scope request/command
-    pub async fn scoped<R>(name: &str, resolver_fn: R)
+    pub async fn scoped<R, RR>(name: &str, resolver_fn: R)
     where
-        R: FnMut(Context) -> BoxFuture<'static, Result<T, anyhow::Error>> + Send + Sync + 'static,
+        R: FnMut(Context) -> RR + Send + Sync + 'static,
+        RR: Future<Output = Result<T, anyhow::Error>> + Send + 'static,
     {
-        Self::scoped_with_drop(name, resolver_fn, |_| {
-            Box::pin(async {
-                // we never reach here
-            })
-        })
-        .await;
+        Self::scoped_with_drop(name, resolver_fn, |_| async {}).await;
     }
 
-    pub async fn scoped_with_drop<R, C>(name: &str, resolver_fn: R, drop_fn: C)
+    pub async fn scoped_with_drop<R, RR, C, CR>(name: &str, resolver_fn: R, drop_fn: C)
     where
-        R: FnMut(Context) -> BoxFuture<'static, Result<T, anyhow::Error>> + Send + Sync + 'static,
-        C: FnMut(T) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        R: FnMut(Context) -> RR + Send + Sync + 'static,
+        RR: Future<Output = Result<T, anyhow::Error>> + Send + 'static,
+        C: FnMut(T) -> CR + Send + Sync + 'static,
+        CR: Future<Output = ()> + Send + 'static,
     {
         let scoped = ResourceManager::new(name, -1);
         Self::register(
             move |_| {
                 let s = scoped.clone();
-                Box::pin(async move {
+                async move {
                     //
                     Ok(s.clone())
-                })
+                }
             },
             resolver_fn,
             drop_fn,
@@ -189,24 +192,23 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
         .await;
     }
 
-    pub async fn forever<R>(name: &str, resolver_fn: R)
+    pub async fn forever<R, RR>(name: &str, resolver_fn: R)
     where
-        R: FnMut(Context) -> BoxFuture<'static, Result<T, anyhow::Error>> + Send + Sync + 'static,
+        R: FnMut(Context) -> RR + Send + Sync + 'static,
+        RR: Future<Output = Result<T, anyhow::Error>> + Send + 'static,
     {
         let scoped = ResourceManager::new(name, 0);
         Self::register(
             move |_| {
                 let s = scoped.clone();
-                Box::pin(async move {
+                async move {
                     //
                     Ok(s.clone())
-                })
+                }
             },
             resolver_fn,
-            |_| {
-                Box::pin(async {
-                    // does nothing
-                })
+            |_| async {
+                // does nothing
             },
         )
         .await;
