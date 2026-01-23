@@ -3,7 +3,7 @@ use std::{env, net::SocketAddr, sync::Arc};
 use axum::{
     Router,
     body::Body,
-    http::{Request, header::COOKIE},
+    http::{Request, Response, header::COOKIE},
 };
 use axum_extra::extract::CookieJar;
 use dirtybase_contract::{
@@ -12,8 +12,6 @@ use dirtybase_contract::{
     http_contract::{HttpContext, RouteType, TrustedIp, axum::clone_request},
 };
 
-#[cfg(feature = "multitenant")]
-use dirtybase_contract::multitenant_contract::TenantManager;
 #[cfg(feature = "permission")]
 use dirtybase_db::types::ArcUuid7;
 use dirtybase_encrypt::Encrypter;
@@ -204,35 +202,6 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 log::trace!("full url: : {}", http_ctx.full_path());
                 tracing::trace!("host: {:?}", http_ctx.host());
 
-                // 1. Find the tenant
-                #[cfg(feature = "multitenant")]
-                {
-                    use dirtybase_multitenant::MultitenantConfig;
-                    let multitenant_config: MultitenantConfig = context
-                        .get_config("multitenant")
-                        .await
-                        .expect("could not fetch the multitenant config");
-                    if let Ok(manager) = context.get::<TenantManager>().await
-                        && multitenant_config.is_enabled()
-                    {
-                        match manager.find_tenant_from_http(&context).await {
-                            Ok(Some(tenant)) => {
-                                tracing::debug!("got tenant: {:#?}", &tenant);
-                                // TODO: Announce that a new tenant has been set to the context
-                                context.set(tenant).await;
-                            }
-                            Ok(None) => {
-                                // TOD0: Return a 403 response
-                                tracing::debug!("did not find the tenant");
-                            }
-                            Err(e) => {
-                                // TOD0: Return a 500 response
-                                tracing::error!("error fetching tenant: {:?} ", e);
-                            }
-                        }
-                    }
-                }
-
                 req.extensions_mut().insert(context.clone());
 
                 let cookie_jar = CookieJar::from_headers(req.headers());
@@ -252,7 +221,18 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 decrypt_cookies(cookie_jar, &encrypter, cookie_config, &mut req);
 
                 // pass the request
-                let mut response = next.run(req).await;
+                let mut response = {
+                    // Find the tenant
+                    #[cfg(feature = "multitenant")]
+                    if let Some(resp) = inject_tenant(&context, &http_ctx).await {
+                        resp
+                    } else {
+                        next.run(req).await
+                    }
+
+                    #[cfg(not(feature = "multitenant"))]
+                    next.run(req).await
+                };
 
                 let http_context = context
                     .get::<HttpContext>()
@@ -318,6 +298,46 @@ fn display_welcome_info(address: &str, port: u16) {
     );
     eprintln!("version: {VERSION}");
     eprintln!("Http server running at : {address} on port: {port}");
+}
+
+async fn inject_tenant(context: &Context, http_ctx: &HttpContext) -> Option<Response<Body>> {
+    use dirtybase_multitenant::MultiTenantManager;
+    let multitenant_manager = match context.get::<MultiTenantManager>().await {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::error!("could not get multitenant manager : {}", e);
+            return None;
+        }
+    };
+    return match multitenant_manager.inject_tenant(&context, true).await {
+        Err(e) => {
+            use axum::http::Response;
+            use axum::http::StatusCode;
+            use dirtybase_multitenant::TenantInjectionError;
+
+            Some(match e {
+                TenantInjectionError::TenantNotFound => {
+                    // FIXME: Implement a way to glbally handle 403 error
+                    let resp_403 = Response::builder()
+                        .status(StatusCode::FORBIDDEN)
+                        .body(Body::empty())
+                        // .body::<Body>("tenant does not exist".into())
+                        .unwrap();
+                    resp_403
+                }
+                TenantInjectionError::SystemError(e) => {
+                    // FIXME: Implement a way to glbally handle 500 error
+                    tracing::error!("system error injecting tenant: {}", e);
+                    let resp_500 = Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body(Body::empty())
+                        .unwrap();
+                    resp_500
+                }
+            })
+        }
+        Ok(_) => None,
+    };
 }
 
 fn encrypt_cookies(
