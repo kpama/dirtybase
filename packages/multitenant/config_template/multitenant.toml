@@ -1,17 +1,25 @@
+# Toggle the feature
 enable = true
 
-# Where the ID should be pluck from in an HTTP request
-# options: domain, subdomain, header, query
-id_location = "subdomain"
+# The database configuration set to use
+# This value is used when the storage is set to 'database'
+db_config_set = ""
 
-# The attribute field use as an ID
-# options: id, name, token
-id = "token"
+# Header key that stores the tenant's ID
+header_key = "X-Tenant-ID"
+
+# Heaker key that stores the tenant's token value
+token_header_key = "X-Tenant-Token"
+
+# Query string used for the tenant's ID 
+query_key = "tenant-id"
+
+# Query string used for the tenant's  token value
+token_query_key = "tonant-tk"
 
 # Where tenants data is store
-# option: database, dummy 
+# option: database, memory, dummy 
 storage = "memory"
 
-# For a custom storage driver use the following
-# Note: You will need to turn off the above "storage" entry
-# storage.custom=""
+# If set to true, a tenant will be require before the require or command is handled
+tenant_require = false

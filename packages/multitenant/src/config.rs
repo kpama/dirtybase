@@ -3,7 +3,10 @@ use dirtybase_contract::{
     app_contract::Context,
     async_trait,
     config_contract::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
-    multitenant_contract::TenantIdLocation,
+    multitenant_contract::{
+        TENANT_ID_HEADER, TENANT_ID_QUERY_STRING, TENANT_TOKEN_HEADER, TENANT_TOKEN_QUERY_STRING,
+        TenantIdLocation,
+    },
     serde,
 };
 
@@ -13,6 +16,11 @@ pub struct MultitenantConfig {
     id_location: TenantIdLocation,
     db_config_set: String,
     storage: String,
+    header_key: String,
+    token_header_key: String,
+    query_key: String,
+    token_query_key: String,
+    tenant_require: bool,
 }
 
 impl Default for MultitenantConfig {
@@ -22,6 +30,11 @@ impl Default for MultitenantConfig {
             id_location: Default::default(),
             db_config_set: Default::default(),
             storage: Default::default(),
+            header_key: TENANT_ID_HEADER.to_string(),
+            token_header_key: TENANT_TOKEN_HEADER.to_string(),
+            query_key: TENANT_ID_QUERY_STRING.to_string(),
+            token_query_key: TENANT_TOKEN_QUERY_STRING.to_string(),
+            tenant_require: false,
         }
     }
 }
@@ -58,5 +71,25 @@ impl MultitenantConfig {
 
     pub fn storage(&self) -> &str {
         &self.storage
+    }
+
+    pub fn header_key(&self) -> &str {
+        &self.header_key
+    }
+
+    pub fn token_header_key(&self) -> &str {
+        &self.token_header_key
+    }
+
+    pub fn query_key(&self) -> &str {
+        &self.query_key
+    }
+
+    pub fn token_query_key(&self) -> &str {
+        &self.token_query_key
+    }
+
+    pub fn tenant_require(&self) -> bool {
+        self.tenant_require
     }
 }

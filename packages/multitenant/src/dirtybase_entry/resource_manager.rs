@@ -1,45 +1,31 @@
 use anyhow::Context as AnyhowCtx;
 use dirtybase_common::db::base::manager::Manager;
 use dirtybase_contract::{
-    multitenant_contract::{
-        TenantManager, TenantStorageProvider, TenantStorageResolver, model::TenantRepo,
-    },
-    prelude::ContextResourceManager,
+    multitenant_contract::{TenantStorageProvider, TenantStorageResolver, model::TenantRepo},
+    prelude::{ContextResourceManager, ResourceManager},
 };
 
-use crate::{MultitenantConfig, storage::TenantDatabaseStorage};
+use crate::{MultiTenantManager, MultitenantConfig, storage::TenantDatabaseStorage};
 
 pub(crate) async fn register_multitenant_resource_manager() {
     register_storages().await;
-    ContextResourceManager::<TenantManager>::register(
-        |context| {
-            Box::pin(async move {
-                context
-                    .load_config::<MultitenantConfig>("multitenant")
-                    .await
-                    .context("could not load multitenant config")?;
 
-                Ok(("multitenant", 10).into())
-            })
-        },
-        |context| {
-            Box::pin(async move {
-                let config = context
-                    .get::<MultitenantConfig>()
-                    .await
-                    .context("could not get multitenant config")?;
+    ContextResourceManager::<MultiTenantManager>::register(
+        |_| async move { Ok(ResourceManager::forever("multitenant-manager")) },
+        |context| async move {
+            let config = context
+                .get::<MultitenantConfig>()
+                .await
+                .context("could not get multitenant config")?;
 
-                let storage = TenantStorageResolver::new(context.clone())
-                    .get_provider(config.storage().to_string())
-                    .await
-                    .context("could not get tenant storage provider")?;
-                Ok(TenantManager::new(storage))
-            })
+            let storage = TenantStorageResolver::new(context.clone())
+                .get_provider(config.storage().to_string())
+                .await
+                .context("could not get tenant storage provider")?;
+            Ok(MultiTenantManager::new(config, storage))
         },
-        |_manager| {
-            Box::pin(async move {
-                //
-            })
+        |_| async {
+            // NOTE: We will never drop unless the program has ended
         },
     )
     .await;
