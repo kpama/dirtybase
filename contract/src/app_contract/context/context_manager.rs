@@ -64,6 +64,14 @@ impl ResourceManager {
             idle: idle_timeout,
         }
     }
+
+    pub fn scoped(name: &str) -> Self {
+        Self::new(name, -1)
+    }
+
+    pub fn forever(name: &str) -> Self {
+        Self::new(name, 0)
+    }
 }
 
 /// Convert from (String, i64) to ResourceManager
