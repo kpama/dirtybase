@@ -236,6 +236,14 @@ impl HttpContext {
         r_lock.as_ref().unwrap().get(name).cloned()
     }
 
+    pub async fn get_cookie_value(&self, name: &str) -> Option<String> {
+        if let Some(cookie) = self.get_cookie(name).await {
+            Some(cookie.value().to_string())
+        } else {
+            None
+        }
+    }
+
     pub async fn set_cookie(&self, cookie: Cookie<'static>) {
         let mut w_lock = self.cookie_jar.write().await;
         *w_lock = Some(w_lock.take().unwrap().add(cookie));
