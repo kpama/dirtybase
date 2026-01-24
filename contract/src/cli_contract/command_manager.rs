@@ -24,6 +24,7 @@ type CommandCollection = Vec<(
 pub struct CliCommandManager {
     commands: CommandCollection,
     middleware_manager: CliMiddlewareManager,
+    global_middlewares: Vec<String>,
 }
 
 impl Default for CliCommandManager {
@@ -37,6 +38,7 @@ impl CliCommandManager {
         Self {
             commands: Vec::new(),
             middleware_manager,
+            global_middlewares: Vec::new(),
         }
     }
 
@@ -51,7 +53,15 @@ impl CliCommandManager {
             + Sync
             + 'static,
     {
-        self.commands.push((command, Box::new(handler), None));
+        if self.global_middlewares.is_empty() {
+            self.commands.push((command, Box::new(handler), None));
+        } else {
+            self.commands.push((
+                command,
+                Box::new(handler),
+                Some(self.global_middlewares.clone()),
+            ));
+        }
 
         self
     }
@@ -73,10 +83,20 @@ impl CliCommandManager {
             + 'static,
         I: Into<String>,
     {
-        let o = order.into_iter().map(|v| v.into()).collect::<Vec<String>>();
-        self.commands.push((command, Box::new(handler), Some(o)));
+        let mut o = order.into_iter().map(|v| v.into()).collect::<Vec<String>>();
+
+        if self.global_middlewares.is_empty() {
+            self.commands.push((command, Box::new(handler), Some(o)));
+        } else {
+            o.extend(self.global_middlewares.clone());
+            self.commands.push((command, Box::new(handler), Some(o)));
+        }
 
         self
+    }
+
+    pub(crate) fn set_global_middlware(&mut self, middlewares: Vec<String>) {
+        self.global_middlewares = middlewares
     }
 
     pub async fn handle(self) {
