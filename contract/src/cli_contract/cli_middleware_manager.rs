@@ -5,60 +5,42 @@ use simple_middleware::Manager;
 
 use crate::app_contract::Context;
 
+// type RegistererFn = Box<
+//     dyn FnMut(
+//             simple_middleware::Manager<(String, clap::ArgMatches, Context), ()>,
+//         ) -> simple_middleware::Manager<(String, clap::ArgMatches, Context), ()>
+//         + Send
+//         + Sync
+//         + 'static,
+// >;
+
 type RegistererFn = Box<
-    dyn FnMut(
-            simple_middleware::Manager<(String, clap::ArgMatches, Context), ()>,
-        ) -> simple_middleware::Manager<(String, clap::ArgMatches, Context), ()>
+    dyn Fn(String, clap::ArgMatches, Context) -> BoxFuture<'static, Result<(), anyhow::Error>>
         + Send
         + Sync
         + 'static,
 >;
 
-pub struct Registerer {
-    wrapper: simple_middleware::Manager<(String, clap::ArgMatches, Context), ()>,
-    _name: Arc<String>,
-    _params: Option<HashMap<String, String>>,
-}
-
-impl Registerer {
-    pub async fn middleware<F, Fut>(self, mut handler: F) -> Self
-    where
-        F: FnMut(String, clap::ArgMatches, Context, Option<HashMap<String, String>>) -> Fut
-            + Send
-            + Sync
-            + 'static,
-        Fut: Future<Output = ()> + Send + Sync + 'static,
-    {
-        self.wrapper
-            .next(move |(a, b, c), _next| {
-                //
-                let x = (handler)(a, b, c, None);
-                Box::pin(x)
-            })
-            .await;
-        self
-    }
-}
-
 #[derive(Default)]
-pub struct CliMiddlewareManager(HashMap<String, RegistererFn>);
+pub struct CliMiddlewareManager(HashMap<String, Arc<RegistererFn>>);
 
 impl CliMiddlewareManager {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn register<T>(&mut self, name: &str, registerer: T) -> &mut Self
+    pub fn register<T, R>(&mut self, name: &str, registerer: T) -> &mut Self
     where
-        T: FnMut(
-                simple_middleware::Manager<(String, clap::ArgMatches, Context), ()>,
-            )
-                -> simple_middleware::Manager<(String, clap::ArgMatches, Context), ()>
-            + Send
-            + Sync
-            + 'static,
+        T: Fn(String, clap::ArgMatches, Context) -> R + Send + Sync + 'static,
+        R: Future<Output = Result<(), anyhow::Error>> + Send + 'static,
     {
-        self.0.insert(name.to_string(), Box::new(registerer));
+        self.0.insert(
+            name.to_string(),
+            Arc::new(Box::new(move |name, arg, ctx| {
+                let f = registerer(name, arg, ctx);
+                Box::pin(async { f.await })
+            })),
+        );
         self
     }
 
@@ -66,7 +48,7 @@ impl CliMiddlewareManager {
         &mut self,
         mut handler: H,
         order: impl IntoIterator<Item = I>,
-    ) -> Manager<(String, clap::ArgMatches, Context), ()>
+    ) -> Arc<Manager<(String, clap::ArgMatches, Context), Result<(), anyhow::Error>>>
     where
         I: Into<String>,
         H: FnMut(
@@ -78,32 +60,61 @@ impl CliMiddlewareManager {
             + Sync
             + 'static,
     {
-        let mut manager =
-            simple_middleware::Manager::<(String, clap::ArgMatches, Context), ()>::last(
-                move |(a, b, c), _| {
-                    let result = (handler)(a, b, c);
-                    Box::pin(async move {
-                        if let Err(e) = result.await {
-                            tracing::error!("command error: {}", e);
-                        }
-                    })
-                },
-            )
+        let manager = Self::get_middleware_manager().await;
+        manager
+            .next(move |(a, b, c), _| {
+                let fut = (handler)(a, b, c);
+                async move {
+                    let result = fut.await;
+                    if let Err(e) = &result {
+                        tracing::error!("command error: {}", e);
+                    }
+                    result
+                }
+            })
             .await;
 
         for n in order.into_iter() {
             let key = n.into();
             if let Some(middleware) = self.0.get_mut(&key) {
-                manager = (middleware)(manager);
+                let inner = middleware.clone();
+                manager
+                    .next(move |(name, arg, ctx), next| {
+                        let f = inner(name.clone(), arg.clone(), ctx.clone());
+                        async move {
+                            let result = f.await;
+                            if result.is_err() {
+                                return result;
+                            }
+                            next.call((name, arg, ctx)).await
+                        }
+                    })
+                    .await;
             } else {
-                // FIXME: Add translation
-                log::error!("could not find web middleware: {key}",);
+                log::error!("could not find cli middleware: {key}",);
             }
         }
 
-        //TODO: add the last middleware
-        //  Add core middlewares here
-
         manager
+    }
+
+    async fn get_middleware_manager() -> Arc<
+        simple_middleware::Manager<(String, clap::ArgMatches, Context), Result<(), anyhow::Error>>,
+    > {
+        return match busybody::helpers::get_service().await {
+            Some(m) => m,
+            None => {
+                let manager = simple_middleware::Manager::<
+                    (String, clap::ArgMatches, Context),
+                    Result<(), anyhow::Error>,
+                >::new();
+                busybody::helpers::service_container()
+                    .set(manager)
+                    .await
+                    .get()
+                    .await
+                    .unwrap() // NOTE: Should never fail since we just added the instance
+            }
+        };
     }
 }
