@@ -52,7 +52,10 @@ impl ExtensionSetup for App {
         .await;
     }
 
-    fn register_cli_middlewares(&self, manager: CliMiddlewareManager) -> CliMiddlewareManager {
+    async fn register_cli_middlewares(
+        &self,
+        manager: CliMiddlewareManager,
+    ) -> CliMiddlewareManager {
         manager
     }
 

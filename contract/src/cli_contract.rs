@@ -15,14 +15,20 @@ pub mod prelude {
     pub use clap::Subcommand;
 }
 
-pub async fn setup_cli_command_manager() -> CliCommandManager {
+pub async fn setup_cli_command_manager(
+    global_middlewares: Option<Vec<String>>,
+) -> CliCommandManager {
     let lock = ExtensionManager::list().read().await;
     let mut middleware = CliMiddlewareManager::new();
 
     for ext in lock.iter() {
-        middleware = ext.register_cli_middlewares(middleware);
+        middleware = ext.register_cli_middlewares(middleware).await;
     }
     let mut manager = CliCommandManager::new(middleware);
+
+    if let Some(global) = global_middlewares {
+        manager.set_global_middlware(global);
+    }
 
     for ext in lock.iter() {
         manager = ext.register_cli_commands(manager);
@@ -36,14 +42,14 @@ where
     I: IntoIterator<Item = T>,
     T: Into<String>,
 {
-    setup_cli_command_manager()
+    setup_cli_command_manager(None)
         .await
         .handle_command(Some(command))
         .await;
     Ok(())
 }
 pub async fn run() -> anyhow::Result<()> {
-    let manager = setup_cli_command_manager().await;
+    let manager = setup_cli_command_manager(None).await;
     manager.handle().await;
     Ok(())
 }

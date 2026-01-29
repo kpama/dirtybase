@@ -1,4 +1,4 @@
-use dirtybase_contract::{cli_contract::CliCommandManager, prelude::WebMiddlewareManager};
+use dirtybase_contract::prelude::*;
 
 mod commands_setup;
 

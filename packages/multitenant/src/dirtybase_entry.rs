@@ -6,7 +6,7 @@ mod resource_manager;
 
 pub mod storage;
 
-use dirtybase_contract::prelude::*;
+use dirtybase_contract::{multitenant_contract::TenantResolvedMiddleware, prelude::*};
 
 use crate::{
     MultitenantConfig, dirtybase_entry::resource_manager::register_multitenant_resource_manager,
@@ -27,6 +27,19 @@ impl dirtybase_contract::ExtensionSetup for Extension {
             .await
             .expect("could not load multi tenant configuration");
         register_multitenant_resource_manager().await;
+
+        TenantResolvedMiddleware::get()
+            .await
+            .next(|t, next| async move {
+                tracing::error!("prepering for tenant: {}", t.name());
+                next.call(t).await
+            })
+            .await
+            .next(|t, next| async move {
+                tracing::error!("prepering for tenant: {}, middleware 2", t.name());
+                next.call(t).await
+            })
+            .await;
     }
 
     fn migrations(&self, _context: &Context) -> Option<dirtybase_contract::ExtensionMigrations> {

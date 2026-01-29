@@ -46,7 +46,7 @@ macro_rules! register_migration {
 pub mod prelude {
     pub use super::app_contract::*;
     pub use super::auth_contract::prelude;
-    pub use super::cli_contract;
+    pub use super::cli_contract::prelude::*;
     pub use super::config_contract::*;
     pub use super::extension::ExtensionManager;
     pub use super::extension::ExtensionMigrations;

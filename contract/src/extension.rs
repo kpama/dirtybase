@@ -83,7 +83,10 @@ pub trait ExtensionSetup: Send + Sync {
     }
 
     // Register CLI middleware
-    fn register_cli_middlewares(&self, mut manager: CliMiddlewareManager) -> CliMiddlewareManager {
+    async fn register_cli_middlewares(
+        &self,
+        mut manager: CliMiddlewareManager,
+    ) -> CliMiddlewareManager {
         manager
     }
 

@@ -7,7 +7,7 @@ use std::{
 use dirtybase_contract::{
     http_contract::HttpContext,
     multitenant_contract::{
-        TenantStorage, TenantStorageProvider,
+        TenantResolvedMiddleware, TenantStorage, TenantStorageProvider,
         model::{FetchTenantOption, FetchTenantPayload, TenantId},
     },
     prelude::Context,
@@ -82,10 +82,15 @@ impl MultiTenantManager {
                 // TODO: Announce that a new tenant has been set to the context
                 if let Ok(http_ctx) = context.get::<HttpContext>().await {
                     http_ctx
-                        .set_cookie_kv("tenant-id", tenant.id().unwrap().to_string())
+                        .set_cookie_kv(self.config.cookie_key(), tenant.id().unwrap().to_string())
                         .await;
                 }
-                context.set(tenant).await;
+                match TenantResolvedMiddleware::get().await.send(tenant).await {
+                    Ok(tenant) => {
+                        context.set(tenant).await;
+                    }
+                    Err(e) => return Err(TenantInjectionError::SystemError(e.to_string())),
+                }
             }
             Ok(None) => {
                 if self.config.tenant_require() {
@@ -93,7 +98,6 @@ impl MultiTenantManager {
                 }
             }
             Err(e) => {
-                // TOD0: Return a 500 response
                 return Err(TenantInjectionError::SystemError(e.to_string()));
             }
         }
@@ -154,7 +158,9 @@ impl MultiTenantManager {
 
                     FetchTenantPayload::by_token(token)
                     // 5. Check cookie
-                } else if let Some(cookie) = http_ctx.get_cookie_value("tenant-id").await {
+                } else if let Some(cookie) =
+                    http_ctx.get_cookie_value(self.config.cookie_key()).await
+                {
                     let id =
                         TenantId::try_from(cookie).context("tenant's ID in cookie is not valid")?;
                     FetchTenantPayload::ById { id: id }

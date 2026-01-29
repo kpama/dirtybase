@@ -125,7 +125,7 @@ english-to-cron = { version = "0.1.6" }
 validator = { version = "0.20.0", features = ["derive"] }
 tower-service = { version = "0.3.3" }
 named_routes_axum = { version = "0.2.5" }
-simple-middleware = { path = "../simple-middleware" }
+simple-middleware = { version = "0.3.0" }
 cruet = { version = "*" }
 axum-extra = { version = "0.12.1", features = [
 	"form",

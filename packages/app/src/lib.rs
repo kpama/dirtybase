@@ -20,13 +20,13 @@ pub use orsomafo;
 
 use dirtybase_contract::cli_contract::setup_cli_command_manager;
 
-/// Setup database application using configs in .env files
+/// Set up database application using configs in .env files
 pub async fn setup() -> anyhow::Result<AppService> {
     let config = core::Config::new(None).await;
     setup_using(&config).await
 }
 
-/// Setup database application using custom configuration
+/// Set up database application using custom configuration
 /// A builder exist that assist in building the configuration instance
 /// ```rust
 /// # use dirtybase_app::core::ConfigBuilder;
@@ -74,7 +74,18 @@ pub async fn run_http(app_service: AppService) -> anyhow::Result<()> {
 
 pub async fn run(app_service: AppService) -> anyhow::Result<()> {
     app_service.init().await;
-    setup_cli_command_manager().await.handle().await;
+    let mut global_middleware = Vec::new();
+
+    #[cfg(feature = "multitenant")]
+    {
+        global_middleware.push("multitenant".to_string());
+    }
+
+    setup_cli_command_manager(Some(global_middleware))
+        .await
+        .handle()
+        .await;
+
     Ok(())
 }
 

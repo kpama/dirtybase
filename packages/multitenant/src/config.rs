@@ -4,8 +4,8 @@ use dirtybase_contract::{
     async_trait,
     config_contract::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
     multitenant_contract::{
-        TENANT_ID_HEADER, TENANT_ID_QUERY_STRING, TENANT_TOKEN_HEADER, TENANT_TOKEN_QUERY_STRING,
-        TenantIdLocation,
+        TENANT_ID_COOKIE, TENANT_ID_HEADER, TENANT_ID_QUERY_STRING, TENANT_TOKEN_HEADER,
+        TENANT_TOKEN_QUERY_STRING,
     },
     serde,
 };
@@ -13,10 +13,10 @@ use dirtybase_contract::{
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct MultitenantConfig {
     enable: bool,
-    id_location: TenantIdLocation,
     db_config_set: String,
     storage: String,
     header_key: String,
+    cookie_key: String,
     token_header_key: String,
     query_key: String,
     token_query_key: String,
@@ -27,9 +27,9 @@ impl Default for MultitenantConfig {
     fn default() -> Self {
         Self {
             enable: Default::default(),
-            id_location: Default::default(),
             db_config_set: Default::default(),
             storage: Default::default(),
+            cookie_key: TENANT_ID_COOKIE.to_string(),
             header_key: TENANT_ID_HEADER.to_string(),
             token_header_key: TENANT_TOKEN_HEADER.to_string(),
             query_key: TENANT_ID_QUERY_STRING.to_string(),
@@ -61,10 +61,6 @@ impl MultitenantConfig {
         self.enable
     }
 
-    pub fn id_location(&self) -> &TenantIdLocation {
-        &self.id_location
-    }
-
     pub fn db_config_set(&self) -> &str {
         &self.db_config_set
     }
@@ -91,5 +87,9 @@ impl MultitenantConfig {
 
     pub fn tenant_require(&self) -> bool {
         self.tenant_require
+    }
+
+    pub fn cookie_key(&self) -> &str {
+        &self.cookie_key
     }
 }

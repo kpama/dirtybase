@@ -14,6 +14,9 @@ token_header_key = "X-Tenant-Token"
 # Query string used for the tenant's ID 
 query_key = "tenant-id"
 
+# Cookie key used for the tenant's ID 
+cookie_key = "tenant-id"
+
 # Query string used for the tenant's  token value
 token_query_key = "tonant-tk"
 
