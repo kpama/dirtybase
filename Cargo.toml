@@ -12,17 +12,18 @@ order = [
 	"dirtybase_contract",
 	"dirtybase_helper",
 	"dirtybase_encrypt",
-  "dirtybase_3rd_client",
+	"dirtybase_3rd_client",
 	"dirtybase_db",
 	"dirtybase_db_macro",
 	"dirtybase_lock",
 	"dirtybase_cache",
 	"dirtybase_permission",
 	"dirtybase_multitenant",
+	"dirtybase_realtime",
 ]
 
 [patch.crates-io]
-dirtybase_3rd_client = { path = "./packages/3rd_client"}
+dirtybase_3rd_client = { path = "./packages/3rd_client" }
 dirtybase_app = { path = "./packages/app" }
 dirtybase_auth = { path = "./packages/auth" }
 dirtybase_cache = { path = "./packages/cache" }
@@ -38,26 +39,28 @@ dirtybase_mail = { path = "./packages/mail" }
 dirtybase_multitenant = { path = "./packages/multitenant" }
 dirtybase_permission = { path = "./packages/permission" }
 dirtybase_queue = { path = "./packages/queue" }
+dirtybase_realtime = { path = "./packages/realtime" }
 dirtybase_session = { path = "./packages/session" }
 
 
 [workspace.dependencies]
 dirtybase_app = { version = "*" }
 dirtybase_contract = { version = "*" }
-dirtybase_auth = { version = "*"}
-dirtybase_cache = { version = "*"}
+dirtybase_auth = { version = "*" }
+dirtybase_cache = { version = "*" }
 dirtybase_common = { version = "*" }
 dirtybase_cron = { version = "*" }
 dirtybase_db = { version = "*" }
-dirtybase_db_macro = { version = "*"}
+dirtybase_db_macro = { version = "*" }
 dirtybase_encrypt = { version = "*" }
 dirtybase_helper = { version = "*" }
 dirtybase_lock = { version = "*" }
-dirtybase_mail = { version = "*"}
+dirtybase_mail = { version = "*" }
 dirtybase_multitenant = { version = "*" }
-dirtybase_permission = { version = "*"}
-dirtybase_queue = { version = "*"}
-dirtybase_session = { version = "*"}
+dirtybase_permission = { version = "*" }
+dirtybase_queue = { version = "*" }
+dirtybase_session = { version = "*" }
+dirtybase_realtime = { version = "*" }
 dirtybase_3rd_client = { version = "*" }
 
 axum = { version = "0.8.4", features = ["ws", "multipart"] }
@@ -66,7 +69,7 @@ crypto = { version = "0.5.1", features = ["aead", "password-hash", "digest"] }
 argon2 = { version = "0.5.3" }
 dashmap = { version = "6.1.0" }
 anyhow = { version = "1.0.99" }
-clap = { version = "4.5.54", features = ["derive", "unstable-doc"] }
+clap = { version = "4.5.55", features = ["derive", "unstable-doc"] }
 serde = { version = "1.0.228", features = ["derive", "rc"] }
 serde_json = { version = "1.0.149", features = ["raw_value"] }
 toml = { version = "0.9.8" }
@@ -98,9 +101,9 @@ tokio-util = { version = "0.7.18", features = ["full"] }
 hmac = { version = "0.12.1" }
 mime = { version = "0.3.17" }
 jwt = { version = "0.16.0" }
-jsonwebtoken = { version = "10.0.0", features = ["rust_crypto"] }
+jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
 sha2 = { version = "0.10.9" }
-quote = { version = "1.0.43" }
+quote = { version = "1.0.44" }
 syn = { version = "2.0.114", features = ["extra-traits"] }
 dotenvy = { version = "0.15.7" }
 busybody = { version = "1.0.11" }
@@ -144,7 +147,7 @@ base64 = "0.22.1"
 base64ct = { version = "1.8.3", features = ["std"] }
 utoipa = { version = "5.4.0", features = ["default", "axum_extras"] }
 utoipa-axum = { version = "0.2.0" }
-uuid = { version = "1.18.1", features = [
+uuid = { version = "1.20.0", features = [
 	"v4",
 	"v7",
 	"serde",
