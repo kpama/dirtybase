@@ -1,5 +1,7 @@
+mod cancellation_token;
 mod context;
 
+pub use cancellation_token::*;
 pub use context::*;
 
 pub async fn global_context() -> Context {
