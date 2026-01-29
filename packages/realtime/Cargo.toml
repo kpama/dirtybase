@@ -1,0 +1,17 @@
+[package]
+name = "dirtybase_realtime"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+dirtybase_contract = { workspace = true }
+tokio-stream = { workspace = true }
+tokio = { workspace = true }
+axum = { workspace = true }
+axum-extra = { workspace = true }
+tokio-util = { workspace = true, features = ["full"] }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+busybody = { workspace = true }
+futures = { workspace = true }
+futures-util = { workspace = true }
