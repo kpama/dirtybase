@@ -12,7 +12,7 @@ pub trait TableModel: FromColumnAndValue + ToColumnAndValue {
     fn table_name() -> &'static str;
 
     /// Tables table's column names without prefix
-    fn table_columns() -> &'static [&'static str];
+    fn table_columns() -> Vec<&'static str>;
 
     fn id_field() -> &'static str {
         "id"

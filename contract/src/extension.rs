@@ -24,7 +24,7 @@ pub type ExtensionMigrations = Vec<Box<dyn super::db_contract::migration::Migrat
 
 #[async_trait::async_trait]
 pub trait ExtensionSetup: Send + Sync {
-    /// Setup the extension
+    /// Set up the extension
     ///
     /// First method that will be called.
     async fn setup(&mut self, global_context: &Context) {
@@ -45,7 +45,7 @@ pub trait ExtensionSetup: Send + Sync {
         // --
     }
 
-    /// Shutdown when the application is shutting down
+    /// Shut down when the application is shutting down
     async fn shutdown(&mut self, global_context: &Context) {
         log::debug!("shutting down extension: {}", self.id());
         // Logic to run when the server is shutting down

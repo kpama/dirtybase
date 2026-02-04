@@ -1,4 +1,4 @@
-use dirtybase_common::anyhow::{self, Context as AnyhowCtx};
+use dirtybase_common::anyhow::Context as AnyhowCtx;
 use dirtybase_contract::{
     app_contract::Context,
     async_trait,
@@ -43,16 +43,13 @@ impl Default for MultitenantConfig {
 impl TryFromDirtyConfig for MultitenantConfig {
     type Returns = Self;
     async fn from_config(config: &DirtyConfig, _ctx: &Context) -> ConfigResult<Self::Returns> {
-        match config
+        Ok(config
             .optional_file("multitenant.toml", Some("DTY_MULTITENANT"))
             .build()
             .await
             .context("could not configure multitenant configuration")?
             .try_deserialize()
-        {
-            Ok(config) => Ok(config),
-            Err(e) => Err(anyhow::anyhow!("could not load multitenant config: {}", e)),
-        }
+            .unwrap_or_default())
     }
 }
 

@@ -67,7 +67,7 @@ impl CacheManager {
 
     fn prefix_a_key(&self, key: &str) -> String {
         let prefix = self.prefix.as_ref().unwrap_or(&"core".to_string()).clone();
-        prefix + ":" + key
+        dirtybase_helper::hash::sha256::hash_string(prefix + ":" + key)
     }
 
     pub async fn tags(&self, tags: &[&str]) -> Self {

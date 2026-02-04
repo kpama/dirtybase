@@ -227,7 +227,49 @@ struct ConfigEntry {
     web_cookie: CookieConfig,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+impl Default for ConfigEntry {
+    fn default() -> Self {
+        Self {
+            name: "Dirty Base App".to_string(),
+            web_port: 8080,
+            key: Default::default(),
+            previous_keys: Default::default(),
+            web_ip_address: "0.0.0.0".to_string(),
+            web_enable_api_routes: true,
+            web_enable_insecure_api_routes: true,
+            web_enable_admin_routes: true,
+            web_enable_general_routes: true,
+            web_enable_dev_routes: true,
+            web_api_route_prefix: "/api".into(),
+            web_insecure_api_route_prefix: "/_open".into(),
+            web_admin_route_prefix: "/_admin".into(),
+            web_dev_route_prefix: "/_dev".into(),
+            web_backend_routes_cors: Default::default(),
+            web_trusted_proxies: Default::default(),
+            web_proxy_trusted_headers: Default::default(),
+            web_public_dir: "public".into(),
+            web_middleware: Default::default(),
+            web_api_routes_cors: RouterCorsConfig {
+                headers: Some(vec!["*".into()]),
+                methods: Some(vec!["*".into()]),
+                origins: Some(vec!["*".into()]),
+                expose: Some(vec!["*".into()]),
+            },
+            web_insecure_api_routes_cors: RouterCorsConfig {
+                headers: Some(vec!["*".into()]),
+                methods: Some(vec!["*".into()]),
+                origins: Some(vec!["*".into()]),
+                expose: Some(vec!["*".into()]),
+            },
+            web_general_routes_cors: Default::default(),
+            web_admin_routes_cors: Default::default(),
+            web_dev_routes_cors: Default::default(),
+            web_cookie: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, Default, serde::Serialize, serde::Deserialize, Clone)]
 pub struct Config {
     dirty_config: DirtyConfig,
     entry: ConfigEntry,
@@ -236,9 +278,7 @@ pub struct Config {
 impl Config {
     pub async fn new(config: Option<DirtyConfig>) -> Self {
         let config = config.unwrap_or_default();
-        Self::try_from_config(&config)
-            .await
-            .expect("Could not find application configuration. You need at least a .env file")
+        Self::try_from_config(&config).await.unwrap_or_default()
     }
 
     pub async fn try_from_config(config: &DirtyConfig) -> ConfigResult<Self> {

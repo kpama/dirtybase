@@ -9,6 +9,7 @@ use crate::CacheEntry;
 
 use super::{CacheDbPivotEntity, CacheDbStoreEntity, CacheDbTagStoreEntity};
 
+#[derive(Debug, Clone)]
 pub struct CacheDbStoreRepository {
     manager: Manager,
 }

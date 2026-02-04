@@ -1,6 +1,10 @@
 use dirtybase_contract::prelude::ContextResourceManager;
 
-use crate::{CacheManager, CacheStorageResolver, cache_store::MemoryStore, config::CacheConfig};
+use crate::{
+    CacheManager, CacheStorageResolver,
+    cache_store::{DatabaseStore, MemoryStore},
+    config::CacheConfig,
+};
 
 pub async fn register_resource_manager() {
     ContextResourceManager::<CacheManager>::register(
@@ -46,4 +50,5 @@ pub async fn register_resource_manager() {
 
 async fn register_cache_storages() {
     MemoryStore::register().await;
+    DatabaseStore::register().await;
 }

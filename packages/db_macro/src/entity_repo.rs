@@ -96,6 +96,10 @@ pub fn build_entity_repo(
             continue;
         }
 
+        if item.1.flatten {
+            continue;
+        }
+
         let fn_name = format_ident!("col_{}", item.0);
         let col_name = &item.1.name;
         let full_name = format!("{}.{}", &tbl_attr.table_name, col_name);

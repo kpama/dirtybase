@@ -21,8 +21,6 @@ pub struct Migrator {
     context: Context,
 }
 
-const LOG_TARGET: &str = "db::migrator";
-
 impl Migrator {
     pub async fn new(context: Option<Context>) -> Self {
         let context = if let Some(ctx) = context {
@@ -40,36 +38,40 @@ impl Migrator {
 
         let migrations = self.migrations().await;
 
-        manager.transaction(|trans| async move {
-            for entry in &migrations {
-            let name = entry.id();
-            if !repo.exist(&name).await {
-                    tracing::debug!(target: LOG_TARGET, "migrating {} up", &name);
-                    if let Err(e) = entry.up(&trans).await {
-                        let collection = repo.get_batch(batch).await;
-                        for name in collection.keys() {
-                            for entry in &migrations {
-                                if entry.id() == name.as_str() {
-                                    tracing::trace!(target: LOG_TARGET, "reverting migration: {}", entry.id());
-                                    entry.down(&trans).await?
+        manager
+            .transaction(|trans| async move {
+                for entry in &migrations {
+                    let name = entry.id();
+                    if !repo.exist(&name).await {
+                        tracing::debug!("migrating {} up", &name);
+                        if let Err(e) = entry.up(&trans).await {
+                            tracing::debug!("reverting migration: {}", entry.id());
+                            entry.down(&trans).await?;
+                            let collection = repo.get_batch(batch).await;
+                            for name in collection.keys() {
+                                for entry in &migrations {
+                                    if entry.id() != name.as_str() {
+                                        tracing::debug!("reverting migration: {}", entry.id());
+                                        entry.down(&trans).await?
+                                    }
                                 }
                             }
+                            repo.delete_batch(batch).await;
+                            return Err(e);
                         }
-                        repo.delete_batch(batch).await;
-                        return Err(e);
-                    }
 
-                    if let Err(e) = repo.create(&name, batch).await {
-                        tracing::error!(target: LOG_TARGET,"could not create migration entry: {:?}", &e); 
-                        entry.down(&trans).await?;
-                        return Err(e);
+                        if let Err(e) = repo.create(&name, batch).await {
+                            tracing::error!("could not create migration entry: {:?}", &e);
+                            entry.down(&trans).await?;
+                            return Err(e);
+                        }
+                    } else {
+                        tracing::debug!("migration already exist: {:?}", &name);
                     }
-                } else {
-                   tracing::debug!(target: LOG_TARGET, "migration already exist: {:?}", &name);
                 }
-            }
-            return Ok(())
-        }).await
+                return Ok(());
+            })
+            .await
     }
 
     pub async fn down(&self, manager: &Manager) -> Result<(), anyhow::Error> {
@@ -82,7 +84,7 @@ impl Migrator {
                 for name in collection.keys() {
                     for entry in &migrations {
                         if entry.id() == name.as_str() {
-                            tracing::debug!(target: LOG_TARGET, "migrating {} down", entry.id());
+                            tracing::debug!("migrating {} down", entry.id());
                             entry.down(&trans).await?;
                         }
                     }

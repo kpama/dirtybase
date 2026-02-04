@@ -74,17 +74,8 @@ pub async fn run_http(app_service: AppService) -> anyhow::Result<()> {
 
 pub async fn run(app_service: AppService) -> anyhow::Result<()> {
     app_service.init().await;
-    let mut global_middleware = Vec::new();
 
-    #[cfg(feature = "multitenant")]
-    {
-        global_middleware.push("multitenant".to_string());
-    }
-
-    setup_cli_command_manager(Some(global_middleware))
-        .await
-        .handle()
-        .await;
+    setup_cli_command_manager(None).await.handle().await;
 
     Ok(())
 }

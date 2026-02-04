@@ -109,7 +109,7 @@ impl DirtyConfig {
                 .add_source(config::File::with_name(filename).required(false))
         };
 
-        builder = self.append_optional(builder, filename);
+        builder = self.append_file(builder, filename, false);
 
         if let Some(prefix) = dotenv_prefix {
             builder = builder.add_source(env_callback(self.build_env(prefix)));
@@ -138,7 +138,7 @@ impl DirtyConfig {
             self.builder().add_source(config::File::with_name(filename))
         };
 
-        builder = self.append_optional(builder, filename);
+        builder = self.append_file(builder, filename, true);
 
         if let Some(prefix) = dotenv_prefix {
             builder = builder.add_source(self.build_env(prefix));
@@ -163,18 +163,19 @@ impl DirtyConfig {
         builder
     }
 
-    fn append_optional(
+    fn append_file(
         &self,
         mut builder: config::ConfigBuilder<AsyncState>,
         filename: &str,
+        required: bool,
     ) -> config::ConfigBuilder<AsyncState> {
-        let env_version = ["_prod.", "_stage.", "_dev."];
+        let env_version = [".", "_prod.", "_stage.", "_dev."];
         for name in env_version {
             let new_file_name = filename.replacen('.', name, 1);
             let path = Path::new(self.config_dir.as_str()).join(new_file_name);
 
             if let Some(full_path) = path.to_str() {
-                builder = builder.add_source(config::File::with_name(full_path).required(false));
+                builder = builder.add_source(config::File::with_name(full_path).required(required));
             }
         }
         builder

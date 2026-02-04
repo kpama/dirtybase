@@ -29,7 +29,7 @@ impl CliMiddlewareManager {
         Self::default()
     }
 
-    pub fn register<T, R>(&mut self, name: &str, registerer: T) -> &mut Self
+    pub fn register<T, R>(&mut self, name: &str, middleware: T) -> &mut Self
     where
         T: Fn(String, clap::ArgMatches, Context) -> R + Send + Sync + 'static,
         R: Future<Output = Result<(), anyhow::Error>> + Send + 'static,
@@ -37,14 +37,14 @@ impl CliMiddlewareManager {
         self.0.insert(
             name.to_string(),
             Arc::new(Box::new(move |name, arg, ctx| {
-                let f = registerer(name, arg, ctx);
+                let f = middleware(name, arg, ctx);
                 Box::pin(async { f.await })
             })),
         );
         self
     }
 
-    pub async fn apply<I, H>(
+    pub(crate) async fn apply<I, H>(
         &mut self,
         mut handler: H,
         order: impl IntoIterator<Item = I>,

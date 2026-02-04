@@ -3,7 +3,7 @@ use std::{env, net::SocketAddr, sync::Arc};
 use axum::{
     Router,
     body::Body,
-    http::{Request, Response, header::COOKIE},
+    http::{Request, header::COOKIE},
 };
 use axum_extra::extract::CookieJar;
 use dirtybase_contract::{
@@ -224,7 +224,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 let mut response = {
                     // Find the tenant
                     #[cfg(feature = "multitenant")]
-                    if let Some(resp) = inject_tenant(&context, &http_ctx).await {
+                    if let Some(resp) = inject_tenant(&context).await {
                         resp
                     } else {
                         next.run(req).await
@@ -300,7 +300,8 @@ fn display_welcome_info(address: &str, port: u16) {
     eprintln!("Http server running at : {address} on port: {port}");
 }
 
-async fn inject_tenant(context: &Context, http_ctx: &HttpContext) -> Option<Response<Body>> {
+#[cfg(feature = "multitenant")]
+async fn inject_tenant(context: &Context) -> Option<axum::http::Response<Body>> {
     use dirtybase_multitenant::MultiTenantManager;
     let multitenant_manager = match context.get::<MultiTenantManager>().await {
         Ok(m) => m,

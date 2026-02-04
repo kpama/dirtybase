@@ -31,12 +31,12 @@ impl dirtybase_contract::ExtensionSetup for Extension {
         TenantResolvedMiddleware::get()
             .await
             .next(|t, next| async move {
-                tracing::error!("prepering for tenant: {}", t.name());
+                tracing::error!("preparing for tenant: {}", t.name());
                 next.call(t).await
             })
             .await
             .next(|t, next| async move {
-                tracing::error!("prepering for tenant: {}, middleware 2", t.name());
+                tracing::error!("preparing for tenant: {}, middleware 2", t.name());
                 next.call(t).await
             })
             .await;

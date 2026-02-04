@@ -8,6 +8,14 @@ pub struct CacheConfig {
     storage: String,
 }
 
+impl Default for CacheConfig {
+    fn default() -> Self {
+        Self {
+            storage: String::from("memory"),
+        }
+    }
+}
+
 impl CacheConfig {
     pub fn storage(&self) -> String {
         self.storage.clone()
@@ -22,15 +30,12 @@ impl CacheConfig {
 impl TryFromDirtyConfig for CacheConfig {
     type Returns = Self;
     async fn from_config(config: &DirtyConfig, _ctx: &Context) -> ConfigResult<Self::Returns> {
-        let mut con: Self = config
+        let con: Self = config
             .optional_file("cache.toml", Some("DTY_CACHE"))
             .build()
             .await?
-            .try_deserialize()?;
-
-        if con.storage.is_empty() {
-            con.storage = "memory".to_string();
-        }
+            .try_deserialize()
+            .unwrap_or_default();
 
         Ok(con)
     }

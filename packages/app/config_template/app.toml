@@ -14,11 +14,44 @@ previous_keys = []
 #------------------------------------------------
 web_port = 8080
 web_ip_address = "0.0.0.0"
-web_public_directory = "./public"
+web_public_directory = "public"
 
 #       Web 
 #------------------------------------------------
 
+#------------------------------------------------
+#       Web Route collection 
+#------------------------------------------------
+web_enable_general_routes = true
+web_enable_admin_routes = true
+web_enable_api_routes = true
+web_enable_insecure_api_routes = true
+web_enable_dev_routes = true
+
+#       Web Route collection 
+#------------------------------------------------
+
+#------------------------------------------------
+#      Web proxy and fowarded seaders
+#------------------------------------------------
+web_trusted_proxies= [] # list of IP addresses or IPNET addresses
+# One or more headers to source the client's IP address from
+# The order is important. Searching will stop on the first valid result
+web_proxy_trusted_headers=[]
+
+#      Web proxy and fowarded seaders
+#------------------------------------------------
+
+#------------------------------------------------
+#       Web Route collection prefix
+#------------------------------------------------
+web_api_route_prefix = "/api"
+web_insecure_api_route_prefix = "/_open"
+web_admin_route_prefix = "/_admin"
+web_dev_route_prefix = "/_dev"
+
+#       Dirtybase Web Route collection prefix
+#------------------------------------------------
 
 #------------------------------------------------
 #       Web Cookie
@@ -31,19 +64,6 @@ encrypt = true
 
 
 #       Web Cookie
-#------------------------------------------------
-
-
-#------------------------------------------------
-#       Web Route collection 
-#------------------------------------------------
-web_enable_general_routes = true
-web_enable_admin_routes = true
-web_enable_api_routes = true
-web_enable_insecure_api_routes = true
-web_enable_dev_routes = true
-
-#       Web Route collection 
 #------------------------------------------------
 
 #------------------------------------------------
@@ -100,24 +120,3 @@ expose = []
 #       Web CORS 
 #------------------------------------------------
 
-#------------------------------------------------
-#      Web proxy and fowarded seaders
-#------------------------------------------------
-web_trusted_proxies= [] # list of IP addresses or IPNET addresses
-# One or more headers to source the client's IP address from
-# The order is important. Searching will stop on the first valid result
-web_proxy_trusted_headers=[]
-
-#      Web proxy and fowarded seaders
-#------------------------------------------------
-
-#------------------------------------------------
-#       Web Route collection prefix
-#------------------------------------------------
-web_api_route_prefix = "/api"
-web_insecure_api_route_prefix = "/_open"
-web_admin_route_prefix = "/_admin"
-web_dev_route_prefix = "/_dev"
-
-#       Dirtybase Web Route collection prefix
-#------------------------------------------------

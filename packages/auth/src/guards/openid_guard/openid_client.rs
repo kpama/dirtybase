@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 pub struct OpenIdClient {
     client_id: Arc<String>,
-    client_secret: Arc<String>,
+    _client_secret: Arc<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -121,7 +121,7 @@ impl OpenIdClient {
     pub fn new(client_id: &str, client_secret: &str) -> Self {
         Self {
             client_id: client_id.to_string().into(),
-            client_secret: client_secret.to_string().into(),
+            _client_secret: client_secret.to_string().into(),
         }
     }
 

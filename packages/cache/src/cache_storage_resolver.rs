@@ -157,7 +157,7 @@ impl CacheStorageResolver {
                 .await
                 .get()
                 .await
-                .unwrap() // should never failed as we just registered the instance
+                .unwrap() // Should never failed as we just registered the instance
         }
     }
 }

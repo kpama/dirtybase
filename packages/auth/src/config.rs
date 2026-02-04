@@ -36,7 +36,8 @@ impl TryFromDirtyConfig for AuthConfig {
             .optional_file("auth.toml", Some("DTY_AUTH"))
             .build()
             .await?
-            .try_deserialize::<Self>()?;
+            .try_deserialize::<Self>()
+            .unwrap_or_default();
         config.storage = config.storage.to_lowercase().trim().to_string().into();
 
         Ok(config)

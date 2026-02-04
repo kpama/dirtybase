@@ -10,7 +10,7 @@ dirtybase_db_macro = { workspace = true }
 dirtybase_contract = { workspace = true }
 dirtybase_common = { workspace = true }
 dirtybase_helper = { workspace = true }
-dirtybase_3rd_client = {workspace = true}
+dirtybase_3rd_client = { workspace = true }
 busybody = { workspace = true }
 simple-middleware = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
