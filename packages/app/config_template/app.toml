@@ -34,10 +34,10 @@ web_enable_dev_routes = true
 #------------------------------------------------
 #      Web proxy and fowarded seaders
 #------------------------------------------------
-web_trusted_proxies= [] # list of IP addresses or IPNET addresses
+web_trusted_proxies = [] # list of IP addresses or IPNET addresses
 # One or more headers to source the client's IP address from
 # The order is important. Searching will stop on the first valid result
-web_proxy_trusted_headers=[]
+web_proxy_trusted_headers = []
 
 #      Web proxy and fowarded seaders
 #------------------------------------------------
@@ -62,7 +62,6 @@ same_site = "lax" # options: lax, strict, none
 secure = true
 encrypt = true
 
-
 #       Web Cookie
 #------------------------------------------------
 
@@ -77,6 +76,8 @@ general_route = []
 global = []
 insecure_api_route = []
 
+#       Web middleware 
+#------------------------------------------------
 
 #------------------------------------------------
 #       Web CORs 
@@ -119,4 +120,3 @@ expose = []
 
 #       Web CORS 
 #------------------------------------------------
-

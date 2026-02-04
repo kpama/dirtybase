@@ -24,5 +24,5 @@ token_query_key = "tonant-tk"
 # option: database, memory, dummy 
 storage = "memory"
 
-# If set to true, a tenant will be require before the require or command is handled
+# If set to true, a tenant will be require before the request or command is handled
 tenant_require = false
