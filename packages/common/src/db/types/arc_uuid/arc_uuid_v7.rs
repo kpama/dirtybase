@@ -57,7 +57,7 @@ impl Debug for ArcUuid7 {
 
 impl From<FieldValue> for ArcUuid7 {
     fn from(value: FieldValue) -> Self {
-        field_value_to_arc_uuid7(value).expect("could not parsed field value to UUID7")
+        field_value_to_arc_uuid7(value).expect("could not parse field value to UUID7")
     }
 }
 
@@ -69,7 +69,10 @@ impl From<&FieldValue> for ArcUuid7 {
 
 impl From<FieldValue> for Option<ArcUuid7> {
     fn from(value: FieldValue) -> Self {
-        field_value_to_arc_uuid7(value).ok()
+        match value {
+            FieldValue::Null | FieldValue::NotSet => None,
+            _ => field_value_to_arc_uuid7(value).ok(),
+        }
     }
 }
 
@@ -163,13 +166,17 @@ fn field_value_to_arc_uuid7(value: FieldValue) -> Result<ArcUuid7, String> {
                     Err("string is not a valid uuid7".to_string())
                 }
             } else {
-                Ok(ArcUuid7(Arc::new(Uuid::from_slice(&bytes).unwrap())))
+                // Ok(ArcUuid7(Arc::new(Uuid::from_slice(&bytes).unwrap())))
+                Err(format!(
+                    "UUID7 total length is less than 16: {}",
+                    bytes.len()
+                ))
             }
         }
         FieldValue::String(v) => Ok(ArcUuid7(Arc::new(Uuid::parse_str(&v).unwrap()))),
         _ => {
-            tracing::error!("could not parsed field value to uuid7");
-            Err("could not parsed field value to uuid7".to_string())
+            tracing::error!("could not parse field value to uuid7");
+            Err("could not parse field value to uuid7".to_string())
         }
     }
 }
