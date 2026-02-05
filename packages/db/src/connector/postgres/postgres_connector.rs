@@ -916,7 +916,7 @@ impl PostgresSchemaManager {
                     if let Ok(v) = v {
                         this_row.insert(col.name().to_string(), FieldValue::Binary(v));
                     } else {
-                        this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
+                        this_row.insert(col.name().to_string(), FieldValue::Null);
                     }
                 }
                 "JSONB" | "JSON" => {
