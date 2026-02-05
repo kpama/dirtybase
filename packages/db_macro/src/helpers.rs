@@ -330,7 +330,7 @@ pub(crate) fn build_from_handlers(
                         } else {
                             quote! {
                                 pub fn #fn_name <'a>(field: Option<&'a ::dirtybase_common::db::field_values::FieldValue>) -> Option<#returns> {
-                                ::dirtybase_common::db::field_values::FieldValue::from_ref_option_into_option(field)
+                                    ::dirtybase_common::db::field_values::FieldValue::from_ref_option_into_option(field)
                                 }
                             }
                         }
