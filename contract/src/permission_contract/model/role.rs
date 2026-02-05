@@ -6,7 +6,7 @@ use dirtybase_db_macro::DirtyTable;
 #[derive(Debug, Clone, Default, Serialize, Deserialize, DirtyTable)]
 #[dirty(table = "perm_roles")]
 pub struct Role {
-    id: ArcUuid7,
+    id: Option<ArcUuid7>,
     name: NameField,
     label: LabelField,
     description: StringField,
@@ -16,8 +16,13 @@ pub struct Role {
 }
 
 impl Role {
-    pub fn id(&self) -> ArcUuid7 {
-        self.id.clone()
+    pub fn id(&self) -> Option<&ArcUuid7> {
+        self.id.as_ref()
+    }
+
+    pub fn set_id(&mut self, id: ArcUuid7) -> &mut Self {
+        self.id = Some(id);
+        self
     }
 
     pub fn name(&self) -> &NameField {

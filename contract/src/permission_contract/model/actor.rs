@@ -33,8 +33,18 @@ impl Actor {
         self.id.as_ref()
     }
 
+    pub fn set_id(&mut self, id: ArcUuid7) -> &mut Self {
+        self.id = Some(id);
+        self
+    }
+
     pub fn user_id(&self) -> Option<&ArcUuid7> {
         self.user_id.as_ref()
+    }
+
+    pub fn set_user_id(&mut self, user_id: ArcUuid7) -> &mut Self {
+        self.user_id = Some(user_id);
+        self
     }
 
     pub fn roles(&self) -> &[Role] {
