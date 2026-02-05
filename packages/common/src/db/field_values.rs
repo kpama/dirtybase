@@ -70,7 +70,10 @@ impl FieldValue {
         Self: Into<T>,
     {
         if field.is_some() {
-            Some(Self::from_ref_option_into(field))
+            match field.as_ref().unwrap() {
+                FieldValue::Null | FieldValue::NotSet => None,
+                _ => Some(Self::from_ref_option_into(field)),
+            }
         } else {
             None
         }
