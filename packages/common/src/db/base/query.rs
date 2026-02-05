@@ -18,7 +18,7 @@ use super::{
     table::DELETED_AT_FIELD,
     where_join_operators::WhereJoinOperator,
 };
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::BTreeMap, fmt::Display};
 
 #[derive(Debug)]
 pub enum WhereJoin {
@@ -84,7 +84,7 @@ impl Display for QueryAction {
 pub struct QueryBuilder {
     where_clauses: Vec<WhereJoinOperator>,
     table: String,
-    joins: Option<HashMap<String, JoinQueryBuilder>>,
+    joins: Option<BTreeMap<String, JoinQueryBuilder>>,
     action: QueryAction,
     order_by: Option<OrderByBuilder>,
     limit: Option<LimitBuilder>,
@@ -210,7 +210,7 @@ impl QueryBuilder {
         self
     }
 
-    pub fn joins(&self) -> Option<&HashMap<String, JoinQueryBuilder>> {
+    pub fn joins(&self) -> Option<&BTreeMap<String, JoinQueryBuilder>> {
         self.joins.as_ref()
     }
 
@@ -989,7 +989,7 @@ impl QueryBuilder {
         select_columns: Option<C>,
     ) -> &mut Self {
         if self.joins.is_none() {
-            self.joins = Some(HashMap::new());
+            self.joins = Some(BTreeMap::new());
         }
 
         let join = JoinQueryBuilder::new(
