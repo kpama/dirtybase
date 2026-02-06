@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Default, Serialize, Deserialize, DirtyTable)]
 #[dirty(table = "perm_actors")]
 pub struct Actor {
-    id: Option<ArcUuid7>,
+    pub(crate) id: Option<ArcUuid7>,
     user_id: Option<ArcUuid7>,
     created_at: Option<DateTimeField>,
     updated_at: Option<DateTimeField>,
@@ -29,6 +29,12 @@ impl Display for Actor {
 }
 
 impl Actor {
+    pub fn new() -> Self {
+        Self {
+            id: Some(ArcUuid7::default()),
+            ..Default::default()
+        }
+    }
     pub fn id(&self) -> Option<&ArcUuid7> {
         self.id.as_ref()
     }
@@ -77,7 +83,7 @@ pub enum PersistActorPayload {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct FetchActorOption {
-    pub check_trashed: bool,
+    pub with_trashed: bool,
     pub with_roles: bool,
     pub with_permissions: bool,
 }

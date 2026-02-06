@@ -8,6 +8,7 @@ mod arc_uuid;
 mod label_field;
 mod name_field;
 mod snowflake;
+mod status;
 mod ulid;
 mod uuid;
 
@@ -16,6 +17,7 @@ pub use arc_uuid::*;
 pub use label_field::*;
 pub use name_field::*;
 pub use snowflake::*;
+pub use status::*;
 pub use ulid::*;
 pub type ColumnAndValue = HashMap<String, FieldValue>;
 

@@ -1,19 +1,16 @@
-use dirtybase_common::db::types::{ArcUuid7, DateTimeField};
+use dirtybase_common::db::types::{ArcUuid7, DateTimeField, StatusField};
 use dirtybase_db_macro::DirtyTable;
 use serde::{Deserialize, Serialize};
-
-use crate::multitenant_contract::model::TenantId;
 
 use super::{actor::Actor, role::Role};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, DirtyTable)]
 #[dirty(table = "perm_actor_roles")]
 pub struct ActorRole {
-    id: Option<ArcUuid7>,
+    pub(crate) id: Option<ArcUuid7>,
     perm_actor_id: ArcUuid7,
     perm_role_id: ArcUuid7,
-    tenant_id: Option<TenantId>,
-    // FIXME: have a column that stores the state of the actor's role?
+    status: StatusField,
     created_at: Option<DateTimeField>,
     updated_at: Option<DateTimeField>,
     deleted_at: Option<DateTimeField>,
@@ -24,6 +21,15 @@ pub struct ActorRole {
 }
 
 impl ActorRole {
+    pub fn new(actor_id: ArcUuid7, role_id: ArcUuid7) -> Self {
+        Self {
+            id: Some(ArcUuid7::default()),
+            perm_actor_id: actor_id,
+            perm_role_id: role_id,
+            ..Default::default()
+        }
+    }
+
     pub fn id(&self) -> Option<&ArcUuid7> {
         self.id.as_ref()
     }
@@ -34,15 +40,6 @@ impl ActorRole {
 
     pub fn set_actor_id(&mut self, actor_id: ArcUuid7) -> &mut Self {
         self.perm_actor_id = actor_id.into();
-        self
-    }
-
-    pub fn tenant_id(&self) -> Option<&TenantId> {
-        self.tenant_id.as_ref()
-    }
-
-    pub fn set_tenant_id(&mut self, tenant_id: TenantId) -> &mut Self {
-        self.tenant_id = Some(tenant_id);
         self
     }
 
@@ -85,22 +82,15 @@ pub enum PersistActorRolePayload {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct FetchActorRoleOption {
-    pub check_trashed: bool,
+    pub with_trashed: bool,
     pub with_role: bool,
     pub with_actor: bool,
-    pub with_tenant: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum FetchActorRolePayload {
     ById {
         id: ArcUuid7,
-    },
-
-    ByTenant {
-        actor_id: ArcUuid7,
-        role_id: ArcUuid7,
-        tenant_id: ArcUuid7,
     },
 
     ByActorAndRole {

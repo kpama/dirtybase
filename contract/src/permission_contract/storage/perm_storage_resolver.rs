@@ -27,7 +27,7 @@ impl PermissionStorageResolver {
     pub async fn register<F, Fut>(name: &str, callback: F)
     where
         F: Clone + Fn(Self) -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Result<PermStorageProvider, anyhow::Error>> + Send + Sync + 'static,
+        Fut: Future<Output = Result<PermStorageProvider, anyhow::Error>> + Send + 'static,
     {
         let resolvers = Self::get_middleware().await;
         let arc_name = Arc::new(name.to_string());

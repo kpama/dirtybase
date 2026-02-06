@@ -7,9 +7,10 @@ edition.workspace = true
 dirtybase_contract = { workspace = true }
 dirtybase_helper = { workspace = true }
 dirtybase_db_macro = { workspace = true }
-dirtybase_common = { workspace  = true }
+dirtybase_common = { workspace = true }
 serde = { workspace = true }
 tracing = { workspace = true }
+async-trait = { workspace = true }
 
 
 [features]

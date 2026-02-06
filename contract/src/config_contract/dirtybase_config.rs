@@ -1,12 +1,12 @@
 use std::{env, path::Path, sync::Arc};
 
 use base64ct::Encoding;
-use config::{builder::AsyncState, ConfigBuilder, Environment};
+use config::{ConfigBuilder, Environment, builder::AsyncState};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::{
-    load_dot_env, CurrentEnvironment, APP_DEFAULT_NAME, APP_NAME_KEY, CONFIG_DIR_KEY,
-    ENVIRONMENT_KEY,
+    APP_DEFAULT_NAME, APP_NAME_KEY, CONFIG_DIR_KEY, CurrentEnvironment, ENVIRONMENT_KEY,
+    load_dot_env,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,13 +43,14 @@ impl DirtyConfig {
         load_dot_env(Some(dir));
 
         let p = path.to_str().to_owned().unwrap_or_default().to_string();
-        env::set_var(CONFIG_DIR_KEY, p);
 
-        Self { ..Self::default() }
+        Self {
+            config_dir: p.into(),
+            ..Self::default()
+        }
     }
 
     pub fn new_with(name: &str, current_env: CurrentEnvironment) -> Self {
-        env::set_var(super::LOADED_FLAG_KEY, super::LOADED_FLAG_VALUE);
         Self {
             app_name: Arc::new(name.to_string()),
             current_env,
@@ -58,8 +59,6 @@ impl DirtyConfig {
     }
 
     pub fn new_skip() -> Self {
-        env::set_var(super::LOADED_FLAG_KEY, super::LOADED_FLAG_VALUE);
-
         Self { ..Self::default() }
     }
 
@@ -242,26 +241,10 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::config_contract::{LOADED_FLAG_KEY, LOADED_FLAG_VALUE};
-
     use super::*;
 
-    fn reset_env() {
-        env::remove_var(APP_NAME_KEY);
-        env::remove_var(ENVIRONMENT_KEY);
-        env::remove_var(LOADED_FLAG_KEY);
-    }
-
     #[test]
-    fn rust_test() {
-        test_default();
-        test_overriding();
-        test_skipping();
-        test_load_from_dir()
-    }
-
     fn test_default() {
-        reset_env();
         let config = DirtyConfig::default();
 
         assert_eq!(
@@ -270,32 +253,25 @@ mod test {
         );
     }
 
+    #[test]
     fn test_overriding() {
-        reset_env();
         let app_name = "Test app";
-        let environment: String = CurrentEnvironment::Development.into();
-
-        env::set_var(APP_NAME_KEY, app_name);
-        env::set_var(ENVIRONMENT_KEY, environment);
-        env::set_var(LOADED_FLAG_KEY, LOADED_FLAG_VALUE);
-
         let config = DirtyConfig::new();
 
         assert_eq!(config.app_name(), app_name);
         assert_eq!(config.current_env(), &CurrentEnvironment::Development);
     }
 
+    #[test]
     fn test_skipping() {
-        reset_env();
         let config = DirtyConfig::new_skip();
 
         assert_eq!(config.app_name(), APP_DEFAULT_NAME);
         assert_eq!(config.current_env(), &CurrentEnvironment::Development);
     }
 
+    #[test]
     fn test_load_from_dir() {
-        reset_env();
-
         let tmp_dir = env::temp_dir();
         let dir = tmp_dir.join("dirty_config");
         let content = "DTY_APP_NAME=\"My Temp App\" \nDTY_APP_ENV=\"prod\" \n";

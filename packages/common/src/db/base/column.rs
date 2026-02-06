@@ -131,6 +131,8 @@ impl ColumnBlueprint {
         self
     }
 
+    // TODO: Add default for UUID4 and V7
+
     pub fn unset_default(&mut self) -> &mut Self {
         self.default = None;
         self

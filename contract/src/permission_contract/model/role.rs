@@ -3,19 +3,31 @@ use serde::{Deserialize, Serialize};
 
 use dirtybase_db_macro::DirtyTable;
 
+use crate::prelude::model::{Permission, RolePermission};
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, DirtyTable)]
 #[dirty(table = "perm_roles")]
 pub struct Role {
-    id: Option<ArcUuid7>,
+    pub(crate) id: Option<ArcUuid7>,
     name: NameField,
     label: LabelField,
     description: StringField,
     created_at: Option<DateTimeField>,
     updated_at: Option<DateTimeField>,
     deleted_at: Option<DateTimeField>,
+    #[dirty(rel(kind ="has_many_through", pivot: RolePermission ))]
+    permissions: Vec<Permission>,
 }
 
 impl Role {
+    pub fn new(name: &str, label: &str) -> Self {
+        Self {
+            name: name.to_string().into(),
+            label: label.to_string().into(),
+            ..Default::default()
+        }
+    }
+
     pub fn id(&self) -> Option<&ArcUuid7> {
         self.id.as_ref()
     }
@@ -75,7 +87,8 @@ pub enum PersistRolePayload {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FetchRoleOption {
-    pub check_trashed: bool,
+    pub with_trashed: bool,
+    pub with_permissions: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

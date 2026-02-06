@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use dirtybase_common::db::types::ArcUuid7;
+
 use crate::prelude::model::{
     Actor, ActorRole, FetchActorOption, FetchActorPayload, FetchActorRoleOption,
     FetchActorRolePayload, FetchPermissionOption, FetchPermissionPayload, FetchRoleOption,
@@ -13,7 +15,10 @@ pub trait PermissionStorage: Send + Sync {
     // - actor
 
     /// Saves and returns the actor saved instance
-    async fn save_actor(&self, payload: PersistActorPayload) -> Result<Actor, anyhow::Error>;
+    async fn save_actor(
+        &self,
+        payload: PersistActorPayload,
+    ) -> Result<Option<Actor>, anyhow::Error>;
 
     /// Fetches an actor
     async fn fetch_actor(
@@ -25,7 +30,7 @@ pub trait PermissionStorage: Send + Sync {
     // - role
 
     /// Saves a Role and returns the saved instance
-    async fn save_role(&self, payload: PersistRolePayload) -> Result<Role, anyhow::Error>;
+    async fn save_role(&self, payload: PersistRolePayload) -> Result<Option<Role>, anyhow::Error>;
 
     /// Fetches a Role
     async fn find_role(
@@ -40,7 +45,7 @@ pub trait PermissionStorage: Send + Sync {
     async fn save_permission(
         &self,
         payload: PersistPermissionPayload,
-    ) -> Result<Permission, anyhow::Error>;
+    ) -> Result<Option<Permission>, anyhow::Error>;
 
     /// Fetches a Permission
     async fn find_permission(
@@ -55,7 +60,7 @@ pub trait PermissionStorage: Send + Sync {
     async fn save_actor_role(
         &self,
         payload: PersistActorRolePayload,
-    ) -> Result<ActorRole, anyhow::Error>;
+    ) -> Result<Option<ActorRole>, anyhow::Error>;
 
     /// Fetches an Actor's Roles
     async fn find_actor_role(
@@ -70,14 +75,13 @@ pub trait PermissionStorage: Send + Sync {
     async fn save_role_permission(
         &self,
         payload: PersistRolePermission,
-        option: Option<FetchRolePermissionOption>,
-    ) -> Result<(), anyhow::Error>;
+    ) -> Result<Option<RolePermission>, anyhow::Error>;
 
     /// Fetches a Role's Permission
     async fn find_role_permission(
         &self,
         payload: FetchRolePermissionPayload,
-        option: FetchRolePermissionOption,
+        option: Option<FetchRolePermissionOption>,
     ) -> Result<Option<RolePermission>, anyhow::Error>;
 }
 
@@ -94,7 +98,16 @@ impl PermStorageProvider {
 #[async_trait::async_trait]
 impl PermissionStorage for PermStorageProvider {
     // - actor
-    async fn save_actor(&self, payload: PersistActorPayload) -> Result<Actor, anyhow::Error> {
+    async fn save_actor(
+        &self,
+        mut payload: PersistActorPayload,
+    ) -> Result<Option<Actor>, anyhow::Error> {
+        if let PersistActorPayload::Save { actor } = &mut payload
+            && actor.id().is_none()
+        {
+            actor.id = Some(ArcUuid7::default());
+        }
+
         self.0.save_actor(payload).await
     }
 
@@ -107,7 +120,15 @@ impl PermissionStorage for PermStorageProvider {
     }
 
     // - role
-    async fn save_role(&self, payload: PersistRolePayload) -> Result<Role, anyhow::Error> {
+    async fn save_role(
+        &self,
+        mut payload: PersistRolePayload,
+    ) -> Result<Option<Role>, anyhow::Error> {
+        if let PersistRolePayload::Save { role } = &mut payload
+            && role.id().is_none()
+        {
+            role.id = Some(ArcUuid7::default());
+        }
         self.0.save_role(payload).await
     }
 
@@ -122,8 +143,13 @@ impl PermissionStorage for PermStorageProvider {
     // - permission
     async fn save_permission(
         &self,
-        payload: PersistPermissionPayload,
-    ) -> Result<Permission, anyhow::Error> {
+        mut payload: PersistPermissionPayload,
+    ) -> Result<Option<Permission>, anyhow::Error> {
+        if let PersistPermissionPayload::Save { perm } = &mut payload
+            && perm.id().is_none()
+        {
+            perm.id = Some(ArcUuid7::default());
+        }
         self.0.save_permission(payload).await
     }
 
@@ -138,8 +164,13 @@ impl PermissionStorage for PermStorageProvider {
     // - actor role
     async fn save_actor_role(
         &self,
-        payload: PersistActorRolePayload,
-    ) -> Result<ActorRole, anyhow::Error> {
+        mut payload: PersistActorRolePayload,
+    ) -> Result<Option<ActorRole>, anyhow::Error> {
+        if let PersistActorRolePayload::Save { record } = &mut payload
+            && record.id.is_none()
+        {
+            record.id = Some(ArcUuid7::default());
+        }
         self.0.save_actor_role(payload).await
     }
 
@@ -154,16 +185,20 @@ impl PermissionStorage for PermStorageProvider {
     // - role permission
     async fn save_role_permission(
         &self,
-        payload: PersistRolePermission,
-        option: Option<FetchRolePermissionOption>,
-    ) -> Result<(), anyhow::Error> {
-        self.0.save_role_permission(payload, option).await
+        mut payload: PersistRolePermission,
+    ) -> Result<Option<RolePermission>, anyhow::Error> {
+        if let PersistRolePermission::Save { record } = &mut payload
+            && record.id().is_none()
+        {
+            record.id = Some(ArcUuid7::default());
+        }
+        self.0.save_role_permission(payload).await
     }
 
     async fn find_role_permission(
         &self,
         payload: FetchRolePermissionPayload,
-        option: FetchRolePermissionOption,
+        option: Option<FetchRolePermissionOption>,
     ) -> Result<Option<RolePermission>, anyhow::Error> {
         self.0.find_role_permission(payload, option).await
     }

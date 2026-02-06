@@ -1,5 +1,4 @@
 use std::{
-    env,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -25,9 +24,6 @@ pub const APP_NAME_KEY: &str = "DTY_APP_NAME";
 pub const APP_DEFAULT_NAME: &str = "A Dirty App";
 pub const ENVIRONMENT_KEY: &str = "DTY_APP_ENV";
 pub const CONFIG_DIR_KEY: &str = "DTY_APP_CONFIG_DIR";
-
-pub(crate) const LOADED_FLAG_KEY: &str = "DTY_ENV_LOADED";
-pub(crate) const LOADED_FLAG_VALUE: &str = "DTY_YES";
 
 pub type ConfigResult<C> = Result<C, anyhow::Error>;
 
@@ -57,10 +53,6 @@ pub trait TryFromDirtyConfig {
 }
 
 fn load_dot_env<P: AsRef<Path>>(mut dir: Option<P>) {
-    if env::var(LOADED_FLAG_KEY).is_ok() {
-        return;
-    }
-
     let path: PathBuf = if let Some(p) = dir.take() {
         p.as_ref().join("")
     } else {
@@ -93,8 +85,6 @@ fn load_dot_env<P: AsRef<Path>>(mut dir: Option<P>) {
             panic!(".env.dev : {:#?}", e);
         }
     }
-
-    env::set_var(LOADED_FLAG_KEY, LOADED_FLAG_VALUE);
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

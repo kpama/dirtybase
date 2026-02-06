@@ -1,3 +1,9 @@
+run project example argument="":
+  CARGO_TARGET_DIR=/tmp/dty/ RUST_LOG=trace cargo run -p {{project}} --example {{example}} {{argument}}
+
+watch project example argument="":
+  watchexec -rc clear CARGO_TARGET_DIR=/tmp/dty/ RUST_LOG=trace cargo run -p {{project}} --example {{example}} {{argument}}
+
 generate-env:
   rm .env.defaults
   touch .env.defaults

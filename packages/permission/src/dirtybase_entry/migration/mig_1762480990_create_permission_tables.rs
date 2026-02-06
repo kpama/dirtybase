@@ -1,4 +1,5 @@
 use dirtybase_common::db::TableModel;
+use dirtybase_common::db::types::StatusField;
 use dirtybase_contract::anyhow;
 use dirtybase_contract::db_contract::base::manager::Manager;
 use dirtybase_contract::db_contract::migration::Migration;
@@ -51,15 +52,11 @@ impl Migration for Mig1762480990CreatePermissionTables {
                 bp.uuid_as_id(Some(ActorRole::id_column()));
                 bp.uuid_table_fk::<Actor>(true);
                 bp.uuid_table_fk::<Role>(true);
-                bp.uuid(ActorRole::col_name_for_tenant_id()).nullable();
+                bp.string(ActorRole::col_name_for_status())
+                    .set_default(StatusField::Pending);
                 bp.timestamps();
                 bp.soft_deletable();
-                bp.index(&[ActorRole::col_name_for_tenant_id()]);
-                bp.unique_index(&[
-                    Actor::foreign_id_column(),
-                    Role::foreign_id_column(),
-                    ActorRole::col_name_for_tenant_id(),
-                ]);
+                bp.unique_index(&[Actor::foreign_id_column(), Role::foreign_id_column()]);
             })
             .await?;
         // Role/Actor-Permission table
@@ -69,15 +66,14 @@ impl Migration for Mig1762480990CreatePermissionTables {
                 bp.uuid_table_fk::<Permission>(true);
                 bp.uuid_table_fk::<Role>(true).nullable();
                 bp.uuid_table_fk::<Actor>(true).nullable();
-                bp.uuid(RolePermission::col_name_for_tenant_id()).nullable();
+                bp.string(RolePermission::col_name_for_status())
+                    .set_default(StatusField::Pending);
                 bp.timestamps();
                 bp.soft_deletable();
-                bp.index(&[RolePermission::col_name_for_tenant_id()]);
                 bp.unique_index(&[
                     RolePermission::col_name_for_perm_permission_id(),
                     RolePermission::col_name_for_perm_role_id(),
                     RolePermission::col_name_for_perm_actor_id(),
-                    RolePermission::col_name_for_tenant_id(),
                 ]);
             })
             .await?;

@@ -22,3 +22,5 @@ orsomafo = { workspace = true }
 futures = { workspace = true }
 futures-util = { workspace = true }
 log = { workspace = true }
+simple-middleware = { workspace = true }
+busybody = { workspace = true }
