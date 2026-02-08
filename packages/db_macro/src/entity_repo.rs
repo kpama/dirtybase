@@ -129,6 +129,7 @@ pub fn build_entity_repo(
                     ),
             manager: manager.clone(),
             eager: Vec::new(),
+            settings: Vec::new(),
         };
     };
 
@@ -256,7 +257,8 @@ pub fn build_entity_repo(
         };
 
         append_trash_filter = quote! {
-            if !self.eager.contains(&"_soft_delete".to_string()) {
+            let flag_soft = "_soft_delete".to_string();
+            if !self.settings.contains(&flag_soft) {
                 self.builder.is_null(
                     <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
                         <#ident as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect("deleted at column is require")
@@ -267,9 +269,13 @@ pub fn build_entity_repo(
 
         with_trashed = quote! {
             pub fn with_trashed(&mut self,)  -> &mut Self {
+                if self.settings.contains(&"_trashed_only".to_string()) {
+                    return self;
+                }
+
                 let flag_soft = "_soft_delete".to_string();
-                if !self.eager.contains(&flag_soft) {
-                    self.eager.push(flag_soft);
+                if !self.settings.contains(&flag_soft) {
+                    self.settings.push(flag_soft.clone());
                 }
                 self
             }
@@ -277,15 +283,17 @@ pub fn build_entity_repo(
 
         trashed_only = quote! {
             pub fn trashed_only(&mut self)  -> &mut Self {
-                let flag_soft = "_soft_delete".to_string();
-                if !self.eager.contains(&flag_soft) {
-                    self.builder.is_not_null(
+                let flag_soft = "_soft_delete";
+                if let Some(index) = self.settings.iter().position(|entry| entry == flag_soft) {
+                    _= self.settings.remove(index);
+                }
+
+                self.settings.push("_trashed_only".to_string());
+                self.builder.is_not_null(
                         <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
                             <#ident as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect("deleted at column is require")
                             )
                         );
-                    self.eager.push(flag_soft);
-                 }
 
                 self
             }
@@ -297,6 +305,7 @@ pub fn build_entity_repo(
         pub struct #repo_name {
             builder: ::dirtybase_common::db::base::query::QueryBuilder,
             manager: ::dirtybase_common::db::base::manager::Manager,
+            settings: Vec<String>,
             eager: Vec<String>,
         }
 

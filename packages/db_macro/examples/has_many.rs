@@ -34,10 +34,7 @@ async fn main() {
         .await;
 
     let mut family_repo = FamilyRepo::new(&manager);
-    println!(
-        "{:#?}",
-        family_repo.with_trashed_only_children().get().await
-    );
+    println!("{:#?}", family_repo.with_children().get().await);
 }
 
 #[derive(Debug, Default, DirtyTable)]
@@ -91,29 +88,37 @@ async fn create_tables(manager: &Manager) {
 
 async fn seed_tables(manager: &Manager) {
     for f in 1..=5 {
+        let name = format!("family {f}");
         _ = manager
             .insert(
                 Family::table_name(),
                 Family {
-                    name: format!("family {f}"),
+                    name: name.clone(),
                     created_at: current_datetime().into(),
                     ..Default::default()
                 },
             )
             .await;
-
-        for c in 1..=rand::random_range(1..rand::random_range(1..3)) {
-            _ = manager
-                .insert(
-                    Child::table_name(),
-                    Child {
-                        name: format!("child {c} for family {f}"),
-                        family_id: f,
-                        created_at: current_datetime().into(),
-                        ..Default::default()
-                    },
-                )
-                .await;
+        if let Ok(Some(family)) = manager
+            .select_from_table(Family::table_name(), |q| {
+                q.is_eq(Family::col_name_for_name(), name);
+            })
+            .first_to::<Family>()
+            .await
+        {
+            for c in 1..=rand::random_range(1..5) {
+                _ = manager
+                    .insert(
+                        Child::table_name(),
+                        Child {
+                            name: format!("child {c} for family {f}"),
+                            family_id: family.id.clone().unwrap(),
+                            created_at: current_datetime().into(),
+                            ..Default::default()
+                        },
+                    )
+                    .await;
+            }
         }
     }
 }

@@ -215,7 +215,7 @@ impl RelType {
     ) -> Option<Self> {
         let name = attribute.remove("kind").unwrap_or_default();
         // TODO: Make sure the attributes are set correctly or fallback to the defaults
-        match name.as_str() {
+        match name.to_lowercase().as_str() {
             "has_one" => Some(Self::HasOne {
                 attribute: has_one::build_attribute(attribute, field, input),
             }),
