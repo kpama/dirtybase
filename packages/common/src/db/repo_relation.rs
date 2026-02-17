@@ -179,7 +179,10 @@ impl Relation {
         // Built relation data
         rows_rel_map: &mut HashMap<String, HashMap<u64, Vec<StructuredColumnAndValue>>>,
     ) -> Result<(), anyhow::Error> {
-        //
+        if rows.is_empty() {
+            return Ok(());
+        }
+
         let process = self
             .process
             .take()
