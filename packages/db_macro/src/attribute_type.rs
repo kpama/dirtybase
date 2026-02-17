@@ -6,36 +6,6 @@ use crate::relationship::{
     belongs_to, has_many, has_many_through, has_one, has_one_through, morph_many, morph_one,
 };
 
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) enum AttributeType {
-    ColName {
-        name: String,
-        optional: bool,
-        the_type: String,
-    },
-    FromHandler(String),
-    IntoHandler(String),
-}
-
-impl From<String> for AttributeType {
-    fn from(value: String) -> Self {
-        match value.as_str() {
-            "col" => Self::ColName {
-                name: String::new(),
-                optional: false,
-                the_type: String::new(),
-            },
-            "from" => Self::FromHandler(String::new()),
-            "into" => Self::IntoHandler(String::new()),
-            _ => Self::ColName {
-                name: String::new(),
-                optional: false,
-                the_type: String::new(),
-            },
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub(crate) struct TableAttribute {
     pub(crate) table_name: String,
@@ -214,7 +184,6 @@ impl RelType {
         input: &DeriveInput,
     ) -> Option<Self> {
         let name = attribute.remove("kind").unwrap_or_default();
-        // TODO: Make sure the attributes are set correctly or fallback to the defaults
         match name.to_lowercase().as_str() {
             "has_one" => Some(Self::HasOne {
                 attribute: has_one::build_attribute(attribute, field, input),

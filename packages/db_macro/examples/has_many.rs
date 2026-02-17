@@ -24,17 +24,25 @@ async fn main() {
         dirtybase_helper::time::current_datetime().into(),
     );
     let mut to_delete = Vec::new();
-    for i in 1..rand::random_range(1..10) {
+    for i in 1..=rand::random_range(2..20) {
         to_delete.push(i);
     }
+    println!("deleting: {:#?}", &to_delete);
     _ = manager
-        .update_table::<Child>(data, |query| {
-            query.is_in(Child::col_name_for_id(), &to_delete);
+        .update_table::<Child>(data, move |query| {
+            query.is_in(Child::col_name_for_id(), to_delete);
         })
         .await;
 
     let mut family_repo = FamilyRepo::new(&manager);
-    println!("{:#?}", family_repo.with_children().get().await);
+    println!(
+        "{:#?}",
+        family_repo
+            .with_trashed_only_children()
+            .limit(2)
+            .get()
+            .await
+    );
 }
 
 #[derive(Debug, Default, DirtyTable)]

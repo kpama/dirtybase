@@ -3,6 +3,7 @@ use dirtybase_db::{
     types::TimestampField,
 };
 use dirtybase_db_macro::DirtyTable;
+use dirtybase_helper::time::current_datetime;
 use rand::distr::SampleString;
 
 #[tokio::main]
@@ -23,7 +24,10 @@ async fn main() {
     //     })
     //     .await;
 
-    println!("{:#?}", customer_repo.with_invoices().get().await);
+    println!(
+        "{:#?}",
+        customer_repo.with_orders().with_invoices().get().await
+    );
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
@@ -31,10 +35,10 @@ async fn main() {
 struct Customer {
     id: Option<i64>,
     name: String,
-    #[dirty(rel(kind = has_many_through, pivot = Order, pivot_through_col = id, through_col= order_id))]
-    invoices: Option<Vec<Invoice>>,
     #[dirty(rel(kind = has_many))]
     orders: Option<Vec<Order>>,
+    #[dirty(rel(kind = has_many_through,  pivot = Order, pivot_through_col = id, through_col= order_id))]
+    invoices: Option<Vec<Invoice>>,
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
@@ -94,7 +98,7 @@ async fn seed_tables(manager: &Manager) {
             })
             .await;
 
-        for _ in 1..=5 {
+        for _ in 1..=rand::random_range(5..=10) {
             _ = manager
                 .insert_into::<Order>(Order {
                     customer_id: c,
@@ -115,6 +119,11 @@ async fn seed_tables(manager: &Manager) {
                     .insert_into::<Invoice>(Invoice {
                         order_id: an_order.id.unwrap(),
                         total: rand::random_range(50..=10000),
+                        deleted_at: if rand::random_bool(1.0 / 3.0) {
+                            Some(current_datetime())
+                        } else {
+                            None
+                        },
                         ..Default::default()
                     })
                     .await;
