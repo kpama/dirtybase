@@ -138,7 +138,7 @@ impl TableBlueprint {
     /// String column with a max length of 256 characters
     pub fn string(&mut self, name: &str) -> &mut ColumnBlueprint {
         self.column(name, |column| {
-            column.set_type(ColumnType::String(256));
+            column.set_type(ColumnType::String(255));
         })
     }
 
