@@ -52,6 +52,19 @@ pub enum QueryAction {
     },
 }
 
+impl QueryAction {
+    /// Create a new Query QueryAction
+    pub fn query() -> Self {
+        Self::Query { columns: None }
+    }
+
+    pub fn query_with(columns: Vec<QueryColumn>) -> Self {
+        Self::Query {
+            columns: Some(columns),
+        }
+    }
+}
+
 impl Display for QueryAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -104,6 +117,10 @@ impl QueryBuilder {
             offset: None,
             lock_for_update: false,
         }
+    }
+
+    pub fn new_query(table: &str) -> Self {
+        Self::new(table, QueryAction::query())
     }
 
     pub fn action(&self) -> &QueryAction {
@@ -725,6 +742,15 @@ impl QueryBuilder {
             column,
             Operator::In,
             QueryValue::SubQuery(Box::new(query_builder)),
+            None,
+        )
+    }
+
+    pub fn is_in_query<C: ToString>(&mut self, column: C, query: QueryBuilder) -> &mut Self {
+        self.where_operator(
+            column,
+            Operator::In,
+            QueryValue::SubQuery(Box::new(query)),
             None,
         )
     }
