@@ -717,7 +717,10 @@ impl SqliteSchemaManager {
             sql = format!("{sql} {limit}");
         }
 
-        // TODO: offset
+        // offset
+        if let Some(offset) = query.offset_by() {
+            sql = format!("{sql} {offset}");
+        }
 
         // Not supported in sqlite
         // if query.is_lock_for_update() {

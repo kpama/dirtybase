@@ -680,7 +680,10 @@ impl PostgresSchemaManager {
             sql = format!("{sql} {limit}");
         }
 
-        // TODO: offset
+        // offset
+        if let Some(offset) = query.offset_by() {
+            sql = format!("{sql} {offset}");
+        }
 
         if query.is_lock_for_update() {
             sql = format!("{sql} FOR UPDATE");
