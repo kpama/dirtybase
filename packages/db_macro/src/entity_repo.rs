@@ -280,8 +280,7 @@ pub fn build_entity_repo(
             builder: ::dirtybase_common::db::base::query::QueryBuilder,
             manager: ::dirtybase_common::db::base::manager::Manager,
             settings: Vec<String>,
-            relation: ::std::collections::HashMap<String, ::dirtybase_common::db::repo_relation::Relation>,
-            eager: Vec<String>,
+            relation: ::std::collections::HashMap<String, ::dirtybase_common::db::repo_relation::Relation<#ident>>,
         }
 
 
@@ -293,7 +292,6 @@ pub fn build_entity_repo(
                         ::dirtybase_common::db::base::query::QueryAction::query()
                     ),
                     manager: manager.clone(),
-                    eager: Vec::new(),
                     relation: ::std::collections::HashMap::new(),
                     settings: Vec::new(),
                 }
@@ -324,19 +322,16 @@ pub fn build_entity_repo(
 
                 match result {
                     Ok(Some(mut raw_list)) => {
-                        for row in &mut raw_list {
-
-                            if let Some(row_entity) = #ident::from_struct_column_value(row,
+                        for row in raw_list {
+                            if let Some(row_entity) = #ident::from_struct_column_value(&row,
                                 Some(<#ident as ::dirtybase_common::db::table_model::TableModel>::table_name())) {
                                 let row_hash= ::dirtybase_common::db::table_model::TableModel::entity_hash(&row_entity);
-                                row.fields_mut().insert("__hash".to_string(), row_hash.into());
                                 rows_map.insert(row_hash, row_entity);
                             }
-
                         }
 
                         for (name, rel) in &self.relation {
-                           if let Err(e)  = rel.clone().process(name, &self.manager, &raw_list, &mut join_field_values, &mut rows_rel_map).await {
+                           if let Err(e)  = rel.clone().process(&name, &self.manager, &rows_map, &mut join_field_values, &mut rows_rel_map).await {
                                 *self = Self::new(&self.manager);
                                 return Err(e);
                            }

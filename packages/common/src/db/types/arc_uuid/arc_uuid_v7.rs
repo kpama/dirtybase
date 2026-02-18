@@ -45,13 +45,13 @@ impl Deref for ArcUuid7 {
 
 impl Display for ArcUuid7 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0.to_string())
+        write!(f, "{}", &self.0)
     }
 }
 
 impl Debug for ArcUuid7 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0.to_string())
+        write!(f, "{}", &self.0)
     }
 }
 
@@ -166,7 +166,6 @@ fn field_value_to_arc_uuid7(value: FieldValue) -> Result<ArcUuid7, String> {
                     Err("string is not a valid uuid7".to_string())
                 }
             } else {
-                // Ok(ArcUuid7(Arc::new(Uuid::from_slice(&bytes).unwrap())))
                 Err(format!(
                     "UUID7 total length is less than 16: {}",
                     bytes.len()

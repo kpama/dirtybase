@@ -45,13 +45,13 @@ impl Deref for ArcUuid4 {
 
 impl Display for ArcUuid4 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0.to_string())
+        write!(f, "{}", &self.0)
     }
 }
 
 impl Debug for ArcUuid4 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0.to_string())
+        write!(f, "{}", &self.0)
     }
 }
 

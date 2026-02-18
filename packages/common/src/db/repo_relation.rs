@@ -100,15 +100,14 @@ impl RelationType {
     }
 }
 
-#[derive(Clone)]
-pub struct Relation {
+pub struct Relation<T> {
     rel_type: RelationType,
     process: Option<
         Arc<
             Box<
                 dyn Fn(
                         Self,
-                        &Vec<StructuredColumnAndValue>,
+                        &HashMap<u64, T>,
                         &mut HashMap<String, HashMap<u64, FieldValue>>,
                     ) -> RelationProcessor
                     + Sync
@@ -118,24 +117,33 @@ pub struct Relation {
     >,
 }
 
-impl Debug for Relation {
+impl<T> Clone for Relation<T> {
+    fn clone(&self) -> Self {
+        Self {
+            rel_type: self.rel_type.clone(),
+            process: self.process.clone(),
+        }
+    }
+}
+
+impl<T> Debug for Relation<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self)
     }
 }
 
-impl Display for Relation {
+impl<T> Display for Relation<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.rel_type)
     }
 }
 
-impl Relation {
+impl<T> Relation<T> {
     pub fn new(
         rel_type: RelationType,
         process: impl Fn(
             Self,
-            &Vec<StructuredColumnAndValue>,
+            &HashMap<u64, T>,
             &mut HashMap<String, HashMap<u64, FieldValue>>,
         ) -> RelationProcessor
         + Send
@@ -173,7 +181,7 @@ impl Relation {
         // Db Manager
         manager: &Manager,
         // The parent raw rows
-        rows: &Vec<StructuredColumnAndValue>,
+        rows: &HashMap<u64, T>,
         //  Values from the parent rows
         join_field_values: &mut HashMap<String, HashMap<u64, FieldValue>>,
         // Built relation data
@@ -187,6 +195,7 @@ impl Relation {
             .process
             .take()
             .expect("could not get relation processor");
+
         let RelationProcessor {
             query,
             child_col_name,

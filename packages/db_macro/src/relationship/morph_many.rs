@@ -41,7 +41,7 @@ pub(crate) fn generate_join_method(
             std::panic!("morph relation must have a name. {name}");
         };
         let empty_callback = quote! {
-            |_: &mut ::dirtybase_common::db::repo_relation::Relation| {
+            |_: &mut ::dirtybase_common::db::repo_relation::Relation<#parent>| {
                 // nothing to do
             }
         };
@@ -92,16 +92,16 @@ pub(crate) fn generate_join_method(
 
         list.push(quote! {
             pub fn #when_method_name<F>(&mut self , mut callback: F) -> &mut Self
-                where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation)
+                where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
              {
 
             let query = <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::make_query_builder();
 
-            let mut relation = ::dirtybase_common::db::repo_relation::Relation::new(
+            let mut relation = ::dirtybase_common::db::repo_relation::Relation::<#parent>::new(
                 ::dirtybase_common::db::repo_relation::RelationType::MorphMany{ query},
                 |
-                    relation: ::dirtybase_common::db::repo_relation::Relation,
-                    rows: &Vec<::dirtybase_common::db::types::StructuredColumnAndValue>,
+                    relation: ::dirtybase_common::db::repo_relation::Relation<#parent>,
+                    rows: &::std::collections::HashMap<u64, #parent>,
                     join_values: &mut ::std::collections::HashMap<String,::std::collections::HashMap<u64,::dirtybase_common::db::field_values::FieldValue>>
                 | {
                     let (mut query, _) = relation.rel_type().builders();
@@ -114,16 +114,10 @@ pub(crate) fn generate_join_method(
                     if join_values.get(&parent_col_name).is_none() {
                         let mut values = ::std::collections::HashMap::new();
                         let prefix = <#parent as ::dirtybase_common::db::table_model::TableModel>::table_name();
-                        for a_row in rows {
-                            let mut hash = 0_u64;
-                            let fields = a_row.fields_ref();
-                            if let Some(::dirtybase_common::db::field_values::FieldValue::U64(h)) = fields.get("__hash").cloned() {
-                                hash = h;
-                             }
-
-                            if let Some(::dirtybase_common::db::field_values::FieldValue::Object(data)) = fields.get(prefix) {
-                                if let Some(v) = data.get(&parent_col_name).cloned() {
-                                    values.insert(hash, v);
+                        for (hash, a_row) in rows {
+                            if let Ok(cv) = ::dirtybase_common::db::types::ToColumnAndValue::to_column_value(a_row) {
+                                if let Some(v) = cv.get(&parent_col_name).cloned() {
+                                    values.insert(hash.clone(), v);
                                 }
                             }
                         }
@@ -159,7 +153,7 @@ pub(crate) fn generate_join_method(
             }
 
             pub fn #method_name_where<F>(&mut self, mut callback: F) -> &mut Self
-             where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation)
+             where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
             {
                 self.#when_method_name(|relation| {
                     #call_callback
@@ -182,7 +176,7 @@ pub(crate) fn generate_join_method(
                 }
 
                 pub fn #trashed_method_name_where<F>(&mut self, mut callback: F) -> &mut Self
-                    where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation)
+                    where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
                 {
                     self.#when_method_name(|relation| {
                         #call_callback
@@ -196,7 +190,7 @@ pub(crate) fn generate_join_method(
                     }
 
                     pub fn #with_only_trashed_method_name_where<F>(&mut self, mut callback: F) -> &mut Self
-                        where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation) {
+                        where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>) {
                             self.#when_method_name(|relation| {
                                 #call_callback
                                 relation.query_mut().is_not_null(

@@ -27,7 +27,6 @@ async fn main() {
     for i in 1..=rand::random_range(2..20) {
         to_delete.push(i);
     }
-    println!("deleting: {:#?}", &to_delete);
     _ = manager
         .update_table::<Child>(data, move |query| {
             query.is_in(Child::col_name_for_id(), to_delete);
