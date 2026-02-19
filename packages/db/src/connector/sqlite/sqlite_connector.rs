@@ -183,14 +183,33 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         };
     }
 
-    async fn raw_insert(&mut self, sql: &str, row: Vec<FieldValue>) -> Result<bool, anyhow::Error> {
-        let mut query = sqlx::query(sql);
-        for field in row {
-            query = query.bind(field.to_string());
-        }
-        match query.execute(self.db_pool.as_ref()).await {
-            Ok(_) => Ok(true),
-            Err(e) => Err(e.into()),
+    async fn raw_insert(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query(sql).execute(&mut *trans).await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
+
+            result
+        } else {
+            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+        };
+
+        match result {
+            Ok(r) => {
+                log::debug!("raw insert result: {:#?}", &r);
+                Ok(true)
+            }
+            Err(e) => {
+                log::error!("raw insert failed: {}", &e);
+                Err(anyhow!(e))
+            }
         }
     }
 
@@ -199,14 +218,42 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         sql: &str,
         params: Vec<FieldValue>,
     ) -> Result<u64, anyhow::Error> {
-        let mut query = sqlx::query(sql);
-        for p in params {
-            query = query.bind(p.to_string());
+        let mut built_params = SqliteArguments::default();
+
+        for field in params {
+            build_field_value_to_args(&field, &mut built_params)?;
         }
 
-        match query.execute(self.db_pool.as_ref()).await {
-            Ok(v) => Ok(v.rows_affected()),
-            Err(e) => Err(anyhow::anyhow!(e)),
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query_with(&sql, built_params)
+                .execute(&mut *trans)
+                .await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
+
+            result
+        } else {
+            sqlx::query_with(&sql, built_params)
+                .execute(self.db_pool.as_ref())
+                .await
+        };
+
+        match result {
+            Ok(r) => {
+                log::debug!("raw update result: {:#?}", &r);
+                Ok(r.rows_affected())
+            }
+            Err(e) => {
+                log::error!("raw update failed: {}", &e);
+                Err(anyhow!(e))
+            }
         }
     }
 
@@ -224,11 +271,12 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         params: Vec<FieldValue>,
     ) -> Result<Vec<ColumnAndValue>, anyhow::Error> {
         let mut results = Vec::new();
-        let mut query = sqlx::query(sql);
+        let mut built_params = SqliteArguments::default();
 
-        for p in &params {
-            query = query.bind(p.to_string());
+        for field in params {
+            build_field_value_to_args(&field, &mut built_params)?;
         }
+        let query = sqlx::query_with(sql, built_params);
 
         let mut rows = query.fetch(self.db_pool.as_ref());
         loop {
@@ -251,11 +299,32 @@ impl SchemaManagerTrait for SqliteSchemaManager {
     }
 
     async fn raw_statement(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
-        let query = sqlx::query(sql);
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query(sql).execute(&mut *trans).await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
 
-        match query.execute(self.db_pool.as_ref()).await {
-            Ok(_v) => Ok(true),
-            Err(e) => Err(e.into()),
+            result
+        } else {
+            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+        };
+
+        match result {
+            Ok(r) => {
+                log::debug!("raw statement result: {:#?}", &r);
+                Ok(true)
+            }
+            Err(e) => {
+                log::error!("raw statement failed: {}", &e);
+                Err(anyhow!(e))
+            }
         }
     }
 }

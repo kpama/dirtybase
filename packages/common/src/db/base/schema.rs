@@ -187,11 +187,7 @@ pub trait SchemaManagerTrait: Send + Sync {
         .await
     }
 
-    async fn raw_insert(
-        &mut self,
-        sql: &str,
-        values: Vec<FieldValue>,
-    ) -> Result<bool, anyhow::Error>;
+    async fn raw_insert(&mut self, sql: &str) -> Result<bool, anyhow::Error>;
 
     async fn raw_update(
         &mut self,

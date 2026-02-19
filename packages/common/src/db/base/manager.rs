@@ -347,16 +347,8 @@ impl Manager {
         Ok(())
     }
 
-    pub async fn raw_insert<V: Into<FieldValue>>(
-        &self,
-        sql: &str,
-        row: Vec<V>,
-    ) -> Result<bool, anyhow::Error> {
-        let result = self
-            .write_connection()
-            .await
-            .raw_insert(sql, row.into_iter().map(|v| v.into()).collect())
-            .await;
+    pub async fn raw_insert(&self, sql: &str) -> Result<bool, anyhow::Error> {
+        let result = self.write_connection().await.raw_insert(sql).await;
         if result.is_ok() {
             self.dispatch_written_event();
         }
