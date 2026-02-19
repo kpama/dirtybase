@@ -159,20 +159,25 @@ fn field_value_to_arc_uuid7(value: FieldValue) -> Result<ArcUuid7, String> {
     match value {
         FieldValue::Uuid(uuid) => Ok(uuid.into()),
         FieldValue::Binary(bytes) => {
-            if bytes.len() > 16 {
-                if let Ok(st) = String::from_utf8(bytes) {
-                    Ok(ArcUuid7(Arc::new(Uuid::from_str(&st).unwrap())))
-                } else {
-                    Err("string is not a valid uuid7".to_string())
+            if bytes.len() == 36 {
+                match String::from_utf8(bytes.clone()) {
+                    Ok(st) => Ok(ArcUuid7(Arc::new(
+                        Uuid::from_str(&st).map_err(|e| format!("{e}"))?,
+                    ))),
+                    Err(e) => Err(format!("{e}")),
+                }
+            } else if bytes.len() == 16 {
+                match Uuid::from_slice(&bytes) {
+                    Ok(uuid) => Ok(ArcUuid7(Arc::new(uuid))),
+                    Err(e) => Err(format!("{e}")),
                 }
             } else {
-                Err(format!(
-                    "UUID7 total length is less than 16: {}",
-                    bytes.len()
-                ))
+                Err("string is not a valid uuid7".to_string())
             }
         }
-        FieldValue::String(v) => Ok(ArcUuid7(Arc::new(Uuid::parse_str(&v).unwrap()))),
+        FieldValue::String(v) => Ok(ArcUuid7(Arc::new(
+            Uuid::parse_str(&v).map_err(|e| format!("{e}"))?,
+        ))),
         _ => {
             tracing::error!("could not parse field value to uuid7");
             Err("could not parse field value to uuid7".to_string())

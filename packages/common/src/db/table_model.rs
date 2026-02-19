@@ -108,7 +108,7 @@ pub trait TableModel: FromColumnAndValue + ToColumnAndValue {
 
         Self::table_columns()
             .iter()
-            .map(|c| format!("{0}.{2} as '{1}.{2}'", Self::table_name(), pre, c))
+            .map(|c| format!("{0}.{2} as \"{1}.{2}\"", Self::table_name(), pre, c))
             .collect()
     }
 

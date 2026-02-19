@@ -108,9 +108,6 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         let statement = self.build_query(query_builder, &mut params)?;
 
         let query = sqlx::query_with(&statement, params);
-        // for p in &params {
-        //     query = query.bind::<&str>(p);
-        // }
 
         let mut rows = query.fetch(self.db_pool.as_ref());
         while let Ok(result) = rows.try_next().await {
@@ -467,7 +464,7 @@ impl PostgresSchemaManager {
                             sql = format!("DROP INDEX IF EXISTS {}.{}", &table.name, index.name());
                         } else {
                             sql = format!(
-                                "CREATE INDEX IF NOT EXISTS '{}' ON {} ({})",
+                                "CREATE INDEX IF NOT EXISTS \"{}\" ON \"{}\" ({})",
                                 index.name(),
                                 &table.name,
                                 index
@@ -575,7 +572,7 @@ impl PostgresSchemaManager {
                 ColumnDefault::EmptyString => the_type.push_str("''"),
                 ColumnDefault::Zero => the_type.push('0'),
                 ColumnDefault::Boolean(v) => {
-                    the_type.push(if *v { '1' } else { '0' });
+                    the_type.push_str(if *v { "true" } else { "false" });
                 }
             };
         }
@@ -945,7 +942,7 @@ impl PostgresSchemaManager {
                     if let Ok(v) = row.try_get::<sqlx::types::Uuid, &str>(col.name()) {
                         this_row.insert(name, v.into());
                     } else {
-                        this_row.insert(name, sqlx::types::Uuid::nil().into());
+                        this_row.insert(name, FieldValue::Null);
                     }
                 }
                 _ => {

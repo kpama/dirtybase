@@ -1,6 +1,6 @@
 use dirtybase_helper::uuid::Uuid;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display, str::FromStr};
 
 mod field_value_from_type;
 mod insert_value;
@@ -80,12 +80,30 @@ impl FieldValue {
     }
 
     /// Returns the FieldValue if Some and `NotSet` when None
-    pub fn from_ref_option(field: Option<&FieldValue>) -> FieldValue {
+    pub fn from_ref_option(field: Option<&FieldValue>) -> Self {
         if let Some(f) = field {
             f.clone()
         } else {
             Self::NotSet
         }
+    }
+
+    pub fn from_vec_of_u8(value: Vec<u8>) -> Self {
+        if value.len() >= 16 && value.len() <= 36 {
+            if value.len() == 36
+                && let Ok(st) = String::from_utf8(value.clone())
+            {
+                if let Ok(uuid) = Uuid::from_str(&st) {
+                    return Self::Uuid(uuid);
+                }
+            } else if value.len() == 16
+                && let Ok(uuid) = Uuid::from_slice(&value)
+            {
+                return Self::Uuid(uuid);
+            }
+        }
+
+        Self::Binary(value)
     }
 }
 

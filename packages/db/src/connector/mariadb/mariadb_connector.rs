@@ -907,7 +907,7 @@ impl MariadbSchemaManager {
                 "VARBINARY" | "BINARY" | "BLOB" | "BYTEA" => {
                     let v = row.try_get::<Vec<u8>, &str>(col.name());
                     if let Ok(v) = v {
-                        this_row.insert(col.name().to_string(), FieldValue::Binary(v));
+                        this_row.insert(col.name().to_string(), FieldValue::from_vec_of_u8(v));
                     } else {
                         this_row.insert(col.name().to_string(), FieldValue::Null);
                     }
