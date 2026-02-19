@@ -835,6 +835,16 @@ impl PostgresSchemaManager {
         let placeholder = match condition.value() {
             QueryValue::SubQuery(sub) => self.build_query(sub, params)?,
             QueryValue::ColumnName(name) => name.clone(),
+            QueryValue::Clause(clause) => {
+                let mut wheres = "".to_owned();
+                for where_join in clause.where_clauses() {
+                    wheres = where_join.as_clause(
+                        &wheres,
+                        &self.transform_condition(where_join.condition(), params)?,
+                    );
+                }
+                wheres
+            }
             _ => {
                 let current_total = params.len();
                 self.transform_value(condition.value(), params)?;
@@ -874,6 +884,7 @@ impl PostgresSchemaManager {
             QueryValue::Field(field) => self.field_value_to_args(field, params)?,
             QueryValue::Null => (),          // `is null` or `is not null`
             QueryValue::ColumnName(_) => (), // does not require an entry into the params,
+            QueryValue::Clause(_) => (),
         }
 
         Ok(())

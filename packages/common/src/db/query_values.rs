@@ -8,6 +8,7 @@ pub enum QueryValue {
     Field(FieldValue),
     ColumnName(String),
     SubQuery(Box<QueryBuilder>),
+    Clause(Box<QueryBuilder>),
 }
 
 impl<T: Into<FieldValue>> From<T> for QueryValue {
