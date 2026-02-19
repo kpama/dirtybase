@@ -8,6 +8,7 @@ mod arc_uuid;
 mod label_field;
 mod name_field;
 mod snowflake;
+mod status;
 mod ulid;
 mod uuid;
 
@@ -16,6 +17,7 @@ pub use arc_uuid::*;
 pub use label_field::*;
 pub use name_field::*;
 pub use snowflake::*;
+pub use status::*;
 pub use ulid::*;
 pub type ColumnAndValue = HashMap<String, FieldValue>;
 
@@ -85,11 +87,24 @@ impl StructuredColumnAndValue {
         self.fields
     }
 
+    pub fn fields_ref(&self) -> &ColumnAndValue {
+        &self.fields
+    }
+
+    pub fn fields_mut(&mut self) -> &mut ColumnAndValue {
+        &mut self.fields
+    }
+
     pub fn from_results(results: Vec<ColumnAndValue>) -> Vec<Self> {
         results
             .into_iter()
             .flat_map(Self::from_column_value)
             .collect()
+    }
+
+    pub fn merge(&mut self, other: StructuredColumnAndValue) -> &mut Self {
+        self.fields.extend(other.fields);
+        self
     }
 
     pub fn from_results_into<T: FromColumnAndValue>(

@@ -38,7 +38,7 @@ impl ExtensionSetup for App {
             |_| {
                 Box::pin(async {
                     //
-                    ("global points".to_string(), 50).into()
+                    Ok(("global points".to_string(), 50).into())
                 })
             },
             |_| {
@@ -52,7 +52,10 @@ impl ExtensionSetup for App {
         .await;
     }
 
-    fn register_cli_middlewares(&self, manager: CliMiddlewareManager) -> CliMiddlewareManager {
+    async fn register_cli_middlewares(
+        &self,
+        manager: CliMiddlewareManager,
+    ) -> CliMiddlewareManager {
         manager
     }
 
@@ -113,7 +116,7 @@ impl ExtensionSetup for App {
     }
 
     async fn on_web_request(&self, req: Request, context: Context, _cookie: &CookieJar) -> Request {
-        let tenant = context.tenant().await.unwrap();
+        let tenant = context.tenant_context().await.unwrap();
 
         let _id = tenant.id().to_string();
         req

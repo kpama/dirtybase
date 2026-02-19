@@ -18,10 +18,10 @@ struct Family {
 struct Member {
     id: String,
     family_id: String,
-    // #[dirty(rel(kind = "belongs_to", foreign_key = "id", local_key = "family_id"))]
-    // family: Option<Family>,
-    // #[dirty(rel(kind = "has_one"))]
-    // person: Option<Person>,
+    #[dirty(rel(kind = "belongs_to", foreign_key = "id", local_key = "family_id"))]
+    family: Option<Family>,
+    #[dirty(rel(kind = "has_one"))]
+    person: Option<Person>,
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]

@@ -18,7 +18,7 @@ use super::{
     table::DELETED_AT_FIELD,
     where_join_operators::WhereJoinOperator,
 };
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::BTreeMap, fmt::Display};
 
 #[derive(Debug)]
 pub enum WhereJoin {
@@ -50,6 +50,19 @@ pub enum QueryAction {
         old: String,
         new: String,
     },
+}
+
+impl QueryAction {
+    /// Create a new Query QueryAction
+    pub fn query() -> Self {
+        Self::Query { columns: None }
+    }
+
+    pub fn query_with(columns: Vec<QueryColumn>) -> Self {
+        Self::Query {
+            columns: Some(columns),
+        }
+    }
 }
 
 impl Display for QueryAction {
@@ -84,7 +97,7 @@ impl Display for QueryAction {
 pub struct QueryBuilder {
     where_clauses: Vec<WhereJoinOperator>,
     table: String,
-    joins: Option<HashMap<String, JoinQueryBuilder>>,
+    joins: Option<BTreeMap<String, JoinQueryBuilder>>,
     action: QueryAction,
     order_by: Option<OrderByBuilder>,
     limit: Option<LimitBuilder>,
@@ -104,6 +117,10 @@ impl QueryBuilder {
             offset: None,
             lock_for_update: false,
         }
+    }
+
+    pub fn new_query(table: &str) -> Self {
+        Self::new(table, QueryAction::query())
     }
 
     pub fn action(&self) -> &QueryAction {
@@ -210,7 +227,7 @@ impl QueryBuilder {
         self
     }
 
-    pub fn joins(&self) -> Option<&HashMap<String, JoinQueryBuilder>> {
+    pub fn joins(&self) -> Option<&BTreeMap<String, JoinQueryBuilder>> {
         self.joins.as_ref()
     }
 
@@ -729,6 +746,15 @@ impl QueryBuilder {
         )
     }
 
+    pub fn is_in_query<C: ToString>(&mut self, column: C, query: QueryBuilder) -> &mut Self {
+        self.where_operator(
+            column,
+            Operator::In,
+            QueryValue::SubQuery(Box::new(query)),
+            None,
+        )
+    }
+
     pub fn and_is_in<T: Into<FieldValue> + IntoIterator, C: ToString>(
         &mut self,
         column: C,
@@ -929,7 +955,7 @@ impl QueryBuilder {
             .and_not_le_or_eq(column, last)
     }
 
-    pub fn where_(&mut self, where_clause: WhereJoinOperator) -> &mut Self {
+    fn where_(&mut self, where_clause: WhereJoinOperator) -> &mut Self {
         self.where_clauses.push(where_clause);
         self
     }
@@ -938,7 +964,7 @@ impl QueryBuilder {
         if self.where_clauses.is_empty() {
             self.where_(WhereJoinOperator::None(condition))
         } else {
-            self.and_where(condition)
+            self.and_op(condition)
         }
     }
 
@@ -956,14 +982,14 @@ impl QueryBuilder {
                     if self.where_clauses.is_empty() {
                         self.first_or_and(condition)
                     } else {
-                        self.and_where(condition)
+                        self.and_op(condition)
                     }
                 }
                 WhereJoin::Or => {
                     if self.where_clauses.is_empty() {
                         self.first_or_and(condition)
                     } else {
-                        self.or_where(condition)
+                        self.or_op(condition)
                     }
                 }
             },
@@ -971,11 +997,58 @@ impl QueryBuilder {
         }
     }
 
-    fn or_where(&mut self, condition: Condition) -> &mut Self {
+    fn or_op(&mut self, condition: Condition) -> &mut Self {
         self.where_(WhereJoinOperator::Or(condition))
     }
 
-    fn and_where(&mut self, condition: Condition) -> &mut Self {
+    pub fn or_where<F>(&mut self, mut callback: F) -> &mut Self
+    where
+        F: FnMut(&mut QueryBuilder),
+    {
+        let mut query_builder = Self::new("", QueryAction::Query { columns: None });
+
+        callback(&mut query_builder);
+
+        self.where_operator(
+            "",
+            Operator::Clause,
+            QueryValue::Clause(Box::new(query_builder)),
+            Some(WhereJoin::Or),
+        )
+    }
+    pub fn group_where<F>(&mut self, mut callback: F) -> &mut Self
+    where
+        F: FnMut(&mut QueryBuilder),
+    {
+        let mut query_builder = Self::new("", QueryAction::Query { columns: None });
+
+        callback(&mut query_builder);
+
+        self.where_operator(
+            "",
+            Operator::Clause,
+            QueryValue::Clause(Box::new(query_builder)),
+            None,
+        )
+    }
+
+    pub fn and_where<F>(&mut self, mut callback: F) -> &mut Self
+    where
+        F: FnMut(&mut QueryBuilder),
+    {
+        let mut query_builder = Self::new("", QueryAction::Query { columns: None });
+
+        callback(&mut query_builder);
+
+        self.where_operator(
+            "",
+            Operator::Clause,
+            QueryValue::Clause(Box::new(query_builder)),
+            Some(WhereJoin::And),
+        )
+    }
+
+    fn and_op(&mut self, condition: Condition) -> &mut Self {
         self.where_(WhereJoinOperator::And(condition))
     }
 
@@ -989,7 +1062,7 @@ impl QueryBuilder {
         select_columns: Option<C>,
     ) -> &mut Self {
         if self.joins.is_none() {
-            self.joins = Some(HashMap::new());
+            self.joins = Some(BTreeMap::new());
         }
 
         let join = JoinQueryBuilder::new(

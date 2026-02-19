@@ -9,7 +9,7 @@ async fn main() {
     let manager = make_sqlite_in_memory_manager().await;
     setup_db(&manager).await;
     let mut mechanic_repo = MechanicRepo::new(&manager);
-    println!("{:#?}", mechanic_repo.with_car().with_owner().get().await);
+    println!("{:#?}", mechanic_repo.with_car().with_owner().one().await);
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
@@ -21,10 +21,12 @@ struct Mechanic {
       kind = "has_one_through",
       pivot = Car,
       pivot_through_col= id,
-      through_col= car_id
+      through_col= car_id,
+      foreign_col = "mechanic_id" // this is the default
+      no_soft_delete
     ))]
     owner: Option<Owner>,
-    #[dirty(rel(kind = has_one))]
+    #[dirty(rel(kind = has_one, foreign_col = "mechanic_id", no_soft_delete))]
     car: Option<Car>,
 }
 
@@ -33,7 +35,7 @@ struct Mechanic {
 struct Car {
     id: Option<i64>,
     model: String,
-    machanic_id: i64,
+    mechanic_id: i64,
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
@@ -93,7 +95,7 @@ async fn seed_db(manager: &Manager) {
                 Car::table_name(),
                 Car {
                     model: rand::distr::Alphanumeric.sample_string(&mut rand::rng(), 10),
-                    machanic_id: m,
+                    mechanic_id: m,
                     ..Default::default()
                 },
             )

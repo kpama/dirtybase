@@ -21,6 +21,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let table_name = &table_attribute.table_name;
 
     let column = pluck_names(&columns_attributes);
+    let flatten_columns = pluck_flatten_columns(&columns_attributes);
 
     let generics = input.generics.clone();
     let (_impl_generics, ty_generics, where_clause) = generics.split_for_impl();
@@ -94,10 +95,11 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
 
         #(#special_column_methods)*
 
-        fn table_columns() -> &'static [&'static str] {
-          &[
+        fn table_columns() -> Vec<&'static str> {
+          let main = vec![
              #(#column),*
-          ]
+          ];
+          [main, #(#flatten_columns),*].concat()
         }
       }
 

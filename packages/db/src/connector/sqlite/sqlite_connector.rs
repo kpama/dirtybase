@@ -183,14 +183,33 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         };
     }
 
-    async fn raw_insert(&mut self, sql: &str, row: Vec<FieldValue>) -> Result<bool, anyhow::Error> {
-        let mut query = sqlx::query(sql);
-        for field in row {
-            query = query.bind(field.to_string());
-        }
-        match query.execute(self.db_pool.as_ref()).await {
-            Ok(_) => Ok(true),
-            Err(e) => Err(e.into()),
+    async fn raw_insert(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query(sql).execute(&mut *trans).await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
+
+            result
+        } else {
+            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+        };
+
+        match result {
+            Ok(r) => {
+                log::debug!("raw insert result: {:#?}", &r);
+                Ok(true)
+            }
+            Err(e) => {
+                log::error!("raw insert failed: {}", &e);
+                Err(anyhow!(e))
+            }
         }
     }
 
@@ -199,14 +218,42 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         sql: &str,
         params: Vec<FieldValue>,
     ) -> Result<u64, anyhow::Error> {
-        let mut query = sqlx::query(sql);
-        for p in params {
-            query = query.bind(p.to_string());
+        let mut built_params = SqliteArguments::default();
+
+        for field in params {
+            build_field_value_to_args(&field, &mut built_params)?;
         }
 
-        match query.execute(self.db_pool.as_ref()).await {
-            Ok(v) => Ok(v.rows_affected()),
-            Err(e) => Err(anyhow::anyhow!(e)),
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query_with(&sql, built_params)
+                .execute(&mut *trans)
+                .await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
+
+            result
+        } else {
+            sqlx::query_with(&sql, built_params)
+                .execute(self.db_pool.as_ref())
+                .await
+        };
+
+        match result {
+            Ok(r) => {
+                log::debug!("raw update result: {:#?}", &r);
+                Ok(r.rows_affected())
+            }
+            Err(e) => {
+                log::error!("raw update failed: {}", &e);
+                Err(anyhow!(e))
+            }
         }
     }
 
@@ -224,11 +271,12 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         params: Vec<FieldValue>,
     ) -> Result<Vec<ColumnAndValue>, anyhow::Error> {
         let mut results = Vec::new();
-        let mut query = sqlx::query(sql);
+        let mut built_params = SqliteArguments::default();
 
-        for p in &params {
-            query = query.bind(p.to_string());
+        for field in params {
+            build_field_value_to_args(&field, &mut built_params)?;
         }
+        let query = sqlx::query_with(sql, built_params);
 
         let mut rows = query.fetch(self.db_pool.as_ref());
         loop {
@@ -251,11 +299,32 @@ impl SchemaManagerTrait for SqliteSchemaManager {
     }
 
     async fn raw_statement(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
-        let query = sqlx::query(sql);
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query(sql).execute(&mut *trans).await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
 
-        match query.execute(self.db_pool.as_ref()).await {
-            Ok(_v) => Ok(true),
-            Err(e) => Err(e.into()),
+            result
+        } else {
+            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+        };
+
+        match result {
+            Ok(r) => {
+                log::debug!("raw statement result: {:#?}", &r);
+                Ok(true)
+            }
+            Err(e) => {
+                log::error!("raw statement failed: {}", &e);
+                Err(anyhow!(e))
+            }
         }
     }
 }
@@ -600,15 +669,14 @@ impl SqliteSchemaManager {
         if let Some(default) = &column.default {
             the_type.push_str(" DEFAULT ");
             match default {
-                // ColumnDefault::CreatedAt => (), // the_type.push_str("CURRENT_TIMESTAMP"),
                 ColumnDefault::Custom(d) => the_type.push_str(&format!("'{d}'")),
                 ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
                 ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
-                ColumnDefault::Uuid => (), // the_type.push_str("GUID()"),
-                ColumnDefault::Ulid => (),
-                // ColumnDefault::UpdatedAt => (), // the_type.push_str("CURRENT_TIMESTAMP"),
                 ColumnDefault::Zero => the_type.push('0'),
+                ColumnDefault::Boolean(v) => {
+                    the_type.push(if *v { '1' } else { '0' });
+                }
             };
         }
 
@@ -718,7 +786,10 @@ impl SqliteSchemaManager {
             sql = format!("{sql} {limit}");
         }
 
-        // TODO: offset
+        // offset
+        if let Some(offset) = query.offset_by() {
+            sql = format!("{sql} {offset}");
+        }
 
         // Not supported in sqlite
         // if query.is_lock_for_update() {
@@ -781,6 +852,16 @@ impl SqliteSchemaManager {
         let placeholder = match condition.value() {
             QueryValue::SubQuery(sub) => self.build_query(sub, params)?,
             QueryValue::ColumnName(name) => name.clone(),
+            QueryValue::Clause(clause) => {
+                let mut wheres = "".to_owned();
+                for where_join in clause.where_clauses() {
+                    wheres = where_join.as_clause(
+                        &wheres,
+                        &self.transform_condition(where_join.condition(), params)?,
+                    );
+                }
+                wheres
+            }
             _ => {
                 self.transform_value(condition.value(), params)?;
                 if *condition.operator() == Operator::In || *condition.operator() == Operator::NotIn
@@ -816,6 +897,7 @@ impl SqliteSchemaManager {
             QueryValue::Field(field) => self.field_value_to_args(field, params)?,
             QueryValue::Null => (),          // `is null` or `is not null`
             QueryValue::ColumnName(_) => (), // Does not require an entry into the params,
+            QueryValue::Clause(_) => (),
         }
         Ok(())
     }
@@ -911,10 +993,12 @@ impl SqliteSchemaManager {
                 }
                 "VARBINARY" | "BINARY" | "BLOB" | "BYTEA" => {
                     let v = row.try_get::<Vec<u8>, &str>(col.name());
-                    if let Ok(v) = v {
-                        this_row.insert(col.name().to_string(), FieldValue::Binary(v));
+                    if let Ok(v) = v
+                        && !v.is_empty()
+                    {
+                        this_row.insert(col.name().to_string(), FieldValue::from_vec_of_u8(v));
                     } else {
-                        this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
+                        this_row.insert(col.name().to_string(), FieldValue::Null);
                     }
                 }
                 "NULL" => {
@@ -1096,6 +1180,18 @@ fn build_field_value_to_args(
         }
         FieldValue::U64(v) => {
             let v = v as i64;
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I32(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I16(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::U32(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I8(v) => {
             _ = Arguments::add(params, v);
         }
         FieldValue::Null => {

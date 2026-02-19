@@ -104,7 +104,13 @@ impl SchemaManagerTrait for MySqlSchemaManager {
             .fetch_one(self.db_pool.as_ref())
             .await;
 
-        result.map_err(|e| anyhow::anyhow!(e))
+        match result {
+            Ok(v) => Ok(v),
+            Err(e) => match e {
+                sqlx::Error::RowNotFound => Ok(false),
+                _ => Err(anyhow::anyhow!(e)),
+            },
+        }
     }
 
     async fn stream_result(
@@ -197,14 +203,33 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         };
     }
 
-    async fn raw_insert(&mut self, sql: &str, row: Vec<FieldValue>) -> Result<bool, anyhow::Error> {
-        let mut query = sqlx::query(sql);
-        for field in row {
-            query = query.bind(field.to_string());
-        }
-        match query.execute(self.db_pool.as_ref()).await {
-            Err(e) => Err(e.into()),
-            _ => Ok(true),
+    async fn raw_insert(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query(sql).execute(&mut *trans).await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
+
+            result
+        } else {
+            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+        };
+
+        match result {
+            Ok(r) => {
+                log::debug!("raw insert result: {:#?}", &r);
+                Ok(true)
+            }
+            Err(e) => {
+                log::error!("raw insert failed: {}", &e);
+                Err(anyhow!(e))
+            }
         }
     }
 
@@ -240,8 +265,34 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         todo!();
     }
 
-    async fn raw_statement(&mut self, _sql: &str) -> Result<bool, anyhow::Error> {
-        todo!();
+    async fn raw_statement(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query(sql).execute(&mut *trans).await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
+
+            result
+        } else {
+            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+        };
+
+        match result {
+            Ok(r) => {
+                log::debug!("raw statement result: {:#?}", &r);
+                Ok(true)
+            }
+            Err(e) => {
+                log::error!("raw statement failed: {}", &e);
+                Err(anyhow!(e))
+            }
+        }
     }
 }
 
@@ -465,10 +516,10 @@ impl MySqlSchemaManager {
                 match entry {
                     IndexType::Index(index) | IndexType::Primary(index) => {
                         if index.delete_index() {
-                            sql = format!("DROP INDEX IF EXISTS {}", index.name());
+                            sql = format!("DROP INDEX {}", index.name());
                         } else {
                             sql = format!(
-                                "CREATE INDEX IF NOT EXISTS {} ON {} ({})",
+                                "CREATE INDEX {} ON {} ({})",
                                 index.name(),
                                 &table.name,
                                 index.concat_columns()
@@ -477,10 +528,10 @@ impl MySqlSchemaManager {
                     }
                     IndexType::Unique(index) => {
                         if index.delete_index() {
-                            sql = format!("DROP INDEX IF EXISTS {}", index.name());
+                            sql = format!("DROP INDEX {}", index.name());
                         } else {
                             sql = format!(
-                                "CREATE UNIQUE INDEX IF NOT EXISTS {} ON {} ({})",
+                                "CREATE UNIQUE INDEX {} ON {} ({})",
                                 index.name(),
                                 &table.name,
                                 index.concat_columns()
@@ -565,15 +616,14 @@ impl MySqlSchemaManager {
         if let Some(default) = &column.default {
             the_type.push_str(" DEFAULT ");
             match default {
-                // ColumnDefault::CreatedAt => (), // the_type.push_str("now()"),
                 ColumnDefault::Custom(d) => the_type.push_str(&format!("'{d}'")),
-                ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
-                ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
+                ColumnDefault::EmptyArray => the_type.push_str("(JSON_ARRAY())"),
+                ColumnDefault::EmptyObject => the_type.push_str("(JSON_OBJECT())"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
-                ColumnDefault::Uuid => (), // Seems to be not supported the_type.push_str("SYS_GUID()"),
-                ColumnDefault::Ulid => (),
-                // ColumnDefault::UpdatedAt => (), // the_type.push_str("current_timestamp() ON UPDATE CURRENT_TIMESTAMP")
                 ColumnDefault::Zero => the_type.push('0'),
+                ColumnDefault::Boolean(v) => {
+                    the_type.push(if *v { '1' } else { '0' });
+                }
             };
         }
 
@@ -658,7 +708,10 @@ impl MySqlSchemaManager {
             sql = format!("{sql} {limit}");
         }
 
-        // TODO: offset
+        // offset
+        if let Some(offset) = query.offset_by() {
+            sql = format!("{sql} {offset}");
+        }
 
         if query.is_lock_for_update() {
             sql = format!("{sql} FOR UPDATE");
@@ -720,6 +773,16 @@ impl MySqlSchemaManager {
         let placeholder = match condition.value() {
             QueryValue::SubQuery(sub) => self.build_query(sub, params)?,
             QueryValue::ColumnName(name) => name.clone(),
+            QueryValue::Clause(clause) => {
+                let mut wheres = "".to_owned();
+                for where_join in clause.where_clauses() {
+                    wheres = where_join.as_clause(
+                        &wheres,
+                        &self.transform_condition(where_join.condition(), params)?,
+                    );
+                }
+                wheres
+            }
             _ => {
                 self.transform_value(condition.value(), params)?;
                 if *condition.operator() == Operator::In || *condition.operator() == Operator::NotIn
@@ -755,6 +818,7 @@ impl MySqlSchemaManager {
             QueryValue::Field(field) => self.field_value_to_args(field, params)?,
             QueryValue::Null => (),          // `is null` or `is not null`
             QueryValue::ColumnName(_) => (), // Does not require an entry into the params,
+            QueryValue::Clause(_) => (),
         }
 
         Ok(())
@@ -884,9 +948,9 @@ impl MySqlSchemaManager {
                 "VARBINARY" | "BINARY" | "BLOB" | "BYTEA" => {
                     let v = row.try_get::<Vec<u8>, &str>(col.name());
                     if let Ok(v) = v {
-                        this_row.insert(col.name().to_string(), FieldValue::Binary(v));
+                        this_row.insert(col.name().to_string(), FieldValue::from_vec_of_u8(v));
                     } else {
-                        this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
+                        this_row.insert(col.name().to_string(), FieldValue::Null);
                     }
                 }
                 "NULL" => {
@@ -1069,6 +1133,19 @@ fn build_field_value_to_args(
             let v = *v as i64;
             _ = Arguments::add(params, v);
         }
+        FieldValue::I32(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I16(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::U32(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I8(v) => {
+            _ = Arguments::add(params, v);
+        }
+
         FieldValue::Null => {
             _ = Arguments::add(params, "NULL");
         }

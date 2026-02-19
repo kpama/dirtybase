@@ -45,13 +45,13 @@ impl Deref for ArcUuid4 {
 
 impl Display for ArcUuid4 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0.to_string())
+        write!(f, "{}", &self.0)
     }
 }
 
 impl Debug for ArcUuid4 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0.to_string())
+        write!(f, "{}", &self.0)
     }
 }
 
@@ -149,20 +149,28 @@ fn field_value_to_arc_uuid4(value: FieldValue) -> Result<ArcUuid4, String> {
     match value {
         FieldValue::Uuid(uuid) => Ok(uuid.into()),
         FieldValue::Binary(bytes) => {
-            if bytes.len() > 16 {
-                if let Ok(st) = String::from_utf8(bytes) {
-                    Ok(ArcUuid4(Arc::new(Uuid::from_str(&st).unwrap())))
-                } else {
-                    Err("string is not a valid uuid4".to_string())
+            if bytes.len() == 36 {
+                match String::from_utf8(bytes.clone()) {
+                    Ok(st) => Ok(ArcUuid4(Arc::new(
+                        Uuid::from_str(&st).map_err(|e| format!("{e}"))?,
+                    ))),
+                    Err(e) => Err(format!("{e}")),
+                }
+            } else if bytes.len() == 16 {
+                match Uuid::from_slice(&bytes) {
+                    Ok(uuid) => Ok(ArcUuid4(Arc::new(uuid))),
+                    Err(e) => Err(format!("{e}")),
                 }
             } else {
-                Ok(ArcUuid4(Arc::new(Uuid::from_slice(&bytes).unwrap())))
+                Err("string is not a valid uuid4".to_string())
             }
         }
-        FieldValue::String(v) => Ok(ArcUuid4(Arc::new(Uuid::parse_str(&v).unwrap()))),
+        FieldValue::String(v) => Ok(ArcUuid4(Arc::new(
+            Uuid::parse_str(&v).map_err(|e| format!("{e}"))?,
+        ))),
         _ => {
-            tracing::error!("could not parsed field value to uuid4");
-            Err("could not parsed field value to uuid4".to_string())
+            tracing::error!("could not parse field value to uuid4");
+            Err("could not parse field value to uuid4".to_string())
         }
     }
 }

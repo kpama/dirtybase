@@ -18,7 +18,7 @@ async fn main() {
     //     .await;
 
     let mut child_repo = ChildRepo::new(&manager);
-    println!("{:#?}", child_repo.with_family().get().await);
+    println!("{:#?}", child_repo.with_family().limit(3).get().await);
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
@@ -37,8 +37,8 @@ struct Child {
     id: Option<i64>,
     name: String,
     family_id: i64,
-    #[dirty(rel(kind = "belongs_to"))]
-    family: Family,
+    #[dirty(rel(kind = "belongs_to", local_col = "family_id"))]
+    family: Option<Family>,
 }
 
 async fn setup_db(manager: &Manager) {

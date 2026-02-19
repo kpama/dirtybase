@@ -108,9 +108,6 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         let statement = self.build_query(query_builder, &mut params)?;
 
         let query = sqlx::query_with(&statement, params);
-        // for p in &params {
-        //     query = query.bind::<&str>(p);
-        // }
 
         let mut rows = query.fetch(self.db_pool.as_ref());
         while let Ok(result) = rows.try_next().await {
@@ -192,14 +189,33 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         };
     }
 
-    async fn raw_insert(&mut self, sql: &str, row: Vec<FieldValue>) -> Result<bool, anyhow::Error> {
-        let mut query = sqlx::query(sql);
-        for field in row {
-            query = query.bind(field.to_string());
-        }
-        match query.execute(self.db_pool.as_ref()).await {
-            Err(e) => Err(e.into()),
-            _ => Ok(true),
+    async fn raw_insert(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query(sql).execute(&mut *trans).await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
+
+            result
+        } else {
+            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+        };
+
+        match result {
+            Ok(r) => {
+                log::debug!("raw insert result: {:#?}", &r);
+                Ok(true)
+            }
+            Err(e) => {
+                log::error!("raw insert failed: {}", &e);
+                Err(anyhow!(e))
+            }
         }
     }
 
@@ -208,14 +224,41 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         sql: &str,
         params: Vec<FieldValue>,
     ) -> Result<u64, anyhow::Error> {
-        let mut query = sqlx::query(sql);
-        for p in params {
-            query = query.bind(p.to_string());
+        let mut built_params = PgArguments::default();
+        for field in params {
+            build_field_value_to_args(&field, &mut built_params)?;
         }
 
-        match query.execute(self.db_pool.as_ref()).await {
-            Ok(v) => Ok(v.rows_affected()),
-            Err(e) => Err(e.into()),
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query_with(&sql, built_params)
+                .execute(&mut *trans)
+                .await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
+
+            result
+        } else {
+            sqlx::query_with(&sql, built_params)
+                .execute(self.db_pool.as_ref())
+                .await
+        };
+
+        match result {
+            Ok(r) => {
+                log::debug!("raw update result: {:#?}", &r);
+                Ok(r.rows_affected())
+            }
+            Err(e) => {
+                log::error!("raw update failed: {}", &e);
+                Err(anyhow!(e))
+            }
         }
     }
 
@@ -229,14 +272,65 @@ impl SchemaManagerTrait for PostgresSchemaManager {
 
     async fn raw_select(
         &mut self,
-        _sql: &str,
-        _params: Vec<FieldValue>,
+        sql: &str,
+        params: Vec<FieldValue>,
     ) -> Result<Vec<ColumnAndValue>, anyhow::Error> {
-        todo!();
+        let mut results = Vec::new();
+        let mut built_params = PgArguments::default();
+
+        for field in params {
+            build_field_value_to_args(&field, &mut built_params)?;
+        }
+        let query = sqlx::query_with(sql, built_params);
+
+        let mut rows = query.fetch(self.db_pool.as_ref());
+        loop {
+            let next = rows.try_next().await;
+            match next {
+                Ok(result) => {
+                    if let Some(row) = result {
+                        results.push(self.row_to_column_value(&row));
+                    } else {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    return Err(anyhow!("could not fetch rows: {}", e));
+                }
+            }
+        }
+
+        Ok(results)
     }
 
-    async fn raw_statement(&mut self, _sql: &str) -> Result<bool, anyhow::Error> {
-        todo!();
+    async fn raw_statement(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query(sql).execute(&mut *trans).await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
+
+            result
+        } else {
+            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+        };
+
+        match result {
+            Ok(r) => {
+                log::debug!("raw statement result: {:#?}", &r);
+                Ok(true)
+            }
+            Err(e) => {
+                log::error!("raw statement failed: {}", &e);
+                Err(anyhow!(e))
+            }
+        }
     }
 }
 
@@ -467,7 +561,7 @@ impl PostgresSchemaManager {
                             sql = format!("DROP INDEX IF EXISTS {}.{}", &table.name, index.name());
                         } else {
                             sql = format!(
-                                "CREATE INDEX IF NOT EXISTS '{}' ON {} ({})",
+                                "CREATE INDEX IF NOT EXISTS \"{}\" ON \"{}\" ({})",
                                 index.name(),
                                 &table.name,
                                 index
@@ -569,15 +663,14 @@ impl PostgresSchemaManager {
         if let Some(default) = &column.default {
             the_type.push_str(" DEFAULT ");
             match default {
-                // ColumnDefault::CreatedAt => (), // the_type.push_str("CURRENT_TIMESTAMP"),
                 ColumnDefault::Custom(d) => the_type.push_str(&format!("'{d}'")),
                 ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
                 ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
-                ColumnDefault::Uuid => (), // the_type.push_str("SYS_GUID()"),
-                ColumnDefault::Ulid => (),
-                // ColumnDefault::UpdatedAt => (), // the_type.push_str("CURRENT_TIMESTAMP"),
                 ColumnDefault::Zero => the_type.push('0'),
+                ColumnDefault::Boolean(v) => {
+                    the_type.push_str(if *v { "true" } else { "false" });
+                }
             };
         }
 
@@ -681,7 +774,10 @@ impl PostgresSchemaManager {
             sql = format!("{sql} {limit}");
         }
 
-        // TODO: offset
+        // offset
+        if let Some(offset) = query.offset_by() {
+            sql = format!("{sql} {offset}");
+        }
 
         if query.is_lock_for_update() {
             sql = format!("{sql} FOR UPDATE");
@@ -739,6 +835,16 @@ impl PostgresSchemaManager {
         let placeholder = match condition.value() {
             QueryValue::SubQuery(sub) => self.build_query(sub, params)?,
             QueryValue::ColumnName(name) => name.clone(),
+            QueryValue::Clause(clause) => {
+                let mut wheres = "".to_owned();
+                for where_join in clause.where_clauses() {
+                    wheres = where_join.as_clause(
+                        &wheres,
+                        &self.transform_condition(where_join.condition(), params)?,
+                    );
+                }
+                wheres
+            }
             _ => {
                 let current_total = params.len();
                 self.transform_value(condition.value(), params)?;
@@ -778,6 +884,7 @@ impl PostgresSchemaManager {
             QueryValue::Field(field) => self.field_value_to_args(field, params)?,
             QueryValue::Null => (),          // `is null` or `is not null`
             QueryValue::ColumnName(_) => (), // does not require an entry into the params,
+            QueryValue::Clause(_) => (),
         }
 
         Ok(())
@@ -917,7 +1024,7 @@ impl PostgresSchemaManager {
                     if let Ok(v) = v {
                         this_row.insert(col.name().to_string(), FieldValue::Binary(v));
                     } else {
-                        this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
+                        this_row.insert(col.name().to_string(), FieldValue::Null);
                     }
                 }
                 "JSONB" | "JSON" => {
@@ -943,7 +1050,7 @@ impl PostgresSchemaManager {
                     if let Ok(v) = row.try_get::<sqlx::types::Uuid, &str>(col.name()) {
                         this_row.insert(name, v.into());
                     } else {
-                        this_row.insert(name, sqlx::types::Uuid::nil().into());
+                        this_row.insert(name, FieldValue::Null);
                     }
                 }
                 _ => {
@@ -1117,6 +1224,21 @@ fn build_field_value_to_args(
         }
         FieldValue::U64(v) => {
             let v = *v as i64;
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I32(v) => {
+            let v = *v as i64;
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I16(v) => {
+            let v = *v as i64;
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::U32(v) => {
+            let v = *v as i64;
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I8(v) => {
             _ = Arguments::add(params, v);
         }
         FieldValue::Null => {

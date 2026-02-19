@@ -1,7 +1,5 @@
 use dirtybase_contract::{
-    db_contract::types::{
-        IntegerField, InternalIdField, OptionalDateTimeField, OptionalInternalIdField, StringField,
-    },
+    db_contract::types::{IntegerField, OptionalInternalIdField, StringField},
     lock_contract::LockData,
 };
 use dirtybase_db_macro::DirtyTable;
@@ -13,8 +11,6 @@ pub struct LockDataWrapper {
     key: StringField,
     owner: StringField,
     expires: IntegerField,
-    // #[dirty(embedded)]
-    // data: LockData,
 }
 
 impl From<LockData> for LockDataWrapper {

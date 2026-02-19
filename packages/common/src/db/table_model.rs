@@ -1,6 +1,9 @@
 use std::hash::Hash;
 
-use crate::db::base::table::{CREATED_AT_FIELD, DELETED_AT_FIELD, UPDATED_AT_FIELD};
+use crate::db::base::{
+    query::QueryBuilder,
+    table::{CREATED_AT_FIELD, DELETED_AT_FIELD, UPDATED_AT_FIELD},
+};
 
 use super::{
     query_column::QueryColumn,
@@ -12,7 +15,7 @@ pub trait TableModel: FromColumnAndValue + ToColumnAndValue {
     fn table_name() -> &'static str;
 
     /// Tables table's column names without prefix
-    fn table_columns() -> &'static [&'static str];
+    fn table_columns() -> Vec<&'static str>;
 
     fn id_field() -> &'static str {
         "id"
@@ -30,7 +33,7 @@ pub trait TableModel: FromColumnAndValue + ToColumnAndValue {
     /// By default, this is calculated from the model ID value
     fn entity_hash(&self) -> u64;
 
-    /// If the id value, this method returns the hash of that value
+    /// Given the id value, this method returns the hash of that value
     fn hash_from_id_value<T: Hash + ?Sized>(id: &T) -> u64 {
         let mut s = ::std::hash::DefaultHasher::new();
         ::std::hash::Hash::hash(id, &mut s);
@@ -107,5 +110,9 @@ pub trait TableModel: FromColumnAndValue + ToColumnAndValue {
             .iter()
             .map(|c| format!("{0}.{2} as \"{1}.{2}\"", Self::table_name(), pre, c))
             .collect()
+    }
+
+    fn make_query_builder() -> QueryBuilder {
+        QueryBuilder::new_query(Self::table_name())
     }
 }

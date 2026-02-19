@@ -45,19 +45,19 @@ impl Deref for ArcUuid7 {
 
 impl Display for ArcUuid7 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0.to_string())
+        write!(f, "{}", &self.0)
     }
 }
 
 impl Debug for ArcUuid7 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0.to_string())
+        write!(f, "{}", &self.0)
     }
 }
 
 impl From<FieldValue> for ArcUuid7 {
     fn from(value: FieldValue) -> Self {
-        field_value_to_arc_uuid7(value).expect("could not parsed field value to UUID7")
+        field_value_to_arc_uuid7(value).expect("could not parse field value to UUID7")
     }
 }
 
@@ -69,7 +69,10 @@ impl From<&FieldValue> for ArcUuid7 {
 
 impl From<FieldValue> for Option<ArcUuid7> {
     fn from(value: FieldValue) -> Self {
-        field_value_to_arc_uuid7(value).ok()
+        match value {
+            FieldValue::Null | FieldValue::NotSet => None,
+            _ => field_value_to_arc_uuid7(value).ok(),
+        }
     }
 }
 
@@ -156,20 +159,28 @@ fn field_value_to_arc_uuid7(value: FieldValue) -> Result<ArcUuid7, String> {
     match value {
         FieldValue::Uuid(uuid) => Ok(uuid.into()),
         FieldValue::Binary(bytes) => {
-            if bytes.len() > 16 {
-                if let Ok(st) = String::from_utf8(bytes) {
-                    Ok(ArcUuid7(Arc::new(Uuid::from_str(&st).unwrap())))
-                } else {
-                    Err("string is not a valid uuid7".to_string())
+            if bytes.len() == 36 {
+                match String::from_utf8(bytes.clone()) {
+                    Ok(st) => Ok(ArcUuid7(Arc::new(
+                        Uuid::from_str(&st).map_err(|e| format!("{e}"))?,
+                    ))),
+                    Err(e) => Err(format!("{e}")),
+                }
+            } else if bytes.len() == 16 {
+                match Uuid::from_slice(&bytes) {
+                    Ok(uuid) => Ok(ArcUuid7(Arc::new(uuid))),
+                    Err(e) => Err(format!("{e}")),
                 }
             } else {
-                Ok(ArcUuid7(Arc::new(Uuid::from_slice(&bytes).unwrap())))
+                Err("string is not a valid uuid7".to_string())
             }
         }
-        FieldValue::String(v) => Ok(ArcUuid7(Arc::new(Uuid::parse_str(&v).unwrap()))),
+        FieldValue::String(v) => Ok(ArcUuid7(Arc::new(
+            Uuid::parse_str(&v).map_err(|e| format!("{e}"))?,
+        ))),
         _ => {
-            tracing::error!("could not parsed field value to uuid7");
-            Err("could not parsed field value to uuid7".to_string())
+            tracing::error!("could not parse field value to uuid7");
+            Err("could not parse field value to uuid7".to_string())
         }
     }
 }

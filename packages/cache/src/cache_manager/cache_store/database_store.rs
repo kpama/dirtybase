@@ -1,15 +1,35 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use crate::{
-    cache_manager::cache_entry::CacheEntry, model::cache_db_store::CacheDbStoreRepository,
+    CacheStorageResolver, cache_manager::cache_entry::CacheEntry,
+    model::cache_db_store::CacheDbStoreRepository,
 };
 
 use super::CacheStoreTrait;
 use async_trait::async_trait;
+use dirtybase_common::db::base::manager::Manager;
 
 #[derive(Clone)]
 pub struct DatabaseStore {
-    repo: Arc<CacheDbStoreRepository>,
+    repo: CacheDbStoreRepository,
+}
+
+impl DatabaseStore {
+    pub async fn register() {
+        CacheStorageResolver::register("database", |mut resolver| async move {
+            let manager = resolver
+                .context_ref()
+                .get::<Manager>()
+                .await
+                .expect("could not get db manager");
+            resolver.set_storage(Self {
+                repo: CacheDbStoreRepository::new(manager),
+            });
+
+            resolver
+        })
+        .await;
+    }
 }
 
 #[async_trait]

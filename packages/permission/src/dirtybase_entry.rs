@@ -4,6 +4,7 @@ mod http;
 mod migration;
 mod model;
 mod seeder;
+mod storage;
 
 use dirtybase_contract::cli_contract::prelude::ArgMatches;
 use dirtybase_contract::prelude::*;
@@ -13,8 +14,9 @@ pub struct Extension;
 
 #[dirtybase_contract::async_trait]
 impl dirtybase_contract::ExtensionSetup for Extension {
-    async fn setup(&mut self, _global_context: &Context) {
+    async fn setup(&mut self, global_context: &Context) {
         event_handler::setup().await;
+        storage::register_storage().await;
     }
 
     fn migrations(

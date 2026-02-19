@@ -18,6 +18,7 @@ pub enum Operator {
     NotNull,
     In,
     NotIn,
+    Clause,
 }
 
 impl Operator {
@@ -39,6 +40,7 @@ impl Operator {
             Self::NotNull => format!("{column} IS NOT NULL",),
             Self::In => format!("{column} IN ({placeholder})"),
             Self::NotIn => format!("{column} NOT IN ({placeholder})"),
+            Self::Clause => format!("({placeholder})"),
         }
     }
 }

@@ -1,7 +1,5 @@
 mod config;
 
-pub mod command;
-
 use std::convert::Infallible;
 use std::ops::Deref;
 
@@ -17,7 +15,9 @@ use dirtybase_contract::app_contract::Context;
 use dirtybase_contract::config_contract::DirtyConfig;
 use dirtybase_contract::http_contract::RouterManager;
 use dirtybase_contract::http_contract::WebMiddlewareManager;
+use dirtybase_contract::prelude::AppCancellationToken;
 use tokio::sync::RwLock;
+use tokio_util::sync::CancellationToken;
 
 pub type AppService = busybody::Service<App>;
 
@@ -39,6 +39,7 @@ impl WebSetup {
 pub struct App {
     config: Config,
     pub(crate) web_setup: RwLock<Option<WebSetup>>,
+    cancel_token: AppCancellationToken,
 }
 
 impl App {
@@ -46,8 +47,12 @@ impl App {
         let instance = Self {
             config: config.clone(),
             web_setup: RwLock::default(),
+            cancel_token: AppCancellationToken::new(CancellationToken::new()),
         };
 
+        busybody::helpers::service_container()
+            .set_type(instance.cancel_token.clone())
+            .await;
         busybody::helpers::service_container().set(instance).await;
 
         Ok(busybody::helpers::service_container()
@@ -73,6 +78,11 @@ impl App {
 
     pub async fn shutdown(&self) {
         ExtensionManager::shutdown(&self.global_context().await).await;
+        self.cancel_token.clone().into_inner().cancel();
+    }
+
+    pub fn cancel_token(&self) -> AppCancellationToken {
+        self.cancel_token.clone()
     }
 
     pub async fn extensions(

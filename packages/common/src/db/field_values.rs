@@ -1,6 +1,6 @@
 use dirtybase_helper::uuid::Uuid;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display, str::FromStr};
 
 mod field_value_from_type;
 mod insert_value;
@@ -18,7 +18,11 @@ pub enum FieldValue {
     Null,
     NotSet,
     U64(u64),
+    U32(u32),
     I64(i64),
+    I32(i32),
+    I16(i16),
+    I8(i8),
     F64(f64),
     String(String),
     Boolean(bool),
@@ -66,19 +70,40 @@ impl FieldValue {
         Self: Into<T>,
     {
         if field.is_some() {
-            Some(Self::from_ref_option_into(field))
+            match field.as_ref().unwrap() {
+                FieldValue::Null | FieldValue::NotSet => None,
+                _ => Some(Self::from_ref_option_into(field)),
+            }
         } else {
             None
         }
     }
 
     /// Returns the FieldValue if Some and `NotSet` when None
-    pub fn from_ref_option(field: Option<&FieldValue>) -> FieldValue {
+    pub fn from_ref_option(field: Option<&FieldValue>) -> Self {
         if let Some(f) = field {
             f.clone()
         } else {
             Self::NotSet
         }
+    }
+
+    pub fn from_vec_of_u8(value: Vec<u8>) -> Self {
+        if value.len() >= 16 && value.len() <= 36 {
+            if value.len() == 36
+                && let Ok(st) = String::from_utf8(value.clone())
+            {
+                if let Ok(uuid) = Uuid::from_str(&st) {
+                    return Self::Uuid(uuid);
+                }
+            } else if value.len() == 16
+                && let Ok(uuid) = Uuid::from_slice(&value)
+            {
+                return Self::Uuid(uuid);
+            }
+        }
+
+        Self::Binary(value)
     }
 }
 
@@ -87,7 +112,11 @@ impl Display for FieldValue {
         match self {
             Self::Null => write!(f, "NULL"),
             Self::U64(v) => write!(f, "{v}",),
+            Self::U32(v) => write!(f, "{v}",),
+            Self::I32(v) => write!(f, "{v}",),
+            Self::I16(v) => write!(f, "{v}",),
             Self::I64(v) => write!(f, "{v}",),
+            Self::I8(v) => write!(f, "{v}",),
             Self::F64(v) => write!(f, "{v}",),
             Self::String(v) => write!(f, "{v}",),
             Self::Boolean(v) => {

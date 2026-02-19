@@ -3,9 +3,13 @@ use super::FieldValue;
 pub mod field_to_chrono_datetime;
 pub mod field_value_to_bool;
 pub mod field_value_to_f64;
+pub mod field_value_to_i16;
+pub mod field_value_to_i32;
 pub mod field_value_to_i64;
+pub mod field_value_to_i8;
 pub mod field_value_to_serde_json;
 pub mod field_value_to_string;
+pub mod field_value_to_u32;
 pub mod field_value_to_u64;
 pub mod field_value_to_vec;
 

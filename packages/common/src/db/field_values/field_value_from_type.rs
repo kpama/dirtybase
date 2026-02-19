@@ -30,7 +30,13 @@ impl From<f64> for FieldValue {
 
 impl From<i32> for FieldValue {
     fn from(value: i32) -> Self {
-        Self::I64(value.into())
+        Self::I32(value.into())
+    }
+}
+
+impl From<i8> for FieldValue {
+    fn from(value: i8) -> Self {
+        Self::I8(value.into())
     }
 }
 
@@ -92,7 +98,7 @@ impl<'a> From<Option<&'a [&str]>> for FieldValue {
 
 impl From<u32> for FieldValue {
     fn from(value: u32) -> Self {
-        Self::U64(value.into())
+        Self::U32(value.into())
     }
 }
 

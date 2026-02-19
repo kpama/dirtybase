@@ -14,7 +14,7 @@ impl Migration for Mig1740151519CreateAuthUserTable {
                 table.uuid_as_id(None);
                 table.string("username").set_is_unique(true);
                 table.string("password").set_is_nullable(true);
-                table.boolean("reset_password").set_default_from(false); // A flag that indicates a password change is required
+                table.boolean("reset_password").default_is_false(); // A flag that indicates a password change is required
                 table
                     .string("status")
                     .set_default_from(AuthUserStatus::Pending);

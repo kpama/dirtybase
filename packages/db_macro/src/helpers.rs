@@ -221,13 +221,29 @@ pub(crate) fn pluck_names(
         .collect::<Vec<String>>()
 }
 
+pub(crate) fn pluck_flatten_columns(
+    columns_attributes: &HashMap<String, DirtybaseAttributes>,
+) -> Vec<TokenStream> {
+    columns_attributes
+        .iter()
+        .filter(|c| !c.1.skip_select)
+        .filter(|c| c.1.relation.is_none())
+        .filter(|c| c.1.flatten)
+        .map(|item| {
+            let the_type = format_ident!("{}", &item.1.the_type);
+            quote! {
+                #the_type::table_columns()
+            }
+        })
+        .collect::<Vec<TokenStream>>()
+}
+
 pub(crate) fn names_of_from_cv_handlers(
     columns_attributes: &HashMap<String, DirtybaseAttributes>,
     table_name: &str,
 ) -> Vec<TokenStream> {
     columns_attributes
         .iter()
-        // .filter(|c| c.1.relation.is_none())
         .map(|item| {
             let struct_field = format_ident!("{}", &item.0);
             let column = if *item.0 == item.1.name {
@@ -314,7 +330,7 @@ pub(crate) fn build_from_handlers(
                         } else {
                             quote! {
                                 pub fn #fn_name <'a>(field: Option<&'a ::dirtybase_common::db::field_values::FieldValue>) -> Option<#returns> {
-                                ::dirtybase_common::db::field_values::FieldValue::from_ref_option_into_option(field)
+                                    ::dirtybase_common::db::field_values::FieldValue::from_ref_option_into_option(field)
                                 }
                             }
                         }
@@ -328,7 +344,7 @@ pub(crate) fn build_from_handlers(
                             quote! {
                                 pub fn #fn_name <'a> (field: Option<&'a ::dirtybase_common::db::field_values::FieldValue>) -> #returns {
                                   let cv =  ::dirtybase_common::db::field_values::FieldValue::from_ref_option_into::<::std::collections::HashMap<String,::dirtybase_common::db::field_values::FieldValue>>(field);
-                                  ::dirtybase_common::db::types::FromColumnAndValue::from_column_value(cv).unwrap_or_default()
+                                  ::dirtybase_common::db::types::FromColumnAndValue::from_column_value(cv).expect("could not build field from field value")
                                 }
                             }
                         }
@@ -344,7 +360,6 @@ pub(crate) fn build_from_handlers(
     built
 }
 
-// TODO: implement "into handler"
 pub(crate) fn build_into_handlers(
     columns_attributes: &HashMap<String, DirtybaseAttributes>,
 ) -> Vec<proc_macro2::TokenStream> {

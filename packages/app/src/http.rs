@@ -12,12 +12,7 @@ use dirtybase_contract::{
     http_contract::{HttpContext, RouteType, TrustedIp, axum::clone_request},
 };
 
-#[cfg(feature = "multitenant")]
-use dirtybase_contract::multitenant_contract::{
-    RequestTenantResolverProvider, RequestTenantResolverTrait, TenantIdLocation,
-    TenantStorageProvider,
-};
-
+#[cfg(feature = "permission")]
 use dirtybase_db::types::ArcUuid7;
 use dirtybase_encrypt::Encrypter;
 use named_routes_axum::RouterWrapper;
@@ -68,7 +63,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                     && let Some(mut api_router) =
                         builder.into_router_wrapper(&mut middleware_manager)
                 {
-                    // now add global middleware for this collection
+                    // Now add global middleware for this collection
                     if let Some(order) = app.config().middleware().api_route() {
                         api_router = middleware_manager.apply(api_router, order);
                     }
@@ -173,9 +168,9 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             next.run(req).await
         });
 
-        // proxy container
+        // Proxy container
         // this should be the last middleware registered.
-        // It sets up the current request specific context, tenant ID if the feature is enabled
+        // It sets up the current request specific context, tenant if the feature is enabled
         let trusted_headers = Arc::new(app.config_ref().web_proxy_trusted_headers());
         let trusted_ips = Arc::new(TrustedIp::form_collection(
             app.config_ref().web_trusted_proxies(),
@@ -185,9 +180,8 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             let trusted_headers = trusted_headers.clone();
             let trusted_ips = trusted_ips.clone();
             let id = ArcUuid7::default();
-            let span = tracing::trace_span!("http", ctx_id = id.to_string(), data = field::Empty);
+            let span = tracing::trace_span!("http", id = id.as_u128(), data = field::Empty);
 
-            // Light copy of the request without the "body"
             tracing::dispatcher::get_default(|dispatch| {
                 if let Some(id) = span.id()
                     && let Some(current) = dispatch.current_span().id()
@@ -208,21 +202,6 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 log::trace!("full url: : {}", http_ctx.full_path());
                 tracing::trace!("host: {:?}", http_ctx.host());
 
-                // 1. Find the tenant
-                #[cfg(feature = "multitenant")]
-                if let Ok(manager) = context.get::<RequestTenantResolverProvider>().await
-                    && let Some(raw_id) = manager
-                        .pluck_id_str_from_request(&http_ctx, TenantIdLocation::Subdomain)
-                        .await
-                {
-                    tracing::trace!("current tenant Id: {}", &raw_id);
-                    if let Ok(_manager) = context.get::<TenantStorageProvider>().await {
-                        tracing::trace!("validate tenant id and try fetching data");
-                        // let tenant = manager.by_id(raw_id).await;
-                        // tracing::trace!("found tenant record: {}", tenant.is_some());
-                    }
-                }
-
                 req.extensions_mut().insert(context.clone());
 
                 let cookie_jar = CookieJar::from_headers(req.headers());
@@ -242,7 +221,18 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 decrypt_cookies(cookie_jar, &encrypter, cookie_config, &mut req);
 
                 // pass the request
-                let mut response = next.run(req).await;
+                let mut response = {
+                    // Find the tenant
+                    #[cfg(feature = "multitenant")]
+                    if let Some(resp) = inject_tenant(&context).await {
+                        resp
+                    } else {
+                        next.run(req).await
+                    }
+
+                    #[cfg(not(feature = "multitenant"))]
+                    next.run(req).await
+                };
 
                 let http_context = context
                     .get::<HttpContext>()
@@ -308,6 +298,47 @@ fn display_welcome_info(address: &str, port: u16) {
     );
     eprintln!("version: {VERSION}");
     eprintln!("Http server running at : {address} on port: {port}");
+}
+
+#[cfg(feature = "multitenant")]
+async fn inject_tenant(context: &Context) -> Option<axum::http::Response<Body>> {
+    use dirtybase_multitenant::MultiTenantManager;
+    let multitenant_manager = match context.get::<MultiTenantManager>().await {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::error!("could not get multitenant manager : {}", e);
+            return None;
+        }
+    };
+    return match multitenant_manager.inject_tenant(&context, true).await {
+        Err(e) => {
+            use axum::http::Response;
+            use axum::http::StatusCode;
+            use dirtybase_multitenant::TenantInjectionError;
+
+            Some(match e {
+                TenantInjectionError::TenantNotFound => {
+                    // FIXME: Implement a way to glbally handle 403 error
+                    let resp_403 = Response::builder()
+                        .status(StatusCode::FORBIDDEN)
+                        .body(Body::empty())
+                        // .body::<Body>("tenant does not exist".into())
+                        .unwrap();
+                    resp_403
+                }
+                TenantInjectionError::SystemError(e) => {
+                    // FIXME: Implement a way to glbally handle 500 error
+                    tracing::error!("system error injecting tenant: {}", e);
+                    let resp_500 = Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body(Body::empty())
+                        .unwrap();
+                    resp_500
+                }
+            })
+        }
+        Ok(_) => None,
+    };
 }
 
 fn encrypt_cookies(

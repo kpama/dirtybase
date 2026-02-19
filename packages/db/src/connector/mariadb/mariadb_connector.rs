@@ -104,7 +104,13 @@ impl SchemaManagerTrait for MariadbSchemaManager {
             .fetch_one(self.db_pool.as_ref())
             .await;
 
-        result.map_err(|e| anyhow::anyhow!(e))
+        match result {
+            Ok(v) => Ok(v),
+            Err(e) => match e {
+                sqlx::Error::RowNotFound => Ok(false),
+                _ => Err(anyhow::anyhow!(e)),
+            },
+        }
     }
 
     async fn stream_result(
@@ -197,14 +203,33 @@ impl SchemaManagerTrait for MariadbSchemaManager {
         };
     }
 
-    async fn raw_insert(&mut self, sql: &str, row: Vec<FieldValue>) -> Result<bool, anyhow::Error> {
-        let mut query = sqlx::query(sql);
-        for field in row {
-            query = query.bind(field.to_string());
-        }
-        match query.execute(self.db_pool.as_ref()).await {
-            Err(e) => Err(e.into()),
-            _ => Ok(true),
+    async fn raw_insert(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query(sql).execute(&mut *trans).await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
+
+            result
+        } else {
+            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+        };
+
+        match result {
+            Ok(r) => {
+                log::debug!("raw insert result: {:#?}", &r);
+                Ok(true)
+            }
+            Err(e) => {
+                log::error!("raw insert failed: {}", &e);
+                Err(anyhow!(e))
+            }
         }
     }
 
@@ -213,14 +238,42 @@ impl SchemaManagerTrait for MariadbSchemaManager {
         sql: &str,
         params: Vec<FieldValue>,
     ) -> Result<u64, anyhow::Error> {
-        let mut query = sqlx::query(sql);
-        for p in params {
-            query = query.bind(p.to_string());
+        let mut built_params = MySqlArguments::default();
+
+        for field in params {
+            build_field_value_to_args(&field, &mut built_params)?;
         }
 
-        match query.execute(self.db_pool.as_ref()).await {
-            Ok(v) => Ok(v.rows_affected()),
-            Err(e) => Err(e.into()),
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query_with(&sql, built_params)
+                .execute(&mut *trans)
+                .await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
+
+            result
+        } else {
+            sqlx::query_with(&sql, built_params)
+                .execute(self.db_pool.as_ref())
+                .await
+        };
+
+        match result {
+            Ok(r) => {
+                log::debug!("raw update result: {:#?}", &r);
+                Ok(r.rows_affected())
+            }
+            Err(e) => {
+                log::error!("raw update failed: {}", &e);
+                Err(anyhow!(e))
+            }
         }
     }
 
@@ -234,19 +287,70 @@ impl SchemaManagerTrait for MariadbSchemaManager {
 
     async fn raw_select(
         &mut self,
-        _sql: &str,
-        _params: Vec<FieldValue>,
+        sql: &str,
+        params: Vec<FieldValue>,
     ) -> Result<Vec<ColumnAndValue>, anyhow::Error> {
-        todo!();
+        let mut results = Vec::new();
+        let mut built_params = MySqlArguments::default();
+
+        for field in params {
+            build_field_value_to_args(&field, &mut built_params)?;
+        }
+        let query = sqlx::query_with(sql, built_params);
+
+        let mut rows = query.fetch(self.db_pool.as_ref());
+        loop {
+            let next = rows.try_next().await;
+            match next {
+                Ok(result) => {
+                    if let Some(row) = result {
+                        results.push(self.row_to_column_value(&row));
+                    } else {
+                        break;
+                    }
+                }
+                Err(e) => {
+                    return Err(anyhow!("could not fetch rows: {}", e));
+                }
+            }
+        }
+
+        Ok(results)
     }
 
-    async fn raw_statement(&mut self, _sql: &str) -> Result<bool, anyhow::Error> {
-        todo!();
+    async fn raw_statement(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query(sql).execute(&mut *trans).await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
+
+            result
+        } else {
+            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+        };
+
+        match result {
+            Ok(r) => {
+                log::debug!("raw statement result: {:#?}", &r);
+                Ok(true)
+            }
+            Err(e) => {
+                log::error!("raw statement failed: {}", &e);
+                Err(anyhow!(e))
+            }
+        }
     }
 }
 
 impl MariadbSchemaManager {
-    async fn do_apply(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
+    async fn do_apply(&mut self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         return if table.view_query.is_some() {
             // working with view table
             self.create_or_replace_view(table).await
@@ -401,7 +505,7 @@ impl MariadbSchemaManager {
         Ok(())
     }
 
-    async fn apply_table_changes(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
+    async fn apply_table_changes(&mut self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         let columns: Vec<String> = table
             .columns()
             .iter()
@@ -426,7 +530,22 @@ impl MariadbSchemaManager {
             query = format!("{query} ENGINE='InnoDB';");
         }
 
-        let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
+        let result = if let Some(mut trans) = self.trans.take() {
+            let result = sqlx::query(&query).execute(&mut *trans).await;
+            if result.is_ok() {
+                if let Err(e) = trans.commit().await {
+                    tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                    return Err(e.into());
+                }
+            } else if let Err(e) = trans.rollback().await {
+                tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                return Err(e.into());
+            }
+
+            result
+        } else {
+            sqlx::query(&query).execute(self.db_pool.as_ref()).await
+        };
 
         match result {
             Ok(_) => {
@@ -565,15 +684,15 @@ impl MariadbSchemaManager {
         if let Some(default) = &column.default {
             the_type.push_str(" DEFAULT ");
             match default {
-                // ColumnDefault::CreatedAt => (), // the_type.push_str("now()"),
                 ColumnDefault::Custom(d) => the_type.push_str(&format!("'{d}'")),
                 ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
                 ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
-                ColumnDefault::Uuid => (), //the_type.push_str("UUID_v7()"),
-                ColumnDefault::Ulid => (),
-                // ColumnDefault::UpdatedAt => (), // the_type.push_str("current_timestamp() ON UPDATE CURRENT_TIMESTAMP")
                 ColumnDefault::Zero => the_type.push('0'),
+                ColumnDefault::Boolean(v) => {
+                    let value = if *v { '1' } else { '0' };
+                    the_type.push(value);
+                }
             };
         }
 
@@ -658,7 +777,10 @@ impl MariadbSchemaManager {
             sql = format!("{sql} {limit}");
         }
 
-        // TODO: offset
+        // offset
+        if let Some(offset) = query.offset_by() {
+            sql = format!("{sql} {offset}");
+        }
 
         if query.is_lock_for_update() {
             sql = format!("{sql} FOR UPDATE");
@@ -720,6 +842,16 @@ impl MariadbSchemaManager {
         let placeholder = match condition.value() {
             QueryValue::SubQuery(sub) => self.build_query(sub, params)?,
             QueryValue::ColumnName(name) => name.clone(),
+            QueryValue::Clause(clause) => {
+                let mut wheres = "".to_owned();
+                for where_join in clause.where_clauses() {
+                    wheres = where_join.as_clause(
+                        &wheres,
+                        &self.transform_condition(where_join.condition(), params)?,
+                    );
+                }
+                wheres
+            }
             _ => {
                 self.transform_value(condition.value(), params)?;
                 if *condition.operator() == Operator::In || *condition.operator() == Operator::NotIn
@@ -755,6 +887,7 @@ impl MariadbSchemaManager {
             QueryValue::Field(field) => self.field_value_to_args(field, params)?,
             QueryValue::Null => (),          // `is null` or `is not null`
             QueryValue::ColumnName(_) => (), // Does not require an entry into the params,
+            QueryValue::Clause(_) => (),
         }
 
         Ok(())
@@ -883,9 +1016,9 @@ impl MariadbSchemaManager {
                 "VARBINARY" | "BINARY" | "BLOB" | "BYTEA" => {
                     let v = row.try_get::<Vec<u8>, &str>(col.name());
                     if let Ok(v) = v {
-                        this_row.insert(col.name().to_string(), FieldValue::Binary(v));
+                        this_row.insert(col.name().to_string(), FieldValue::from_vec_of_u8(v));
                     } else {
-                        this_row.insert(col.name().to_string(), FieldValue::Binary(vec![]));
+                        this_row.insert(col.name().to_string(), FieldValue::Null);
                     }
                 }
                 "NULL" => {
@@ -1065,6 +1198,18 @@ fn build_field_value_to_args(
         }
         FieldValue::U64(v) => {
             let v = *v as i64;
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I32(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I16(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::U32(v) => {
+            _ = Arguments::add(params, v);
+        }
+        FieldValue::I8(v) => {
             _ = Arguments::add(params, v);
         }
         FieldValue::Null => {

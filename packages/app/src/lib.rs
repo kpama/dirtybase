@@ -20,13 +20,13 @@ pub use orsomafo;
 
 use dirtybase_contract::cli_contract::setup_cli_command_manager;
 
-/// Setup database application using configs in .env files
+/// Set up database application using configs in .env files
 pub async fn setup() -> anyhow::Result<AppService> {
     let config = core::Config::new(None).await;
     setup_using(&config).await
 }
 
-/// Setup database application using custom configuration
+/// Set up database application using custom configuration
 /// A builder exist that assist in building the configuration instance
 /// ```rust
 /// # use dirtybase_app::core::ConfigBuilder;
@@ -42,16 +42,19 @@ pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
     let app = core::App::new(config).await?;
 
     // core extensions
+    #[cfg(feature = "multitenant")]
+    app.register(dirtybase_multitenant::Extension::default())
+        .await; // Multi tenant extension should always be the first
     app.register(dirtybase_session::Extension).await;
+    // TODO: Make the auth and permission extensions optional !?!?!?
     app.register(dirtybase_auth::Extension::default()).await;
+    app.register(dirtybase_permission::Extension).await;
     app.register(dirtybase_db::Extension).await;
     app.register(dirtybase_encrypt::Extension).await;
     // the core app
     app.register(dirtybase_entry::Extension).await;
     app.register(dirtybase_cache::Extension).await;
     app.register(dirtybase_cron::Extension).await;
-    #[cfg(feature = "multitenant")]
-    app.register(dirtybase_multitenant::Extension).await;
     Ok(app)
 }
 
@@ -70,7 +73,9 @@ pub async fn run_http(app_service: AppService) -> anyhow::Result<()> {
 
 pub async fn run(app_service: AppService) -> anyhow::Result<()> {
     app_service.init().await;
-    setup_cli_command_manager().await.handle().await;
+
+    setup_cli_command_manager(None).await.handle().await;
+
     Ok(())
 }
 
