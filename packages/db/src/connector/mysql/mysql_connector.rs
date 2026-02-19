@@ -471,10 +471,10 @@ impl MySqlSchemaManager {
                 match entry {
                     IndexType::Index(index) | IndexType::Primary(index) => {
                         if index.delete_index() {
-                            sql = format!("DROP INDEX IF EXISTS {}", index.name());
+                            sql = format!("DROP INDEX {}", index.name());
                         } else {
                             sql = format!(
-                                "CREATE INDEX IF NOT EXISTS {} ON {} ({})",
+                                "CREATE INDEX {} ON {} ({})",
                                 index.name(),
                                 &table.name,
                                 index.concat_columns()
@@ -483,10 +483,10 @@ impl MySqlSchemaManager {
                     }
                     IndexType::Unique(index) => {
                         if index.delete_index() {
-                            sql = format!("DROP INDEX IF EXISTS {}", index.name());
+                            sql = format!("DROP INDEX {}", index.name());
                         } else {
                             sql = format!(
-                                "CREATE UNIQUE INDEX IF NOT EXISTS {} ON {} ({})",
+                                "CREATE UNIQUE INDEX {} ON {} ({})",
                                 index.name(),
                                 &table.name,
                                 index.concat_columns()
@@ -572,8 +572,8 @@ impl MySqlSchemaManager {
             the_type.push_str(" DEFAULT ");
             match default {
                 ColumnDefault::Custom(d) => the_type.push_str(&format!("'{d}'")),
-                ColumnDefault::EmptyArray => the_type.push_str("'[]'"),
-                ColumnDefault::EmptyObject => the_type.push_str("'{}'"),
+                ColumnDefault::EmptyArray => the_type.push_str("(JSON_ARRAY())"),
+                ColumnDefault::EmptyObject => the_type.push_str("(JSON_OBJECT())"),
                 ColumnDefault::EmptyString => the_type.push_str("''"),
                 ColumnDefault::Zero => the_type.push('0'),
                 ColumnDefault::Boolean(v) => {
