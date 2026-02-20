@@ -3,7 +3,7 @@ use std::{ops::Deref, sync::Arc};
 use anyhow::anyhow;
 use axum::{
     extract::FromRequestParts,
-    http::{request::Parts, StatusCode},
+    http::{StatusCode, request::Parts},
 };
 use serde::de::DeserializeOwned;
 
@@ -240,7 +240,7 @@ where
             Ok(Some(bind)) => {
                 return Ok(Self(
                     context.set(bind).await.get::<Bind<T>>().await.unwrap().0,
-                ))
+                ));
             }
             Ok(None) => return Err((StatusCode::NOT_FOUND, String::new())),
             _ => (),

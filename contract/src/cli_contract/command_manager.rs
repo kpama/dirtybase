@@ -1,7 +1,7 @@
 use clap::command;
 use futures::future::BoxFuture;
 
-use crate::{app_contract::Context, ExtensionManager};
+use crate::{ExtensionManager, app_contract::Context};
 
 use super::CliMiddlewareManager;
 use tokio_util::sync::CancellationToken;

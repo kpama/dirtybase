@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::lock_contract::{storage::LockStorage, LockData};
+use crate::lock_contract::{LockData, storage::LockStorage};
 
 #[derive(Clone)]
 pub struct LockStorageProvider(Arc<Box<dyn LockStorage>>);

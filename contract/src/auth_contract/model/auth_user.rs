@@ -14,15 +14,15 @@ use validator::Validate;
 use crate::{
     auth_contract::{auth_user_status::AuthUserStatus, generate_salt},
     db_contract::{
+        ColumnAndValueBuilder,
         base::helper::generate_ulid,
         types::{ArcUuid7, BooleanField, IntegerField, OptionalDateTimeField, ToColumnAndValue},
-        ColumnAndValueBuilder,
     },
 };
 
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 
 use super::ParseToken;

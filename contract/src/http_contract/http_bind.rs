@@ -1,7 +1,7 @@
 use std::{future::Future, ops::Deref, sync::Arc};
 
-use axum::extract::{rejection::PathRejection, Path};
-use dirtybase_common::db::{field_values::FieldValue, TableModel};
+use axum::extract::{Path, rejection::PathRejection};
+use dirtybase_common::db::{TableModel, field_values::FieldValue};
 use serde::de::DeserializeOwned;
 
 use crate::{
@@ -186,8 +186,8 @@ impl ModelBindResolver {
         Ok(true)
     }
 
-    pub(crate) async fn get_middleware<T: 'static>(
-    ) -> Arc<simple_middleware::Manager<(Self, &'static str), Result<Option<Bind<T>>, anyhow::Error>>>
+    pub(crate) async fn get_middleware<T: 'static>()
+    -> Arc<simple_middleware::Manager<(Self, &'static str), Result<Option<Bind<T>>, anyhow::Error>>>
     {
         if let Some(r) = busybody::helpers::service_container().get().await {
             r
@@ -238,8 +238,8 @@ impl ModelBindResolver {
             .await;
     }
 
-    pub(crate) async fn get_alias_middleware(
-    ) -> Arc<simple_middleware::Manager<(Self, String), Result<bool, anyhow::Error>>> {
+    pub(crate) async fn get_alias_middleware()
+    -> Arc<simple_middleware::Manager<(Self, String), Result<bool, anyhow::Error>>> {
         if let Some(m) = busybody::helpers::service_container().get().await {
             m
         } else {

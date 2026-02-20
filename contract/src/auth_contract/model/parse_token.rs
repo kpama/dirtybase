@@ -5,7 +5,7 @@ use argon2::password_hash::SaltString;
 use crypto::aead::OsRng;
 use dirtybase_helper::{
     hash::sha256,
-    uuid::{uuid25_from_str, uuid_v7_from_str},
+    uuid::{uuid_v7_from_str, uuid25_from_str},
 };
 
 use crate::db_contract::types::ArcUuid7;

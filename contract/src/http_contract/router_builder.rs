@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use axum::{handler::Handler, Router};
+use axum::{Router, handler::Handler};
 use named_routes_axum::RouterWrapper;
 
 use super::WebMiddlewareManager;

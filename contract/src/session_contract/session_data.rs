@@ -1,4 +1,4 @@
-use std::sync::{atomic::AtomicI64, Arc, RwLock};
+use std::sync::{Arc, RwLock, atomic::AtomicI64};
 
 use dirtybase_helper::time::now_ts;
 use serde::Serialize;

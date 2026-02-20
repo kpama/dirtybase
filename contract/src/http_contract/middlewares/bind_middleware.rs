@@ -7,7 +7,7 @@ use axum::{
 };
 
 use crate::{
-    http_contract::{api::ApiResponse, ModelBindResolver},
+    http_contract::{ModelBindResolver, api::ApiResponse},
     prelude::{Context, MiddlewareParam},
 };
 

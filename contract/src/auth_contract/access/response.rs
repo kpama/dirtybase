@@ -80,11 +80,7 @@ impl PartialEq<GateResponse> for bool {
 
 impl From<bool> for GateResponse {
     fn from(value: bool) -> Self {
-        if value {
-            Self::allow()
-        } else {
-            Self::deny()
-        }
+        if value { Self::allow() } else { Self::deny() }
     }
 }
 

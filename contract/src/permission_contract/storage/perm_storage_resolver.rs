@@ -46,8 +46,8 @@ impl PermissionStorageResolver {
             .await;
     }
 
-    async fn get_middleware(
-    ) -> Arc<simple_middleware::Manager<(Self, String), Result<PermStorageProvider, anyhow::Error>>>
+    async fn get_middleware()
+    -> Arc<simple_middleware::Manager<(Self, String), Result<PermStorageProvider, anyhow::Error>>>
     {
         if let Some(m) = busybody::helpers::get_service().await {
             m

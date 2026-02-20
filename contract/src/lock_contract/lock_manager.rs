@@ -1,8 +1,8 @@
 use std::time::Duration;
 
 use crate::lock_contract::{
-    storage::{LockStorage, LockStorageProvider},
     Lock, LockData,
+    storage::{LockStorage, LockStorageProvider},
 };
 
 #[derive(Clone)]

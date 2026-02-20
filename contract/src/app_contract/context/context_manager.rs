@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     future::Future,
-    sync::{atomic::AtomicI64, Arc},
+    sync::{Arc, atomic::AtomicI64},
 };
 
 use anyhow::anyhow;

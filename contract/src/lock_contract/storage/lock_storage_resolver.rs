@@ -45,8 +45,8 @@ impl StorageResolver {
             .await;
     }
 
-    async fn get_middleware(
-    ) -> Arc<simple_middleware::Manager<(Self, String), Result<LockStorageProvider, anyhow::Error>>>
+    async fn get_middleware()
+    -> Arc<simple_middleware::Manager<(Self, String), Result<LockStorageProvider, anyhow::Error>>>
     {
         if let Some(m) = busybody::helpers::service_container().get().await {
             m
