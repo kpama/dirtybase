@@ -303,14 +303,70 @@ pub fn build_entity_repo(
 
             #(#relationship_methods)*
 
+            pub async fn cursor_paginate(&mut self, cursor: Option<::dirtybase_common::db::base::cursor_builder::CursorBuilder>) ->
+             ::dirtybase_common::db::base::cursor_builder::CursorResult<#ident>
+            {
+                let mut rows_map = ::std::collections::HashMap::<u64, #ident>::new();
+                // <name of a field whos value is used in a join, <entry hash, the field value>>
+                let mut join_field_values = ::std::collections::HashMap::new();
+                //<String, ::std::collections::HashMap<u64,::dirtybase_common::db::field_values::FieldValue>>,
+                let mut rows_rel_map = ::std::collections::HashMap::new();
+                let cursor = if let Some(cursor) = cursor {
+                    cursor
+                } else {
+                    ::dirtybase_common::db::base::cursor_builder::CursorBuilder::new(
+                        <#ident as ::dirtybase_common::db::table_model::TableModel>::id_column(),
+                        None
+                    )
+                };
+
+                #append_trash_filter
+
+                self.builder
+                    .select_multiple(&<#ident as ::dirtybase_common::db::table_model::TableModel>::table_query_col_aliases(None));
+                let cursor_result = self.manager.execute_query(self.builder.clone()).cursor_paginate(cursor).await;
+                let (cursor, result) = cursor_result.parts();
+
+              match result {
+                    Ok(mut raw_list) => {
+                        for row in raw_list {
+                            if let Some(row_entity) = #ident::from_struct_column_value(&row,
+                                Some(<#ident as ::dirtybase_common::db::table_model::TableModel>::table_name())) {
+                                let row_hash = ::dirtybase_common::db::table_model::TableModel::entity_hash(&row_entity);
+                                rows_map.insert(row_hash, row_entity);
+                            }
+                        }
+
+
+                        for (name, rel) in &self.relation {
+                           if let Err(e)  = rel.clone().process(&name, &self.manager, &rows_map, &mut join_field_values, &mut rows_rel_map).await {
+                                *self = Self::new(&self.manager);
+                                return ::dirtybase_common::db::base::cursor_builder::CursorResult::<#ident>::new(cursor, Err(e));
+                           }
+                        }
+
+                        // now map relationships
+                        for(row_hash, row_entity) in &mut rows_map {
+                            #(#append_methods)*
+                        }
+
+                        *self = Self::new(&self.manager);
+                        ::dirtybase_common::db::base::cursor_builder::CursorResult::<#ident>::new(cursor,Ok(rows_map.into_iter().map(|e| e.1).collect::<Vec<#ident>>()))
+                    }
+                    Err(e) => {
+                        *self = Self::new(&self.manager);
+                        ::dirtybase_common::db::base::cursor_builder::CursorResult::<#ident>::new(cursor, Err(e))
+                    },
+                }
+
+            }
+
             pub async fn get(&mut self) -> Result<Option<Vec<#ident>>, ::dirtybase_common::anyhow::Error> {
                 let mut rows_map = ::std::collections::HashMap::<u64, #ident>::new();
                 // <name of a field whos value is used in a join, <entry hash, the field value>>
                 let mut join_field_values = ::std::collections::HashMap::new();
                 //<String, ::std::collections::HashMap<u64,::dirtybase_common::db::field_values::FieldValue>>,
                 let mut rows_rel_map = ::std::collections::HashMap::new();
-                let id_column = <#ident as ::dirtybase_common::db::table_model::TableModel>::id_column();
-                let table = <#ident as ::dirtybase_common::db::table_model::TableModel>::table_name();
                 #append_trash_filter
 
 
