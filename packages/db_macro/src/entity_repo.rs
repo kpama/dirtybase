@@ -319,7 +319,6 @@ pub fn build_entity_repo(
                         None
                     )
                 };
-                cursor.set_limit(2);
 
                 #append_trash_filter
 
