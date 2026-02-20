@@ -19,7 +19,7 @@ impl Display for Direction {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OrderByBuilder {
-    orders: Vec<(String, Direction)>,
+    pub(crate) orders: Vec<(String, Direction)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -53,6 +53,18 @@ impl Default for OrderByBuilder {
 impl OrderByBuilder {
     pub fn new() -> Self {
         Self { orders: Vec::new() }
+    }
+
+    pub fn new_asc<C: ToString>(column: C) -> Self {
+        Self {
+            orders: vec![(column.to_string(), Direction::ASC)],
+        }
+    }
+
+    pub fn new_desc<C: ToString>(column: C) -> Self {
+        Self {
+            orders: vec![(column.to_string(), Direction::DESC)],
+        }
     }
 
     pub fn asc<C: ToString>(&mut self, column: C) -> &mut Self {

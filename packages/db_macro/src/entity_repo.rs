@@ -321,7 +321,7 @@ pub fn build_entity_repo(
                 let result = self.manager.execute_query(self.builder.clone()).all().await;
 
                 match result {
-                    Ok(Some(mut raw_list)) => {
+                    Ok(mut raw_list) => {
                         for row in raw_list {
                             if let Some(row_entity) = #ident::from_struct_column_value(&row,
                                 Some(<#ident as ::dirtybase_common::db::table_model::TableModel>::table_name())) {
@@ -344,10 +344,6 @@ pub fn build_entity_repo(
 
                         *self = Self::new(&self.manager);
                         Ok(Some(rows_map.into_iter().map(|e| e.1).collect::<Vec<#ident>>()))
-                    },
-                    Ok(None) => {
-                        *self = Self::new(&self.manager);
-                        Ok(None)
                     },
                     Err(e) => {
                         *self = Self::new(&self.manager);

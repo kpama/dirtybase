@@ -158,7 +158,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
     async fn fetch_all(
         &mut self,
         query_builder: &QueryBuilder,
-    ) -> Result<Option<Vec<HashMap<String, FieldValue>>>, anyhow::Error> {
+    ) -> Result<Vec<HashMap<String, FieldValue>>, anyhow::Error> {
         let mut results = Vec::new();
 
         let mut params = MySqlArguments::default();
@@ -183,7 +183,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
             }
         }
 
-        Ok(Some(results))
+        Ok(results)
     }
 
     async fn fetch_one(
@@ -704,12 +704,16 @@ impl MySqlSchemaManager {
         // having
 
         // limit
-        if let Some(limit) = query.limit_by() {
+        if let Some(cursor) = query.cursor_by() {
+            sql = format!("{sql} {}", cursor.limit());
+        } else if let Some(limit) = query.limit_by() {
             sql = format!("{sql} {limit}");
         }
 
         // offset
-        if let Some(offset) = query.offset_by() {
+        if let Some(offset) = query.offset_by()
+            && query.cursor_by().is_none()
+        {
             sql = format!("{sql} {offset}");
         }
 
@@ -762,7 +766,11 @@ impl MySqlSchemaManager {
     }
 
     fn build_order_by(&self, query: &QueryBuilder) -> Option<String> {
-        query.order_by().map(|order| order.to_string())
+        if let Some(cursor) = query.cursor_by() {
+            Some(cursor.order().to_string())
+        } else {
+            query.order_by().map(|order| order.to_string())
+        }
     }
 
     fn transform_condition(

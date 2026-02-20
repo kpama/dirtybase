@@ -1,6 +1,7 @@
 pub mod aggregate;
 pub mod column;
 pub mod connection;
+pub mod cursor_builder;
 pub mod helper;
 pub mod index;
 pub mod join_builder;

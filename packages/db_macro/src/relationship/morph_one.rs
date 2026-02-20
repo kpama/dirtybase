@@ -163,29 +163,26 @@ pub(crate) fn generate_join_method(
             }
         });
 
-        list.push(
-            quote! {
-                pub fn #morph_method_name() -> &'static str {
-                    #morph_type
-                }
-            },
-        );
+        list.push(quote! {
+            pub fn #morph_method_name() -> &'static str {
+                #morph_type
+            }
+        });
 
         if !attribute.no_soft_delete {
             list.push(quote! {
-                    pub fn #trashed_method_name(&mut self,) -> &mut Self {
-                        self.#trashed_method_name_where(#empty_callback)
-                    }
-
-                    pub fn #trashed_method_name_where<F>(&mut self, mut callback: F) -> &mut Self
-                        where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
-                    {
-                        self.#when_method_name(|relation|{
-                            #call_callback
-                        })
-                    }
+                pub fn #trashed_method_name(&mut self,) -> &mut Self {
+                    self.#trashed_method_name_where(#empty_callback)
                 }
-            );
+
+                pub fn #trashed_method_name_where<F>(&mut self, mut callback: F) -> &mut Self
+                    where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
+                {
+                    self.#when_method_name(|relation|{
+                        #call_callback
+                    })
+                }
+            });
 
             list.push(quote! {
                     pub fn #with_only_trashed_method_name(&mut self,) -> &mut Self {
@@ -210,10 +207,7 @@ pub(crate) fn generate_join_method(
     }
 }
 
-pub(crate) fn build_entity_append(
-    attr: &DirtybaseAttributes,
-    list: &mut Vec<TokenStream>,
-) {
+pub(crate) fn build_entity_append(attr: &DirtybaseAttributes, list: &mut Vec<TokenStream>) {
     let name = &attr.name;
     let foreign_type = format_ident!("{}", attr.the_type);
     let name_ident = format_ident!("{}", name);
