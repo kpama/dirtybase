@@ -306,19 +306,20 @@ pub fn build_entity_repo(
             pub async fn cursor_paginate(&mut self, cursor: Option<::dirtybase_common::db::base::cursor_builder::CursorBuilder>) ->
              ::dirtybase_common::db::base::cursor_builder::CursorResult<#ident>
             {
-                let mut rows_map = ::std::collections::HashMap::<u64, #ident>::new();
+                let mut rows_map = Vec::<#ident>::new();
                 // <name of a field whos value is used in a join, <entry hash, the field value>>
                 let mut join_field_values = ::std::collections::HashMap::new();
                 //<String, ::std::collections::HashMap<u64,::dirtybase_common::db::field_values::FieldValue>>,
                 let mut rows_rel_map = ::std::collections::HashMap::new();
-                let cursor = if let Some(cursor) = cursor {
+                let mut cursor = if let Some(cursor) = cursor {
                     cursor
                 } else {
                     ::dirtybase_common::db::base::cursor_builder::CursorBuilder::new(
-                        <#ident as ::dirtybase_common::db::table_model::TableModel>::id_column(),
+                        &<#ident as ::dirtybase_common::db::table_model::TableModel>::id_column(),
                         None
                     )
                 };
+                cursor.set_limit(2);
 
                 #append_trash_filter
 
@@ -332,8 +333,7 @@ pub fn build_entity_repo(
                         for row in raw_list {
                             if let Some(row_entity) = #ident::from_struct_column_value(&row,
                                 Some(<#ident as ::dirtybase_common::db::table_model::TableModel>::table_name())) {
-                                let row_hash = ::dirtybase_common::db::table_model::TableModel::entity_hash(&row_entity);
-                                rows_map.insert(row_hash, row_entity);
+                                rows_map.push(row_entity);
                             }
                         }
 
@@ -346,12 +346,13 @@ pub fn build_entity_repo(
                         }
 
                         // now map relationships
-                        for(row_hash, row_entity) in &mut rows_map {
+                        for row_entity in &mut rows_map {
+                            let row_hash = ::dirtybase_common::db::table_model::TableModel::entity_hash(row_entity);
                             #(#append_methods)*
                         }
 
                         *self = Self::new(&self.manager);
-                        ::dirtybase_common::db::base::cursor_builder::CursorResult::<#ident>::new(cursor,Ok(rows_map.into_iter().map(|e| e.1).collect::<Vec<#ident>>()))
+                        ::dirtybase_common::db::base::cursor_builder::CursorResult::<#ident>::new(cursor,Ok(rows_map))
                     }
                     Err(e) => {
                         *self = Self::new(&self.manager);
@@ -362,7 +363,7 @@ pub fn build_entity_repo(
             }
 
             pub async fn get(&mut self) -> Result<Option<Vec<#ident>>, ::dirtybase_common::anyhow::Error> {
-                let mut rows_map = ::std::collections::HashMap::<u64, #ident>::new();
+                let mut rows_map = Vec::<#ident>::new();
                 // <name of a field whos value is used in a join, <entry hash, the field value>>
                 let mut join_field_values = ::std::collections::HashMap::new();
                 //<String, ::std::collections::HashMap<u64,::dirtybase_common::db::field_values::FieldValue>>,
@@ -382,7 +383,7 @@ pub fn build_entity_repo(
                             if let Some(row_entity) = #ident::from_struct_column_value(&row,
                                 Some(<#ident as ::dirtybase_common::db::table_model::TableModel>::table_name())) {
                                 let row_hash= ::dirtybase_common::db::table_model::TableModel::entity_hash(&row_entity);
-                                rows_map.insert(row_hash, row_entity);
+                                rows_map.push(row_entity);
                             }
                         }
 
@@ -394,12 +395,13 @@ pub fn build_entity_repo(
                         }
 
                         // now map relationships
-                        for(row_hash, row_entity) in &mut rows_map {
+                        for row_entity in &mut rows_map {
+                            let row_hash = ::dirtybase_common::db::table_model::TableModel::entity_hash(row_entity);
                             #(#append_methods)*
                         }
 
                         *self = Self::new(&self.manager);
-                        Ok(Some(rows_map.into_iter().map(|e| e.1).collect::<Vec<#ident>>()))
+                        Ok(Some(rows_map))
                     },
                     Err(e) => {
                         *self = Self::new(&self.manager);

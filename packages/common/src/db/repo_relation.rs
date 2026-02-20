@@ -107,7 +107,7 @@ pub struct Relation<T> {
             Box<
                 dyn Fn(
                         Self,
-                        &HashMap<u64, T>,
+                        &Vec<T>,
                         &mut HashMap<String, HashMap<u64, FieldValue>>,
                     ) -> RelationProcessor
                     + Sync
@@ -143,7 +143,7 @@ impl<T> Relation<T> {
         rel_type: RelationType,
         process: impl Fn(
             Self,
-            &HashMap<u64, T>,
+            &Vec<T>,
             &mut HashMap<String, HashMap<u64, FieldValue>>,
         ) -> RelationProcessor
         + Send
@@ -181,7 +181,7 @@ impl<T> Relation<T> {
         // Db Manager
         manager: &Manager,
         // The parent raw rows
-        rows: &HashMap<u64, T>,
+        rows: &Vec<T>,
         //  Values from the parent rows
         join_field_values: &mut HashMap<String, HashMap<u64, FieldValue>>,
         // Built relation data

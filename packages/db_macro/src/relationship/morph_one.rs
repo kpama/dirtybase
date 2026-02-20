@@ -121,7 +121,7 @@ pub(crate) fn generate_join_method(
                     ::dirtybase_common::db::repo_relation::RelationType::MorphMany{ query},
                     |
                         relation: ::dirtybase_common::db::repo_relation::Relation<#parent>,
-                        rows: &::std::collections::HashMap<u64, #parent>,
+                        rows: &Vec<#parent>,
                         join_values: &mut ::std::collections::HashMap<String,::std::collections::HashMap<u64,::dirtybase_common::db::field_values::FieldValue>>
                     | {
                         let (mut query, _) = relation.rel_type().builders();
@@ -133,9 +133,10 @@ pub(crate) fn generate_join_method(
 
                         if join_values.get(&parent_col_name).is_none() {
                             let mut values = ::std::collections::HashMap::new();
-                            for (hash, a_row) in rows {
+                            for a_row in rows {
                                 if let Ok(cv) = ::dirtybase_common::db::types::ToColumnAndValue::to_column_value(a_row) {
                                     if let Some(v) = cv.get(&parent_col_name).cloned() {
+                                        let hash = ::dirtybase_common::db::table_model::TableModel::entity_hash(a_row);
                                         values.insert(hash.clone(), v);
                                     }
                                 }
@@ -234,7 +235,7 @@ pub(crate) fn build_entity_append(attr: &DirtybaseAttributes, list: &mut Vec<Tok
     let token = quote! {
         // Note: rows_rel_map, row_hash ane row_entity are from the `get` method of the repo instance
         if let Some(rows) = rows_rel_map.get_mut(#name) {
-            if let Some(related_rows) = rows.remove(row_hash)  {
+            if let Some(related_rows) = rows.remove(&row_hash)  {
                 #body
             }
         }

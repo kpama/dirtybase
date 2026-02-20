@@ -298,6 +298,7 @@ impl SchemaQuery {
         Self: Sized,
     {
         let mut cursor_two = cursor.clone();
+        self.query_builder.select_as(cursor.column(), "__p");
         if let Some(field_value) = cursor.last().cloned() {
             self.query_builder.and_where(|q| {
                 if let Some((col, dir)) = cursor.order().orders.first().cloned() {
@@ -314,7 +315,7 @@ impl SchemaQuery {
         let result = self.fetch_all().await;
         if let Ok(rows) = &result {
             if let Some(last) = rows.last()
-                && let Some(value) = last.get(cursor_two.column()).cloned()
+                && let Some(value) = last.get("__p").cloned()
             {
                 cursor_two.set_last(value);
             }
