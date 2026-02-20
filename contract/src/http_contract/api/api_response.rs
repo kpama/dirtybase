@@ -1,9 +1,9 @@
 use std::fmt::Debug;
 
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::Serialize;
 

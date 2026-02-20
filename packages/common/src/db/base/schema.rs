@@ -2,10 +2,16 @@ use super::{
     query::{QueryAction, QueryBuilder},
     table::TableBlueprint,
 };
-use crate::db::field_values::FieldValue;
 use crate::db::{
     base::manager::Manager,
     types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue},
+};
+use crate::db::{
+    base::{
+        cursor_builder::{CursorBuilder, CursorResult},
+        order_by_builder::Direction,
+    },
+    field_values::FieldValue,
 };
 use anyhow::Result;
 use async_trait::async_trait;
@@ -100,7 +106,7 @@ pub trait SchemaManagerTrait: Send + Sync {
     async fn fetch_all(
         &mut self,
         query_builder: &QueryBuilder,
-    ) -> Result<Option<Vec<ColumnAndValue>>, anyhow::Error>;
+    ) -> Result<Vec<ColumnAndValue>, anyhow::Error>;
 
     async fn stream_result(
         &mut self,
@@ -132,24 +138,17 @@ pub trait SchemaManagerTrait: Send + Sync {
         }
     }
 
-    async fn fetch_all_to<T>(
-        &mut self,
-        query: &QueryBuilder,
-    ) -> Result<Option<Vec<T>>, anyhow::Error>
+    async fn fetch_all_to<T>(&mut self, query: &QueryBuilder) -> Result<Vec<T>, anyhow::Error>
     where
         Self: Sized,
         T: FromColumnAndValue,
     {
         let result = self.fetch_all(query).await;
         if let Ok(records) = result {
-            match records {
-                Some(rs) => Ok(Some(
-                    rs.into_iter()
-                        .flat_map(T::from_column_value)
-                        .collect::<Vec<T>>(),
-                )),
-                None => Ok(None),
-            }
+            Ok(records
+                .into_iter()
+                .flat_map(T::from_column_value)
+                .collect::<Vec<T>>())
         } else {
             Err(result.err().unwrap())
         }
@@ -223,7 +222,7 @@ impl SchemaQuery {
         }
     }
 
-    pub async fn fetch_all(self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
+    pub async fn fetch_all(self) -> Result<Vec<StructuredColumnAndValue>, anyhow::Error> {
         let results = self
             .manager
             .read_connection()
@@ -231,24 +230,21 @@ impl SchemaQuery {
             .fetch_all(&self.query_builder)
             .await;
         if let Ok(records) = results {
-            match records {
-                Some(rs) => Ok(Some(StructuredColumnAndValue::from_results(rs))),
-                None => Ok(Some(Vec::new())),
-            }
+            Ok(StructuredColumnAndValue::from_results(records))
         } else {
             Err(results.err().unwrap())
         }
     }
 
-    pub async fn all(self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
+    pub async fn all(self) -> Result<Vec<StructuredColumnAndValue>, anyhow::Error> {
         self.fetch_all().await
     }
 
-    pub async fn get(self) -> Result<Option<Vec<StructuredColumnAndValue>>, anyhow::Error> {
+    pub async fn get(self) -> Result<Vec<StructuredColumnAndValue>, anyhow::Error> {
         self.fetch_all().await
     }
 
-    pub async fn get_to<T: FromColumnAndValue>(self) -> Result<Option<Vec<T>>, anyhow::Error> {
+    pub async fn get_to<T: FromColumnAndValue>(self) -> Result<Vec<T>, anyhow::Error> {
         self.fetch_all_to().await
     }
 
@@ -294,21 +290,87 @@ impl SchemaQuery {
         }
     }
 
-    pub async fn fetch_all_to<T>(self) -> Result<Option<Vec<T>>, anyhow::Error>
+    pub async fn cursor_paginate(
+        mut self,
+        cursor: CursorBuilder,
+    ) -> CursorResult<StructuredColumnAndValue>
+    where
+        Self: Sized,
+    {
+        let mut cursor_two = cursor.clone();
+        if let Some(field_value) = cursor.last().cloned() {
+            self.query_builder.and_where(|q| {
+                if let Some((col, dir)) = cursor.order().orders.first().cloned() {
+                    if dir == Direction::ASC {
+                        q.gt(col, field_value);
+                    } else {
+                        q.le(col, field_value);
+                    }
+                }
+            });
+        }
+        self.query_builder.cursor(cursor);
+
+        let result = self.fetch_all().await;
+        if let Ok(rows) = &result {
+            if let Some(last) = rows.last()
+                && let Some(value) = last.get(cursor_two.column()).cloned()
+            {
+                cursor_two.set_last(value);
+            }
+        }
+
+        CursorResult::new(cursor_two, result)
+    }
+
+    pub async fn cursor_paginate_to<T>(mut self, cursor: CursorBuilder) -> CursorResult<T>
+    where
+        Self: Sized,
+        T: FromColumnAndValue + Debug,
+    {
+        let mut cursor_two = cursor.clone();
+        if let Some(field_value) = cursor.last().cloned() {
+            self.query_builder.and_where(|q| {
+                if let Some((col, dir)) = cursor.order().orders.first().cloned() {
+                    if dir == Direction::ASC {
+                        q.gt(col, field_value);
+                    } else {
+                        q.le(col, field_value);
+                    }
+                }
+            });
+        }
+        self.query_builder.cursor(cursor);
+
+        let result = self.fetch_all().await;
+        let data = if let Ok(rows) = result {
+            if let Some(last) = rows.last()
+                && let Some(value) = last.get(cursor_two.column()).cloned()
+            {
+                cursor_two.set_last(value);
+            }
+            Ok(rows
+                .into_iter()
+                .flat_map(|row| T::from_column_value(row.fields()))
+                .collect::<Vec<T>>())
+        } else {
+            Err(result.err().unwrap())
+        };
+
+        CursorResult::new(cursor_two, data)
+    }
+
+    pub async fn fetch_all_to<T>(self) -> Result<Vec<T>, anyhow::Error>
     where
         Self: Sized,
         T: FromColumnAndValue,
     {
         let result = self.fetch_all().await;
-        if let Ok(records) = result {
-            match records {
-                Some(rows) => Ok(Some(
-                    rows.into_iter()
-                        .flat_map(|row| T::from_column_value(row.fields()))
-                        .collect::<Vec<T>>(),
-                )),
-                None => Ok(Some(Vec::new())),
-            }
+        if let Ok(rows) = result {
+            Ok(rows
+                .into_iter()
+                .flat_map(|row| T::from_column_value(row.fields()))
+                .collect::<Vec<T>>())
         } else {
             Err(result.err().unwrap())
         }

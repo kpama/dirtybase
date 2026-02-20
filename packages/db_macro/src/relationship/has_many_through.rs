@@ -4,8 +4,8 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::DeriveInput;
 
+use crate::attribute_type::RelType;
 use crate::attribute_type::{DirtybaseAttributes, RelationAttribute};
-use crate::attribute_type::{RelType};
 
 pub(crate) fn build_attribute(
     attr: HashMap<String, String>,
@@ -44,27 +44,26 @@ pub(crate) fn generate_join_method(
 
         // parent col
         let parent_col = if let Some(field) = &attribute.local_col {
-             quote! { #field }
+            quote! { #field }
         } else {
             quote! {<#parent as ::dirtybase_common::db::table_model::TableModel>::id_column()}
         };
 
         // foreign col
         let foreign_col = if let Some(field) = &attribute.foreign_col {
-             quote! { #field }
+            quote! { #field }
         } else {
             quote! { <#parent as ::dirtybase_common::db::table_model::TableModel>::foreign_id_column() }
         };
-        
+
         // pivot foreign col
         let mut pivot_through_col = quote! { <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::foreign_id_column() };
         let mut through_col = quote! { <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::id_column() };
-        let empty_callback = quote!{
+        let empty_callback = quote! {
             |_: &mut ::dirtybase_common::db::repo_relation::Relation<#parent>| {
                 // nothing to do
             }
         };
-
 
         // pivot table column
         if let Some(field) = &attribute.pivot_through_col {
@@ -164,19 +163,18 @@ pub(crate) fn generate_join_method(
 
         if !attribute.no_soft_delete {
             list.push(quote! {
-                    pub fn #trashed_method_name(&mut self,) -> &mut Self {
-                        self.#trashed_method_name_where(#empty_callback)
-                    }
-
-                    pub fn #trashed_method_name_where<F>(&mut self,mut callback: F) -> &mut Self 
-                        where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
-                    {
-                        self.#when_method_name(|relation| {
-                            #call_callback
-                        })
-                    }
+                pub fn #trashed_method_name(&mut self,) -> &mut Self {
+                    self.#trashed_method_name_where(#empty_callback)
                 }
-            );
+
+                pub fn #trashed_method_name_where<F>(&mut self,mut callback: F) -> &mut Self
+                    where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
+                {
+                    self.#when_method_name(|relation| {
+                        #call_callback
+                    })
+                }
+            });
 
             list.push(quote! {
                     pub fn #with_only_trashed_method_name_where<F>(&mut self,mut callback: F) -> &mut Self 
@@ -202,10 +200,7 @@ pub(crate) fn generate_join_method(
     }
 }
 
-pub(crate) fn build_entity_append(
-    attr: &DirtybaseAttributes,
-    list: &mut Vec<TokenStream>,
-) {
+pub(crate) fn build_entity_append(attr: &DirtybaseAttributes, list: &mut Vec<TokenStream>) {
     let name = &attr.name;
     let name_ident = format_ident!("{}", name);
     let foreign_type = format_ident!("{}", attr.the_type);

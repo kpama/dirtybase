@@ -5,7 +5,7 @@ use std::{
 
 use tokio::sync::RwLock;
 
-use crate::lock_contract::{storage::LockStorage, LockData};
+use crate::lock_contract::{LockData, storage::LockStorage};
 
 type Storage = Arc<RwLock<HashMap<String, LockData>>>;
 

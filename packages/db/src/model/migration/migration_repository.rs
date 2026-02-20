@@ -49,7 +49,7 @@ impl MigrationRepository {
     }
 
     pub async fn get_batch(&self, batch: i64) -> BTreeMap<StringField, MigrationEntity> {
-        if let Ok(Some(collection)) = self
+        if let Ok(collection) = self
             .manager
             .select_from_table(TABLE_NAME, |q| {
                 q.is_eq(BATCH_COLUMN, batch).desc("created_at");
@@ -74,7 +74,7 @@ impl MigrationRepository {
             })
             .fetch_one_to::<MigrationEntity>()
             .await
-            && let Ok(Some(collection)) = self
+            && let Ok(collection) = self
                 .manager
                 .select_from_table(TABLE_NAME, |q| {
                     q.is_eq(BATCH_COLUMN, last.batch).desc("created_at");

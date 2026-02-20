@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::db::{
     TableModel,
+    base::cursor_builder::CursorBuilder,
     field_values::FieldValue,
     query_column::{QueryColumn, QueryColumnName},
     query_values::QueryValue,
@@ -102,6 +103,7 @@ pub struct QueryBuilder {
     order_by: Option<OrderByBuilder>,
     limit: Option<LimitBuilder>,
     offset: Option<OffsetBuilder>,
+    cursor: Option<CursorBuilder>,
     lock_for_update: bool, // select * from foo where a=b for update
 }
 
@@ -115,6 +117,7 @@ impl QueryBuilder {
             order_by: None,
             limit: None,
             offset: None,
+            cursor: None,
             lock_for_update: false,
         }
     }
@@ -151,9 +154,9 @@ impl QueryBuilder {
         self
     }
 
-    pub fn sub_query<F>(&mut self, table: &str, mut callback: F) -> QueryValue
+    pub fn sub_query<F>(&mut self, table: &str, callback: F) -> QueryValue
     where
-        F: FnMut(&mut QueryBuilder),
+        F: FnOnce(&mut QueryBuilder),
     {
         let mut query_builder = Self::new(table, QueryAction::Query { columns: None });
 
@@ -391,6 +394,15 @@ impl QueryBuilder {
     pub fn limit(&mut self, limit: usize) -> &mut Self {
         self.limit = Some(LimitBuilder { limit });
         self
+    }
+
+    pub fn cursor(&mut self, cursor: CursorBuilder) -> &mut Self {
+        self.cursor = Some(cursor);
+        self
+    }
+
+    pub fn cursor_by(&self) -> Option<&CursorBuilder> {
+        self.cursor.as_ref()
     }
 
     pub fn limit_by(&self) -> Option<LimitBuilder> {
@@ -726,14 +738,9 @@ impl QueryBuilder {
         self.where_operator(column, Operator::In, value, None)
     }
 
-    pub fn is_in_sub<F, C: ToString>(
-        &mut self,
-        column: C,
-        table: &str,
-        mut callback: F,
-    ) -> &mut Self
+    pub fn is_in_sub<F, C: ToString>(&mut self, column: C, table: &str, callback: F) -> &mut Self
     where
-        F: FnMut(&mut QueryBuilder),
+        F: FnOnce(&mut QueryBuilder),
     {
         let mut query_builder = Self::new(table, QueryAction::Query { columns: None });
 
@@ -767,10 +774,10 @@ impl QueryBuilder {
         &mut self,
         column: C,
         table: &str,
-        mut callback: F,
+        callback: F,
     ) -> &mut Self
     where
-        F: FnMut(&mut QueryBuilder),
+        F: FnOnce(&mut QueryBuilder),
     {
         let mut query_builder = Self::new(table, QueryAction::Query { columns: None });
 
@@ -791,14 +798,9 @@ impl QueryBuilder {
         self.where_operator(column, Operator::In, value, Some(WhereJoin::Or))
     }
 
-    pub fn or_is_in_sub<F, C: ToString>(
-        &mut self,
-        column: C,
-        table: &str,
-        mut callback: F,
-    ) -> &mut Self
+    pub fn or_is_in_sub<F, C: ToString>(&mut self, column: C, table: &str, callback: F) -> &mut Self
     where
-        F: FnMut(&mut QueryBuilder),
+        F: FnOnce(&mut QueryBuilder),
     {
         let mut query_builder = Self::new(table, QueryAction::Query { columns: None });
 
@@ -823,10 +825,10 @@ impl QueryBuilder {
         &mut self,
         column: C,
         table: &str,
-        mut callback: F,
+        callback: F,
     ) -> &mut Self
     where
-        F: FnMut(&mut QueryBuilder),
+        F: FnOnce(&mut QueryBuilder),
     {
         let mut query_builder = Self::new(table, QueryAction::Query { columns: None });
 
@@ -851,10 +853,10 @@ impl QueryBuilder {
         &mut self,
         column: C,
         table: &str,
-        mut callback: F,
+        callback: F,
     ) -> &mut Self
     where
-        F: FnMut(&mut QueryBuilder),
+        F: FnOnce(&mut QueryBuilder),
     {
         let mut query_builder = Self::new(table, QueryAction::Query { columns: None });
 
@@ -879,10 +881,10 @@ impl QueryBuilder {
         &mut self,
         column: C,
         table: &str,
-        mut callback: F,
+        callback: F,
     ) -> &mut Self
     where
-        F: FnMut(&mut QueryBuilder),
+        F: FnOnce(&mut QueryBuilder),
     {
         let mut query_builder = Self::new(table, QueryAction::Query { columns: None });
 
@@ -1001,9 +1003,9 @@ impl QueryBuilder {
         self.where_(WhereJoinOperator::Or(condition))
     }
 
-    pub fn or_where<F>(&mut self, mut callback: F) -> &mut Self
+    pub fn or_where<F>(&mut self, callback: F) -> &mut Self
     where
-        F: FnMut(&mut QueryBuilder),
+        F: FnOnce(&mut QueryBuilder),
     {
         let mut query_builder = Self::new("", QueryAction::Query { columns: None });
 
@@ -1016,9 +1018,9 @@ impl QueryBuilder {
             Some(WhereJoin::Or),
         )
     }
-    pub fn group_where<F>(&mut self, mut callback: F) -> &mut Self
+    pub fn group_where<F>(&mut self, callback: F) -> &mut Self
     where
-        F: FnMut(&mut QueryBuilder),
+        F: FnOnce(&mut QueryBuilder),
     {
         let mut query_builder = Self::new("", QueryAction::Query { columns: None });
 
@@ -1032,9 +1034,9 @@ impl QueryBuilder {
         )
     }
 
-    pub fn and_where<F>(&mut self, mut callback: F) -> &mut Self
+    pub fn and_where<F>(&mut self, callback: F) -> &mut Self
     where
-        F: FnMut(&mut QueryBuilder),
+        F: FnOnce(&mut QueryBuilder),
     {
         let mut query_builder = Self::new("", QueryAction::Query { columns: None });
 

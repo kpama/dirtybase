@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     body::Body,
-    http::{self, uri::Authority, HeaderMap, Request},
+    http::{self, HeaderMap, Request, uri::Authority},
 };
 
 pub fn full_request_url(req: &Request<Body>) -> String {

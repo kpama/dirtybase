@@ -46,8 +46,8 @@ impl TenantStorageResolver {
             .await;
     }
 
-    async fn get_middleware(
-    ) -> Arc<Manager<(Self, String), Result<TenantStorageProvider, anyhow::Error>>> {
+    async fn get_middleware()
+    -> Arc<Manager<(Self, String), Result<TenantStorageProvider, anyhow::Error>>> {
         if let Some(m) = busybody::helpers::get_service().await {
             m
         } else {

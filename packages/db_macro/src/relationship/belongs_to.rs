@@ -47,15 +47,13 @@ pub(crate) fn generate_join_method(
         } else {
             quote! {<#foreign_type as ::dirtybase_common::db::table_model::TableModel>::foreign_id_column()}
         };
-        
+
         // foreign key
         let foreign_col = if let Some(field) = &attribute.foreign_col {
             quote! { #field }
         } else {
             quote! { <#foreign_type  as ::dirtybase_common::db::table_model::TableModel>::id_column() }
         };
-
-
 
         let trash_condition = if attribute.no_soft_delete {
             quote! {}
@@ -140,19 +138,18 @@ pub(crate) fn generate_join_method(
 
         if !attribute.no_soft_delete {
             list.push(quote! {
-                    pub fn #trashed_method_name(&mut self) -> &mut Self {
-                        self.#trashed_method_name_where(#empty_callback)
-                    }
+                pub fn #trashed_method_name(&mut self) -> &mut Self {
+                    self.#trashed_method_name_where(#empty_callback)
+                }
 
-                    pub fn #trashed_method_name_where<F>(&mut self, mut callback: F) -> &mut Self
-                        where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
-                     {
-                        self.#when_method_name(|relation|{
-                            #call_callback
-                        })
-                    }
-                },
-            );
+                pub fn #trashed_method_name_where<F>(&mut self, mut callback: F) -> &mut Self
+                    where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
+                 {
+                    self.#when_method_name(|relation|{
+                        #call_callback
+                    })
+                }
+            });
 
             list.push(quote! {
                     pub fn #with_only_trashed_method_name(&mut self,) -> &mut Self {
@@ -177,14 +174,10 @@ pub(crate) fn generate_join_method(
     }
 }
 
-pub(crate) fn build_entity_append(
-    attr: &DirtybaseAttributes,
-    list: &mut Vec<TokenStream>,
-) {
+pub(crate) fn build_entity_append(attr: &DirtybaseAttributes, list: &mut Vec<TokenStream>) {
     let name = &attr.name;
     let name_ident = format_ident!("{}", name);
     let foreign_type = format_ident!("{}", attr.the_type);
-
 
     let transform = quote! {
         related_rows.into_iter().map(|row|{
@@ -194,7 +187,7 @@ pub(crate) fn build_entity_append(
             )
         }).flatten().collect::<Vec<#foreign_type>>().pop().unwrap_or_default()
     };
-    
+
     let body = if attr.optional {
         quote! {
                 row_entity.#name_ident = Some(#transform);
@@ -213,6 +206,5 @@ pub(crate) fn build_entity_append(
         }
     };
 
-    list.push( token);
+    list.push(token);
 }
-

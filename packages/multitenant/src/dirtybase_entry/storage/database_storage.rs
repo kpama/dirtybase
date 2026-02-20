@@ -61,7 +61,7 @@ impl TenantStorage for TenantDatabaseStorage {
                     .filter(move |builder| {
                         builder.is_eq(Tenant::col_name_for_token(), token);
                     })
-                    .first()
+                    .one()
                     .await
             }
             FetchTenantPayload::ByDomain { domain } => {
@@ -69,7 +69,7 @@ impl TenantStorage for TenantDatabaseStorage {
                     .filter(|builder| {
                         builder.is_eq(Tenant::col_name_for_domain(), domain);
                     })
-                    .first()
+                    .one()
                     .await
             }
             FetchTenantPayload::ByName { name } => {
@@ -77,7 +77,7 @@ impl TenantStorage for TenantDatabaseStorage {
                     .filter(|builder| {
                         builder.is_eq(Tenant::col_name_for_name(), name.clone());
                     })
-                    .first()
+                    .one()
                     .await
             }
         }

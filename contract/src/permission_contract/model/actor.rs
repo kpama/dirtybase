@@ -15,6 +15,8 @@ pub struct Actor {
     deleted_at: Option<DateTimeField>,
     #[dirty(rel(kind = "has_many_through", pivot: ActorRole))]
     roles: Vec<Role>,
+    #[dirty(rel(kind = "has_many"))]
+    actor_roles: Vec<ActorRole>,
     #[dirty(rel(kind = "has_many_through", pivot: RolePermission))]
     permissions: Vec<Permission>,
 }

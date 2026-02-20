@@ -8,12 +8,12 @@ use std::{
 
 use axum::{
     extract::{
-        rejection::{PathRejection, QueryRejection},
         ConnectInfo, FromRequestParts, Path, Query, Request,
+        rejection::{PathRejection, QueryRejection},
     },
-    http::{header::USER_AGENT, request::Parts, HeaderMap, HeaderValue, Uri},
+    http::{HeaderMap, HeaderValue, Uri, header::USER_AGENT, request::Parts},
 };
-use axum_extra::extract::{cookie::Cookie, CookieJar};
+use axum_extra::extract::{CookieJar, cookie::Cookie};
 use dirtybase_helper::hash::sha256;
 use named_routes_axum::{NamedRoutesService, RoutePath};
 use serde::de::DeserializeOwned;

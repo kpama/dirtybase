@@ -11,8 +11,8 @@ use tokio::sync::RwLock;
 use crate::prelude::Context;
 
 use super::{
-    gate_after_middleware::GateAfterMiddleware, gate_before_middleware::GateBeforeMiddleware,
-    GateResponse,
+    GateResponse, gate_after_middleware::GateAfterMiddleware,
+    gate_before_middleware::GateBeforeMiddleware,
 };
 
 type GateCollection = HashMap<

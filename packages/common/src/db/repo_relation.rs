@@ -204,7 +204,7 @@ impl<T> Relation<T> {
         } = (process)(self, rows, join_field_values);
 
         match manager.execute_query(query).all().await {
-            Ok(Some(rel_list)) => {
+            Ok(rel_list) => {
                 for a_row in rel_list {
                     let mut belongs_to_hash = Vec::new();
 
@@ -240,7 +240,6 @@ impl<T> Relation<T> {
                     }
                 }
             }
-            Ok(None) => (),
             Err(e) => return Err(e),
         }
 

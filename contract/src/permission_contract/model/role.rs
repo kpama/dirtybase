@@ -22,6 +22,7 @@ pub struct Role {
 impl Role {
     pub fn new(name: &str, label: &str) -> Self {
         Self {
+            id: Some(ArcUuid7::default()),
             name: name.to_string().into(),
             label: label.to_string().into(),
             ..Default::default()
@@ -95,4 +96,14 @@ pub struct FetchRoleOption {
 pub enum FetchRolePayload {
     ById { id: ArcUuid7 },
     ByName { name: NameField },
+}
+
+impl FetchRolePayload {
+    pub fn by_name(name: &str) -> Self {
+        Self::ByName { name: name.into() }
+    }
+
+    pub fn by_id(id: ArcUuid7) -> Self {
+        Self::ById { id }
+    }
 }
