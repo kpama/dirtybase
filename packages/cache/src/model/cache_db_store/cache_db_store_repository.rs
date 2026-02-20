@@ -38,11 +38,7 @@ impl CacheDbStoreRepository {
             .unwrap_or_default()
     }
 
-    pub async fn get_many(
-        &self,
-        keys: &[String],
-        with_trashed: bool,
-    ) -> Option<Vec<CacheDbStoreEntity>> {
+    pub async fn get_many(&self, keys: &[String], with_trashed: bool) -> Vec<CacheDbStoreEntity> {
         let query_by_keys = |query: &mut QueryBuilder| {
             query.is_in(
                 CacheDbStoreEntity::prefix_with_tbl(CacheEntry::col_name_for_key()),
