@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use dirtybase_contract::config_contract::field_to_usize_array;
 use dirtybase_contract::{
     app_contract::Context,
     config_contract::{ConfigResult, DirtyConfig, TryFromDirtyConfig},
@@ -29,6 +30,8 @@ pub struct SessionConfig {
     lifetime: i64,
     #[serde(default = "default_session_id")]
     cookie_id: Arc<String>,
+    #[serde(deserialize_with = "field_to_usize_array")]
+    lottery: Vec<usize>,
 }
 
 impl Default for SessionConfig {
@@ -37,6 +40,7 @@ impl Default for SessionConfig {
             storage: Arc::new("dummy".to_string()),
             lifetime: DEFAULT_LIFETIME as i64 * 60,
             cookie_id: "dty_session".to_string().into(),
+            lottery: vec![2, 200],
         }
     }
 }
@@ -72,6 +76,15 @@ impl SessionConfig {
 
     pub fn lifetime(&self) -> i64 {
         self.lifetime
+    }
+
+    pub fn lottery(&self) -> [usize; 2] {
+        let mut value = [2, 200];
+        for (i, num) in self.lottery.iter().take(2).cloned().enumerate() {
+            value[i] = num;
+        }
+
+        value
     }
 
     pub fn cookie_id_ref(&self) -> &str {
