@@ -11,3 +11,6 @@ lifetime = 60
 
 # session cookie name
 cookie = "dty_session"
+
+# For storage that needs to do manual clean up. There is a 2 in 200 chances the clean up will be called
+lottery = [2, 200]
