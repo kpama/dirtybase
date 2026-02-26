@@ -19,8 +19,6 @@ pub async fn register_resource_manager() {
                 .await
                 .unwrap_or_default();
 
-            println!("{:#?}", &config);
-
             context.set(config).await;
             Ok(ResourceManager::scoped("session"))
         },
