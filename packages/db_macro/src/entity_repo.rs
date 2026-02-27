@@ -231,8 +231,7 @@ pub fn build_entity_repo(
         };
 
         append_trash_filter = quote! {
-            let flag_soft = "_soft_delete".to_string();
-            if !self.settings.contains(&flag_soft) {
+            if !self.return_only_deleted_rec && !self.include_deleted_rec {
                 self.builder.is_null(
                     <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
                         <#ident as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect("deleted at column is require")
@@ -243,26 +242,14 @@ pub fn build_entity_repo(
 
         with_trashed = quote! {
             pub fn with_trashed(&mut self,)  -> &mut Self {
-                if self.settings.contains(&"_trashed_only".to_string()) {
-                    return self;
-                }
-
-                let flag_soft = "_soft_delete".to_string();
-                if !self.settings.contains(&flag_soft) {
-                    self.settings.push(flag_soft.clone());
-                }
+                self.return_only_deleted_rec = true;
                 self
             }
         };
 
         trashed_only = quote! {
             pub fn trashed_only(&mut self)  -> &mut Self {
-                let flag_soft = "_soft_delete";
-                if let Some(index) = self.settings.iter().position(|entry| entry == flag_soft) {
-                    _= self.settings.remove(index);
-                }
-
-                self.settings.push("_trashed_only".to_string());
+                self.return_only_deleted_rec = true;
                 self.builder.is_not_null(
                         <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
                             <#ident as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect("deleted at column is require")
@@ -279,7 +266,8 @@ pub fn build_entity_repo(
         pub struct #repo_name {
             builder: ::dirtybase_common::db::base::query::QueryBuilder,
             manager: ::dirtybase_common::db::base::manager::Manager,
-            settings: Vec<String>,
+            include_deleted_rec: bool,
+            return_only_deleted_rec: bool,
             relation: ::std::collections::HashMap<String, ::dirtybase_common::db::repo_relation::Relation<#ident>>,
         }
 
@@ -293,7 +281,8 @@ pub fn build_entity_repo(
                     ),
                     manager: manager.clone(),
                     relation: ::std::collections::HashMap::new(),
-                    settings: Vec::new(),
+                    include_deleted_rec: false,
+                    return_only_deleted_rec: false
                 }
             }
 
@@ -361,7 +350,7 @@ pub fn build_entity_repo(
 
             }
 
-            pub async fn get(&mut self) -> Result<Option<Vec<#ident>>, ::dirtybase_common::anyhow::Error> {
+            pub async fn get(&mut self) -> Result<Vec<#ident>, ::dirtybase_common::anyhow::Error> {
                 let mut rows_map = Vec::<#ident>::new();
                 // <name of a field whos value is used in a join, <entry hash, the field value>>
                 let mut join_field_values = ::std::collections::HashMap::new();
@@ -400,7 +389,7 @@ pub fn build_entity_repo(
                         }
 
                         *self = Self::new(&self.manager);
-                        Ok(Some(rows_map))
+                        Ok(rows_map)
                     },
                     Err(e) => {
                         *self = Self::new(&self.manager);
@@ -411,7 +400,7 @@ pub fn build_entity_repo(
 
             pub async fn one(&mut self) -> Result<Option<#ident>, ::dirtybase_common::anyhow::Error> {
                 match self.limit(1).get().await {
-                    Ok(Some(mut list)) => {
+                    Ok(mut list) => {
                         Ok(list.pop())
                     },
                     Err(e) => Err(e),
@@ -487,7 +476,7 @@ pub fn build_entity_repo(
                 self.one().await
             }
 
-            pub async fn id_in(&mut self, ids: Vec<#id_type>)-> Result<Option<Vec<#ident>>, ::dirtybase_common::anyhow::Error> {
+            pub async fn id_in(&mut self, ids: Vec<#id_type>)-> Result<Vec<#ident>, ::dirtybase_common::anyhow::Error> {
                 self.builder.is_in(
                         <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
                         <#ident as ::dirtybase_common::db::table_model::TableModel>::id_column()),
