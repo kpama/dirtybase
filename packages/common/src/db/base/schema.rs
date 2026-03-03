@@ -274,10 +274,7 @@ impl SchemaQuery {
         self.fetch_one_to().await
     }
 
-    pub async fn fetch_one_to<T: FromColumnAndValue>(self) -> Result<Option<T>, anyhow::Error>
-    where
-        Self: Sized,
-    {
+    pub async fn fetch_one_to<T: FromColumnAndValue>(self) -> Result<Option<T>, anyhow::Error> {
         let result = self.fetch_one().await;
 
         if let Ok(row) = result {
@@ -293,12 +290,8 @@ impl SchemaQuery {
     pub async fn cursor_paginate(
         mut self,
         cursor: CursorBuilder,
-    ) -> CursorResult<StructuredColumnAndValue>
-    where
-        Self: Sized,
-    {
+    ) -> CursorResult<StructuredColumnAndValue> {
         let mut cursor_two = cursor.clone();
-        self.query_builder.select_as(cursor.column(), "__p");
         if let Some(field_value) = cursor.last().cloned() {
             self.query_builder.and_where(|q| {
                 if let Some((col, dir)) = cursor.order().orders.first().cloned() {
@@ -315,7 +308,7 @@ impl SchemaQuery {
         let result = self.fetch_all().await;
         if let Ok(rows) = &result {
             if let Some(last) = rows.last()
-                && let Some(value) = last.get("__p").cloned()
+                && let Some(value) = last.get(cursor_two.column()).cloned()
             {
                 cursor_two.set_last(value);
             }
@@ -326,8 +319,7 @@ impl SchemaQuery {
 
     pub async fn cursor_paginate_to<T>(mut self, cursor: CursorBuilder) -> CursorResult<T>
     where
-        Self: Sized,
-        T: FromColumnAndValue + Debug,
+        T: FromColumnAndValue,
     {
         let mut cursor_two = cursor.clone();
         if let Some(field_value) = cursor.last().cloned() {
@@ -338,6 +330,8 @@ impl SchemaQuery {
                     } else {
                         q.le(col, field_value);
                     }
+                } else {
+                    q.gt(cursor.column(), field_value);
                 }
             });
         }
@@ -363,7 +357,6 @@ impl SchemaQuery {
 
     pub async fn fetch_all_to<T>(self) -> Result<Vec<T>, anyhow::Error>
     where
-        Self: Sized,
         T: FromColumnAndValue,
     {
         let result = self.fetch_all().await;

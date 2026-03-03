@@ -79,7 +79,7 @@ pub struct ConnectionConfig {
     pub custom: Option<HashMap<String, String>>,
 }
 
-/// By default the data is sqlite and
+/// By default the data is SQLite and
 /// the database is in memory
 impl Default for ConnectionConfig {
     fn default() -> Self {

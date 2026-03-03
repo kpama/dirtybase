@@ -1057,9 +1057,9 @@ impl QueryBuilder {
     pub fn join<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
         &mut self,
         table: &str,
-        left_table: &str,
+        left_column: &str,
         operator: &str,
-        right_table: &str,
+        right_column: &str,
         join_type: JoinType,
         select_columns: Option<C>,
     ) -> &mut Self {
@@ -1069,9 +1069,9 @@ impl QueryBuilder {
 
         let join = JoinQueryBuilder::new(
             table,
-            left_table,
+            left_column,
             operator,
-            right_table,
+            right_column,
             join_type,
             select_columns,
         );
@@ -1082,79 +1082,79 @@ impl QueryBuilder {
 
     pub fn inner_join(
         &mut self,
-        table: &str,
-        left_table: &str,
+        inner_table: &str,
+        inner_column: &str,
         operator: &str,
-        right_table: &str,
+        right_column: &str,
     ) -> &mut Self {
         self.join::<String, Vec<String>>(
-            table,
-            left_table,
+            inner_table,
+            inner_column,
             operator,
-            right_table,
+            right_column,
             JoinType::Inner,
             None,
         )
     }
 
-    pub fn inner_join_table<L: TableModel, R: TableModel>(
+    pub fn inner_join_table<I: TableModel, R: TableModel>(
         &mut self,
-        left_field: &str,
-        right_field: &str,
+        inner_column: &str,
+        right_column: &str,
     ) -> &mut Self {
         self.inner_join(
-            R::table_name(),
-            &L::prefix_with_tbl(left_field),
+            I::table_name(),
+            &I::prefix_with_tbl(inner_column),
             "=",
-            &R::prefix_with_tbl(right_field),
+            &R::prefix_with_tbl(right_column),
         )
     }
 
     pub fn inner_join_and_select<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
         &mut self,
-        table: &str,
-        left_table: &str,
+        inner_table: &str,
+        inner_column: &str,
         operator: &str,
-        right_table: &str,
+        right_column: &str,
         select_columns: C,
     ) -> &mut Self {
         self.join(
-            table,
-            left_table,
+            inner_table,
+            inner_column,
             operator,
-            right_table,
+            right_column,
             JoinType::Inner,
             Some(select_columns),
         )
     }
 
-    pub fn inner_join_table_and_select<L: TableModel, R: TableModel>(
+    pub fn inner_join_table_and_select<I: TableModel, R: TableModel>(
         &mut self,
-        left_field: &str,
-        right_field: &str,
+        inner_column: &str,
+        right_column: &str,
         right_tbl_columns_prefix: Option<&str>,
     ) -> &mut Self {
         self.inner_join_and_select(
-            R::table_name(),
-            &L::prefix_with_tbl(left_field),
+            I::table_name(),
+            &I::prefix_with_tbl(inner_column),
             "=",
-            &R::prefix_with_tbl(right_field),
-            R::column_aliases(right_tbl_columns_prefix),
+            &R::prefix_with_tbl(right_column),
+            I::column_aliases(right_tbl_columns_prefix),
         )
     }
 
     pub fn left_join(
         &mut self,
-        table: &str,
         left_table: &str,
+        left_column: &str,
         operator: &str,
-        right_table: &str,
+        right_column: &str,
     ) -> &mut Self {
         self.join::<String, Vec<String>>(
-            table,
             left_table,
+            left_column,
             operator,
-            right_table,
+            right_column,
             JoinType::Left,
             None,
         )
@@ -1162,110 +1162,110 @@ impl QueryBuilder {
 
     pub fn left_join_table<L: TableModel, R: TableModel>(
         &mut self,
-        left_field: &str,
-        right_field: &str,
+        left_column: &str,
+        right_column: &str,
     ) -> &mut Self {
         self.left_join(
-            R::table_name(),
-            &L::prefix_with_tbl(left_field),
+            L::table_name(),
+            &L::prefix_with_tbl(left_column),
             "=",
-            &R::prefix_with_tbl(right_field),
+            &R::prefix_with_tbl(right_column),
         )
     }
 
     pub fn left_join_and_select<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
         &mut self,
-        table: &str,
         left_table: &str,
+        left_column: &str,
         operator: &str,
-        right_table: &str,
-        select_columns: C,
+        right_column: &str,
+        select_left_columns: C,
     ) -> &mut Self {
         self.join(
-            table,
             left_table,
+            left_column,
             operator,
-            right_table,
+            right_column,
             JoinType::Left,
-            Some(select_columns),
+            Some(select_left_columns),
         )
     }
 
     pub fn left_join_table_and_select<L: TableModel, R: TableModel>(
         &mut self,
-        left_field: impl ToString,
-        right_field: impl ToString,
+        left_column: impl ToString,
+        right_column: impl ToString,
         left_tbl_columns_prefix: Option<&str>,
     ) -> &mut Self {
         self.left_join_and_select(
-            R::table_name(),
-            &L::prefix_with_tbl(left_field),
+            L::table_name(),
+            &L::prefix_with_tbl(left_column),
             "=",
-            &R::prefix_with_tbl(right_field),
-            R::column_aliases(left_tbl_columns_prefix),
+            &R::prefix_with_tbl(right_column),
+            L::column_aliases(left_tbl_columns_prefix),
         )
     }
 
     pub fn right_join(
         &mut self,
-        table: &str,
-        left_table: &str,
-        operator: &str,
         right_table: &str,
+        right_column: &str,
+        operator: &str,
+        left_column: &str,
     ) -> &mut Self {
         self.join::<String, Vec<String>>(
-            table,
-            left_table,
-            operator,
             right_table,
+            left_column,
+            operator,
+            right_column,
             JoinType::Right,
             None,
         )
     }
 
-    pub fn right_join_table<L: TableModel, R: TableModel>(
+    pub fn right_join_table<R: TableModel, L: TableModel>(
         &mut self,
-        left_field: &str,
-        right_field: &str,
+        right_column: &str,
+        left_column: &str,
     ) -> &mut Self {
         self.right_join(
             R::table_name(),
-            &L::prefix_with_tbl(left_field),
+            &L::prefix_with_tbl(left_column),
             "=",
-            &R::prefix_with_tbl(right_field),
+            &R::prefix_with_tbl(right_column),
         )
     }
 
     pub fn right_join_and_select<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
         &mut self,
-        table: &str,
-        left_table: &str,
-        operator: &str,
         right_table: &str,
+        right_column: &str,
+        operator: &str,
+        left_column: &str,
         select_columns: C,
     ) -> &mut Self {
         self.join(
-            table,
-            left_table,
-            operator,
             right_table,
+            left_column,
+            operator,
+            right_column,
             JoinType::Right,
             Some(select_columns),
         )
     }
 
-    pub fn right_join_table_and_select<L: TableModel, R: TableModel>(
+    pub fn right_join_table_and_select<R: TableModel, L: TableModel>(
         &mut self,
-        left_field: &str,
-        right_field: &str,
+        right_column: &str,
+        left_column: &str,
         left_tbl_columns_prefix: Option<&str>,
     ) -> &mut Self {
         self.right_join_and_select(
-            L::table_name(),
-            &L::prefix_with_tbl(left_field),
+            R::table_name(),
+            &L::prefix_with_tbl(left_column),
             "=",
-            &R::prefix_with_tbl(right_field),
-            L::column_aliases(left_tbl_columns_prefix),
+            &R::prefix_with_tbl(right_column),
+            R::column_aliases(left_tbl_columns_prefix),
         )
     }
 }

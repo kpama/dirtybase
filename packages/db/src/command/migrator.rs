@@ -100,6 +100,7 @@ impl Migrator {
 
     pub async fn refresh(&self, manager: &Manager) -> Result<(), anyhow::Error> {
         self.down(manager).await?;
+        manager.drop_table(TABLE_NAME).await?;
         self.up(manager).await
     }
 

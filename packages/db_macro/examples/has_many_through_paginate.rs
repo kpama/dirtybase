@@ -13,10 +13,11 @@ async fn main() {
 
     let mut customer_repo = CustomerRepo::new(&manager);
 
-    println!(
-        "{:#?}",
-        customer_repo.with_orders().with_invoices().get().await
-    );
+    if let Ok(Some(customer)) = customer_repo.latest().await {
+        let mut paginator = customer_repo.invoices_paginate_cursor(&customer);
+        println!("page one: {:#?}", paginator.next().await.data_ref());
+        println!("page two: {:#?}", paginator.next().await.data_ref());
+    }
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]

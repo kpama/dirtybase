@@ -50,7 +50,11 @@ pub(crate) fn get_real_column_name(
     field: &syn::Field,
     input: &DeriveInput,
 ) -> Option<(String, DirtybaseAttributes)> {
-    let name = field.ident.as_ref().unwrap().to_string();
+    let name = field
+        .ident
+        .as_ref()
+        .expect("could not get column name from field")
+        .to_string();
 
     let mut dirty_attribute = DirtybaseAttributes {
         from_handler: format!("from_column_for_{}", &name),
@@ -86,7 +90,11 @@ pub(crate) fn field_attributes(
     input: &DeriveInput,
 ) -> bool {
     let mut include = true;
-    let name = field.ident.as_ref().unwrap().to_string();
+    let name = field
+        .ident
+        .as_ref()
+        .expect("could not get column name from field")
+        .to_string();
 
     if !name.is_empty() {
         dirty_attribute.name = name;
@@ -130,17 +138,29 @@ pub(crate) fn attribute_to_attribute_type(
             }
             "col" => {
                 _ = walker.next();
-                dirty_attribute.name = walker.next().unwrap().to_string().replace('\"', "");
+                dirty_attribute.name = walker
+                    .next()
+                    .expect("could not get 'col' value")
+                    .to_string()
+                    .replace('\"', "");
             }
             "from" => {
                 _ = walker.next();
-                let from_handler = walker.next().unwrap().to_string().replace('\"', "");
+                let from_handler = walker
+                    .next()
+                    .expect("could not get 'from' value")
+                    .to_string()
+                    .replace('\"', "");
                 dirty_attribute.from_handler = from_handler;
                 dirty_attribute.has_custom_from_handler = true;
             }
             "into" => {
                 _ = walker.next();
-                let into_handler = walker.next().unwrap().to_string().replace('\"', "");
+                let into_handler = walker
+                    .next()
+                    .expect("could not get 'into' value")
+                    .to_string()
+                    .replace('\"', "");
                 dirty_attribute.into_handler = into_handler;
                 dirty_attribute.has_custom_into_handler = true;
             }
@@ -492,7 +512,7 @@ pub(crate) fn build_special_column_methods(
     }
 
     // timestamps
-    if !tbl_attr.no_timestamp {
+    if tbl_attr.timestamp {
         let created_at = &tbl_attr.created_at_col;
         let updated_at = &tbl_attr.updated_at_col;
         tokens.push(quote! {
@@ -506,14 +526,32 @@ pub(crate) fn build_special_column_methods(
                 Some(#updated_at)
             }
         });
+    } else {
+        tokens.push(quote! {
+            fn created_at_column() -> Option<&'static str> {
+                None
+            }
+        });
+
+        tokens.push(quote! {
+            fn updated_at_column() -> Option<&'static str> {
+                None
+            }
+        });
     }
 
     // soft delete
-    if !tbl_attr.no_soft_delete {
+    if tbl_attr.soft_deletable {
         let name = &tbl_attr.deleted_at_col;
         tokens.push(quote! {
             fn deleted_at_column() -> Option<&'static str> {
                 Some(#name)
+            }
+        });
+    } else {
+        tokens.push(quote! {
+            fn deleted_at_column() -> Option<&'static str> {
+                None
             }
         });
     }

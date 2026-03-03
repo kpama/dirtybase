@@ -12,8 +12,8 @@ pub(crate) struct TableAttribute {
     pub(crate) id_field: String,
     pub(crate) id_column: String,
     pub(crate) foreign_name: String,
-    pub(crate) no_timestamp: bool,
-    pub(crate) no_soft_delete: bool,
+    pub(crate) timestamp: bool,
+    pub(crate) soft_deletable: bool,
     pub(crate) created_at_col: String,
     pub(crate) updated_at_col: String,
     pub(crate) deleted_at_col: String,
@@ -26,8 +26,8 @@ impl Default for TableAttribute {
             id_field: "id".to_string(),
             id_column: "id".to_string(),
             foreign_name: String::new(),
-            no_timestamp: false,
-            no_soft_delete: false,
+            timestamp: false,
+            soft_deletable: false,
             created_at_col: "created_at".to_string(),
             updated_at_col: "updated_at".to_string(),
             deleted_at_col: "deleted_at".to_string(),
@@ -48,12 +48,12 @@ impl From<&DeriveInput> for TableAttribute {
             {
                 let mut walker = the_list.tokens.clone().into_iter();
                 while let Some(arg) = walker.next() {
-                    if arg.to_string() == "no_timestamp" {
-                        value.no_timestamp = true;
+                    if arg.to_string() == "timestamp" {
+                        value.timestamp = true;
                     }
 
-                    if arg.to_string() == "no_soft_delete" {
-                        value.no_soft_delete = true;
+                    if arg.to_string() == "soft_delete" || arg.to_string() == "soft_deletable" {
+                        value.soft_deletable = true;
                     }
 
                     if arg.to_string() == "created_at" {
@@ -145,7 +145,7 @@ pub struct RelationAttribute {
     pub(crate) morph_name: Option<String>,
     pub(crate) morph_type: Option<String>,
     pub(crate) morph_type_col: Option<String>,
-    pub(crate) no_soft_delete: bool,
+    pub(crate) soft_deletable: bool,
 }
 
 impl From<HashMap<String, String>> for RelationAttribute {
@@ -159,7 +159,7 @@ impl From<HashMap<String, String>> for RelationAttribute {
             morph_name: val.remove("morph_name"),
             morph_type: val.remove("morph_type"),
             morph_type_col: val.remove("morph_type_col"),
-            no_soft_delete: val.remove("no_soft_delete").is_some(),
+            soft_deletable: val.remove("soft_deletable").is_some(),
         }
     }
 }
@@ -171,8 +171,6 @@ pub(crate) enum RelType {
     HasMany { attribute: RelationAttribute },
     HasOneThrough { attribute: RelationAttribute },
     HasManyThrough { attribute: RelationAttribute },
-    BelongsToMany { attribute: RelationAttribute },
-    // MorphTo { attribute: RelationAttribute },
     MorphOne { attribute: RelationAttribute },
     MorphMany { attribute: RelationAttribute },
 }
@@ -184,15 +182,16 @@ impl RelType {
         input: &DeriveInput,
     ) -> Option<Self> {
         let name = attribute.remove("kind").unwrap_or_default();
+        if name.is_empty() {
+            return None;
+        }
+
         match name.to_lowercase().as_str() {
             "has_one" => Some(Self::HasOne {
                 attribute: has_one::build_attribute(attribute, field, input),
             }),
             "belongs_to" => Some(Self::BelongsTo {
                 attribute: belongs_to::build_attribute(attribute, field, input),
-            }),
-            "belongs_to_many" => Some(Self::BelongsToMany {
-                attribute: attribute.into(),
             }),
             "has_many" => Some(Self::HasMany {
                 attribute: has_many::build_attribute(attribute, field, input),
@@ -209,7 +208,7 @@ impl RelType {
             "morph_many" => Some(Self::MorphMany {
                 attribute: morph_many::build_attribute(attribute, field, input),
             }),
-            _ => None,
+            _ => panic!("unknown relation kind: {}", name),
         }
     }
 }

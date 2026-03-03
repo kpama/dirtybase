@@ -464,7 +464,7 @@ impl PostgresSchemaManager {
                 Ok(())
             }
             Err(e) => {
-                log::error!("{} failed: {}", query.action(), e);
+                log::error!("{} failed: {} >> {}", query.action(), e, sql);
                 Err(anyhow!(e))
             }
         }

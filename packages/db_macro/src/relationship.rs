@@ -24,6 +24,7 @@ pub(crate) fn process_relation_attribute(
 
     if let Some(TokenTree::Group(g)) = token_stream.into_iter().next() {
         let mut it = g.stream().into_iter();
+        // FIXME: Make sure all values are strings
         loop {
             let item = it.next();
             if item.is_none() {
@@ -32,7 +33,14 @@ pub(crate) fn process_relation_attribute(
 
             if let Some(TokenTree::Ident(key)) = item {
                 let name = key.to_string().replace('\"', "");
-                _ = it.next();
+                if let Some(n) = it.next() {
+                    let v = n.to_string().replace('\"', "");
+                    if v == "," {
+                        attributes.insert(name, String::new());
+                        continue;
+                    }
+                }
+
                 if let Some(value) = it.next() {
                     attributes.insert(name, value.to_string().replace('\"', ""));
                 } else {

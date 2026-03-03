@@ -11,7 +11,7 @@ mod entity_repo;
 mod helpers;
 mod relationship;
 
-#[proc_macro_derive(DirtyTable, attributes(dirty, dirty_rel))]
+#[proc_macro_derive(DirtyTable, attributes(dirty))]
 pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
 

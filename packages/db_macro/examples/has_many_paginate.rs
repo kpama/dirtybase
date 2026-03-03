@@ -2,7 +2,7 @@ use dirtybase_db::{
     TableModel,
     base::manager::Manager,
     connector::sqlite::make_sqlite_in_memory_manager,
-    types::{ColumnAndValue, CreatedAtField, DeletedAtField, UpdatedAtField},
+    types::{CreatedAtField, DeletedAtField, UpdatedAtField},
 };
 use dirtybase_db_macro::DirtyTable;
 use dirtybase_helper::time::current_datetime;
@@ -18,30 +18,25 @@ async fn main() {
     let manager = make_sqlite_in_memory_manager().await;
     setup_db(&manager).await;
 
-    let mut data = ColumnAndValue::new();
-    data.insert(
-        Child::col_name_for_deleted_at().to_string(),
-        dirtybase_helper::time::current_datetime().into(),
-    );
-    let mut to_delete = Vec::new();
-    for i in 1..=rand::random_range(2..20) {
-        to_delete.push(i);
-    }
-    _ = manager
-        .update_table::<Child>(data, move |query| {
-            query.is_in(Child::col_name_for_id(), to_delete);
-        })
-        .await;
-
     let mut family_repo = FamilyRepo::new(&manager);
-    println!(
-        "{:#?}",
-        family_repo
-            .with_trashed_only_children()
-            .limit(2)
-            .get()
-            .await
-    );
+    if let Ok(Some(family)) = family_repo.latest().await {
+        let mut paginator = family_repo.children_paginate_cursor(&family);
+        println!(
+            "{} children. page 1: {:#?}",
+            &family.name,
+            paginator.next().await.data_ref()
+        );
+        println!(
+            "{} children. page 2: {:#?}",
+            &family.name,
+            paginator.next().await.data_ref()
+        );
+        println!(
+            "{} children. page 3: {:#?}",
+            &family.name,
+            paginator.next().await.data_ref()
+        );
+    }
 }
 
 #[derive(Debug, Default, DirtyTable)]

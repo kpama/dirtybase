@@ -1242,7 +1242,9 @@ mod test {
         query.select(col);
 
         // use to test generated sql
-        println!("{:#?}", sqlite.build_query(&query, &mut params));
-        println!("{:#?}", &params)
+        assert_eq!(
+            sqlite.build_query(&query, &mut params).unwrap(),
+            "SELECT (COUNT(SELECT * FROM 'inner'  WHERE   user = ?)) as 'points' FROM 'foo'  WHERE   age = ?"
+        )
     }
 }

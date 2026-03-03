@@ -73,17 +73,17 @@ pub(crate) fn generate_join_method(
             through_col = quote! { #field };
         }
 
-        let trash_condition = if attribute.no_soft_delete {
-            quote! {}
-        } else {
+        let trash_condition = if attribute.soft_deletable {
             quote! {
                 relation.query_mut()
                  .is_null(
                     <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
-                        <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                        <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect(&format!("{} is not soft deletable", #name))
                     )
                  );
             }
+        } else {
+            quote! {}
         };
 
         list.push(quote! {
@@ -96,9 +96,10 @@ pub(crate) fn generate_join_method(
                 let mut relation = ::dirtybase_common::db::repo_relation::Relation::<#parent>::new(
                     ::dirtybase_common::db::repo_relation::RelationType::HasManyThrough{ query, pivot },
                     |   relation: ::dirtybase_common::db::repo_relation::Relation<#parent>,
-                        rows: &Vec<#parent>,
+                        rows: &[#parent],
                         join_values: &mut ::std::collections::HashMap<String,::std::collections::HashMap<u64,::dirtybase_common::db::field_values::FieldValue>>
                     | {
+                        let is_soft_deletable = relation.is_pivot_soft_deletable();
                         let (mut query, mut pivot) = relation.rel_type().builders();
 
                         query.select_multiple(&<#foreign_type as ::dirtybase_common::db::table_model::TableModel>::table_query_col_aliases(None));
@@ -123,16 +124,24 @@ pub(crate) fn generate_join_method(
                                 ::dirtybase_common::db::field_values::FieldValue
                             >>();
                             pivot.is_in(#foreign_col, values);
+                            if is_soft_deletable  && 
+                             let Some(col) = <#pivot_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column()
+                             {
+                                pivot.is_null(col);
+                            }
+
                             query.is_in_query(
                                     <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(#through_col),
                                     pivot
                             );
                         }
                         let pivot_data = format!("{}_pivot", #name);
-                        query.inner_join_table_and_select::<#foreign_type,#pivot_type>(#through_col, #pivot_through_col, Some(&pivot_data));
+                        query.inner_join_table_and_select::<#pivot_type, #foreign_type>(#pivot_through_col, #through_col, Some(&pivot_data));
                         ::dirtybase_common::db::repo_relation::RelationProcessor::new(query, parent_col_name, pivot_data, #foreign_col.to_string())
                     }
                 );
+
+                relation.set_pivot_soft_deletable(<#pivot_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().is_some());
 
                 callback(&mut relation);
                 self.relation.insert(#name.to_string(), relation);
@@ -161,7 +170,7 @@ pub(crate) fn generate_join_method(
 
         list.push(token);
 
-        if !attribute.no_soft_delete {
+        if attribute.soft_deletable {
             list.push(quote! {
                 pub fn #trashed_method_name(&mut self,) -> &mut Self {
                     self.#trashed_method_name_where(#empty_callback)
@@ -171,6 +180,7 @@ pub(crate) fn generate_join_method(
                     where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
                  {
                     self.#when_method_name(|relation|{
+                        _= <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect(&format!("{} is not soft deletable", #name));
                         #call_callback
                     })
                 }
@@ -189,7 +199,7 @@ pub(crate) fn generate_join_method(
                             #call_callback
                             relation.query_mut().is_not_null(
                                 <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
-                                    <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                                    <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect(&format!("{} is not soft deletable", #name))
                                 )
                             );
                         })
