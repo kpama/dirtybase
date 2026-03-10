@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
-use dirtybase_auth::helpers::get_auth_storage;
 use dirtybase_auth::memory_storage::AuthUserMemoryStorage;
 use dirtybase_contract::{
     ExtensionSetup,
-    auth_contract::{AuthUser, AuthUserPayload, AuthUserStatus, Gate, GateResponse},
+    auth_contract::{
+        Actor, AuthUser, AuthUserPayload, AuthUserStatus, Gate, GateResponse, PermissionManager,
+        StorageResolver,
+    },
     prelude::{Context, StatusCode},
 };
 use tracing_subscriber::EnvFilter;
@@ -18,16 +20,26 @@ async fn main() {
         .expect("could not setup tracing");
 
     let context = Context::make_global().await;
+    let mut perm_manager = PermissionManager::default();
+    perm_manager.add_str("posts:create");
+    context.set(perm_manager).await;
+    context.set(Actor::new()).await;
     dirtybase_auth::Extension::default().setup(&context).await;
 
     //
-    Gate::before(|_actor: AuthUser| async {
-        // -
-        if false {
-            return true.into();
-        }
-        None
-    })
+    Gate::before(
+        |_actor: Actor, permission_manager: PermissionManager| async move {
+            // -
+            println!(
+                "we will get call before other gates: {}",
+                permission_manager.can("posts:edit")
+            );
+            if false {
+                return true.into();
+            }
+            None
+        },
+    )
     .await;
 
     Gate::define(
@@ -42,7 +54,8 @@ async fn main() {
     .await;
     register_gates().await;
 
-    let storage = get_auth_storage(context.clone(), Some(AuthUserMemoryStorage::NAME))
+    let storage = StorageResolver::new(context.clone())
+        .get_provider(AuthUserMemoryStorage::NAME)
         .await
         .expect("could not resolve the auth storage provider");
 

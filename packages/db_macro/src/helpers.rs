@@ -182,6 +182,10 @@ pub(crate) fn attribute_to_attribute_type(
             _ => (),
         };
 
+        if dirty_attribute.skip_insert && dirty_attribute.skip_select {
+            include = false;
+        }
+
         if let Some(x) = walker.next() {
             if x.to_string() == "," {
                 attribute_to_attribute_type(walker, field, dirty_attribute, input);

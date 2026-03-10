@@ -46,9 +46,8 @@ pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
     app.register(dirtybase_multitenant::Extension::default())
         .await; // Multi tenant extension should always be the first
     app.register(dirtybase_session::Extension).await;
-    // TODO: Make the auth and permission extensions optional !?!?!?
+    #[cfg(feature = "auth")]
     app.register(dirtybase_auth::Extension::default()).await;
-    app.register(dirtybase_permission::Extension).await;
     app.register(dirtybase_db::Extension).await;
     app.register(dirtybase_encrypt::Extension).await;
     // the core app

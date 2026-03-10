@@ -192,9 +192,9 @@ pub(crate) fn generate_join_method(
                 return result;
                             
             }
-        }); 
+        });
 
-        if attribute.soft_deletable{
+        if attribute.soft_deletable {
             list.push(quote! {
                 pub fn #trashed_method_name(&mut self,) -> &mut Self {
                     self.#trashed_method_name_where(#empty_callback)

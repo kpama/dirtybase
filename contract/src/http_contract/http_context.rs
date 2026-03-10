@@ -179,6 +179,8 @@ impl HttpContext {
         } else if let Some(value) = self.header("x-forwarded-proto") {
             let scheme = value.to_str().unwrap_or_default();
             full_path.push_str(&format!("{scheme}://"));
+        } else {
+            full_path.push_str("http://");
         }
 
         // foo.com or 127.0.0.1
@@ -249,11 +251,34 @@ impl HttpContext {
         *w_lock = Some(w_lock.take().unwrap().add(cookie));
     }
 
+    pub async fn set_cookie_fn<F: FnOnce(&mut Cookie) -> (), K: ToString, V: ToString>(
+        &self,
+        name: K,
+        value: V,
+        callback: F,
+    ) {
+        let mut cookie = Cookie::new(name.to_string(), value.to_string());
+        callback(&mut cookie);
+        let mut w_lock = self.cookie_jar.write().await;
+        *w_lock = Some(w_lock.take().unwrap().add(cookie));
+    }
+
     pub async fn cookie_jar(&self) -> CookieJar {
         let r_lock = self.cookie_jar.read().await;
         r_lock.as_ref().unwrap().clone()
     }
 
+    pub async fn set_cookie_json<V>(&self, name: &str, value: &V)
+    where
+        V: serde::Serialize,
+    {
+        let mut cookie = Cookie::new(
+            name.to_string(),
+            serde_json::to_string(value).unwrap_or_default(),
+        );
+        cookie.set_path("/");
+        self.set_cookie(cookie).await
+    }
     pub async fn set_cookie_kv<V>(&self, name: &str, value: V)
     where
         V: ToString,

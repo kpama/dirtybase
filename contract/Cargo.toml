@@ -43,3 +43,4 @@ config = { workspace = true }
 base64ct = { workspace = true }
 ipnet = { workspace = true }
 cookie = { workspace = true }
+cel = { workspace = true }

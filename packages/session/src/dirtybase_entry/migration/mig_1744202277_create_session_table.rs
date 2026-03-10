@@ -9,6 +9,9 @@ pub struct Mig1744202277CreateSessionTable;
 #[dirtybase_contract::async_trait]
 impl Migration for Mig1744202277CreateSessionTable {
     async fn up(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+        if manager.has_table(SessionTable::table_name()).await? {
+            return Ok(());
+        }
         manager
             .create_table_schema(SessionTable::table_name(), |table| {
                 table

@@ -2,8 +2,6 @@ use dirtybase_common::db::field_values::FieldValue;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
-// use crate::db_contract::field_values::FieldValue;
-
 #[derive(Serialize, Default, Deserialize, Debug, PartialEq, Copy, Clone)]
 pub enum AuthUserStatus {
     #[serde(rename = "active")]

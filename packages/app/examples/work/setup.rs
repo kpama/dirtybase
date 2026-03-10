@@ -3,7 +3,7 @@ use crate::models::{
     SalesOrder, Warehouse,
 };
 use dirtybase_db::{TableModel, base::manager::Manager, types::UlidField};
-use rand::Rng;
+use rand::RngExt;
 
 pub async fn seed_tables(manager: &Manager) {
     if let Ok(Some(_)) = manager

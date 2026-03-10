@@ -73,7 +73,7 @@ impl App {
         dirtybase_contract::app_contract::global_context().await
     }
     pub async fn init(&self) {
-        ExtensionManager::setup_boot_run(&self.global_context().await).await;
+        ExtensionManager::setup_boot_and_run(&self.global_context().await).await;
     }
 
     pub async fn shutdown(&self) {

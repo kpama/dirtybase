@@ -4,6 +4,8 @@ use std::{future::Future, sync::Arc};
 
 use busybody::ServiceContainer;
 
+use crate::auth_contract::AuthUser;
+
 use super::GateResponse;
 
 #[derive(Debug, Clone)]
@@ -38,13 +40,13 @@ impl GateBeforeMiddleware {
         resolvers
             .next(move |resolver, next| {
                 let cb = before.clone();
-                Box::pin(async move {
+                async move {
                     let result = (cb)(resolver.clone()).await;
                     if result.is_some() {
                         return result;
                     }
                     next.call(resolver).await
-                })
+                }
             })
             .await;
     }

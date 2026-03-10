@@ -1,5 +1,7 @@
 use dirtybase_contract::{
-    auth_contract::{GuardResolver, GuardResponse, ParseToken},
+    auth_contract::{
+        FetchActorPayload, GuardResolver, GuardResponse, ParseToken, storage2::PermissionStorage,
+    },
     prelude::{Credentials, axum_extra},
 };
 
@@ -18,7 +20,8 @@ pub async fn guard(resolver: GuardResolver) -> GuardResponse {
             if token.contains("|")
                 && let Ok(token) = ParseToken::try_from(token)
             {
-                let result = resolver.storage_ref().find_by_id(token.id()).await;
+                let payload = FetchActorPayload::by_id(token.id());
+                let result = resolver.storage_ref().fetch_actor(payload, None).await;
                 // TODO: check if this user is verified. May have via another middleware...
                 if let Ok(Some(user)) = result {
                     return GuardResponse::success(user);

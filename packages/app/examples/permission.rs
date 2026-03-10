@@ -1,12 +1,8 @@
-use dirtybase_contract::prelude::{
-    PermStorageProvider, PermissionStorage, PermissionStorageResolver,
-    model::{
-        Actor, ActorRepo, ActorRole, FetchActorOption, FetchActorPayload, Permission,
-        PersistActorPayload, PersistActorRolePayload, PersistPermissionPayload, PersistRolePayload,
-        PersistRolePermission, Role, RolePermission,
-    },
+use dirtybase_contract::auth_contract::{Actor, ActorRepo, PermissionManager};
+use dirtybase_db::{
+    TableModel,
+    base::{cursor_builder::CursorBuilder, manager::Manager},
 };
-use dirtybase_db::{TableModel, base::manager::Manager, types::ArcUuid7};
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -27,9 +23,55 @@ async fn main() {
 
     let manager: Manager = context.get().await.expect("could not get db manager");
 
+    if let Ok(per_manager) = context.get::<PermissionManager>().await {
+        println!(
+            "can create resource 0: {}",
+            per_manager.can("resource_0:create")
+        );
+        println!(
+            "can create resource 10: {}",
+            per_manager.can("resource_10:create")
+        );
+    }
+
+    return;
+
     let mut actor_repo = ActorRepo::new(&manager);
 
-    let result = actor_repo.with_roles().first().await;
+    let mut cursor = CursorBuilder::new(Actor::col_name_for_id(), None);
+    cursor.set_limit(5);
+    let result = actor_repo
+        .with_roles()
+        .with_actor_roles()
+        .cursor_paginate(Some(cursor))
+        .await;
+    println!("{:#?} => {:#?}", result.cursor_ref(), result.data_ref());
+    return;
+    let mut cursor = CursorBuilder::new(Actor::col_name_for_id(), None);
+    cursor.set_limit(4);
 
-    println!("{result:#?}");
+    let mut page = manager
+        .select_from::<Actor>(|_q| {})
+        .cursor_paginate_to::<Actor>(cursor)
+        .await;
+    let mut counter = 1;
+    loop {
+        if let Ok(list) = page.data_ref() {
+            if list.is_empty() {
+                break;
+            }
+
+            for actor in list {
+                println!("id: {}", actor.id().as_ref().unwrap(),);
+            }
+        } else {
+            break;
+        }
+        counter += 1;
+        println!("fetch next page: {}", counter);
+        page = manager
+            .select_from::<Actor>(|_| {})
+            .cursor_paginate_to::<Actor>(page.cursor())
+            .await;
+    }
 }

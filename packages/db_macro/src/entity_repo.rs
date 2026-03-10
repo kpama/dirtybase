@@ -492,6 +492,15 @@ pub fn build_entity_repo(
                <#ident as ::dirtybase_common::db::table_model::TableModel>::table_name()
             }
 
+            pub fn is_soft_deletable() -> bool {
+                <#ident as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().is_some()
+            }
+
+            pub fn is_timestampable() -> bool {
+                <#ident as ::dirtybase_common::db::table_model::TableModel>::created_at_column().is_some() &&
+                <#ident as ::dirtybase_common::db::table_model::TableModel>::created_at_column().is_some()
+            }
+
             #insert_method
             #update_method
             #delete_method

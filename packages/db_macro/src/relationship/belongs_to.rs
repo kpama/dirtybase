@@ -55,7 +55,7 @@ pub(crate) fn generate_join_method(
             quote! { <#foreign_type  as ::dirtybase_common::db::table_model::TableModel>::id_column() }
         };
 
-        let trash_condition = if attribute.soft_deletable{
+        let trash_condition = if attribute.soft_deletable {
             quote! {
                 relation.query_mut().is_null(
                     <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
@@ -137,7 +137,7 @@ pub(crate) fn generate_join_method(
 
         list.push(token);
 
-        if attribute.soft_deletable{
+        if attribute.soft_deletable {
             list.push(quote! {
                 pub fn #trashed_method_name(&mut self) -> &mut Self {
                     self.#trashed_method_name_where(#empty_callback)

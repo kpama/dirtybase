@@ -1,16 +1,15 @@
 mod http;
 mod middlewares;
-pub mod migration;
+mod migration;
+mod observer;
+mod seeder;
 
 use dirtybase_contract::{
-    ExtensionMigrations, ExtensionSetup,
-    app_contract::Context,
-    auth_contract::Gate,
-    http_contract::{RouterManager, WebMiddlewareManager},
+    ExtensionMigrations, ExtensionSetup, app_contract::Context, auth_contract::Gate,
+    http_contract::RouterManager, prelude::ArgMatches,
 };
-use middlewares::setup_middlewares;
 
-use crate::{AuthConfig, guards::register_guards, register_storages, storage};
+use crate::{AuthConfig, guards::register_guards, register_storages, storage, storage2};
 
 #[derive(Debug, Default)]
 pub struct AuthExtension {
@@ -45,8 +44,13 @@ impl ExtensionSetup for AuthExtension {
 
         self.global_container().set_type(global_config).await;
 
+        storage2::register_storage().await;
+        storage2::register_manager().await;
+
         register_storages().await;
         register_guards().await;
+
+        observer::register_observers().await;
     }
 
     fn migrations(&self, _: &Context) -> Option<ExtensionMigrations> {
@@ -57,16 +61,22 @@ impl ExtensionSetup for AuthExtension {
         None
     }
 
-    fn register_web_middlewares(&self, manager: WebMiddlewareManager) -> WebMiddlewareManager {
-        if !self.is_enable {
-            return manager;
-        }
-
-        setup_middlewares(manager)
-    }
-
     fn register_routes(&self, manager: &mut RouterManager) {
         http::register_routes(manager, self.allow_self_signup)
+    }
+
+    async fn on_cli_command(
+        &self,
+        cmd: &str,
+        matches: ArgMatches,
+        _context: Context,
+    ) -> ArgMatches {
+        // TODO: Check the feature's flag
+        if cmd == "seed" {
+            seeder::register_seeders().await;
+        }
+
+        matches
     }
 }
 

@@ -190,8 +190,7 @@ pub(crate) fn generate_join_method(
                 return result;
                             
             }
-        }); 
-
+        });
 
         if attribute.soft_deletable {
             list.push(quote! {

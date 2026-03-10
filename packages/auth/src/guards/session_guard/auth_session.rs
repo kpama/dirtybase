@@ -13,16 +13,16 @@ pub struct AuthSession {
     hash: Option<StringField>, // Random hash
     ck: Option<StringField>,   // Cookie key
     rd: StringField,           // Redirect url
-    user: Option<ArcUuid7>,    // User Id
+    actor: Option<ArcUuid7>,   // Actor Id
 }
 
 impl AuthSession {
-    pub fn new(user: Option<ArcUuid7>) -> Self {
+    pub fn new(actor: Option<ArcUuid7>) -> Self {
         Self {
             hash: Some(random_bytes_hex(16).into()),
             ck: Some(random_bytes_hex(4).into()),
             rd: "/".to_string().into(),
-            user,
+            actor,
         }
     }
 
@@ -40,30 +40,32 @@ impl AuthSession {
             .ck
             .clone()
             .unwrap_or_else(|| random_bytes_hex(4).into());
-        session.make_session_cookie(&key, &hash)
+        let mut cookie = session.make_session_cookie(&key, &hash);
+        cookie.set_http_only(true);
+        cookie
     }
 
     pub async fn delete(&self, session: Session, ctx: &Context) -> Session {
         session.invalidate(ctx).await
     }
 
-    pub async fn from_session(session: &Session) -> Self {
-        session.get::<Self>(SESSION_KEY).await.unwrap_or_default()
+    pub async fn from_session(session: &Session) -> Option<Self> {
+        session.get::<Self>(SESSION_KEY).await
     }
 
-    pub fn hash(&self) -> Option<&String> {
-        self.hash.as_deref()
+    pub fn hash(&self) -> Option<&StringField> {
+        self.hash.as_ref()
     }
 
-    pub fn cookie_key(&self) -> Option<&String> {
-        self.ck.as_deref()
+    pub fn cookie_key(&self) -> Option<&StringField> {
+        self.ck.as_ref()
     }
 
-    pub fn user_id(&self) -> Option<&ArcUuid7> {
-        self.user.as_ref()
+    pub fn actor_id(&self) -> Option<&ArcUuid7> {
+        self.actor.as_ref()
     }
 
-    pub fn redirect(&self) -> &String {
+    pub fn redirect(&self) -> &str {
         self.rd.as_ref()
     }
 

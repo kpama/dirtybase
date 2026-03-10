@@ -12,7 +12,6 @@ use dirtybase_contract::{
     http_contract::{HttpContext, RouteType, TrustedIp, axum::clone_request},
 };
 
-#[cfg(feature = "permission")]
 use dirtybase_db::types::ArcUuid7;
 use dirtybase_encrypt::Encrypter;
 use named_routes_axum::RouterWrapper;
@@ -43,6 +42,12 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
 
     for ext in lock.iter() {
         middleware_manager = ext.register_web_middlewares(middleware_manager);
+    }
+
+    #[cfg(feature = "auth")]
+    {
+        middleware_manager =
+            dirtybase_contract::auth_contract::middleware::setup_middlewares(middleware_manager);
     }
 
     for ext in lock.iter() {

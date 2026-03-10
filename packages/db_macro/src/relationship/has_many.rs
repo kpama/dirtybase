@@ -69,7 +69,12 @@ pub(crate) fn generate_join_method(
             quote! {}
         };
 
+        let default_join_doc = format!(
+            "Initiates a new join for {} applying only the join filter. Gives you full control",
+            attr.the_type
+        );
         list.push(quote! {
+                #[doc = #default_join_doc]
                 pub fn #when_method_name<F>(&mut self , mut callback: F) -> &mut Self
                     where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
                  {
@@ -123,11 +128,21 @@ pub(crate) fn generate_join_method(
             callback(relation);
         };
 
+        let name_where = format!(
+            "Returns {} by applying default filters. This includes the trash filter when applicable",
+            attr.the_type
+        );
+        let name_where_doc = format!(
+            "Returns {} applying additional filters. The trashed filter is applied as well",
+            attr.the_type
+        );
         let token = quote! {
+            #[doc = #name_where]
             pub fn #method_name(&mut self,) -> &mut Self {
                 self.#method_name_where(#empty_callback)
             }
 
+            #[doc = #name_where_doc]
             pub fn #method_name_where<F>(&mut self, mut callback: F) -> &mut Self
              where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
             {
@@ -140,7 +155,9 @@ pub(crate) fn generate_join_method(
 
         list.push(token);
 
+        let paginator_doc = format!("Returns a cursor paginator for {}", attr.the_type);
         list.push(quote! {
+            #[doc = #paginator_doc]
             pub fn #cursor_paginator(&mut self, instance: &#parent) -> ::dirtybase_common::db::repo_relation::RelationCursorPaginator<#foreign_type> {
                 let rows_map =  std::slice::from_ref(instance);
                 let mut join_field_values = ::std::collections::HashMap::new();

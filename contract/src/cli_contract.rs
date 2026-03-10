@@ -15,6 +15,7 @@ pub mod prelude {
     pub use clap::Subcommand;
 }
 
+/// Set up the CLI Manger that can be use to handle a command
 pub async fn setup_cli_command_manager(
     global_middlewares: Option<Vec<String>>,
 ) -> CliCommandManager {
@@ -27,7 +28,7 @@ pub async fn setup_cli_command_manager(
     let mut manager = CliCommandManager::new(middleware);
 
     if let Some(global) = global_middlewares {
-        manager.set_global_middlware(global);
+        manager.set_global_middleware(global);
     }
 
     for ext in lock.iter() {
@@ -37,6 +38,7 @@ pub async fn setup_cli_command_manager(
     manager
 }
 
+/// Run a command
 pub async fn run_command<I, T>(command: I) -> anyhow::Result<()>
 where
     I: IntoIterator<Item = T>,

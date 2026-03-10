@@ -95,7 +95,7 @@ impl CliCommandManager {
         self
     }
 
-    pub(crate) fn set_global_middlware(&mut self, middlewares: Vec<String>) {
+    pub(crate) fn set_global_middleware(&mut self, middlewares: Vec<String>) {
         self.global_middlewares = middlewares
     }
 
