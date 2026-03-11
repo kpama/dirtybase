@@ -3,6 +3,7 @@ pub mod column_value_builder;
 pub mod event;
 pub mod field_values;
 pub mod query_column;
+pub mod query_result;
 pub mod query_values;
 pub mod repo_relation;
 pub mod table_model;
@@ -11,6 +12,7 @@ pub mod types;
 use std::collections::HashMap;
 
 pub use column_value_builder::*;
+pub use query_result::*;
 pub use table_model::*;
 
 use crate::db::base::{

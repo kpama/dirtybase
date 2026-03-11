@@ -3,6 +3,7 @@ use super::{
     table::TableBlueprint,
 };
 use crate::db::{
+    QueryResult,
     base::manager::Manager,
     types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue},
 };
@@ -95,7 +96,7 @@ pub trait SchemaManagerTrait: Send + Sync {
     // commit schema changes
     async fn apply(&mut self, table: TableBlueprint) -> Result<()>;
 
-    async fn execute(&mut self, query_builder: QueryBuilder) -> Result<()>;
+    async fn execute(&mut self, query_builder: QueryBuilder) -> Result<QueryResult>;
 
     async fn begin(&mut self) -> Result<Box<dyn SchemaManagerTrait>, anyhow::Error>;
 
@@ -159,7 +160,7 @@ pub trait SchemaManagerTrait: Send + Sync {
 
     async fn drop_table(&mut self, name: &str) -> Result<()>;
 
-    async fn rename_table(&mut self, old: &str, new: &str) -> Result<()> {
+    async fn rename_table(&mut self, old: &str, new: &str) -> Result<QueryResult> {
         self.execute(QueryBuilder::new(
             old,
             QueryAction::RenameTable(new.to_string()),
@@ -167,7 +168,7 @@ pub trait SchemaManagerTrait: Send + Sync {
         .await
     }
 
-    async fn drop_column(&mut self, table: &str, column: &str) -> Result<()> {
+    async fn drop_column(&mut self, table: &str, column: &str) -> Result<QueryResult> {
         self.execute(QueryBuilder::new(
             table,
             QueryAction::DropColumn(column.to_string()),
@@ -175,7 +176,7 @@ pub trait SchemaManagerTrait: Send + Sync {
         .await
     }
 
-    async fn rename_column(&mut self, table: &str, old: &str, new: &str) -> Result<()> {
+    async fn rename_column(&mut self, table: &str, old: &str, new: &str) -> Result<QueryResult> {
         self.execute(QueryBuilder::new(
             table,
             QueryAction::RenameColumn {

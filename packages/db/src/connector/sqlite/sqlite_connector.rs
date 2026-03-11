@@ -11,6 +11,7 @@ use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAnd
 use anyhow::anyhow;
 use async_trait::async_trait;
 use dirtybase_contract::db_contract::{
+    QueryResult,
     base::aggregate::Aggregate,
     query_column::{QueryColumn, QueryColumnName},
 };
@@ -118,10 +119,10 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         Ok(())
     }
 
-    async fn drop_table(&mut self, name: &str) -> Result<(), anyhow::Error> {
+    async fn drop_table(&mut self, name: &str) -> anyhow::Result<()> {
         if self.has_table(name).await? {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
-            return self.execute(query).await;
+            _ = self.execute(query).await?;
         }
         Ok(())
     }
@@ -130,7 +131,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         self.do_apply(table).await
     }
 
-    async fn execute(&mut self, query: QueryBuilder) -> anyhow::Result<()> {
+    async fn execute(&mut self, query: QueryBuilder) -> anyhow::Result<QueryResult> {
         self.do_execute(query).await
     }
 
@@ -340,7 +341,7 @@ impl SqliteSchemaManager {
         };
     }
 
-    async fn do_execute(&mut self, query: QueryBuilder) -> anyhow::Result<()> {
+    async fn do_execute(&mut self, query: QueryBuilder) -> anyhow::Result<QueryResult> {
         let mut params = SqliteArguments::default();
 
         let mut sql;
@@ -451,7 +452,7 @@ impl SqliteSchemaManager {
         match result {
             Ok(r) => {
                 log::debug!(target: LOG_TARGET,"{} result: {:#?}", query.action(), r);
-                Ok(())
+                Ok(QueryResult::new(r.rows_affected(), r.last_insert_rowid()))
             }
             Err(e) => {
                 log::error!(target: LOG_TARGET, "{} failed: {}", query.action(), e);

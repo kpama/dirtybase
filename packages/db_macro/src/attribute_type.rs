@@ -12,6 +12,7 @@ pub(crate) struct TableAttribute {
     pub(crate) id_field: String,
     pub(crate) id_column: String,
     pub(crate) foreign_name: String,
+    pub(crate) id_incrementing: bool,
     pub(crate) timestamp: bool,
     pub(crate) soft_deletable: bool,
     pub(crate) created_at_col: String,
@@ -26,6 +27,7 @@ impl Default for TableAttribute {
             id_field: "id".to_string(),
             id_column: "id".to_string(),
             foreign_name: String::new(),
+            id_incrementing: true,
             timestamp: false,
             soft_deletable: false,
             created_at_col: "created_at".to_string(),
@@ -50,6 +52,10 @@ impl From<&DeriveInput> for TableAttribute {
                 while let Some(arg) = walker.next() {
                     if arg.to_string() == "timestamp" || arg.to_string() == "timestampable" {
                         value.timestamp = true;
+                    }
+
+                    if arg.to_string() == "id_not_auto" {
+                        value.id_incrementing = false;
                     }
 
                     if arg.to_string() == "soft_delete" || arg.to_string() == "soft_deletable" {

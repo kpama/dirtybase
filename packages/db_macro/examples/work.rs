@@ -26,16 +26,19 @@ struct Order {
 
 #[tokio::main]
 async fn main() {
-    setup_db().await;
-    // let people_repo = Person::repo_instance().await;
+    let manager = setup_db().await;
+    let mut people_repo = Person::repo_instance(&manager);
     // insert
-    let _person1 = Person {
+    let person1 = Person {
         id: None,
         first_name: "Person1 Frist".to_string(),
         last_name: "Person2 Last".to_string(),
         is_admin: true,
         orders: Vec::new(),
     };
+
+    let result = people_repo.insert(person1).await;
+    println!("{:#?}", result);
 
     let _person2 = Person {
         id: None,
@@ -64,9 +67,10 @@ async fn main() {
     // }
 }
 
-async fn setup_db() {
+async fn setup_db() -> Manager {
     let manager = make_sqlite_in_memory_manager().await;
     create_tables(&manager).await;
+    manager
 }
 
 async fn create_tables(manager: &Manager) {

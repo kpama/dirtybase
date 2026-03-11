@@ -115,16 +115,36 @@ pub fn build_entity_repo(
     } else {
         quote! {}
     };
-    let insert_method = quote! {
-        pub async fn insert(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_common::anyhow::Error> {
-            #set_created_at
-            #pluck_rec_id
 
-           _ = self.manager.insert_into::<#ident>(record).await?;
+    let insert_method = if tbl_attr.id_incrementing {
+        quote! {
+            pub async fn insert(&mut self, mut record: #ident)  -> Result<#ident, ::dirtybase_common::anyhow::Error>{
+                #set_created_at
+                let result = self.manager.insert_into::<#ident>(record).await?;
+                if let Some(record) = result.record().cloned() {
+                    return <#ident as ::dirtybase_common::db::types::FromColumnAndValue>::from_column_value(record);
+                } else {
 
-            match self.by_id(id).await? {
-                Some(v) => Ok(v),
-                None => Err(::dirtybase_common::anyhow::anyhow!("could not retrieve inserted model"))
+                self.builder.is_eq(
+                  <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
+                        <#ident as ::dirtybase_common::db::table_model::TableModel>::id_column()),
+                    result.last_insert_id());
+                return self.one().await?.ok_or(::dirtybase_common::anyhow::anyhow!("could not get back inserted record"))
+                }
+            }
+        }
+    } else {
+        quote! {
+            pub async fn insert(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_common::anyhow::Error> {
+                #set_created_at
+                #pluck_rec_id
+
+                _ = self.manager.insert_into::<#ident>(record).await?;
+
+                match self.by_id(id).await? {
+                    Some(v) => Ok(v),
+                    None => Err(::dirtybase_common::anyhow::anyhow!("could not retrieve inserted model"))
+                }
             }
         }
     };

@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
 use dirtybase_contract::db_contract::{
+    QueryResult,
     base::{aggregate::Aggregate, index::IndexType},
     query_column::{QueryColumn, QueryColumnName},
 };
@@ -141,7 +142,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
     async fn drop_table(&mut self, name: &str) -> Result<(), anyhow::Error> {
         if self.has_table(name).await? {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
-            return self.do_execute(query).await;
+            _ = self.do_execute(query).await?;
         }
 
         Ok(())
@@ -151,7 +152,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         self.do_apply(table).await
     }
 
-    async fn execute(&mut self, query: QueryBuilder) -> anyhow::Result<()> {
+    async fn execute(&mut self, query: QueryBuilder) -> anyhow::Result<QueryResult> {
         self.do_execute(query).await
     }
 
@@ -307,7 +308,7 @@ impl MySqlSchemaManager {
         };
     }
 
-    async fn do_execute(&mut self, query: QueryBuilder) -> anyhow::Result<()> {
+    async fn do_execute(&mut self, query: QueryBuilder) -> anyhow::Result<QueryResult> {
         let mut params = MySqlArguments::default();
 
         let mut sql;
@@ -415,7 +416,10 @@ impl MySqlSchemaManager {
         match result {
             Ok(r) => {
                 log::debug!("{} result: {:#?}", query.action(), r);
-                Ok(())
+                Ok(QueryResult::new(
+                    r.rows_affected(),
+                    r.last_insert_id() as i64,
+                ))
             }
             Err(e) => {
                 log::error!("{} failed: {}", query.action(), e);
