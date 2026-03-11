@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use super::{actor::Actor, role::Role};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, DirtyTable)]
-#[dirty(table = "auth_actor_roles", timestamp, soft_deletable)]
+#[dirty(table = "auth_actor_roles", id_not_auto, timestamp, soft_deletable)]
 pub struct ActorRole {
     pub(crate) id: Option<ArcUuid7>,
     auth_actor_id: ArcUuid7,

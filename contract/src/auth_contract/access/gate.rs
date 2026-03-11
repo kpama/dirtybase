@@ -27,6 +27,27 @@ type GateCollection = HashMap<
     >,
 >;
 
+#[derive(Debug, Clone)]
+pub struct GateAbility {
+    inner: Arc<String>,
+    hash: u64,
+}
+impl GateAbility {
+    pub(crate) fn new(ability: &str, ability_hash: u64) -> Self {
+        Self {
+            inner: ability.to_string().into(),
+            hash: ability_hash,
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.inner
+    }
+    pub fn hash(&self) -> u64 {
+        self.hash
+    }
+}
+
 pub(crate) static GATE_COLLECTION: OnceLock<RwLock<GateCollection>> = OnceLock::new();
 
 #[derive(Debug, Clone)]
@@ -66,7 +87,7 @@ impl Gate {
                 let h = handler.clone();
                 Box::pin(async move {
                     //
-                    let result = cc.resolve_and_call(h.clone()).await;
+                    let result = cc.resolve_and_call(h).await;
                     if let Some(r) = result {
                         return Some(r.into());
                     }
@@ -132,9 +153,10 @@ impl Gate {
             hash
         );
 
-        let result = GateBeforeMiddleware::new(self.sc.clone(), hash)
-            .handle()
-            .await;
+        let result =
+            GateBeforeMiddleware::new(self.sc.clone(), GateAbility::new(ability.as_ref(), hash))
+                .handle()
+                .await;
         if let Some(r) = result {
             return r;
         }
@@ -149,9 +171,10 @@ impl Gate {
             }
         }
 
-        let result = GateAfterMiddleware::new(self.sc.clone(), hash)
-            .handle()
-            .await;
+        let result =
+            GateAfterMiddleware::new(self.sc.clone(), GateAbility::new(ability.as_ref(), hash))
+                .handle()
+                .await;
 
         if let Some(r) = result {
             return r;

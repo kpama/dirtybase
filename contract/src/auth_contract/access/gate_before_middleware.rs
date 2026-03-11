@@ -4,26 +4,26 @@ use std::{future::Future, sync::Arc};
 
 use busybody::ServiceContainer;
 
-use crate::auth_contract::AuthUser;
+use crate::auth_contract::{AuthUser, GateAbility};
 
 use super::GateResponse;
 
 #[derive(Debug, Clone)]
 pub(crate) struct GateBeforeMiddleware {
     pub(crate) sc: ServiceContainer,
-    ability: u64,
+    ability: GateAbility,
 }
 
 impl GateBeforeMiddleware {
-    pub(crate) fn new(sc: ServiceContainer, ability_hash: u64) -> Self {
-        Self {
-            sc,
-            ability: ability_hash,
-        }
+    pub(crate) fn new(sc: ServiceContainer, ability: GateAbility) -> Self {
+        Self { sc, ability }
     }
 
-    pub fn ability(&self) -> u64 {
-        self.ability
+    pub fn ability_ref(&self) -> &GateAbility {
+        &self.ability
+    }
+    pub fn ability(&self) -> GateAbility {
+        self.ability.clone()
     }
 
     pub async fn handle(self) -> Option<GateResponse> {

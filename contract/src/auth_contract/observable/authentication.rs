@@ -18,6 +18,10 @@ impl AuthSucceeded {
         &self.actor
     }
 
+    pub fn set_actor(&mut self, actor: Actor) {
+        self.actor = actor;
+    }
+
     pub async fn dispatch_response(actor: Actor, ctx: &Context) -> Actor {
         (Self::new(actor)).notify(ctx).await.actor().clone()
     }

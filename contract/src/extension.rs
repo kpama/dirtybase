@@ -14,7 +14,7 @@ use crate::{
     cli_contract::{CliCommandManager, CliMiddlewareManager},
     config_contract::DirtyConfig,
     http_contract::{self, RouterBuilder, RouterManager, WebMiddlewareManager},
-    prelude::{ContextResourceManager, observable::CommonExpressionSandbox},
+    prelude::{ContextResourceManager, observable::cel::CommonExpressionSandbox},
 };
 
 pub(crate) static EXTENSION_COLLECTION: OnceLock<RwLock<Vec<Box<dyn ExtensionSetup>>>> =

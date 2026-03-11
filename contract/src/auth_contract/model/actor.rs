@@ -21,6 +21,7 @@ use crate::{
         base::helper::generate_ulid,
         types::{ArcUuid7, BooleanField, IntegerField, OptionalDateTimeField, ToColumnAndValue},
     },
+    prelude::Context,
 };
 
 use argon2::{
@@ -31,7 +32,7 @@ use argon2::{
 use super::ParseToken;
 
 #[derive(Clone, Validate, Serialize, DirtyTable, Deserialize)]
-#[dirty(table = "auth_actors", soft_deletable, timestampable)]
+#[dirty(table = "auth_actors", soft_deletable, id_not_auto, timestampable)]
 pub struct Actor {
     pub(crate) id: Option<ArcUuid7>,
     #[validate(length(min = 4, max = 255))]
@@ -67,7 +68,11 @@ pub struct Actor {
 
     #[serde(skip)]
     #[dirty(skip)]
-    manager: PermissionManager,
+    manager: Arc<PermissionManager>,
+
+    #[serde(skip_deserializing)]
+    #[dirty(skip)]
+    current_role: Role,
 }
 
 impl Default for Actor {
@@ -95,7 +100,8 @@ impl Default for Actor {
             roles: Vec::default(),
             actor_roles: Vec::default(),
             permissions: Vec::default(),
-            manager: PermissionManager::default(),
+            manager: Arc::default(),
+            current_role: Role::create_guest(),
         }
     }
 }
@@ -142,19 +148,27 @@ impl Actor {
     }
 
     pub fn set_perm_manager(&mut self, manager: PermissionManager) {
-        self.manager = manager;
+        self.manager = Arc::new(manager);
     }
 
-    pub fn has_all<T: ToString>(&self, actions: &[&str]) -> bool {
-        self.manager.all(actions)
+    pub fn current_role(&self) -> &Role {
+        &self.current_role
     }
 
-    pub fn has_any(&self, actions: &[&str]) -> bool {
-        self.manager.any(actions)
+    pub fn set_current_role(&mut self, role: Role) {
+        self.current_role = role;
     }
 
-    pub fn can<T: ToString>(&self, action: T) -> bool {
-        self.manager.can(action)
+    pub async fn has_all<T: ToString>(&self, actions: &[&str], context: &Context) -> bool {
+        self.manager.all(actions, context).await
+    }
+
+    pub async fn has_any(&self, actions: &[&str], context: &Context) -> bool {
+        self.manager.any(actions, context).await
+    }
+
+    pub async fn can<T: ToString>(&self, action: T, context: &Context) -> bool {
+        self.manager.can(action, context).await
     }
 
     pub fn status(&self) -> AuthUserStatus {

@@ -6,7 +6,12 @@ use serde::{Deserialize, Serialize};
 use super::{actor::Actor, permission::Permission, role::Role};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, DirtyTable)]
-#[dirty(table = "auth_role_permissions", timestamp, soft_deletable)]
+#[dirty(
+    table = "auth_role_permissions",
+    id_not_auto,
+    timestamp,
+    soft_deletable
+)]
 pub struct RolePermission {
     pub(crate) id: Option<ArcUuid7>,
     auth_role_id: Option<ArcUuid7>, // The permission could be applied to one of the actor's roles. This is the recommended way

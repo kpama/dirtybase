@@ -6,7 +6,7 @@ use dirtybase_db_macro::DirtyTable;
 use crate::auth_contract::{Actor, ActorRole, Permission, RolePermission};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, DirtyTable)]
-#[dirty(table = "auth_roles", timestamp, soft_deletable)]
+#[dirty(table = "auth_roles", id_not_auto, timestamp, soft_deletable)]
 pub struct Role {
     pub(crate) id: Option<ArcUuid7>,
     name: NameField,
@@ -29,6 +29,15 @@ impl Role {
             id: Some(ArcUuid7::default()),
             name: name.to_string().into(),
             label: label.to_string().into(),
+            ..Default::default()
+        }
+    }
+
+    pub fn create_guest() -> Self {
+        Self {
+            id: Some(ArcUuid7::default()),
+            name: "guest".to_string().into(),
+            label: "Guest Role".to_string().into(),
             ..Default::default()
         }
     }

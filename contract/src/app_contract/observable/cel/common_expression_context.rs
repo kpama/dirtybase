@@ -61,7 +61,23 @@ impl CommonExpressionSandbox {
         self
     }
 
-    /// Register a program only if the project does not exist
+    /// Update a existing program.
+    pub fn put_program(&self, name: &str, source: &str) -> &Self {
+        match self.collection.read() {
+            Ok(r_lock) => {
+                if !r_lock.contains_key(name) {
+                    return self;
+                }
+            }
+            Err(e) => {
+                tracing::error!("{}", e);
+                return self;
+            }
+        }
+        self.set_program(name, source)
+    }
+
+    /// Register a program only if the program does not exist
     pub fn add_program(&self, name: &str, source: &str) -> &Self {
         match self.collection.read() {
             Ok(r_lock) => {

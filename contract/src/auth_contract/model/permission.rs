@@ -5,7 +5,7 @@ use dirtybase_db_macro::DirtyTable;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, DirtyTable)]
-#[dirty(table = "auth_permissions", timestamp, soft_deletable)]
+#[dirty(table = "auth_permissions", id_not_auto, timestamp, soft_deletable)]
 pub struct Permission {
     pub(crate) id: Option<ArcUuid7>,
     name: NameField,

@@ -111,7 +111,7 @@ impl TryFrom<String> for TenantId {
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, DirtyTable)]
-#[dirty(table = "tenants", soft_deletable)]
+#[dirty(table = "tenants", soft_deletable, id_not_auto)]
 pub struct Tenant {
     id: Option<TenantId>,
     name: StringField,
