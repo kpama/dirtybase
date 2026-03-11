@@ -3,8 +3,6 @@ use dirtybase_contract::db_contract::TableModel;
 use dirtybase_contract::db_contract::base::manager::Manager;
 use dirtybase_contract::db_contract::migration::Migration;
 
-use crate::storage::database_storage::AUTH_USER_TABLE;
-
 pub struct Mig1740151519CreateAuthUserTable;
 
 #[dirtybase_contract::async_trait]
