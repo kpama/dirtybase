@@ -8,7 +8,9 @@ use std::{
 
 use cel::{Context as CelCtx, ExecutionError as CelExecutionError, Program, Value};
 
-use crate::prelude::{Context, ContextResourceManager, Observable, global_context};
+use crate::prelude::{
+    Context, ContextResourceManager, Observable, global_context, observable::cel::CelCoreVariable,
+};
 
 /// An Observable that allows other crates to add function, variable to global context
 pub type CelContext<'a> = CelCtx<'a>;
@@ -113,7 +115,12 @@ impl CommonExpressionSandbox {
             .resolver(move |_| {
                 let c = ctx.clone();
                 async move {
-                    let cel_ctx = CelContext::default();
+                    let mut cel_ctx = CelContext::default();
+                    let core_variable = CelCoreVariable::default().notify(&c).await;
+                    if let Err(e) = core_variable.merge_into_context(&mut cel_ctx) {
+                        tracing::error!("could not merge CEL core variables. {}", e);
+                    }
+
                     busybody::Service::new(cel_ctx.notify(&c).await)
                 }
             })
