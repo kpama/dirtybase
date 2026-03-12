@@ -11,7 +11,7 @@ mod entity_repo;
 mod helpers;
 mod relationship;
 
-#[proc_macro_derive(DirtyTable, attributes(dirty, dirty_rel))]
+#[proc_macro_derive(DirtyTable, attributes(dirty))]
 pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
 
@@ -19,6 +19,7 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
     let (table_attribute, columns_attributes) = pluck_attributes(&input);
     let entity_hash_method = build_entity_hash_method(&table_attribute);
     let table_name = &table_attribute.table_name;
+    let repo_name = format_ident!("{}Repo", &input.ident);
 
     let column = pluck_names(&columns_attributes);
     let flatten_columns = pluck_flatten_columns(&columns_attributes);
@@ -84,6 +85,10 @@ pub fn derive_dirtybase_entity(item: TokenStream) -> TokenStream {
 
         pub fn into_embeddable(&self) -> ::dirtybase_common::db::field_values::FieldValue {
           ::dirtybase_common::db::field_values::FieldValue::from(self)
+        }
+
+        pub fn repo_instance(db_manager: &::dirtybase_common::db::base::manager::Manager ) -> #repo_name {
+          #repo_name::new(db_manager)
         }
 
       }

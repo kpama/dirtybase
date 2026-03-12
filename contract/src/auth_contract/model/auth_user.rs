@@ -28,7 +28,7 @@ use argon2::{
 use super::ParseToken;
 
 #[derive(Clone, Validate, Serialize, DirtyTable, Deserialize)]
-#[dirty(table = "auth_users")]
+#[dirty(table = "auth_users", id_not_auto)]
 pub struct AuthUser {
     id: Option<ArcUuid7>,
     #[validate(length(min = 4, max = 255))]

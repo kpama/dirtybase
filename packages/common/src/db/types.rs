@@ -129,7 +129,26 @@ impl StructuredColumnAndValue {
     }
 
     pub fn get(&self, key: &str) -> Option<&FieldValue> {
-        self.fields.get(key)
+        if key.trim().is_empty() {
+            return None;
+        }
+
+        let mut parts = key.split('.').collect::<Vec<&str>>().into_iter();
+        let current = self.fields.get(parts.next().unwrap());
+        let mut child = current;
+        if current.is_some() {
+            for other in parts {
+                match child {
+                    Some(FieldValue::Object(obj)) => {
+                        child = obj.get(other);
+                    }
+                    _ => (),
+                }
+            }
+            return child;
+        }
+
+        current
     }
 
     pub fn take(&self, key: &str) -> Option<FieldValue> {

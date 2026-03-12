@@ -65,7 +65,7 @@ pub fn build_entity_repo(
     let mut append_trash_filter = quote! {};
     let mut with_trashed = quote! {};
     let mut trashed_only = quote! {};
-    let soft_deletable = !tbl_attr.no_soft_delete;
+    let soft_deletable = tbl_attr.soft_deletable;
     let created_at = format_ident!("{}", tbl_attr.created_at_col);
     let updated_at = format_ident!("{}", tbl_attr.updated_at_col);
     let deleted_at = format_ident!("{}", tbl_attr.deleted_at_col);
@@ -108,34 +108,54 @@ pub fn build_entity_repo(
     };
 
     // insert
-    let set_created_at = if tbl_attr.no_timestamp {
-        quote! {}
-    } else {
+    let set_created_at = if tbl_attr.timestamp {
         quote! {
             record.#created_at = Some(::dirtybase_common::dirtybase_helper::time::current_datetime());
         }
+    } else {
+        quote! {}
     };
-    let insert_method = quote! {
-        pub async fn insert(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_common::anyhow::Error> {
-            #set_created_at
-            #pluck_rec_id
 
-           _ = self.manager.insert_into::<#ident>(record).await?;
+    let insert_method = if tbl_attr.id_incrementing {
+        quote! {
+            pub async fn insert(&mut self, mut record: #ident)  -> Result<#ident, ::dirtybase_common::anyhow::Error>{
+                #set_created_at
+                let result = self.manager.insert_into::<#ident>(record).await?;
+                if let Some(record) = result.record().cloned() {
+                    return <#ident as ::dirtybase_common::db::types::FromColumnAndValue>::from_column_value(record);
+                } else {
 
-            match self.by_id(id).await? {
-                Some(v) => Ok(v),
-                None => Err(::dirtybase_common::anyhow::anyhow!("could not retrieve inserted model"))
+                self.builder.is_eq(
+                  <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
+                        <#ident as ::dirtybase_common::db::table_model::TableModel>::id_column()),
+                    result.last_insert_id());
+                return self.one().await?.ok_or(::dirtybase_common::anyhow::anyhow!("could not get back inserted record"))
+                }
+            }
+        }
+    } else {
+        quote! {
+            pub async fn insert(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_common::anyhow::Error> {
+                #set_created_at
+                #pluck_rec_id
+
+                _ = self.manager.insert_into::<#ident>(record).await?;
+
+                match self.by_id(id).await? {
+                    Some(v) => Ok(v),
+                    None => Err(::dirtybase_common::anyhow::anyhow!("could not retrieve inserted model"))
+                }
             }
         }
     };
 
     // update
-    let set_updated_at = if tbl_attr.no_timestamp {
-        quote! {}
-    } else {
+    let set_updated_at = if tbl_attr.timestamp {
         quote! {
             record.#updated_at= Some(::dirtybase_common::dirtybase_helper::time::current_datetime());
         }
+    } else {
+        quote! {}
     };
     let update_method = quote! {
         pub async fn update(&mut self, mut record: #ident) -> Result<#ident, ::dirtybase_common::anyhow::Error>{
@@ -231,8 +251,7 @@ pub fn build_entity_repo(
         };
 
         append_trash_filter = quote! {
-            let flag_soft = "_soft_delete".to_string();
-            if !self.settings.contains(&flag_soft) {
+            if !self.return_only_deleted_rec && !self.include_deleted_rec {
                 self.builder.is_null(
                     <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
                         <#ident as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect("deleted at column is require")
@@ -243,26 +262,14 @@ pub fn build_entity_repo(
 
         with_trashed = quote! {
             pub fn with_trashed(&mut self,)  -> &mut Self {
-                if self.settings.contains(&"_trashed_only".to_string()) {
-                    return self;
-                }
-
-                let flag_soft = "_soft_delete".to_string();
-                if !self.settings.contains(&flag_soft) {
-                    self.settings.push(flag_soft.clone());
-                }
+                self.return_only_deleted_rec = true;
                 self
             }
         };
 
         trashed_only = quote! {
             pub fn trashed_only(&mut self)  -> &mut Self {
-                let flag_soft = "_soft_delete";
-                if let Some(index) = self.settings.iter().position(|entry| entry == flag_soft) {
-                    _= self.settings.remove(index);
-                }
-
-                self.settings.push("_trashed_only".to_string());
+                self.return_only_deleted_rec = true;
                 self.builder.is_not_null(
                         <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
                             <#ident as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect("deleted at column is require")
@@ -275,11 +282,15 @@ pub fn build_entity_repo(
     }
 
     quote! {
+        /// Repository.
+        ///
+        /// This struct is autogenerated
         #[derive(Debug, Clone)]
         pub struct #repo_name {
             builder: ::dirtybase_common::db::base::query::QueryBuilder,
             manager: ::dirtybase_common::db::base::manager::Manager,
-            settings: Vec<String>,
+            include_deleted_rec: bool,
+            return_only_deleted_rec: bool,
             relation: ::std::collections::HashMap<String, ::dirtybase_common::db::repo_relation::Relation<#ident>>,
         }
 
@@ -293,7 +304,8 @@ pub fn build_entity_repo(
                     ),
                     manager: manager.clone(),
                     relation: ::std::collections::HashMap::new(),
-                    settings: Vec::new(),
+                    include_deleted_rec: false,
+                    return_only_deleted_rec: false
                 }
             }
 
@@ -306,16 +318,16 @@ pub fn build_entity_repo(
             pub async fn cursor_paginate(&mut self, cursor: Option<::dirtybase_common::db::base::cursor_builder::CursorBuilder>) ->
              ::dirtybase_common::db::base::cursor_builder::CursorResult<#ident>
             {
-                let mut rows_map = ::std::collections::HashMap::<u64, #ident>::new();
+                let mut rows_map = Vec::<#ident>::new();
                 // <name of a field whos value is used in a join, <entry hash, the field value>>
                 let mut join_field_values = ::std::collections::HashMap::new();
                 //<String, ::std::collections::HashMap<u64,::dirtybase_common::db::field_values::FieldValue>>,
                 let mut rows_rel_map = ::std::collections::HashMap::new();
-                let cursor = if let Some(cursor) = cursor {
+                let mut cursor = if let Some(cursor) = cursor {
                     cursor
                 } else {
                     ::dirtybase_common::db::base::cursor_builder::CursorBuilder::new(
-                        <#ident as ::dirtybase_common::db::table_model::TableModel>::id_column(),
+                        &<#ident as ::dirtybase_common::db::table_model::TableModel>::id_column(),
                         None
                     )
                 };
@@ -332,8 +344,7 @@ pub fn build_entity_repo(
                         for row in raw_list {
                             if let Some(row_entity) = #ident::from_struct_column_value(&row,
                                 Some(<#ident as ::dirtybase_common::db::table_model::TableModel>::table_name())) {
-                                let row_hash = ::dirtybase_common::db::table_model::TableModel::entity_hash(&row_entity);
-                                rows_map.insert(row_hash, row_entity);
+                                rows_map.push(row_entity);
                             }
                         }
 
@@ -346,12 +357,13 @@ pub fn build_entity_repo(
                         }
 
                         // now map relationships
-                        for(row_hash, row_entity) in &mut rows_map {
+                        for row_entity in &mut rows_map {
+                            let row_hash = ::dirtybase_common::db::table_model::TableModel::entity_hash(row_entity);
                             #(#append_methods)*
                         }
 
                         *self = Self::new(&self.manager);
-                        ::dirtybase_common::db::base::cursor_builder::CursorResult::<#ident>::new(cursor,Ok(rows_map.into_iter().map(|e| e.1).collect::<Vec<#ident>>()))
+                        ::dirtybase_common::db::base::cursor_builder::CursorResult::<#ident>::new(cursor,Ok(rows_map))
                     }
                     Err(e) => {
                         *self = Self::new(&self.manager);
@@ -361,9 +373,9 @@ pub fn build_entity_repo(
 
             }
 
-            pub async fn get(&mut self) -> Result<Option<Vec<#ident>>, ::dirtybase_common::anyhow::Error> {
-                let mut rows_map = ::std::collections::HashMap::<u64, #ident>::new();
-                // <name of a field whos value is used in a join, <entry hash, the field value>>
+            pub async fn get(&mut self) -> Result<Vec<#ident>, ::dirtybase_common::anyhow::Error> {
+                let mut rows_map = Vec::<#ident>::new();
+                // <name of a field whose value is used in a join, <entry hash, the field value>>
                 let mut join_field_values = ::std::collections::HashMap::new();
                 //<String, ::std::collections::HashMap<u64,::dirtybase_common::db::field_values::FieldValue>>,
                 let mut rows_rel_map = ::std::collections::HashMap::new();
@@ -382,7 +394,7 @@ pub fn build_entity_repo(
                             if let Some(row_entity) = #ident::from_struct_column_value(&row,
                                 Some(<#ident as ::dirtybase_common::db::table_model::TableModel>::table_name())) {
                                 let row_hash= ::dirtybase_common::db::table_model::TableModel::entity_hash(&row_entity);
-                                rows_map.insert(row_hash, row_entity);
+                                rows_map.push(row_entity);
                             }
                         }
 
@@ -394,12 +406,13 @@ pub fn build_entity_repo(
                         }
 
                         // now map relationships
-                        for(row_hash, row_entity) in &mut rows_map {
+                        for row_entity in &mut rows_map {
+                            let row_hash = ::dirtybase_common::db::table_model::TableModel::entity_hash(row_entity);
                             #(#append_methods)*
                         }
 
                         *self = Self::new(&self.manager);
-                        Ok(Some(rows_map.into_iter().map(|e| e.1).collect::<Vec<#ident>>()))
+                        Ok(rows_map)
                     },
                     Err(e) => {
                         *self = Self::new(&self.manager);
@@ -410,7 +423,7 @@ pub fn build_entity_repo(
 
             pub async fn one(&mut self) -> Result<Option<#ident>, ::dirtybase_common::anyhow::Error> {
                 match self.limit(1).get().await {
-                    Ok(Some(mut list)) => {
+                    Ok(mut list) => {
                         Ok(list.pop())
                     },
                     Err(e) => Err(e),
@@ -486,7 +499,7 @@ pub fn build_entity_repo(
                 self.one().await
             }
 
-            pub async fn id_in(&mut self, ids: Vec<#id_type>)-> Result<Option<Vec<#ident>>, ::dirtybase_common::anyhow::Error> {
+            pub async fn id_in(&mut self, ids: Vec<#id_type>)-> Result<Vec<#ident>, ::dirtybase_common::anyhow::Error> {
                 self.builder.is_in(
                         <#ident as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
                         <#ident as ::dirtybase_common::db::table_model::TableModel>::id_column()),
@@ -497,6 +510,15 @@ pub fn build_entity_repo(
 
             pub fn table_name() -> &'static str {
                <#ident as ::dirtybase_common::db::table_model::TableModel>::table_name()
+            }
+
+            pub fn is_soft_deletable() -> bool {
+                <#ident as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().is_some()
+            }
+
+            pub fn is_timestampable() -> bool {
+                <#ident as ::dirtybase_common::db::table_model::TableModel>::created_at_column().is_some() &&
+                <#ident as ::dirtybase_common::db::table_model::TableModel>::created_at_column().is_some()
             }
 
             #insert_method

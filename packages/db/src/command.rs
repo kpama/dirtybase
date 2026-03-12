@@ -66,18 +66,33 @@ pub(crate) fn setup_commands(mut manager: CliCommandManager) -> CliCommandManage
     });
 
     // Seeding
-    let seed = clap::Command::new("seed")
+    let mut seed = clap::Command::new("seed")
         .about("Seed the database with dummy data")
         .arg_required_else_help(true)
         .arg(Arg::new("name").short('n').action(ArgAction::Set));
 
+    seed = seed.subcommand(clap::Command::new("list").about("List all seeders"));
+
     manager.register(seed, |_, matches, context| {
         Box::pin(async move {
-            if let Some(name) = matches.get_one::<String>("name")
-                && let Ok(manager) = context.get::<Manager>().await
-            {
-                let seeder = SeederRegisterer::new(name, manager, context.clone());
-                seeder.seed().await;
+            let manager = if let Ok(manager) = context.get::<Manager>().await {
+                manager
+            } else {
+                return Ok(());
+            };
+            match matches.subcommand_name() {
+                Some(sub_name) => {
+                    if sub_name == "list" {
+                        let seeder = SeederRegisterer::new("list-all", manager, context.clone());
+                        seeder.list().await;
+                    }
+                }
+                None => {
+                    if let Some(name) = matches.get_one::<String>("name") {
+                        let seeder = SeederRegisterer::new(name, manager, context.clone());
+                        seeder.seed().await;
+                    }
+                }
             }
             Ok(())
         })

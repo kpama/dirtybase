@@ -60,9 +60,10 @@ pub(crate) async fn attach_session_cookie(context: &Context, mut cookie: CookieJ
         let mut entry = Cookie::new(config.cookie_id().to_string(), session.id().to_string());
 
         let mut ts = cookie::time::OffsetDateTime::now_utc();
-        ts += cookie::time::Duration::minutes(config.lifetime() * 2);
+        ts += cookie::time::Duration::minutes(config.lifetime());
         entry.set_expires(ts);
         entry.set_path("/");
+        entry.set_http_only(true);
         cookie = cookie.add(entry);
     }
 

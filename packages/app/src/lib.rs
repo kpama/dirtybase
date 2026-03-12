@@ -1,6 +1,8 @@
-use core::AppService;
+use app::AppService;
 
-pub mod core;
+mod config;
+
+pub mod app;
 pub mod dirtybase_entry;
 pub mod http;
 
@@ -9,6 +11,7 @@ pub use axum;
 pub use busstop;
 pub use busybody;
 pub use clap;
+pub use config::*;
 pub use dirtybase_auth as auth;
 pub use dirtybase_contract as contract;
 pub use dirtybase_contract::config_contract;
@@ -22,7 +25,7 @@ use dirtybase_contract::cli_contract::setup_cli_command_manager;
 
 /// Set up database application using configs in .env files
 pub async fn setup() -> anyhow::Result<AppService> {
-    let config = core::Config::new(None).await;
+    let config = app::Config::new(None).await;
     setup_using(&config).await
 }
 
@@ -36,19 +39,18 @@ pub async fn setup() -> anyhow::Result<AppService> {
 ///                     .build();
 /// ```
 ///
-pub async fn setup_using(config: &core::Config) -> anyhow::Result<AppService> {
+pub async fn setup_using(config: &app::Config) -> anyhow::Result<AppService> {
     busybody::helpers::set_type(config.dirty_config().clone()).await;
 
-    let app = core::App::new(config).await?;
+    let app = app::App::new(config).await?;
 
     // core extensions
     #[cfg(feature = "multitenant")]
     app.register(dirtybase_multitenant::Extension::default())
         .await; // Multi tenant extension should always be the first
     app.register(dirtybase_session::Extension).await;
-    // TODO: Make the auth and permission extensions optional !?!?!?
+    #[cfg(feature = "auth")]
     app.register(dirtybase_auth::Extension::default()).await;
-    app.register(dirtybase_permission::Extension).await;
     app.register(dirtybase_db::Extension).await;
     app.register(dirtybase_encrypt::Extension).await;
     // the core app

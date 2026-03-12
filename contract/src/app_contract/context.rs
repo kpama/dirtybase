@@ -1,4 +1,8 @@
-use std::{ops::Deref, sync::Arc};
+use std::{
+    fmt::{Debug, Display},
+    ops::Deref,
+    sync::Arc,
+};
 
 use anyhow::anyhow;
 use axum::{
@@ -28,6 +32,18 @@ pub struct Context {
     id: ArcUuid7,
     is_global: bool,
     sc: busybody::ServiceContainer,
+}
+
+impl Display for Context {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "app context: {}, global: {}", self.id, self.is_global)
+    }
+}
+
+impl Debug for Context {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
 }
 
 impl Context {
@@ -253,6 +269,63 @@ where
 
 impl<T> Deref for CtxExt<T> {
     type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+/// Current request context extension manager
+///
+/// Safe version of CtxExt<T>
+///
+/// When an extension is requested, the current request context is used
+/// before falling back to the global context
+/// All requested data will be wrapped in Option<T>
+#[derive(Debug, Clone)]
+#[must_use]
+pub struct OptionCtxExt<T>(pub Option<T>);
+
+impl<T, S> FromRequestParts<S> for OptionCtxExt<T>
+where
+    T: Clone + Send + Sync + 'static,
+    S: Send + Sync,
+{
+    type Rejection = (StatusCode, String);
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let Some(context) = parts.extensions.get::<Context>().cloned() else {
+            return Err((StatusCode::INTERNAL_SERVER_ERROR, String::new()));
+        };
+
+        if let Ok(ext) = context.get::<T>().await {
+            return Ok(Self(Some(ext)));
+        }
+
+        if let Some(v) = context.container().get_type::<Bind<T>>().await {
+            return Ok(Self(Some(v.0)));
+        }
+
+        match ModelBindResolver::new(context.clone(), None)
+            .await
+            .bind::<T>()
+            .await
+        {
+            Ok(Some(bind)) => {
+                return Ok(Self(Some(
+                    context.set(bind).await.get::<Bind<T>>().await.unwrap().0,
+                )));
+            }
+            Ok(None) => return Ok(Self(None)),
+            _ => (),
+        }
+
+        tracing::error!("{} not found in context", std::any::type_name::<T>());
+        Ok(Self(None))
+    }
+}
+
+impl<T> Deref for OptionCtxExt<T> {
+    type Target = Option<T>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }

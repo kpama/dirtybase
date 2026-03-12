@@ -1,13 +1,19 @@
 use std::{
     collections::HashMap,
     fmt::{Debug, Display},
+    marker::PhantomData,
     sync::Arc,
 };
 
 use crate::db::{
-    base::{manager::Manager, query::QueryBuilder},
+    TableModel,
+    base::{
+        cursor_builder::{CursorBuilder, CursorResult},
+        manager::Manager,
+        query::QueryBuilder,
+    },
     field_values::FieldValue,
-    types::StructuredColumnAndValue,
+    types::{FromColumnAndValue, StructuredColumnAndValue},
 };
 
 #[derive(Clone)]
@@ -102,12 +108,13 @@ impl RelationType {
 
 pub struct Relation<T> {
     rel_type: RelationType,
+    is_pivot_soft_deletable: bool,
     process: Option<
         Arc<
             Box<
                 dyn Fn(
                         Self,
-                        &HashMap<u64, T>,
+                        &[T],
                         &mut HashMap<String, HashMap<u64, FieldValue>>,
                     ) -> RelationProcessor
                     + Sync
@@ -122,6 +129,7 @@ impl<T> Clone for Relation<T> {
         Self {
             rel_type: self.rel_type.clone(),
             process: self.process.clone(),
+            is_pivot_soft_deletable: self.is_pivot_soft_deletable.clone(),
         }
     }
 }
@@ -143,7 +151,7 @@ impl<T> Relation<T> {
         rel_type: RelationType,
         process: impl Fn(
             Self,
-            &HashMap<u64, T>,
+            &[T],
             &mut HashMap<String, HashMap<u64, FieldValue>>,
         ) -> RelationProcessor
         + Send
@@ -152,8 +160,18 @@ impl<T> Relation<T> {
     ) -> Self {
         Self {
             rel_type,
+            is_pivot_soft_deletable: false,
             process: Some(Arc::new(Box::new(process))),
         }
+    }
+
+    pub fn is_pivot_soft_deletable(&self) -> bool {
+        self.is_pivot_soft_deletable
+    }
+
+    pub fn set_pivot_soft_deletable(&mut self, value: bool) -> &mut Self {
+        self.is_pivot_soft_deletable = value;
+        self
     }
 
     pub fn rel_type_mut(&mut self) -> &mut RelationType {
@@ -178,10 +196,10 @@ impl<T> Relation<T> {
         mut self,
         // The relation name
         name: &str,
-        // Db Manager
+        // Database Manager
         manager: &Manager,
         // The parent raw rows
-        rows: &HashMap<u64, T>,
+        rows: &[T],
         //  Values from the parent rows
         join_field_values: &mut HashMap<String, HashMap<u64, FieldValue>>,
         // Built relation data
@@ -245,6 +263,30 @@ impl<T> Relation<T> {
 
         Ok(())
     }
+
+    pub fn build_cursor_paginator<R: TableModel + FromColumnAndValue>(
+        mut self,
+        // Database Manager
+        manager: &Manager,
+        // The parent raw rows
+        rows: &[T],
+        //  Values from the parent rows
+        join_field_values: &mut HashMap<String, HashMap<u64, FieldValue>>,
+    ) -> RelationCursorPaginator<R> {
+        let process = self
+            .process
+            .take()
+            .expect("could not get relation processor");
+
+        let processor = (process)(self, rows, join_field_values);
+
+        RelationCursorPaginator {
+            processor,
+            manager: manager.clone(),
+            next_cursor: None,
+            _phanthom_data: PhantomData::default(),
+        }
+    }
 }
 
 pub struct RelationProcessor {
@@ -267,5 +309,41 @@ impl RelationProcessor {
             child_field_prefix,
             child_col_name,
         }
+    }
+}
+
+pub struct RelationCursorPaginator<T> {
+    manager: Manager,
+    processor: RelationProcessor,
+    next_cursor: Option<CursorBuilder>,
+    _phanthom_data: PhantomData<T>,
+}
+
+impl<T: TableModel + FromColumnAndValue> RelationCursorPaginator<T> {
+    pub async fn next(&mut self) -> CursorResult<T> {
+        self.fetch(None).await
+    }
+
+    pub async fn fetch(&mut self, cursor: Option<CursorBuilder>) -> CursorResult<T> {
+        let cursor = if let Some(cursor) = cursor {
+            cursor
+        } else {
+            self.next_cursor
+                .as_ref()
+                .cloned()
+                .unwrap_or_else(|| CursorBuilder::new(&T::prefix_with_tbl(T::id_column()), None))
+        };
+
+        let query = self.processor.query.clone();
+
+        let result = self
+            .manager
+            .execute_query(query)
+            .cursor_paginate_to::<T>(cursor)
+            .await;
+
+        self.next_cursor = Some(result.cursor());
+
+        result
     }
 }

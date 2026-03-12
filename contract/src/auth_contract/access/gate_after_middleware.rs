@@ -4,24 +4,29 @@ use std::{future::Future, sync::Arc};
 
 use busybody::ServiceContainer;
 
+use crate::{
+    auth_contract::{Actor, GateAbility},
+    prelude::Context,
+};
+
 use super::GateResponse;
 
 #[derive(Debug, Clone)]
 pub(crate) struct GateAfterMiddleware {
     pub(crate) sc: ServiceContainer,
-    ability: u64,
+    ability: GateAbility,
 }
 
 impl GateAfterMiddleware {
-    pub(crate) fn new(sc: ServiceContainer, ability_hash: u64) -> Self {
-        Self {
-            sc,
-            ability: ability_hash,
-        }
+    pub(crate) fn new(sc: ServiceContainer, ability: GateAbility) -> Self {
+        Self { sc, ability }
     }
 
-    pub fn ability(&self) -> u64 {
-        self.ability
+    pub fn ability(&self) -> GateAbility {
+        self.ability.clone()
+    }
+    pub fn ability_ref(&self) -> &GateAbility {
+        &self.ability
     }
 
     pub async fn handle(self) -> Option<GateResponse> {
@@ -53,10 +58,33 @@ impl GateAfterMiddleware {
         if let Some(r) = busybody::helpers::service_container().get().await {
             r
         } else {
-            let manager = simple_middleware::Manager::<Self, Option<GateResponse>>::last(|_, _| {
-                //
-                Box::pin(async move { Some(GateResponse::deny()) })
-            })
+            let manager = simple_middleware::Manager::<Self, Option<GateResponse>>::last(
+                |resolver, _| async move {
+                    //
+                    let actor = if let Some(actor) = resolver.sc.get_type::<Actor>().await {
+                        actor
+                    } else {
+                        return Some(GateResponse::deny());
+                    };
+
+                    let context = if let Some(ctx) = resolver.sc.get_type::<Context>().await {
+                        ctx
+                    } else {
+                        return Some(GateResponse::deny());
+                    };
+
+                    tracing::info!(
+                        "gate handled by last middlewere. ability: {}",
+                        resolver.ability_ref().name(),
+                    );
+                    Some(
+                        actor
+                            .can(resolver.ability_ref().name(), &context)
+                            .await
+                            .into(),
+                    )
+                },
+            )
             .await;
             busybody::helpers::service_container()
                 .set(manager)

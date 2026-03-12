@@ -23,6 +23,10 @@ impl SeederRegisterer {
         Self::get_middleware().await.send(self).await;
     }
 
+    pub async fn list(self) {
+        Self::get_middleware().await.send(self).await;
+    }
+
     pub async fn register<F, Fut>(name: &str, callback: F)
     where
         F: Clone + Fn(Manager, Context) -> Fut + Send + Sync + 'static,
@@ -40,6 +44,8 @@ impl SeederRegisterer {
                         if &reg.cmd_name != "all" {
                             return;
                         }
+                    } else if "list-all" == reg.cmd_name {
+                        println!("{}", &name);
                     }
                     next.call(reg).await
                 })

@@ -7,8 +7,6 @@ watch project example argument="":
 generate-env:
   rm .env.defaults
   touch .env.defaults
-  rm docs/docs/v1/config/env_config.md
-  touch docs/docs/v1/config/env_config.md
   cat packages/app/config_template/app.env.defaults >>  .env.defaults
   echo "\n\n" >> .env.defaults
   cat packages/auth/config_template/auth.env.defaults >>  .env.defaults
@@ -28,12 +26,6 @@ generate-env:
   cat packages/session/config_template/session.env.defaults >>  .env.defaults
   echo "\n\n" >> .env.defaults
   cp .env.defaults bin/cli/src/stubs/.env.defaults.stub.txt
-  echo "# Environment variables \n" >> docs/docs/v1/config/env_config.md;
-  echo "\`\`\`ini" >> docs/docs/v1/config/env_config.md
-  echo "\n" >> docs/docs/v1/config/env_config.md
-  cat .env.defaults >> docs/docs/v1/config/env_config.md
-  echo "\`\`\`" >> docs/docs/v1/config/env_config.md
-  echo "\n" >> docs/docs/v1/config/env_config.md
 
 build-api-doc:
   cargo doc --no-deps

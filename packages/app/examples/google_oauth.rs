@@ -15,6 +15,7 @@ use dirtybase_auth::{
 };
 use dirtybase_contract::{
     ExtensionSetup,
+    auth_contract::{FetchActorPayload, storage2::PermissionStorage},
     http_contract::HttpContext,
     prelude::{ConfigResult, Context, CtxExt, DirtyConfig, RouterManager, TryFromDirtyConfig},
     session_contract::Session,
@@ -99,8 +100,9 @@ impl ExtensionSetup for OauthApp {
                         //
                         _= fs::write("token.json", response.text().await.unwrap());
 
-                        let auth_prov = get_auth_storage(ctx.clone(), None).await.unwrap();
-                        if let Ok(Some(user))= auth_prov.find_by_username("admin").await {
+                        let auth_prov = get_auth_storage(ctx.clone()).await.unwrap();
+                        let payload = FetchActorPayload::by_username("admin");
+                        if let Ok(Some(user))= auth_prov.fetch_actor(payload, None).await {
                             session_guard::log_user_in(user, ctx).await;
                         }
 

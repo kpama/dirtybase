@@ -1,22 +1,31 @@
-use std::{future::Future, sync::Arc};
+use std::{
+    fmt::{Debug, Display},
+    future::Future,
+    sync::Arc,
+};
 
 use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
 };
 
-use crate::prelude::Context;
-
-use super::{AuthUser, AuthUserStorageProvider};
+use crate::{
+    auth_contract::{
+        Actor,
+        observable::{AuthSucceeded, AuthUnSuccessful},
+        storage2::PermStorageProvider,
+    },
+    prelude::{Context, Observable},
+};
 
 pub struct GuardResolver {
     headers: HeaderMap,
-    storage: AuthUserStorageProvider,
     context: Context,
+    storage: PermStorageProvider,
 }
 
 impl GuardResolver {
-    pub fn new(headers: HeaderMap, context: Context, storage: AuthUserStorageProvider) -> Self {
+    pub fn new(headers: HeaderMap, context: Context, storage: PermStorageProvider) -> Self {
         Self {
             headers,
             context,
@@ -28,7 +37,7 @@ impl GuardResolver {
         &self.headers
     }
 
-    pub fn storage_ref(&self) -> &AuthUserStorageProvider {
+    pub fn storage_ref(&self) -> &PermStorageProvider {
         &self.storage
     }
 
@@ -38,10 +47,6 @@ impl GuardResolver {
 
     pub fn context_ref(&self) -> &Context {
         &self.context
-    }
-
-    pub fn storage_mut_ref(&mut self) -> &mut AuthUserStorageProvider {
-        &mut self.storage
     }
 
     pub async fn register<F, Fut>(name: &str, callback: F)
@@ -59,13 +64,32 @@ impl GuardResolver {
                 async move {
                     if guard_name == name.as_str() {
                         let ctx = resolver.context();
-                        let result = (cb)(resolver).await;
+                        let mut guard_response = (cb)(resolver).await;
 
-                        if result.is_success() {
-                            ctx.set(result.user().unwrap()).await;
+                        guard_response = guard_response.notify(&ctx).await;
+                        if guard_response.is_success()
+                            && let Some(actor) = guard_response.actor()
+                        {
+                            ctx.set(AuthSucceeded::dispatch_response(actor, &ctx).await)
+                                .await;
+                        } else {
+                            if guard_response.is_success() {
+                                tracing::debug!("guard returned success but actor is 'None'");
+                            }
+
+                            guard_response = AuthUnSuccessful::new(guard_response)
+                                .notify(&ctx)
+                                .await
+                                .take_response();
                         }
 
-                        return result;
+                        if !guard_response.is_success() && !guard_response.has_response() {
+                            guard_response.set_response(
+                                GuardResponse::unauthorized().response().unwrap(), // NOTE: unwrap is okay here
+                            );
+                        }
+
+                        return guard_response;
                     }
                     next.call((resolver, guard_name)).await
                 }
@@ -98,17 +122,20 @@ impl GuardResolver {
     }
 }
 
+/// Holds the response from the auth guard
+///
+/// Instance of this type if observable
 pub struct GuardResponse {
     success: bool,
-    user: Option<AuthUser>,
+    actor: Option<Actor>,
     resp: Option<Response>,
 }
 
 impl GuardResponse {
-    pub fn success(user: AuthUser) -> Self {
+    pub fn success(actor: Actor) -> Self {
         Self {
             success: true,
-            user: Some(user),
+            actor: Some(actor),
             resp: None,
         }
     }
@@ -116,7 +143,7 @@ impl GuardResponse {
     pub fn failed(resp: Response) -> Self {
         Self {
             success: false,
-            user: None,
+            actor: None,
             resp: Some(resp),
         }
     }
@@ -124,7 +151,7 @@ impl GuardResponse {
     pub fn forbid() -> Self {
         Self {
             success: false,
-            user: None,
+            actor: None,
             resp: Some((StatusCode::FORBIDDEN, ()).into_response()),
         }
     }
@@ -132,15 +159,15 @@ impl GuardResponse {
     pub fn unauthorized() -> Self {
         Self {
             success: false,
-            user: None,
-            resp: Some((StatusCode::FORBIDDEN, ()).into_response()),
+            actor: None,
+            resp: Some((StatusCode::UNAUTHORIZED, ()).into_response()),
         }
     }
 
     pub fn fail_resp(resp: Response) -> Self {
         Self {
             success: false,
-            user: None,
+            actor: None,
             resp: Some(resp),
         }
     }
@@ -149,11 +176,47 @@ impl GuardResponse {
         self.success
     }
 
-    pub fn user(&self) -> Option<AuthUser> {
-        self.user.clone()
+    pub fn actor(&self) -> Option<Actor> {
+        self.actor.clone()
     }
 
+    pub fn actor_ref(&self) -> Option<&Actor> {
+        self.actor.as_ref()
+    }
+
+    pub fn has_actor(&self) -> bool {
+        self.actor.is_some()
+    }
+
+    pub fn set_actor(&mut self, actor: Actor) -> &mut Self {
+        self.actor = Some(actor);
+        self
+    }
+
+    pub fn set_response(&mut self, resp: Response) -> &mut Self {
+        self.resp = Some(resp);
+        self
+    }
     pub fn response(self) -> Option<Response> {
         self.resp
     }
+
+    pub fn has_response(&self) -> bool {
+        self.resp.is_some()
+    }
 }
+
+impl Display for GuardResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "guard resp - is success: {}", self.is_success())
+    }
+}
+
+impl Debug for GuardResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+#[async_trait::async_trait]
+impl Observable for GuardResponse {}

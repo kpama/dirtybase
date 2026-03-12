@@ -25,6 +25,7 @@ pub(crate) fn generate_join_method(
     let name = &attr.name;
     let method_name_st = format!("with_{name}");
     let method_name = format_ident!("{}", &method_name_st);
+    let cursor_paginator = format_ident!("{name}_paginate_cursor");
     let when_method_name = format_ident!("{}_when", &name);
     let method_name_where = format_ident!("{}_where", &method_name_st);
     let trashed_method_name = format_ident!("with_trashed_{}", &name);
@@ -56,28 +57,33 @@ pub(crate) fn generate_join_method(
             foreign_col = quote! { #field };
         }
 
-        let trash_condition = if attribute.no_soft_delete {
-            quote! {}
-        } else {
+        let trash_condition = if attribute.soft_deletable {
             quote! {
-                relation.query_mut().is_null(
-                    <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
-                        <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
-                    )
-                );
+                if let Some(deleted_at) = <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column() {
+                    relation.query_mut().is_null(<#foreign_type as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(deleted_at));
+                } else {
+                    std::panic!("{} are not soft deletable", #name);
+                }
             }
+        } else {
+            quote! {}
         };
 
+        let default_join_doc = format!(
+            "Initiates a new join for {} applying only the join filter. Gives you full control",
+            attr.the_type
+        );
         list.push(quote! {
+                #[doc = #default_join_doc]
                 pub fn #when_method_name<F>(&mut self , mut callback: F) -> &mut Self
-                    where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
+                    where F: FnOnce(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
                  {
             let query = <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::make_query_builder();
             let mut relation = ::dirtybase_common::db::repo_relation::Relation::<#parent>::new(
                 ::dirtybase_common::db::repo_relation::RelationType::HasMany{ query },
                 |
                     relation: ::dirtybase_common::db::repo_relation::Relation<#parent>,
-                    rows: &::std::collections::HashMap<u64, #parent>,
+                    rows: &[#parent],
                     join_values: &mut ::std::collections::HashMap<String,::std::collections::HashMap<u64,::dirtybase_common::db::field_values::FieldValue>>
                 | {
                     let (mut query, _) = relation.rel_type().builders();
@@ -86,9 +92,10 @@ pub(crate) fn generate_join_method(
                     let parent_col_name = #parent_col.to_string();
                     if join_values.get(&parent_col_name).is_none() {
                         let mut values = ::std::collections::HashMap::new();
-                        for (hash, a_row) in rows {
+                        for  a_row in rows {
                             if let Ok(cv) = ::dirtybase_common::db::types::ToColumnAndValue::to_column_value(a_row) {
                                 if let Some(v) = cv.get(&parent_col_name).cloned() {
+                                    let hash = ::dirtybase_common::db::table_model::TableModel::entity_hash(a_row);
                                     values.insert(hash.clone(), v);
                                 }
                             }
@@ -121,13 +128,23 @@ pub(crate) fn generate_join_method(
             callback(relation);
         };
 
+        let name_where = format!(
+            "Returns {} by applying default filters. This includes the trash filter when applicable",
+            attr.the_type
+        );
+        let name_where_doc = format!(
+            "Returns {} applying additional filters. The trashed filter is applied as well",
+            attr.the_type
+        );
         let token = quote! {
+            #[doc = #name_where]
             pub fn #method_name(&mut self,) -> &mut Self {
                 self.#method_name_where(#empty_callback)
             }
 
+            #[doc = #name_where_doc]
             pub fn #method_name_where<F>(&mut self, mut callback: F) -> &mut Self
-             where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
+             where F: FnOnce(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
             {
                 self.#when_method_name(|relation| {
                     #call_callback
@@ -138,16 +155,37 @@ pub(crate) fn generate_join_method(
 
         list.push(token);
 
-        if !attribute.no_soft_delete {
+        let paginator_doc = format!("Returns a cursor paginator for {}", attr.the_type);
+        list.push(quote! {
+            #[doc = #paginator_doc]
+            pub fn #cursor_paginator(&mut self, instance: &#parent) -> ::dirtybase_common::db::repo_relation::RelationCursorPaginator<#foreign_type> {
+                let rows_map =  std::slice::from_ref(instance);
+                let mut join_field_values = ::std::collections::HashMap::new();
+
+                let mut rel = if let Some(rel) = self.relation.remove(#name){
+                    rel
+                } else {
+                    self.#method_name_where(#empty_callback);
+                    self.relation.remove(#name).unwrap() // NOTE: Unwrap will never panic here
+                };
+
+                let result = rel.build_cursor_paginator(&self.manager, &rows_map, &mut join_field_values);
+                *self = Self::new(&self.manager);
+                return result;
+            }
+        });
+
+        if attribute.soft_deletable {
             list.push(quote! {
                 pub fn #trashed_method_name(&mut self,) -> &mut Self {
                     self.#trashed_method_name_where(#empty_callback)
                 }
 
                 pub fn #trashed_method_name_where<F>(&mut self, mut callback: F) -> &mut Self
-                    where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
+                    where F: FnOnce(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
                 {
                     self.#when_method_name(|relation| {
+                        _= <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect(&format!("{} are not soft deletable", #name));
                         #call_callback
                     })
                 }
@@ -159,12 +197,12 @@ pub(crate) fn generate_join_method(
                     }
 
                     pub fn #with_only_trashed_method_name_where<F>(&mut self, mut callback: F) -> &mut Self
-                        where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>) {
+                        where F: FnOnce(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>) {
                             self.#when_method_name(|relation| {
                                 #call_callback
                                 relation.query_mut().is_not_null(
                                     <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
-                                        <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                                        <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect(&format!("{} are not soft deletable", #name))
                                     )
                                 );
                             })
@@ -201,7 +239,7 @@ pub(crate) fn build_entity_append(attr: &DirtybaseAttributes, list: &mut Vec<Tok
 
     let token = quote! {
         if let Some(rows) = rows_rel_map.get_mut(#name) {
-            if let Some(related_rows) = rows.remove(row_hash)  {
+            if let Some(related_rows) = rows.remove(&row_hash)  {
                 #body
             }
         }

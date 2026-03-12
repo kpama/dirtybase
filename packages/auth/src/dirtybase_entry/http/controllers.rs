@@ -1,15 +1,18 @@
 use dirtybase_contract::{
     app_contract::{CtxExt, RequestContext},
-    auth_contract::{AuthUser, AuthUserPayload, AuthUserStorageProvider, LoginCredential},
+    auth_contract::{
+        ActorPayload, AuthUser, AuthUserStorageProvider, FetchActorPayload, LoginCredential,
+        PersistActorPayload, storage2::PermissionStorage,
+    },
     axum::response::Html,
     db_contract::types::ArcUuid7,
     http_contract::{HttpContext, api::ApiResponse, named_routes_axum, prelude::*},
     session_contract::Session,
 };
-use dirtybase_helper::hash::sha256;
 
 use crate::{
-    AuthConfig, guards::session_guard::auth_session::AuthSession, helpers::get_auth_storage,
+    AuthConfig, AuthExtension, guards::session_guard::auth_session::AuthSession,
+    helpers::get_auth_storage,
 };
 
 pub(crate) async fn login_form_handler(
@@ -42,7 +45,7 @@ pub(crate) async fn handle_login_request(
     Form(cred): Form<LoginCredential>,
 ) -> Response<Body> {
     // TODO: This will use the auth service in the future
-    let storage = if let Ok(s) = get_auth_storage(ctx.clone(), None).await {
+    let storage = if let Ok(s) = get_auth_storage(ctx.clone()).await {
         s
     } else {
         let bdy = Body::empty();
@@ -53,41 +56,55 @@ pub(crate) async fn handle_login_request(
     let session = ctx.get::<Session>().await.unwrap();
 
     let result = if cred.username().is_some() {
-        storage
-            .find_by_username(cred.username().as_ref().unwrap())
-            .await
+        let payload = FetchActorPayload::by_username(cred.username().as_ref().cloned().unwrap());
+        storage.fetch_actor(payload, None).await
     } else {
-        let hash = sha256::hash_str(&cred.email().cloned().unwrap_or(":::nothing:::".to_string()));
-        storage.find_by_email_hash(&hash).await
+        let payload = FetchActorPayload::by_email(&cred.email().cloned().unwrap_or("".to_string()));
+        storage.fetch_actor(payload, None).await
     };
     if let Ok(Some(user)) = result
         && user.verify_password(cred.password())
     {
-        let auth_session = AuthSession::from_session(&session).await;
+        let header = if let Some(auth_session) = AuthSession::from_session(&session).await {
+            HeaderValue::from_str(auth_session.redirect().as_ref())
+                .expect("Could not create header from auth session")
+        } else {
+            HeaderValue::from_str("/").unwrap() // NOTE: Should never panic as we set the value here
+        };
+
         http_ctx
-            .set_cookie(AuthSession::new(user.id()).to_cookie(&session).await)
+            .set_cookie(
+                AuthSession::new(user.id().cloned())
+                    .to_cookie(&session)
+                    .await,
+            )
             .await;
 
         let mut response = ().into_response();
-
-        response.headers_mut().append(
-            header::LOCATION,
-            header::HeaderValue::from_str(auth_session.redirect()).unwrap(),
-        );
+        response.headers_mut().append(header::LOCATION, header);
         *response.status_mut() = StatusCode::SEE_OTHER;
         return response;
     }
 
-    let bdy = Body::empty();
-    bdy.into_response()
+    // TODO: Notify observers regarding the redirect back to the login form
+    if let Ok(auth_config) = AuthExtension::config_from_ctx(&ctx).await {
+        let login_form = auth_config.signin_form_route();
+        named_routes_axum::helpers::redirect(&login_form).into_response()
+    } else {
+        let mut response = ().into_response();
+        let header = HeaderValue::from_str("/").unwrap(); // NOTE: Unwrap is okay here..
+        response.headers_mut().append(header::LOCATION, header);
+        response
+    }
 }
 
 pub(crate) async fn handle_logout_request(
     RequestContext(ctx): RequestContext,
 ) -> impl IntoResponse {
     let session = ctx.get::<Session>().await.unwrap();
-    let auth_session = AuthSession::from_session(&session).await;
-    _ = auth_session.delete(session, &ctx).await;
+    if let Some(auth_session) = AuthSession::from_session(&session).await {
+        _ = auth_session.delete(session, &ctx).await;
+    }
 
     let mut response = ().into_response();
     response.headers_mut().append(
@@ -103,19 +120,18 @@ pub(crate) async fn handle_get_auth_token(
     Json(cred): Json<LoginCredential>,
 ) -> impl IntoResponse {
     // TODO: This will use the auth service in the future
-    let storage = if let Ok(s) = get_auth_storage(ctx.clone(), None).await {
+    let storage = if let Ok(s) = get_auth_storage(ctx.clone()).await {
         s
     } else {
         return ApiResponse::<String>::error("could not resolve storage");
     };
 
     let result = if cred.username().is_some() {
-        storage
-            .find_by_username(cred.username().as_ref().unwrap())
-            .await
+        let payload = FetchActorPayload::by_username(cred.username().as_ref().unwrap());
+        storage.fetch_actor(payload, None).await
     } else {
-        let hash = sha256::hash_str(&cred.email().cloned().unwrap_or(":::nothing:::".to_string()));
-        storage.find_by_email_hash(&hash).await
+        let payload = FetchActorPayload::by_email(&cred.email().cloned().unwrap_or("".to_string()));
+        storage.fetch_actor(payload, None).await
     };
 
     let mut res = ApiResponse::<String>::default();
@@ -164,10 +180,10 @@ pub(crate) async fn register_form_handler(
 
 pub(crate) async fn handle_register_request(
     RequestContext(ctx): RequestContext,
-    Form(mut payload): Form<AuthUserPayload>,
+    Form(mut payload): Form<ActorPayload>,
 ) -> impl IntoResponse {
     // FIXME: This will use the auth service in the future
-    let storage = if let Ok(s) = get_auth_storage(ctx.clone(), None).await {
+    let storage = if let Ok(s) = get_auth_storage(ctx.clone()).await {
         s
     } else {
         return "token:".to_string();
@@ -183,11 +199,14 @@ pub(crate) async fn handle_register_request(
     payload.verified_at = Some(dirtybase_helper::time::current_datetime());
 
     let mut token = String::new();
-    if let Ok(user) = storage.store(payload).await {
-        match user.generate_token() {
+    let payload = PersistActorPayload::Save {
+        actor: payload.into(),
+    };
+    if let Ok(Some(actor)) = storage.save_actor(payload).await {
+        match actor.generate_token() {
             Some(t) => token = t,
             None => {
-                tracing::error!("did not get back user token: {:?}", user.id())
+                tracing::error!("did not get back user token: {:?}", actor.id())
             }
         }
     }
@@ -197,10 +216,10 @@ pub(crate) async fn handle_register_request(
 
 pub(crate) async fn handle_api_register_request(
     RequestContext(ctx): RequestContext,
-    Json(mut payload): Json<AuthUserPayload>,
+    Json(mut payload): Json<ActorPayload>,
 ) -> ApiResponse<String> {
     // This will use the auth service in the future
-    let storage = if let Ok(s) = get_auth_storage(ctx.clone(), None).await {
+    let storage = if let Ok(s) = get_auth_storage(ctx.clone()).await {
         s
     } else {
         let mut resp = ApiResponse::<String>::default();
@@ -211,8 +230,11 @@ pub(crate) async fn handle_api_register_request(
     payload.rotate_salt = true;
     let mut resp = ApiResponse::<String>::default();
 
-    if let Ok(user) = storage.store(payload).await {
-        resp.set_data(user.generate_token().unwrap());
+    let payload = PersistActorPayload::Save {
+        actor: payload.into(),
+    };
+    if let Ok(Some(actor)) = storage.save_actor(payload).await {
+        resp.set_data(actor.generate_token().unwrap());
     } else {
         resp.set_error("could not register user");
     }

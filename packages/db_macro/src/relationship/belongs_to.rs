@@ -55,28 +55,28 @@ pub(crate) fn generate_join_method(
             quote! { <#foreign_type  as ::dirtybase_common::db::table_model::TableModel>::id_column() }
         };
 
-        let trash_condition = if attribute.no_soft_delete {
-            quote! {}
-        } else {
+        let trash_condition = if attribute.soft_deletable {
             quote! {
                 relation.query_mut().is_null(
                     <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
-                        <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                        <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect(&format!("{} is not soft deletable", #name))
                     )
                 );
             }
+        } else {
+            quote! {}
         };
 
         list.push(quote! {
             pub fn #when_method_name<F>(&mut self , mut callback: F) -> &mut Self
-                where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
+                where F: FnOnce(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
              {
             let query = <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::make_query_builder();
             let mut relation = ::dirtybase_common::db::repo_relation::Relation::<#parent>::new(
                 ::dirtybase_common::db::repo_relation::RelationType::BelongsTo{ query },
                 |
                     relation: ::dirtybase_common::db::repo_relation::Relation<#parent>,
-                    rows: &::std::collections::HashMap<u64, #parent>,
+                    rows: &[#parent],
                     join_values: &mut ::std::collections::HashMap<String,::std::collections::HashMap<u64,::dirtybase_common::db::field_values::FieldValue>>
                 | {
                     let (mut query, _) = relation.rel_type().builders();
@@ -86,10 +86,11 @@ pub(crate) fn generate_join_method(
                     let parent_col_name = #parent_col.to_string();
                     if join_values.get(&parent_col_name).is_none() {
                         let mut values = ::std::collections::HashMap::new();
-                        for (hash, a_row) in rows {
+                        for  a_row in rows {
                             if let Ok(cv) = ::dirtybase_common::db::types::ToColumnAndValue::to_column_value(a_row) {
                                 if let Some(v) = cv.get(&parent_col_name).cloned() {
-                                    values.insert(hash.clone(), v);
+                                    let hash = ::dirtybase_common::db::table_model::TableModel::entity_hash(a_row);
+                                    values.insert(hash, v);
                                 }
                             }
                         }
@@ -125,7 +126,7 @@ pub(crate) fn generate_join_method(
             }
 
             pub fn #method_name_where<F>(&mut self, mut callback: F) -> &mut Self
-             where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
+             where F: FnOnce(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
              {
                 self.#when_method_name(|relation|{
                     #call_callback
@@ -136,16 +137,17 @@ pub(crate) fn generate_join_method(
 
         list.push(token);
 
-        if !attribute.no_soft_delete {
+        if attribute.soft_deletable {
             list.push(quote! {
                 pub fn #trashed_method_name(&mut self) -> &mut Self {
                     self.#trashed_method_name_where(#empty_callback)
                 }
 
                 pub fn #trashed_method_name_where<F>(&mut self, mut callback: F) -> &mut Self
-                    where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
+                    where F: FnOnce(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
                  {
                     self.#when_method_name(|relation|{
+                        _ = <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect(&format!("{} is not soft deletable", #name));
                         #call_callback
                     })
                 }
@@ -157,13 +159,13 @@ pub(crate) fn generate_join_method(
                     }
 
                     pub fn #with_only_trashed_method_name_where<F>(&mut self, mut callback: F) -> &mut Self 
-                        where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
+                        where F: FnOnce(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
                     {
                         self.#when_method_name(|relation|{
                             #call_callback
                             relation.query_mut().is_not_null(
                                 <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(
-                                    <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().unwrap()
+                                    <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().as_ref().expect(&format!("{} is not soft deletable", #name))
                                 )
                             );
                         })
@@ -200,7 +202,7 @@ pub(crate) fn build_entity_append(attr: &DirtybaseAttributes, list: &mut Vec<Tok
 
     let token = quote! {
         if let Some(rows) = rows_rel_map.get_mut(#name) {
-            if let Some(related_rows) = rows.remove(row_hash)  {
+            if let Some(related_rows) = rows.remove(&row_hash)  {
                 #body
             }
         }

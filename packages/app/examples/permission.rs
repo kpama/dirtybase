@@ -1,12 +1,10 @@
-use dirtybase_contract::prelude::{
-    PermStorageProvider, PermissionStorage, PermissionStorageResolver,
-    model::{
-        Actor, ActorRepo, ActorRole, FetchActorOption, FetchActorPayload, Permission,
-        PersistActorPayload, PersistActorRolePayload, PersistPermissionPayload, PersistRolePayload,
-        PersistRolePermission, Role, RolePermission,
-    },
+use std::collections::btree_map;
+
+use dirtybase_contract::auth_contract::{Actor, ActorRepo, PermissionManager};
+use dirtybase_db::{
+    TableModel,
+    base::{cursor_builder::CursorBuilder, manager::Manager, paginate_builder::PaginateBuilder},
 };
-use dirtybase_db::{TableModel, base::manager::Manager, types::ArcUuid7};
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -27,9 +25,29 @@ async fn main() {
 
     let manager: Manager = context.get().await.expect("could not get db manager");
 
-    let mut actor_repo = ActorRepo::new(&manager);
+    let mut page = PaginateBuilder::new("username", 0, 25);
+    page.add_order("id", dirtybase_db::base::order_by_builder::Direction::ASC);
+    loop {
+        println!("{:?}", serde_json::to_string(&page));
 
-    let result = actor_repo.with_roles().first().await;
+        let (p, result) = manager
+            .select_from::<Actor>(|_| {
+                //
+            })
+            .paginate_to::<Actor>(page)
+            .await
+            .parts();
 
-    println!("{result:#?}");
+        if result.is_err() {
+            break;
+        }
+        if let Ok(rows) = result {
+            println!("result: {:#?}", &rows);
+            if rows.is_empty() {
+                break;
+            }
+        }
+
+        page = p;
+    }
 }

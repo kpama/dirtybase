@@ -4,10 +4,11 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-dirtybase_db_macro = {workspace = true}
-dirtybase_contract = {workspace = true}
-dirtybase_helper= {workspace = true}
-dirtybase_session = {workspace = true}
+dirtybase_db_macro = { workspace = true }
+dirtybase_contract = { workspace = true }
+dirtybase_helper = { workspace = true }
+dirtybase_session = { workspace = true }
+dirtybase_common = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
@@ -27,3 +28,6 @@ serde_urlencoded = { workspace = true }
 
 [features]
 openid = []
+permission = []
+migration = []
+seeders = []

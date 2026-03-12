@@ -1,12 +1,9 @@
-use std::fmt::{Debug, Display, write};
+use std::fmt::Debug;
 
 use serde::{Deserialize, Serialize};
 
 use crate::db::{
-    base::{
-        helper,
-        order_by_builder::{LimitBuilder, OrderByBuilder},
-    },
+    base::order_by_builder::{LimitBuilder, OrderByBuilder},
     field_values::FieldValue,
 };
 
@@ -26,6 +23,10 @@ impl CursorBuilder {
             last,
             ..Default::default()
         }
+    }
+
+    pub fn order_by_builder(&mut self) -> &mut OrderByBuilder {
+        &mut self.order
     }
 
     pub fn set_desc(&mut self) -> &mut Self {

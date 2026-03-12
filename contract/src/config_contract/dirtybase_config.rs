@@ -201,6 +201,22 @@ where
         .collect::<Vec<String>>())
 }
 
+/// A deserializer function that will return `Vec<usize>`
+///
+/// Use this function on an attribute where the raw value is a string
+/// that should be split at "," and the pieces return as a `Vec<usize>`
+///  apply the function as the deserializer as `#[serde(deserialize_with = "field_to_usize_array")]`
+pub fn field_to_usize_array<'de, D>(deserializer: D) -> Result<Vec<usize>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = serde::de::Deserialize::deserialize(deserializer).unwrap_or_default();
+
+    Ok(s.split(',')
+        .map(|v| v.trim().parse::<usize>().unwrap_or_default())
+        .collect::<Vec<usize>>())
+}
+
 /// Same as `field_to_array` but an empty string will case a return of `None`
 pub fn field_to_option_array<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where

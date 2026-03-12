@@ -45,10 +45,11 @@ async fn main() {
 }
 
 #[derive(Debug, Default, DirtyTable)]
+#[dirty(timestamp, soft_deletable)]
 struct Family {
     id: Option<i64>,
     name: String,
-    #[dirty(rel(kind = "has_many"))]
+    #[dirty(rel(kind = "has_many", soft_deletable))]
     children: Vec<Child>,
     created_at: CreatedAtField,
     updated_at: UpdatedAtField,
@@ -56,7 +57,7 @@ struct Family {
 }
 
 #[derive(Debug, Default, DirtyTable)]
-#[dirty(table = "family_children")]
+#[dirty(table = "family_children", timestamp, soft_deletable)]
 struct Child {
     id: Option<i64>,
     name: String,
@@ -113,7 +114,7 @@ async fn seed_tables(manager: &Manager) {
             .first_to::<Family>()
             .await
         {
-            for c in 1..=rand::random_range(1..5) {
+            for c in 1..=rand::random_range(1..20) {
                 _ = manager
                     .insert(
                         Child::table_name(),

@@ -1,13 +1,15 @@
 use axum::response::Html;
 use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
-use dirtybase_contract::auth_contract::{AuthUserPayload, LoginCredential};
+use dirtybase_contract::auth_contract::{AuthUserPayload, LoginCredential, PermissionManager};
+use dirtybase_contract::auth_contract::{Permission, PermissionRepo};
 use dirtybase_contract::cli_contract::CliMiddlewareManager;
 use dirtybase_contract::{
     app_contract::{Context, ContextResourceManager, CtxExt},
     prelude::*,
     session_contract::Session,
 };
+use dirtybase_db::TableModel;
 use dirtybase_db::base::manager::Manager;
 use dirtybase_db::types::{ArcUuid7, ToColumnAndValue};
 use tracing_subscriber::EnvFilter;
@@ -92,6 +94,27 @@ impl ExtensionSetup for App {
                     "do-login",
                 )
                 .get("/xx", test_cookie_handler, "xx")
+                .get_x(
+                    "/resource/{name}",
+                    |Path(name): Path<String>,
+                     CtxExt(perm): CtxExt<PermissionManager>,
+                     CtxExt(ctx): CtxExt<_>,
+                     CtxExt(db_manager): CtxExt<Manager>| async move {
+                        let action = format!("{}:create", &name);
+                        let mut collection = Vec::<Permission>::new();
+                        let mut repo = PermissionRepo::new(&db_manager);
+                        repo.filter(|builder| {
+                            builder.asc(Permission::id_column());
+                        });
+                        if perm.can(action, &ctx).await
+                            && let Ok(c) = repo.get().await
+                        {
+                            collection = c;
+                        }
+
+                        axum::Json(collection)
+                    },
+                )
                 .post_x(
                     "/create-user",
                     |CtxExt(manager): CtxExt<Manager>,

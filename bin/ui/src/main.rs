@@ -1,12 +1,12 @@
 use busybody::{Service, helpers::get_type};
 use dirtybase_app::{
+    app::App,
     axum::{
         extract::Path,
         http::{HeaderValue, Response, header::CONTENT_TYPE},
         response::IntoResponse,
     },
     contract::{ExtensionSetup, http_contract::prelude::*},
-    core::App,
 };
 use include_dir::{Dir, include_dir};
 

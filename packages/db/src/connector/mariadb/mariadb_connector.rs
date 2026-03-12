@@ -1,6 +1,7 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
 use dirtybase_contract::db_contract::{
+    QueryResult,
     base::{aggregate::Aggregate, index::IndexType},
     query_column::{QueryColumn, QueryColumnName},
 };
@@ -141,7 +142,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
     async fn drop_table(&mut self, name: &str) -> Result<(), anyhow::Error> {
         if self.has_table(name).await? {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
-            return self.do_execute(query).await;
+            _ = self.do_execute(query).await?;
         }
 
         Ok(())
@@ -151,7 +152,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
         self.do_apply(table).await
     }
 
-    async fn execute(&mut self, query: QueryBuilder) -> anyhow::Result<()> {
+    async fn execute(&mut self, query: QueryBuilder) -> anyhow::Result<QueryResult> {
         self.do_execute(query).await
     }
 
@@ -360,7 +361,7 @@ impl MariadbSchemaManager {
         };
     }
 
-    async fn do_execute(&mut self, query: QueryBuilder) -> anyhow::Result<()> {
+    async fn do_execute(&mut self, query: QueryBuilder) -> anyhow::Result<QueryResult> {
         let mut params = MySqlArguments::default();
 
         let mut sql;
@@ -467,7 +468,10 @@ impl MariadbSchemaManager {
         match result {
             Ok(r) => {
                 tracing::debug!(target: LOG_TARGET,"{} result: {:#?}", query.action(), r);
-                Ok(())
+                Ok(QueryResult::new(
+                    r.rows_affected(),
+                    r.last_insert_id() as i64,
+                ))
             }
             Err(e) => {
                 tracing::error!(target: LOG_TARGET,"{} failed: {}", query.action(), e);
@@ -796,18 +800,29 @@ impl MariadbSchemaManager {
     fn build_join(
         &self,
         query: &QueryBuilder,
-        _params: &mut MySqlArguments,
+        params: &mut MySqlArguments,
     ) -> Result<String, anyhow::Error> {
         let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
             for a_join in joins.values() {
-                sql = format!(
-                    "{} {} JOIN {} ON {}",
-                    sql,
-                    a_join.join_type(),
-                    a_join.table(),
-                    a_join.join_clause()
-                );
+                if let Some(sub_query) = a_join.sub_query() {
+                    sql = format!(
+                        "{} {} JOIN ({}) {} ON {}",
+                        sql,
+                        a_join.join_type(),
+                        self.build_query(sub_query, params)?,
+                        a_join.table(),
+                        a_join.join_clause()
+                    );
+                } else {
+                    sql = format!(
+                        "{} {} JOIN {} ON {}",
+                        sql,
+                        a_join.join_type(),
+                        a_join.table(),
+                        a_join.join_clause()
+                    );
+                }
             }
         }
 

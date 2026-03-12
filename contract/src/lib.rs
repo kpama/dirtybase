@@ -1,4 +1,5 @@
 mod extension;
+mod observable;
 
 pub mod app_contract;
 pub mod auth_contract;
@@ -10,7 +11,6 @@ pub mod dot_env_man;
 pub mod http_contract;
 pub mod lock_contract;
 pub mod multitenant_contract;
-pub mod permission_contract;
 pub mod queue_contract;
 pub mod session_contract;
 
@@ -52,7 +52,7 @@ pub mod prelude {
     pub use super::extension::ExtensionMigrations;
     pub use super::extension::ExtensionSetup;
     pub use super::http_contract::prelude::*;
-    pub use super::permission_contract::*;
+    pub use super::observable::*;
     pub use chrono::*;
 
     pub use anyhow;

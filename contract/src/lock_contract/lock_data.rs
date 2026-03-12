@@ -5,7 +5,13 @@ use dirtybase_helper::random::random_string;
 use crate::db_contract::types::{BooleanField, StringField};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, DirtyTable)]
-#[dirty(table = "lock_data", id = "key", no_soft_delete, no_timestamp)]
+#[dirty(
+    table = "lock_data",
+    id = "key",
+    no_soft_delete,
+    id_not_auto,
+    no_timestamp
+)]
 pub struct LockData {
     key: StringField,
     owner: StringField,

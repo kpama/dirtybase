@@ -13,17 +13,6 @@ async fn main() {
 
     let mut customer_repo = CustomerRepo::new(&manager);
 
-    // let mut data = ColumnAndValue::new();
-    // data.insert(
-    //     Invoice::col_name_for_deleted_at().to_string(),
-    //     dirtybase_helper::time::current_datetime().into(),
-    // );
-    // _ = manager
-    //     .update_table::<Invoice>(data, |q| {
-    //         q.is_in(Invoice::col_name_for_id(), vec![1, 3]);
-    //     })
-    //     .await;
-
     println!(
         "{:#?}",
         customer_repo.with_orders().with_invoices().get().await
@@ -31,25 +20,25 @@ async fn main() {
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
-#[dirty(no_timestamp, no_soft_delete)]
 struct Customer {
     id: Option<i64>,
     name: String,
     #[dirty(rel(kind = has_many))]
     orders: Option<Vec<Order>>,
-    #[dirty(rel(kind = has_many_through,  pivot = Order, pivot_through_col = id, through_col= order_id))]
+    #[dirty(rel(kind = has_many_through, soft_deletable,  pivot = Order, pivot_through_col = id, through_col= order_id))]
     invoices: Option<Vec<Invoice>>,
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
-#[dirty(no_timestamp, no_soft_delete)]
+#[dirty(soft_deletable)]
 struct Order {
     id: Option<i64>,
     customer_id: i64,
+    deleted_at: Option<TimestampField>,
 }
 
 #[derive(Debug, Default, Clone, DirtyTable)]
-#[dirty(no_timestamp)]
+#[dirty(soft_deletable)]
 struct Invoice {
     id: Option<i64>,
     order_id: i64,
@@ -63,6 +52,9 @@ async fn setup_db(manager: &Manager) {
 }
 
 async fn create_tables(manager: &Manager) {
+    _ = manager.drop_table(Invoice::table_name()).await;
+    _ = manager.drop_table(Order::table_name()).await;
+    _ = manager.drop_table(Customer::table_name()).await;
     _ = manager
         .create_table_schema(Customer::table_name(), |table| {
             table.id(None);
@@ -99,15 +91,18 @@ async fn seed_tables(manager: &Manager) {
             .await;
 
         for _ in 1..=rand::random_range(5..=10) {
-            _ = manager
+            if let Err(e) = manager
                 .insert_into::<Order>(Order {
                     customer_id: c,
                     ..Default::default()
                 })
-                .await;
+                .await
+            {
+                println!("error creating order: {}", e);
+            }
         }
 
-        if let Ok(Some(orders)) = manager
+        if let Ok(orders) = manager
             .select_from::<Order>(|q| {
                 q.is_eq(Order::col_name_for_customer_id(), c);
             })

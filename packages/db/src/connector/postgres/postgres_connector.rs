@@ -10,6 +10,7 @@ use crate::{field_values::FieldValue, query_values::QueryValue, types::ColumnAnd
 use anyhow::anyhow;
 use async_trait::async_trait;
 use dirtybase_contract::db_contract::{
+    QueryResult,
     base::{aggregate::Aggregate, index::IndexType},
     query_column::{QueryColumn, QueryColumnName},
 };
@@ -127,7 +128,7 @@ impl SchemaManagerTrait for PostgresSchemaManager {
     async fn drop_table(&mut self, name: &str) -> Result<(), anyhow::Error> {
         if self.has_table(name).await? {
             let query = QueryBuilder::new(name, QueryAction::DropTable);
-            return self.execute(query).await;
+            _ = self.execute(query).await?;
         }
 
         Ok(())
@@ -137,7 +138,7 @@ impl SchemaManagerTrait for PostgresSchemaManager {
         self.do_apply(table).await
     }
 
-    async fn execute(&mut self, query: QueryBuilder) -> anyhow::Result<()> {
+    async fn execute(&mut self, query: QueryBuilder) -> anyhow::Result<QueryResult> {
         self.do_execute(query).await
     }
 
@@ -345,10 +346,11 @@ impl PostgresSchemaManager {
         };
     }
 
-    async fn do_execute(&mut self, query: QueryBuilder) -> anyhow::Result<()> {
+    async fn do_execute(&mut self, query: QueryBuilder) -> anyhow::Result<QueryResult> {
         let mut params = PgArguments::default();
 
         let mut sql;
+        let mut request_id = false;
         match query.action() {
             QueryAction::Create {
                 rows,
@@ -360,6 +362,7 @@ impl PostgresSchemaManager {
                     query.table()
                 );
                 sql = self.build_insert_data(&mut params, rows, sql)?;
+                request_id = true;
             }
             QueryAction::Upsert {
                 rows,
@@ -368,6 +371,7 @@ impl PostgresSchemaManager {
             } => {
                 sql = format!("INSERT INTO {}", query.table());
                 sql = self.build_insert_data(&mut params, rows, sql)?;
+                request_id = true;
 
                 if !unique.is_empty() && !to_update.is_empty() {
                     sql = format!(
@@ -408,14 +412,14 @@ impl PostgresSchemaManager {
                 }
 
                 // joins
-                sql = format!("{} {}", sql, self.build_join(&query)?);
+                sql = format!("{} {}", sql, self.build_join(&query, &mut params)?,);
                 // where
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
             QueryAction::Delete => {
                 sql = format!("DELETE FROM {0} ", query.table());
                 // joins
-                sql = format!("{} {}", sql, self.build_join(&query)?);
+                sql = format!("{} {}", sql, self.build_join(&query, &mut params)?);
                 // where
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
@@ -439,6 +443,37 @@ impl PostgresSchemaManager {
             }
         }
 
+        // We need the last insert id
+        if request_id {
+            sql = format!("{} RETURNING *", sql);
+            let result = if let Some(mut trans) = self.trans.take() {
+                let result = sqlx::query_with(&sql, params).fetch_one(&mut *trans).await;
+                if result.is_ok() {
+                    if let Err(e) = trans.commit().await {
+                        tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
+                        return Err(e.into());
+                    }
+                } else if let Err(e) = trans.rollback().await {
+                    tracing::error!(target: LOG_TARGET, "rolling back error: {}", &e);
+                    return Err(e.into());
+                }
+
+                result
+            } else {
+                sqlx::query_with(&sql, params)
+                    .fetch_one(self.db_pool.as_ref())
+                    .await
+            };
+
+            return match result {
+                Ok(row) => Ok(QueryResult::new_record(self.row_to_column_value(&row))),
+                Err(e) => {
+                    log::error!("{} failed: {} >> {}", query.action(), e, sql);
+                    Err(anyhow!(e))
+                }
+            };
+        }
+
         let result = if let Some(mut trans) = self.trans.take() {
             let result = sqlx::query_with(&sql, params).execute(&mut *trans).await;
             if result.is_ok() {
@@ -460,11 +495,11 @@ impl PostgresSchemaManager {
 
         match result {
             Ok(r) => {
-                log::debug!("{} result: {:#?}", query.action(), r);
-                Ok(())
+                tracing::debug!("{} result: {:#?}", query.action(), r);
+                Ok(QueryResult::new(r.rows_affected(), 0))
             }
             Err(e) => {
-                log::error!("{} failed: {}", query.action(), e);
+                log::error!("{} failed: {} >> {}", query.action(), e, sql);
                 Err(anyhow!(e))
             }
         }
@@ -755,7 +790,7 @@ impl PostgresSchemaManager {
         sql = format!("{} FROM {}", sql, query.table());
 
         // joins
-        sql = format!("{} {}", sql, self.build_join(query)?);
+        sql = format!("{} {}", sql, self.build_join(query, params)?);
 
         // wheres
         sql = format!("{} {}", sql, self.build_where_clauses(query, params)?);
@@ -790,17 +825,32 @@ impl PostgresSchemaManager {
         Ok(sql)
     }
 
-    fn build_join(&self, query: &QueryBuilder) -> Result<String, anyhow::Error> {
+    fn build_join(
+        &self,
+        query: &QueryBuilder,
+        params: &mut PgArguments,
+    ) -> Result<String, anyhow::Error> {
         let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
             for a_join in joins.values() {
-                sql = format!(
-                    "{} {} JOIN {} ON {}",
-                    sql,
-                    a_join.join_type(),
-                    a_join.table(),
-                    a_join.join_clause()
-                );
+                if let Some(sub_query) = a_join.sub_query() {
+                    sql = format!(
+                        "{} {} JOIN ({}) {} ON {}",
+                        sql,
+                        a_join.join_type(),
+                        self.build_query(sub_query, params)?,
+                        a_join.table(),
+                        a_join.join_clause()
+                    );
+                } else {
+                    sql = format!(
+                        "{} {} JOIN {} ON {}",
+                        sql,
+                        a_join.join_type(),
+                        a_join.table(),
+                        a_join.join_clause()
+                    );
+                }
             }
         }
 
@@ -924,7 +974,7 @@ impl PostgresSchemaManager {
                         this_row.insert(name, 0_i32.into());
                     }
                 }
-                "INT" => {
+                "INT" | "INT4" => {
                     let v = row.try_get::<i32, &str>(col.name());
                     if let Ok(v) = v {
                         this_row.insert(name, v.into());

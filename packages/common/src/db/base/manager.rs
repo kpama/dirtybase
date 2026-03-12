@@ -4,10 +4,8 @@ use std::{
 };
 
 use crate::db::{
-    DatabaseKindPoolCollection,
-    // TableModel,
+    DatabaseKindPoolCollection, QueryResult,
     event::SchemeWroteEvent,
-    // field_values::FieldValue,
     types::{ColumnAndValue, ToColumnAndValue},
 };
 
@@ -147,11 +145,15 @@ impl Manager {
         Ok(())
     }
 
-    pub async fn insert<CV: ToColumnAndValue>(&self, table_name: &str, record: CV) -> Result<()> {
+    pub async fn insert<CV: ToColumnAndValue>(
+        &self,
+        table_name: &str,
+        record: CV,
+    ) -> Result<QueryResult> {
         self.insert_multi(table_name, vec![record]).await
     }
 
-    pub async fn insert_into<T>(&self, record: impl ToColumnAndValue) -> Result<()>
+    pub async fn insert_into<T>(&self, record: impl ToColumnAndValue) -> Result<QueryResult>
     where
         T: TableModel,
     {
@@ -162,7 +164,7 @@ impl Manager {
         &self,
         table_name: &str,
         record: &CV,
-    ) -> Result<()> {
+    ) -> Result<QueryResult> {
         self.insert_multi(table_name, vec![record.to_column_value()?])
             .await
     }
@@ -171,12 +173,16 @@ impl Manager {
         &self,
         table_name: &str,
         rows: R,
-    ) -> Result<()> {
+    ) -> Result<QueryResult> {
         self.create_insert_query(table_name, rows, false).await
     }
 
     /// Insert row gracefully ignore insert duplicates
-    pub async fn soft_insert<I: ToColumnAndValue>(&self, table_name: &str, row: I) -> Result<()> {
+    pub async fn soft_insert<I: ToColumnAndValue>(
+        &self,
+        table_name: &str,
+        row: I,
+    ) -> Result<QueryResult> {
         self.create_insert_query(table_name, vec![row], true).await
     }
 
@@ -185,7 +191,7 @@ impl Manager {
         &self,
         table_name: &str,
         rows: R,
-    ) -> Result<()> {
+    ) -> Result<QueryResult> {
         self.create_insert_query(table_name, rows, true).await
     }
 
@@ -333,7 +339,7 @@ impl Manager {
         table_name: &str,
         rows: R,
         do_soft_insert: bool,
-    ) -> Result<()> {
+    ) -> Result<QueryResult> {
         let query = QueryBuilder::new(
             table_name,
             super::query::QueryAction::Create {
@@ -342,9 +348,9 @@ impl Manager {
             },
         );
 
-        self.write_connection().await.execute(query).await?;
+        let result = self.write_connection().await.execute(query).await?;
         self.dispatch_written_event();
-        Ok(())
+        Ok(result)
     }
 
     pub async fn raw_insert(&self, sql: &str) -> Result<bool, anyhow::Error> {
