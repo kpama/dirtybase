@@ -31,25 +31,28 @@ pub async fn handle_auth_middleware(
         return (StatusCode::UNAUTHORIZED, ()).into_response();
     };
 
-    if let Ok(storage) = context.get::<PermStorageProvider>().await {
-        let mut guard_response =
-            GuardResolver::new(req.headers().clone(), context.clone(), storage)
-                .guard(guard_name)
-                .await;
+    let storage = if let Ok(s) = context.get::<PermStorageProvider>().await {
+        s
+    } else {
+        return (StatusCode::SERVICE_UNAVAILABLE, ()).into_response();
+    };
 
-        if !guard_response.is_success() && !guard_response.has_response() {
-            guard_response.set_response(
-                GuardResponse::unauthorized().response().unwrap(), // NOTE: unwrap is okay here
-            );
-        }
+    let mut guard_response = GuardResolver::new(req.headers().clone(), context.clone(), storage)
+        .guard(guard_name)
+        .await;
 
-        return if guard_response.has_response() {
-            tracing::trace!(target = AUTH_MIDDLEWARE_LOG, "serving guard response");
-            guard_response.response().unwrap() // NOTE: Will never be none here
-        } else {
-            next.run(req).await
-        };
+    if !guard_response.is_success() && !guard_response.has_response() {
+        guard_response.set_response(
+            GuardResponse::unauthorized().response().unwrap(), // NOTE: unwrap is okay here
+        );
     }
 
-    (StatusCode::UNAUTHORIZED, ()).into_response()
+    return if guard_response.has_response() {
+        tracing::trace!(target = AUTH_MIDDLEWARE_LOG, "serving guard response");
+        guard_response
+            .response()
+            .expect("could not get guard returned response")
+    } else {
+        next.run(req).await
+    };
 }

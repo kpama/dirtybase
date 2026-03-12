@@ -18,7 +18,7 @@ use named_routes_axum::RouterWrapper;
 use tracing::{Instrument, field};
 
 use crate::{
-    core::{AppService, WebSetup},
+    app::{AppService, WebSetup},
     shutdown_signal,
 };
 
@@ -203,8 +203,8 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 // Add the request context
                 context.set(http_ctx.clone()).await;
 
-                log::trace!("uri: {}", req.uri());
-                log::trace!("full url: : {}", http_ctx.full_path());
+                tracing::trace!("uri: {}", req.uri());
+                tracing::trace!("full url: : {}", http_ctx.full_path());
                 tracing::trace!("host: {:?}", http_ctx.host());
 
                 req.extensions_mut().insert(context.clone());
@@ -215,7 +215,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                     .await
                     .expect("could not get app service");
 
-                // TODO: CHECK THAT WE HAVE A ENCRYPTION KEY
+                // TODO: CHECK THAT WE HAVE AN ENCRYPTION KEY
                 let app_config = app.config_ref();
                 let cookie_config = app_config.web_cookie_ref();
                 let encrypter = dirtybase_encrypt::Encrypter::new(
@@ -349,7 +349,7 @@ async fn inject_tenant(context: &Context) -> Option<axum::http::Response<Body>> 
 fn encrypt_cookies(
     cookie_jar: CookieJar,
     encryptor: &Encrypter,
-    cookie_config: &super::core::CookieConfig,
+    cookie_config: &super::app::CookieConfig,
 ) -> CookieJar {
     let mut jar = CookieJar::new();
 
@@ -379,7 +379,7 @@ fn encrypt_cookies(
 fn decrypt_cookies(
     cookie_jar: CookieJar,
     encryptor: &Encrypter,
-    cookie_config: &super::core::CookieConfig,
+    cookie_config: &super::app::CookieConfig,
     req: &mut Request<Body>,
 ) {
     if !cookie_config.encrypt() {

@@ -1,14 +1,12 @@
-mod config;
-
 use std::convert::Infallible;
 use std::ops::Deref;
 
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
 
-pub use config::Config;
-pub use config::ConfigBuilder;
-pub use config::CookieConfig;
+pub use super::Config;
+pub use super::ConfigBuilder;
+pub use super::CookieConfig;
 
 use dirtybase_contract::ExtensionManager;
 use dirtybase_contract::app_contract::Context;

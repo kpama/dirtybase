@@ -1,9 +1,11 @@
 pub mod auth_session;
+
+use dirtybase_common::db::types::ArcUuid7;
 use dirtybase_contract::{
     app_contract::Context,
     auth_contract::{
-        Actor, AuthUserStatus, FetchActorPayload, GuardResolver, GuardResponse, LoginCredential,
-        storage2::PermissionStorage,
+        Actor, AuthUserStatus, FetchActorOption, FetchActorPayload, GuardResolver, GuardResponse,
+        LoginCredential, storage2::PermissionStorage,
     },
     http_contract::{HttpContext, named_routes_axum},
     prelude::IntoResponse,
@@ -65,12 +67,37 @@ pub async fn guard(resolver: GuardResolver) -> GuardResponse {
             && cookie.value() == hash.as_str()
         {
             let payload = FetchActorPayload::by_id(actor_id.clone());
-            if let Ok(Some(user)) = resolver.storage_ref().fetch_actor(payload, None).await {
+            let mut option = FetchActorOption::default();
+            if let Some(role_id_str) = http_context.get_cookie_value("_ar").await
+                && let Ok(id) = ArcUuid7::try_from(role_id_str)
+            {
+                tracing::warn!("current role Id: {}", &id);
+                option.with_active_role = Some(id);
+            } else {
+                option.with_roles = true;
+            }
+
+            if let Ok(Some(mut actor)) = resolver
+                .storage_ref()
+                .fetch_actor(payload, Some(option))
+                .await
+            {
                 let mut cookie = session.make_session_cookie(cookie_id, hash);
                 cookie.set_http_only(true);
                 http_context.set_cookie(cookie).await;
                 tracing::debug!("authentication successful: {}", &actor_id);
-                return GuardResponse::success(user);
+                for role in actor.roles() {
+                    http_context
+                        .set_cookie_fn("_ar", role.id().unwrap(), |cookie| {
+                            cookie.make_permanent();
+                            cookie.set_http_only(true);
+                        })
+                        .await;
+                    resolver.context_ref().set(role.clone()).await;
+                    actor.set_current_role(role.clone());
+                    break;
+                }
+                return GuardResponse::success(actor);
             } else {
                 tracing::debug!("authentication unsuccessful: {}", &actor_id);
                 session.invalidate(resolver.context_ref()).await;

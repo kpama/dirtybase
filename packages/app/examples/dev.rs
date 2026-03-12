@@ -98,6 +98,7 @@ impl ExtensionSetup for App {
                     "/resource/{name}",
                     |Path(name): Path<String>,
                      CtxExt(perm): CtxExt<PermissionManager>,
+                     CtxExt(ctx): CtxExt<_>,
                      CtxExt(db_manager): CtxExt<Manager>| async move {
                         let action = format!("{}:create", &name);
                         let mut collection = Vec::<Permission>::new();
@@ -105,7 +106,7 @@ impl ExtensionSetup for App {
                         repo.filter(|builder| {
                             builder.asc(Permission::id_column());
                         });
-                        if perm.can(action)
+                        if perm.can(action, &ctx).await
                             && let Ok(c) = repo.get().await
                         {
                             collection = c;

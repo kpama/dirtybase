@@ -122,7 +122,7 @@ impl ModelBindResolver {
         &self.context
     }
 
-    /// Returns a references of the current http context
+    /// Returns a references of the current HTTP context
     pub fn http_context_ref(&self) -> &HttpContext {
         &self.http_ctx
     }
@@ -207,7 +207,7 @@ impl ModelBindResolver {
                 .await
                 .get()
                 .await
-                .unwrap() // should never failed as we just registered the instance
+                .unwrap() // Should never failed as we just registered the instance
         }
     }
 

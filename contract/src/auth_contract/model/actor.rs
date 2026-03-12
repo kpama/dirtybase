@@ -396,6 +396,8 @@ pub struct FetchActorOption {
     pub with_actor_roles: bool,
     #[serde(default)]
     pub with_permissions: bool,
+    #[serde(default)]
+    pub with_active_role: Option<ArcUuid7>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

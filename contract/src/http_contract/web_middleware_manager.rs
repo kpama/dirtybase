@@ -149,7 +149,6 @@ impl WebMiddlewareManager {
                 reg = (m)(reg);
                 router = reg.inner();
             } else {
-                // FIXME: Add translation
                 tracing::error!("could not find web middleware: {}", param.name_ref());
             }
         }

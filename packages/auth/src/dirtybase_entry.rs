@@ -5,11 +5,8 @@ mod observer;
 mod seeder;
 
 use dirtybase_contract::{
-    ExtensionMigrations, ExtensionSetup,
-    app_contract::Context,
-    auth_contract::{Actor, Gate},
-    http_contract::RouterManager,
-    prelude::ArgMatches,
+    ExtensionMigrations, ExtensionSetup, app_contract::Context, auth_contract::Gate,
+    http_contract::RouterManager, prelude::ArgMatches,
 };
 
 use crate::{AuthConfig, guards::register_guards, register_storages, storage, storage2};

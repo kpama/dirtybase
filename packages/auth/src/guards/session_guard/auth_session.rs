@@ -12,7 +12,7 @@ const SESSION_KEY: &str = "_auth";
 pub struct AuthSession {
     hash: Option<StringField>, // Random hash
     ck: Option<StringField>,   // Cookie key
-    rd: StringField,           // Redirect url
+    rd: StringField,           // Redirect URL
     actor: Option<ArcUuid7>,   // Actor Id
 }
 

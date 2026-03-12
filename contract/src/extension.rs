@@ -11,10 +11,14 @@ use tokio::sync::RwLock;
 
 use crate::{
     app_contract::Context,
+    auth_contract::Actor,
     cli_contract::{CliCommandManager, CliMiddlewareManager},
     config_contract::DirtyConfig,
     http_contract::{self, RouterBuilder, RouterManager, WebMiddlewareManager},
-    prelude::{ContextResourceManager, observable::cel::CommonExpressionSandbox},
+    prelude::{
+        ContextResourceManager, Observable,
+        observable::cel::{CelCoreVariable, CommonExpressionSandbox},
+    },
 };
 
 pub(crate) static EXTENSION_COLLECTION: OnceLock<RwLock<Vec<Box<dyn ExtensionSetup>>>> =
@@ -217,7 +221,24 @@ impl ExtensionManager {
     }
 
     pub(crate) async fn setup_core_resources() {
+        tracing::trace!("registering contract resources");
         CommonExpressionSandbox::register_as_resource().await;
+
+        // add core
+        tracing::trace!("registering contract subscribers");
+        CelCoreVariable::subscribe(|mut core, ctx| async move {
+            let actor = if let Ok(a) = ctx.get::<Actor>().await {
+                tracing::trace!("adding actor {:?} to CEL context", a.id());
+                a
+            } else {
+                tracing::trace!("adding guest actor to CEL context",);
+                Actor::default()
+            };
+            core.set_actor(actor);
+
+            core
+        })
+        .await
     }
 
     pub(crate) fn init() {

@@ -65,16 +65,25 @@ impl PermissionStorage for PermissionDatabaseStorage {
             }
 
             if option.with_roles {
-                repo.with_roles().filter(|qb| {
-                    qb.sub_query(ActorRole::table_name(), |qb| {
-                        let field = ActorRole::prefix_with_tbl(ActorRole::col_name_for_status());
-                        qb.is_eq(field, StatusField::Active);
-                    });
+                repo.with_roles_where(|rel| {
+                    if let Some(pivot) = rel.pivot_mut() {
+                        pivot.is_eq(ActorRoleRepo::col_status(), StatusField::Active);
+                    }
                 });
             }
 
             if option.with_actor_roles {
                 repo.with_actor_roles();
+            }
+
+            if let Some(role_id) = option.with_active_role.clone() {
+                repo.with_roles_where(|rel| {
+                    if let Some(pivot) = rel.pivot_mut() {
+                        pivot
+                            .is_eq(ActorRoleRepo::col_status(), StatusField::Active)
+                            .is_eq(ActorRoleRepo::col_auth_role_id(), role_id);
+                    }
+                });
             }
         }
 

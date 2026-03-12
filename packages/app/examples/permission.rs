@@ -1,7 +1,9 @@
+use std::collections::btree_map;
+
 use dirtybase_contract::auth_contract::{Actor, ActorRepo, PermissionManager};
 use dirtybase_db::{
     TableModel,
-    base::{cursor_builder::CursorBuilder, manager::Manager},
+    base::{cursor_builder::CursorBuilder, manager::Manager, paginate_builder::PaginateBuilder},
 };
 use tracing_subscriber::EnvFilter;
 
@@ -23,55 +25,29 @@ async fn main() {
 
     let manager: Manager = context.get().await.expect("could not get db manager");
 
-    if let Ok(per_manager) = context.get::<PermissionManager>().await {
-        println!(
-            "can create resource 0: {}",
-            per_manager.can("resource_0:create")
-        );
-        println!(
-            "can create resource 10: {}",
-            per_manager.can("resource_10:create")
-        );
-    }
-
-    return;
-
-    let mut actor_repo = ActorRepo::new(&manager);
-
-    let mut cursor = CursorBuilder::new(Actor::col_name_for_id(), None);
-    cursor.set_limit(5);
-    let result = actor_repo
-        .with_roles()
-        .with_actor_roles()
-        .cursor_paginate(Some(cursor))
-        .await;
-    println!("{:#?} => {:#?}", result.cursor_ref(), result.data_ref());
-    return;
-    let mut cursor = CursorBuilder::new(Actor::col_name_for_id(), None);
-    cursor.set_limit(4);
-
-    let mut page = manager
-        .select_from::<Actor>(|_q| {})
-        .cursor_paginate_to::<Actor>(cursor)
-        .await;
-    let mut counter = 1;
+    let mut page = PaginateBuilder::new("username", 0, 25);
+    page.add_order("id", dirtybase_db::base::order_by_builder::Direction::ASC);
     loop {
-        if let Ok(list) = page.data_ref() {
-            if list.is_empty() {
-                break;
-            }
+        println!("{:?}", serde_json::to_string(&page));
 
-            for actor in list {
-                println!("id: {}", actor.id().as_ref().unwrap(),);
-            }
-        } else {
+        let (p, result) = manager
+            .select_from::<Actor>(|_| {
+                //
+            })
+            .paginate_to::<Actor>(page)
+            .await
+            .parts();
+
+        if result.is_err() {
             break;
         }
-        counter += 1;
-        println!("fetch next page: {}", counter);
-        page = manager
-            .select_from::<Actor>(|_| {})
-            .cursor_paginate_to::<Actor>(page.cursor())
-            .await;
+        if let Ok(rows) = result {
+            println!("result: {:#?}", &rows);
+            if rows.is_empty() {
+                break;
+            }
+        }
+
+        page = p;
     }
 }

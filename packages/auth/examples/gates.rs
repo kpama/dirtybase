@@ -28,11 +28,11 @@ async fn main() {
 
     //
     Gate::before(
-        |_actor: Actor, permission_manager: PermissionManager| async move {
+        |_actor: Actor, context: Context, permission_manager: PermissionManager| async move {
             // -
             println!(
                 "we will get call before other gates: {}",
-                permission_manager.can("posts:edit")
+                permission_manager.can("posts:edit", &context).await
             );
             if false {
                 return true.into();

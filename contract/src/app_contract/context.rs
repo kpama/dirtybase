@@ -1,4 +1,8 @@
-use std::{ops::Deref, sync::Arc};
+use std::{
+    fmt::{Debug, Display},
+    ops::Deref,
+    sync::Arc,
+};
 
 use anyhow::anyhow;
 use axum::{
@@ -28,6 +32,18 @@ pub struct Context {
     id: ArcUuid7,
     is_global: bool,
     sc: busybody::ServiceContainer,
+}
+
+impl Display for Context {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "app context: {}, global: {}", self.id, self.is_global)
+    }
+}
+
+impl Debug for Context {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
 }
 
 impl Context {

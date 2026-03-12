@@ -1,4 +1,3 @@
-pub(crate) mod create_auth_permission_seeder;
 pub(crate) mod create_auth_users_seeder;
 
 use dirtybase_contract::db_contract::SeederRegisterer;

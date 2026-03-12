@@ -12,3 +12,8 @@ pub async fn global_context() -> Context {
         Context::make_global().await
     }
 }
+
+pub async fn make_context() -> Context {
+    _ = global_context().await;
+    Context::new().await
+}

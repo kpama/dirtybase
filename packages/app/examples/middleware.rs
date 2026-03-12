@@ -27,22 +27,26 @@ async fn main() {
     app.setup_web(|mut manager, _middleware_manager| {
         manager.general(None, |router| {
             router.get_x("/", || async { Html("Home page") });
-            router.get_x("/u/{auth-actor}", |CtxExt(actor): CtxExt<Actor>| async  move { 
-                //
-                Json(actor)
-             });
+            router.get_x(
+                "/u/{auth-actor}",
+                |CtxExt(actor): CtxExt<Actor>| async move {
+                    //
+                    Json(actor)
+                },
+            );
             router.get_x_with_middleware(
                 "/secure",
-                |CtxExt(user): CtxExt<AuthUser>, OptionCtxExt(actor_opt): OptionCtxExt<Actor>| async move {
+                |CtxExt(user): CtxExt<AuthUser>,
+                 CtxExt(ctx): CtxExt<_>,
+                 OptionCtxExt(actor_opt): OptionCtxExt<Actor>| async move {
                     tracing::warn!("auth user: {:#?}", user.username());
-                    if let Some(actor) =  actor_opt {
-                        if  actor.can("secrets:view") {
+                    if let Some(actor) = actor_opt {
+                        if actor.can("secrets:view", &ctx).await {
                             return Html("One ring to rule them all is the big secret");
                         }
                     } else {
                         return Html("you don't have permission");
                     }
-
 
                     Html("This is half of the secret. You don't have permission to view all")
                 },

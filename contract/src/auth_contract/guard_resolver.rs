@@ -67,11 +67,16 @@ impl GuardResolver {
                         let mut guard_response = (cb)(resolver).await;
 
                         guard_response = guard_response.notify(&ctx).await;
-                        if guard_response.is_success() {
-                            let user = guard_response.actor().unwrap();
-                            ctx.set(AuthSucceeded::dispatch_response(user, &ctx).await)
+                        if guard_response.is_success()
+                            && let Some(actor) = guard_response.actor()
+                        {
+                            ctx.set(AuthSucceeded::dispatch_response(actor, &ctx).await)
                                 .await;
                         } else {
+                            if guard_response.is_success() {
+                                tracing::debug!("guard returned success but actor is 'None'");
+                            }
+
                             guard_response = AuthUnSuccessful::new(guard_response)
                                 .notify(&ctx)
                                 .await

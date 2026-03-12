@@ -67,6 +67,7 @@ pub trait Observable {
                 .unwrap()
         };
 
+        tracing::trace!("observer dispatched: {}", std::any::type_name::<Self>());
         manager.send((self, context.clone())).await
     }
 }
