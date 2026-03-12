@@ -40,7 +40,7 @@ pub struct OffsetBuilder {
 
 impl Display for OffsetBuilder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, ", OFFSET {}", &self.offset)
+        write!(f, " OFFSET {}", &self.offset)
     }
 }
 

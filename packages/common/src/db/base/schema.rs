@@ -4,7 +4,10 @@ use super::{
 };
 use crate::db::{
     QueryResult,
-    base::manager::Manager,
+    base::{
+        manager::Manager,
+        paginate_builder::{PaginateBuilder, PaginateResult},
+    },
     types::{ColumnAndValue, FromColumnAndValue, StructuredColumnAndValue},
 };
 use crate::db::{
@@ -318,44 +321,84 @@ impl SchemaQuery {
         CursorResult::new(cursor_two, result)
     }
 
-    pub async fn cursor_paginate_to<T>(mut self, cursor: CursorBuilder) -> CursorResult<T>
+    pub async fn cursor_paginate_to<T>(self, cursor: CursorBuilder) -> CursorResult<T>
     where
         T: FromColumnAndValue,
     {
-        let mut cursor_two = cursor.clone();
-        if let Some(field_value) = cursor.last().cloned() {
-            self.query_builder.and_where(|q| {
-                if let Some((col, dir)) = cursor.order().orders.first().cloned() {
-                    if dir == Direction::ASC {
-                        q.gt(col, field_value);
-                    } else {
-                        q.le(col, field_value);
-                    }
-                } else {
-                    q.gt(cursor.column(), field_value);
-                }
-            });
-        }
-        self.query_builder.cursor(cursor);
+        let (cursor, result) = self.cursor_paginate(cursor).await.parts();
 
-        let result = self.fetch_all().await;
-        let data = if let Ok(rows) = result {
-            if let Some(last) = rows.last()
-                && let Some(value) = last.get(cursor_two.column()).cloned()
-            {
-                cursor_two.set_last(value);
-            }
-            Ok(rows
+        let data = match result {
+            Ok(rows) => Ok(rows
                 .into_iter()
                 .flat_map(|row| T::from_column_value(row.fields()))
-                .collect::<Vec<T>>())
-        } else {
-            Err(result.err().unwrap())
+                .collect::<Vec<T>>()),
+            Err(e) => Err(e),
         };
-
-        CursorResult::new(cursor_two, data)
+        CursorResult::new(cursor, data)
     }
 
+    pub async fn paginate(
+        mut self,
+        mut page: PaginateBuilder,
+    ) -> PaginateResult<StructuredColumnAndValue> {
+        let mut page_two = page.clone();
+        let table = self.query_builder.table().to_string();
+        let column = {
+            let mut col = "id".to_string();
+            for order in page.order() {
+                col = order.0.clone();
+                break;
+            }
+            col
+        };
+
+        self.query_builder.inner_join_sub_query(
+            &format!("{}2", &table),
+            "page2_id",
+            "=",
+            &column,
+            &table,
+            |q| {
+                q.select_as(&column, "page2_id");
+                q.limit(page.limit());
+                q.offset(page.offset());
+                for (col, dir) in page.order() {
+                    if *dir == Direction::ASC {
+                        q.asc(col);
+                    } else {
+                        q.desc(col);
+                    }
+                }
+            },
+        );
+
+        let result = self.fetch_all().await;
+
+        if let Ok(rows) = &result
+            && !rows.is_empty()
+        {
+            page_two.set_offset(page_two.offset() + page_two.limit());
+        }
+
+        PaginateResult::new(page_two, result)
+    }
+
+    pub async fn paginate_to<T>(self, page: PaginateBuilder) -> PaginateResult<T>
+    where
+        T: FromColumnAndValue,
+    {
+        let (page, result) = self.paginate(page).await.parts();
+
+        let data = match result {
+            Ok(rows) => Ok(rows
+                .into_iter()
+                .flat_map(|row| T::from_column_value(row.fields()))
+                .collect::<Vec<T>>()),
+            Err(e) => Err(e),
+        };
+
+        PaginateResult::new(page, data)
+    }
     pub async fn fetch_all_to<T>(self) -> Result<Vec<T>, anyhow::Error>
     where
         T: FromColumnAndValue,

@@ -104,7 +104,7 @@ pub struct QueryBuilder {
     limit: Option<LimitBuilder>,
     offset: Option<OffsetBuilder>,
     cursor: Option<CursorBuilder>,
-    lock_for_update: bool, // select * from foo where a=b for update
+    lock_for_update: bool, // Select * from foo where a=b for update
 }
 
 impl QueryBuilder {
@@ -130,7 +130,7 @@ impl QueryBuilder {
         &self.action
     }
 
-    pub fn table(&self) -> &String {
+    pub fn table(&self) -> &str {
         &self.table
     }
 
@@ -396,7 +396,7 @@ impl QueryBuilder {
         self
     }
 
-    pub fn cursor(&mut self, cursor: CursorBuilder) -> &mut Self {
+    pub(crate) fn cursor(&mut self, cursor: CursorBuilder) -> &mut Self {
         self.cursor = Some(cursor);
         self
     }
@@ -1080,6 +1080,39 @@ impl QueryBuilder {
         self
     }
 
+    pub fn join_sub_query<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
+        &mut self,
+        table: &str,
+        left_column: &str,
+        operator: &str,
+        right_column: &str,
+        join_type: JoinType,
+        select_columns: Option<C>,
+        subquery_table: &str,
+        callback: impl FnOnce(&mut QueryBuilder),
+    ) -> &mut Self {
+        if self.joins.is_none() {
+            self.joins = Some(BTreeMap::new());
+        }
+
+        let mut query_builder = Self::new(subquery_table, QueryAction::Query { columns: None });
+
+        callback(&mut query_builder);
+
+        let join = JoinQueryBuilder::new_sub(
+            table,
+            left_column,
+            operator,
+            right_column,
+            join_type,
+            select_columns,
+            query_builder,
+        );
+        self.joins.as_mut().unwrap().insert(table.to_string(), join);
+
+        self
+    }
+
     pub fn inner_join(
         &mut self,
         inner_table: &str,
@@ -1094,6 +1127,30 @@ impl QueryBuilder {
             right_column,
             JoinType::Inner,
             None,
+        )
+    }
+
+    pub fn inner_join_sub_query<F>(
+        &mut self,
+        inner_table: &str,
+        inner_column: &str,
+        operator: &str,
+        right_column: &str,
+        subquery_table: &str,
+        callback: F,
+    ) -> &mut Self
+    where
+        F: FnOnce(&mut QueryBuilder),
+    {
+        self.join_sub_query::<String, Vec<String>>(
+            inner_table,
+            inner_column,
+            operator,
+            right_column,
+            JoinType::Inner,
+            None,
+            subquery_table,
+            callback,
         )
     }
 
@@ -1125,6 +1182,28 @@ impl QueryBuilder {
             right_column,
             JoinType::Inner,
             Some(select_columns),
+        )
+    }
+
+    pub fn inner_join_and_select_sub_query<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
+        &mut self,
+        inner_table: &str,
+        inner_column: &str,
+        operator: &str,
+        right_column: &str,
+        select_columns: C,
+        subquery_table: &str,
+        callback: impl FnOnce(&mut QueryBuilder),
+    ) -> &mut Self {
+        self.join_sub_query(
+            inner_table,
+            inner_column,
+            operator,
+            right_column,
+            JoinType::Inner,
+            Some(select_columns),
+            subquery_table,
+            callback,
         )
     }
 
@@ -1160,6 +1239,30 @@ impl QueryBuilder {
         )
     }
 
+    pub fn left_join_sub_query<F>(
+        &mut self,
+        left_table: &str,
+        left_column: &str,
+        operator: &str,
+        right_column: &str,
+        subquery_table: &str,
+        callback: F,
+    ) -> &mut Self
+    where
+        F: FnOnce(&mut QueryBuilder),
+    {
+        self.join_sub_query::<String, Vec<String>>(
+            left_table,
+            left_column,
+            operator,
+            right_column,
+            JoinType::Left,
+            None,
+            subquery_table,
+            callback,
+        )
+    }
+
     pub fn left_join_table<L: TableModel, R: TableModel>(
         &mut self,
         left_column: &str,
@@ -1188,6 +1291,28 @@ impl QueryBuilder {
             right_column,
             JoinType::Left,
             Some(select_left_columns),
+        )
+    }
+
+    pub fn left_join_and_select_sub_query<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
+        &mut self,
+        left_table: &str,
+        left_column: &str,
+        operator: &str,
+        right_column: &str,
+        select_left_columns: C,
+        subquery_table: &str,
+        callback: impl FnOnce(&mut QueryBuilder),
+    ) -> &mut Self {
+        self.join_sub_query(
+            left_table,
+            left_column,
+            operator,
+            right_column,
+            JoinType::Left,
+            Some(select_left_columns),
+            subquery_table,
+            callback,
         )
     }
 
@@ -1223,6 +1348,27 @@ impl QueryBuilder {
         )
     }
 
+    pub fn right_join_sub_query(
+        &mut self,
+        right_table: &str,
+        right_column: &str,
+        operator: &str,
+        left_column: &str,
+        subquery_table: &str,
+        callback: impl FnOnce(&mut QueryBuilder),
+    ) -> &mut Self {
+        self.join_sub_query::<String, Vec<String>>(
+            right_table,
+            left_column,
+            operator,
+            right_column,
+            JoinType::Right,
+            None,
+            subquery_table,
+            callback,
+        )
+    }
+
     pub fn right_join_table<R: TableModel, L: TableModel>(
         &mut self,
         right_column: &str,
@@ -1251,6 +1397,28 @@ impl QueryBuilder {
             right_column,
             JoinType::Right,
             Some(select_columns),
+        )
+    }
+
+    pub fn right_join_and_select_sub_query<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
+        &mut self,
+        right_table: &str,
+        right_column: &str,
+        operator: &str,
+        left_column: &str,
+        select_columns: C,
+        subquery_table: &str,
+        callback: impl FnOnce(&mut QueryBuilder),
+    ) -> &mut Self {
+        self.join_sub_query(
+            right_table,
+            left_column,
+            operator,
+            right_column,
+            JoinType::Right,
+            Some(select_columns),
+            subquery_table,
+            callback,
         )
     }
 

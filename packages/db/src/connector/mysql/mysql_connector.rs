@@ -731,18 +731,29 @@ impl MySqlSchemaManager {
     fn build_join(
         &self,
         query: &QueryBuilder,
-        _params: &mut MySqlArguments,
+        params: &mut MySqlArguments,
     ) -> Result<String, anyhow::Error> {
         let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
             for a_join in joins.values() {
-                sql = format!(
-                    "{} {} JOIN {} ON {}",
-                    sql,
-                    a_join.join_type(),
-                    a_join.table(),
-                    a_join.join_clause()
-                );
+                if let Some(sub_query) = a_join.sub_query() {
+                    sql = format!(
+                        "{} {} JOIN ({}) {} ON {}",
+                        sql,
+                        a_join.join_type(),
+                        self.build_query(sub_query, params)?,
+                        a_join.table(),
+                        a_join.join_clause()
+                    );
+                } else {
+                    sql = format!(
+                        "{} {} JOIN {} ON {}",
+                        sql,
+                        a_join.join_type(),
+                        a_join.table(),
+                        a_join.join_clause()
+                    );
+                }
             }
         }
 

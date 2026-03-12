@@ -1,12 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-use crate::db::query_column::QueryColumn;
+use crate::db::{base::query::QueryBuilder, query_column::QueryColumn};
 
 use super::query_join_types::JoinType;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct JoinQueryBuilder {
     table: String,
+    sub_query: Option<QueryBuilder>,
     join_clause: String,
     select_columns: Option<Vec<QueryColumn>>,
     join_type: JoinType,
@@ -24,6 +25,30 @@ impl JoinQueryBuilder {
         Self {
             table: table.to_owned(),
             join_clause: format!("{left_table} {operator} {right_table}"),
+            sub_query: None,
+            join_type,
+            select_columns: select_columns.map(|columns| {
+                columns
+                    .into_iter()
+                    .map(|f| f.into())
+                    .collect::<Vec<QueryColumn>>()
+            }),
+        }
+    }
+
+    pub fn new_sub<T: Into<QueryColumn>, C: IntoIterator<Item = T>>(
+        table: &str,
+        left_table: &str,
+        operator: &str,
+        right_table: &str,
+        join_type: JoinType,
+        select_columns: Option<C>,
+        sub_query: QueryBuilder,
+    ) -> Self {
+        Self {
+            table: table.to_owned(),
+            join_clause: format!("{left_table} {operator} {right_table}"),
+            sub_query: Some(sub_query),
             join_type,
             select_columns: select_columns.map(|columns| {
                 columns
@@ -73,5 +98,9 @@ impl JoinQueryBuilder {
 
     pub fn join_type(&self) -> &JoinType {
         &self.join_type
+    }
+
+    pub fn sub_query(&self) -> Option<&QueryBuilder> {
+        self.sub_query.as_ref()
     }
 }

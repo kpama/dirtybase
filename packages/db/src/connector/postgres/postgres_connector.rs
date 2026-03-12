@@ -412,14 +412,14 @@ impl PostgresSchemaManager {
                 }
 
                 // joins
-                sql = format!("{} {}", sql, self.build_join(&query)?);
+                sql = format!("{} {}", sql, self.build_join(&query, &mut params)?,);
                 // where
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
             QueryAction::Delete => {
                 sql = format!("DELETE FROM {0} ", query.table());
                 // joins
-                sql = format!("{} {}", sql, self.build_join(&query)?);
+                sql = format!("{} {}", sql, self.build_join(&query, &mut params)?);
                 // where
                 sql = format!("{} {}", sql, self.build_where_clauses(&query, &mut params)?);
             }
@@ -466,10 +466,7 @@ impl PostgresSchemaManager {
             };
 
             return match result {
-                Ok(row) => {
-                    tracing::debug!("{} result: {:#?}", query.action(), &row);
-                    Ok(QueryResult::new_record(self.row_to_column_value(&row)))
-                }
+                Ok(row) => Ok(QueryResult::new_record(self.row_to_column_value(&row))),
                 Err(e) => {
                     log::error!("{} failed: {} >> {}", query.action(), e, sql);
                     Err(anyhow!(e))
@@ -793,7 +790,7 @@ impl PostgresSchemaManager {
         sql = format!("{} FROM {}", sql, query.table());
 
         // joins
-        sql = format!("{} {}", sql, self.build_join(query)?);
+        sql = format!("{} {}", sql, self.build_join(query, params)?);
 
         // wheres
         sql = format!("{} {}", sql, self.build_where_clauses(query, params)?);
@@ -828,17 +825,32 @@ impl PostgresSchemaManager {
         Ok(sql)
     }
 
-    fn build_join(&self, query: &QueryBuilder) -> Result<String, anyhow::Error> {
+    fn build_join(
+        &self,
+        query: &QueryBuilder,
+        params: &mut PgArguments,
+    ) -> Result<String, anyhow::Error> {
         let mut sql = "".to_string();
         if let Some(joins) = query.joins() {
             for a_join in joins.values() {
-                sql = format!(
-                    "{} {} JOIN {} ON {}",
-                    sql,
-                    a_join.join_type(),
-                    a_join.table(),
-                    a_join.join_clause()
-                );
+                if let Some(sub_query) = a_join.sub_query() {
+                    sql = format!(
+                        "{} {} JOIN ({}) {} ON {}",
+                        sql,
+                        a_join.join_type(),
+                        self.build_query(sub_query, params)?,
+                        a_join.table(),
+                        a_join.join_clause()
+                    );
+                } else {
+                    sql = format!(
+                        "{} {} JOIN {} ON {}",
+                        sql,
+                        a_join.join_type(),
+                        a_join.table(),
+                        a_join.join_clause()
+                    );
+                }
             }
         }
 

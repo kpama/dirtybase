@@ -25,6 +25,10 @@ impl CursorBuilder {
         }
     }
 
+    pub fn order_by_builder(&mut self) -> &mut OrderByBuilder {
+        &mut self.order
+    }
+
     pub fn set_desc(&mut self) -> &mut Self {
         self.order = OrderByBuilder::new_desc(self.column());
         self
