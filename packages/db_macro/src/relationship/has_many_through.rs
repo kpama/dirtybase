@@ -92,7 +92,7 @@ pub(crate) fn generate_join_method(
 
         list.push(quote! {
             pub fn #when_method_name<F>(&mut self , mut callback: F) -> &mut Self
-                where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
+                where F: FnOnce(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
              {
                 let query = <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::make_query_builder();
                 let pivot = <#pivot_type as ::dirtybase_common::db::table_model::TableModel>::make_query_builder();
@@ -162,7 +162,7 @@ pub(crate) fn generate_join_method(
             }
 
             pub fn #method_name_where<F>(&mut self,mut callback: F) -> &mut Self
-             where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
+             where F: FnOnce(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
             {
                 self.#when_method_name(|relation|{
                     #call_callback
@@ -201,7 +201,7 @@ pub(crate) fn generate_join_method(
                 }
 
                 pub fn #trashed_method_name_where<F>(&mut self,mut callback: F) -> &mut Self
-                    where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
+                    where F: FnOnce(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
                 {
                     self.#when_method_name(|relation| {
                         // Make sure this entity supports soft deletion
@@ -213,7 +213,7 @@ pub(crate) fn generate_join_method(
 
             list.push(quote! {
                     pub fn #with_only_trashed_method_name_where<F>(&mut self,mut callback: F) -> &mut Self 
-                        where F: FnMut(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
+                        where F: FnOnce(&mut ::dirtybase_common::db::repo_relation::Relation<#parent>)
                     {
                         self.#when_method_name(|relation| {
                             #call_callback
