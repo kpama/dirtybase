@@ -524,7 +524,7 @@ impl MySqlSchemaManager {
                         } else {
                             sql = format!(
                                 "CREATE INDEX {} ON {} ({})",
-                                index.name(),
+                                format!("{}{}", index.name(), &table.name),
                                 &table.name,
                                 index.concat_columns()
                             );
@@ -536,7 +536,7 @@ impl MySqlSchemaManager {
                         } else {
                             sql = format!(
                                 "CREATE UNIQUE INDEX {} ON {} ({})",
-                                index.name(),
+                                format!("{}{}", index.name(), &table.name),
                                 &table.name,
                                 index.concat_columns()
                             );
