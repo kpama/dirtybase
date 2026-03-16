@@ -227,6 +227,13 @@ fn walk_and_find_type(p: &TypePath, dirty_attribute: &mut DirtybaseAttributes) {
                     dirty_attribute.is_vec = true;
                 }
             }
+        } else if name == "HashSet" {
+            if let PathArguments::AngleBracketed(a) = &p.path.segments[0].arguments {
+                if let GenericArgument::Type(syn::Type::Path(p)) = &a.args[0] {
+                    dirty_attribute.the_type = p.path.segments[0].ident.to_string();
+                    dirty_attribute.is_hashset = true;
+                }
+            }
         } else {
             dirty_attribute.the_type = p.path.segments[0].ident.to_string();
         }
@@ -351,6 +358,12 @@ pub(crate) fn build_from_handlers(
                                 ::dirtybase_common::db::field_values::FieldValue::from_ref_option_into_option(field)
                             }
                         }
+                    } else if item.1.is_hashset {
+                        quote! {
+                            pub fn #fn_name <'a>(field: Option<&'a ::dirtybase_common::db::field_values::FieldValue>) -> Option<HashSet<#returns>> {
+                                ::dirtybase_common::db::field_values::FieldValue::from_ref_option_into_option(field)
+                            }
+                        }
                         } else {
                             quote! {
                                 pub fn #fn_name <'a>(field: Option<&'a ::dirtybase_common::db::field_values::FieldValue>) -> Option<#returns> {
@@ -361,6 +374,12 @@ pub(crate) fn build_from_handlers(
                     } else if item.1.is_vec {
                             quote! {
                                 pub fn #fn_name <'a> (field: Option<&'a ::dirtybase_common::db::field_values::FieldValue>) -> Vec<#returns> {
+                                    ::dirtybase_common::db::field_values::FieldValue::from_ref_option_into(field)
+                                }
+                            }
+                    } else if item.1.is_hashset {
+                            quote! {
+                                pub fn #fn_name <'a> (field: Option<&'a ::dirtybase_common::db::field_values::FieldValue>) -> HashSet<#returns> {
                                     ::dirtybase_common::db::field_values::FieldValue::from_ref_option_into(field)
                                 }
                             }

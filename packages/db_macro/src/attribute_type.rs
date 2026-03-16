@@ -130,6 +130,7 @@ pub(crate) struct DirtybaseAttributes {
     pub(crate) optional: bool,
     pub(crate) the_type: String,
     pub(crate) is_vec: bool,
+    pub(crate) is_hashset: bool,
     pub(crate) flatten: bool,
     pub(crate) embedded: bool,
     pub(crate) from_handler: String,
