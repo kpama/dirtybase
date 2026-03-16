@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use chrono::{DateTime, NaiveDate, Utc};
 
@@ -164,6 +167,29 @@ impl From<&serde_json::value::Map<String, serde_json::Value>> for FieldValue {
 impl From<&HashMap<String, String>> for FieldValue {
     fn from(value: &HashMap<String, String>) -> Self {
         Self::from(value.clone())
+    }
+}
+
+impl<T> From<HashSet<T>> for FieldValue
+where
+    T: Into<FieldValue>,
+{
+    fn from(value: HashSet<T>) -> Self {
+        Self::Array(value.into_iter().map(|i| i.into()).collect())
+    }
+}
+
+impl<T> From<&HashSet<T>> for FieldValue
+where
+    T: Clone + Into<FieldValue>,
+{
+    fn from(value: &HashSet<T>) -> Self {
+        let list = value
+            .clone()
+            .into_iter()
+            .map(|i| i.into())
+            .collect::<Vec<FieldValue>>();
+        Self::Array(list)
     }
 }
 

@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use super::FieldValue;
 
 pub mod field_to_chrono_datetime;
@@ -19,7 +21,7 @@ where
 {
     fn from(value: FieldValue) -> Self {
         match value {
-            FieldValue::Array(v) => v.iter().map(|f| f.clone().into()).collect(),
+            FieldValue::Array(v) => v.into_iter().map(|f| f.into()).collect(),
             _ => Vec::new(),
         }
     }
@@ -33,6 +35,30 @@ where
         match value {
             FieldValue::Array(v) => v.iter().map(|f| f.clone().into()).collect(),
             _ => Vec::new(),
+        }
+    }
+}
+
+impl<T> From<FieldValue> for HashSet<T>
+where
+    T: std::cmp::Eq + std::hash::Hash + From<FieldValue>,
+{
+    fn from(value: FieldValue) -> Self {
+        match value {
+            FieldValue::Array(v) => v.into_iter().map(|v| v.into()).collect(),
+            _ => HashSet::new(),
+        }
+    }
+}
+
+impl<T> From<&FieldValue> for HashSet<T>
+where
+    T: std::cmp::Eq + std::hash::Hash + From<FieldValue>,
+{
+    fn from(value: &FieldValue) -> Self {
+        match value {
+            FieldValue::Array(v) => v.iter().map(|f| f.clone().into()).collect(),
+            _ => HashSet::new(),
         }
     }
 }

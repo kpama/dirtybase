@@ -1,10 +1,6 @@
 use dirtybase_helper::uuid::Uuid;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Display,
-    str::FromStr,
-};
+use std::{collections::HashMap, fmt::Display, str::FromStr};
 
 mod field_value_from_type;
 mod insert_value;
@@ -200,15 +196,6 @@ where
     T: Into<FieldValue>,
 {
     fn from(value: Vec<T>) -> Self {
-        Self::Array(value.into_iter().map(|i| i.into()).collect())
-    }
-}
-
-impl<T> From<HashSet<T>> for FieldValue
-where
-    T: Into<FieldValue>,
-{
-    fn from(value: HashSet<T>) -> Self {
         Self::Array(value.into_iter().map(|i| i.into()).collect())
     }
 }
