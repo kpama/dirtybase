@@ -699,6 +699,11 @@ impl SqliteSchemaManager {
                 )
             };
             f.push_str(&st);
+
+            if relationship.cascade_update() {
+                f.push_str(" ON UPDATE CASCADE");
+            }
+
             if relationship.cascade_delete() {
                 f.push_str(" ON DELETE CASCADE");
             }

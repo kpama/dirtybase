@@ -171,13 +171,18 @@ impl TableBlueprint {
 
         self.column_string(name, |column| {
             column.set_type(ColumnType::Char(ULID_STRING_LENGTH));
-            if cascade_delete {
-                column.references_with_cascade_delete(foreign_table, ID_FIELD);
-            } else {
-                column.references_without_cascade_delete(foreign_table, ID_FIELD);
-            }
+            column.references(foreign_table, ID_FIELD, cascade_delete, false);
         })
     }
+    pub fn ulid_fk_cascade_all(&mut self, foreign_table: &str) -> &mut ColumnBlueprint {
+        let name = to_fk_column(foreign_table, None);
+
+        self.column_string(name, |column| {
+            column.set_type(ColumnType::Char(ULID_STRING_LENGTH));
+            column.reference_cascade_all(foreign_table, ID_FIELD);
+        })
+    }
+
     pub fn ulid_fk_as(
         &mut self,
         foreign_table: &str,
@@ -199,11 +204,7 @@ impl TableBlueprint {
 
         self.column_string(name, |column| {
             column.set_type(ColumnType::Uuid);
-            if cascade_delete {
-                column.references_with_cascade_delete(foreign_table, ID_FIELD);
-            } else {
-                column.references_without_cascade_delete(foreign_table, ID_FIELD);
-            }
+            column.references(foreign_table, ID_FIELD, cascade_delete, false);
         })
     }
 
@@ -233,17 +234,12 @@ impl TableBlueprint {
     ) -> &mut ColumnBlueprint {
         self.column_string(name.to_string(), |column| {
             column.set_type(column_type);
-            if cascade_delete {
-                column.references_with_cascade_delete(
-                    foreign_table,
-                    foreign_column.unwrap_or(ID_FIELD),
-                );
-            } else {
-                column.references_without_cascade_delete(
-                    foreign_table,
-                    foreign_column.unwrap_or(ID_FIELD),
-                );
-            }
+            column.references(
+                foreign_table,
+                foreign_column.unwrap_or(ID_FIELD),
+                cascade_delete,
+                false,
+            );
         })
     }
 
@@ -254,11 +250,7 @@ impl TableBlueprint {
 
         self.column_string(name, |column| {
             column.set_type(ColumnType::Char(ULID_STRING_LENGTH));
-            if cascade_delete {
-                column.references_with_cascade_delete(foreign_table, id);
-            } else {
-                column.references_without_cascade_delete(foreign_table, id);
-            }
+            column.references(foreign_table, id, cascade_delete, false);
         })
     }
 
@@ -269,11 +261,7 @@ impl TableBlueprint {
 
         self.column_string(name, |column| {
             column.set_type(ColumnType::Uuid);
-            if cascade_delete {
-                column.references_with_cascade_delete(foreign_table, id);
-            } else {
-                column.references_without_cascade_delete(foreign_table, id);
-            }
+            column.references(foreign_table, id, cascade_delete, false);
         })
     }
 
@@ -300,11 +288,7 @@ impl TableBlueprint {
 
         self.column_string(name, |column| {
             column.set_type(ColumnType::Integer);
-            if cascade_delete {
-                column.references_with_cascade_delete(foreign_table, id);
-            } else {
-                column.references_without_cascade_delete(foreign_table, id);
-            }
+            column.references(foreign_table, id, cascade_delete, false);
         })
     }
 

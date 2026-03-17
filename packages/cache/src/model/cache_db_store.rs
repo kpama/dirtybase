@@ -59,6 +59,7 @@ async fn setup_catch_db_tag_entries_pivot(manager: &Manager) {
                     CacheDbTagStoreEntity::table_name(),
                     CacheDbTagStoreEntity::col_name_for_tag(),
                     true,
+                    false,
                 );
             table
                 .string(CacheDbPivotEntity::col_name_for_core_cache_key())
@@ -67,6 +68,7 @@ async fn setup_catch_db_tag_entries_pivot(manager: &Manager) {
                     CacheDbStoreEntity::table_name(),
                     CacheEntry::col_name_for_key(),
                     true,
+                    false,
                 );
 
             table.primary_index(&[

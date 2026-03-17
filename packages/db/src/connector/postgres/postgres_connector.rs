@@ -721,6 +721,10 @@ impl PostgresSchemaManager {
             } else {
                 // FIXME: Generate correct sql when altering
             }
+            if relationship.cascade_update() {
+                the_type.push_str(" ON UPDATE CASCADE");
+            }
+
             if relationship.cascade_delete() {
                 the_type.push_str(" ON DELETE CASCADE");
             }

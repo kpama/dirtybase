@@ -20,14 +20,16 @@ pub struct ForeignKey {
     table: String,
     column: String,
     cascade_delete: bool,
+    cascade_update: bool,
 }
 
 impl ForeignKey {
-    pub fn new(table: &str, column: &str, cascade_delete: bool) -> Self {
+    pub fn new(table: &str, column: &str, cascade_delete: bool, cascade_update: bool) -> Self {
         Self {
             table: table.to_owned(),
             column: column.to_owned(),
             cascade_delete,
+            cascade_update,
         }
     }
 
@@ -40,6 +42,20 @@ impl ForeignKey {
     }
     pub fn cascade_delete(&self) -> bool {
         self.cascade_delete
+    }
+
+    pub fn set_cascase_delete(&mut self, cascade_delete: bool) -> &mut Self {
+        self.cascade_delete = cascade_delete;
+        self
+    }
+
+    pub fn cascade_update(&self) -> bool {
+        self.cascade_update
+    }
+
+    pub fn set_cascase_update(&mut self, cascade_update: bool) -> &mut Self {
+        self.cascade_update = cascade_update;
+        self
     }
 }
 
@@ -131,8 +147,6 @@ impl ColumnBlueprint {
         self
     }
 
-    // TODO: Add default for UUID4 and V7
-
     pub fn unset_default(&mut self) -> &mut Self {
         self.default = None;
         self
@@ -172,15 +186,43 @@ impl ColumnBlueprint {
         self
     }
 
-    pub fn references(&mut self, table: &str, column: &str, cascade_delete: bool) -> &mut Self {
-        self.relationship = Some(ForeignKey::new(table, column, cascade_delete));
+    pub fn references(
+        &mut self,
+        table: &str,
+        column: &str,
+        cascade_delete: bool,
+        cascade_update: bool,
+    ) -> &mut Self {
+        self.relationship = Some(ForeignKey::new(
+            table,
+            column,
+            cascade_delete,
+            cascade_update,
+        ));
         self
     }
-    pub fn references_with_cascade_delete(&mut self, table: &str, column: &str) -> &mut Self {
-        self.references(table, column, true)
+
+    pub fn relationship(&mut self) -> Option<&mut ForeignKey> {
+        self.relationship.as_mut()
+    }
+    pub fn relationship_fn<F>(&mut self, callback: F) -> &mut Self
+    where
+        F: FnOnce(&mut ForeignKey),
+    {
+        if let Some(rel) = self.relationship.as_mut() {
+            callback(rel);
+        }
+        self
     }
 
-    pub fn references_without_cascade_delete(&mut self, table: &str, column: &str) -> &mut Self {
-        self.references(table, column, false)
+    pub fn references_with_cascade_delete(&mut self, table: &str, column: &str) -> &mut Self {
+        self.references(table, column, true, false)
+    }
+    pub fn references_with_cascade_update(&mut self, table: &str, column: &str) -> &mut Self {
+        self.references(table, column, false, true)
+    }
+
+    pub fn reference_cascade_all(&mut self, table: &str, column: &str) -> &mut Self {
+        self.references(table, column, true, true)
     }
 }
