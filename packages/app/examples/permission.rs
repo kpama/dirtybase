@@ -1,5 +1,3 @@
-use std::collections::btree_map;
-
 use dirtybase_contract::auth_contract::{Actor, ActorRepo, PermissionManager};
 use dirtybase_db::{
     TableModel,

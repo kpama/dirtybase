@@ -315,6 +315,64 @@ pub fn build_entity_repo(
 
             #(#relationship_methods)*
 
+
+            pub async fn paginate(&mut self, page: Option<::dirtybase_common::db::base::paginate_builder::PaginateBuilder>) ->
+             ::dirtybase_common::db::base::paginate_builder::PaginateResult<#ident>
+            {
+                let mut rows_map = Vec::<#ident>::new();
+                let mut join_field_values = ::std::collections::HashMap::new();
+                let mut rows_rel_map = ::std::collections::HashMap::new();
+                let mut page = if let Some(page) = page {
+                    page
+                } else {
+                    ::dirtybase_common::db::base::paginate_builder::PaginateBuilder::new(
+                        &<#ident as ::dirtybase_common::db::table_model::TableModel>::id_column(),
+                        0,
+                        25
+                    )
+                };
+
+                #append_trash_filter
+
+                self.builder
+                    .select_multiple(&<#ident as ::dirtybase_common::db::table_model::TableModel>::table_query_col_aliases(None));
+                let paginate_result = self.manager.execute_query(self.builder.clone()).paginate(page).await;
+                let (page, result) = paginate_result.parts();
+
+              match result {
+                    Ok(mut raw_list) => {
+                        for row in raw_list {
+                            if let Some(row_entity) = #ident::from_struct_column_value(&row,
+                                Some(<#ident as ::dirtybase_common::db::table_model::TableModel>::table_name())) {
+                                rows_map.push(row_entity);
+                            }
+                        }
+
+
+                        for (name, rel) in &self.relation {
+                           if let Err(e)  = rel.clone().process(&name, &self.manager, &rows_map, &mut join_field_values, &mut rows_rel_map).await {
+                                *self = Self::new(&self.manager);
+                                return ::dirtybase_common::db::base::paginate_builder::PaginateResult::<#ident>::new(page, Err(e));
+                           }
+                        }
+
+                        // now map relationships
+                        for row_entity in &mut rows_map {
+                            let row_hash = ::dirtybase_common::db::table_model::TableModel::entity_hash(row_entity);
+                            #(#append_methods)*
+                        }
+
+                        *self = Self::new(&self.manager);
+                        ::dirtybase_common::db::base::paginate_builder::PaginateResult::<#ident>::new(page,Ok(rows_map))
+                    }
+                    Err(e) => {
+                        *self = Self::new(&self.manager);
+                        ::dirtybase_common::db::base::paginate_builder::PaginateResult::<#ident>::new(page, Err(e))
+                    },
+                }
+
+            }
+
             pub async fn cursor_paginate(&mut self, cursor: Option<::dirtybase_common::db::base::cursor_builder::CursorBuilder>) ->
              ::dirtybase_common::db::base::cursor_builder::CursorResult<#ident>
             {
