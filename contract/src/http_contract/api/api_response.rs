@@ -5,6 +5,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use dirtybase_common::db::base::{cursor_builder::CursorResult, paginate_builder::PaginateResult};
 use serde::Serialize;
 
 type MoreErrorData = serde_json::map::Map<String, serde_json::Value>;
@@ -12,6 +13,7 @@ type MoreErrorData = serde_json::map::Map<String, serde_json::Value>;
 #[derive(Debug, serde::Serialize)]
 pub struct ApiResponse<D: serde::Serialize = ()> {
     data: Option<D>,
+    meta: Option<serde_json::Value>,
     error: Option<ApiError>,
     #[serde(skip)]
     status_code: Option<StatusCode>,
@@ -22,6 +24,7 @@ impl<D: serde::Serialize> Default for ApiResponse<D> {
         Self {
             data: None,
             error: None,
+            meta: None,
             status_code: None,
         }
     }
@@ -32,6 +35,7 @@ impl<D: serde::Serialize> ApiResponse<D> {
         Self {
             data,
             error,
+            meta: None,
             status_code: None,
         }
     }
@@ -199,5 +203,31 @@ impl<D: serde::Serialize> IntoResponse for ApiResponse<D> {
 impl<D: serde::Serialize> From<ApiResponse<D>> for Response {
     fn from(val: ApiResponse<D>) -> Self {
         val.into_response()
+    }
+}
+
+impl<D: serde::Serialize> From<PaginateResult<D>> for ApiResponse<Vec<D>> {
+    fn from(value: PaginateResult<D>) -> Self {
+        let (page, result) = value.parts();
+        let mut response = match result {
+            Ok(v) => Self::new(Some(v), None),
+            Err(e) => Self::new(None, Some(e.into())),
+        };
+
+        response.meta = serde_json::to_value(page).ok();
+        response
+    }
+}
+
+impl<D: serde::Serialize> From<CursorResult<D>> for ApiResponse<Vec<D>> {
+    fn from(value: CursorResult<D>) -> Self {
+        let (cursor, result) = value.parts();
+        let mut response = match result {
+            Ok(v) => Self::new(Some(v), None),
+            Err(e) => Self::new(None, Some(e.into())),
+        };
+
+        response.meta = serde_json::to_value(cursor).ok();
+        response
     }
 }
