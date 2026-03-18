@@ -1,6 +1,6 @@
 use std::{future::Future, sync::Arc};
 
-use crate::{auth_contract::storage2::PermStorageProvider, prelude::Context};
+use crate::{auth_contract::storage::PermStorageProvider, prelude::Context};
 
 #[derive(Clone)]
 pub struct PermissionStorageResolver {

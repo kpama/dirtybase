@@ -2,7 +2,7 @@ use dirtybase_contract::{
     auth_contract::{
         PermissionManager,
         observable::AuthSucceeded,
-        storage2::{PermStorageProvider, PermissionStorage},
+        storage::{PermStorageProvider, PermissionStorage},
     },
     prelude::{Observable, observable::cel::CommonExpressionSandbox},
 };

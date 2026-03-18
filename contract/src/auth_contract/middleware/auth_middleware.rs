@@ -1,7 +1,7 @@
 use axum::{extract::Request, http::StatusCode, middleware::Next, response::IntoResponse};
 
 use crate::{
-    auth_contract::{GuardResolver, GuardResponse, storage2::PermStorageProvider},
+    auth_contract::{GuardResolver, GuardResponse, storage::PermStorageProvider},
     prelude::{Context, MiddlewareParam},
 };
 

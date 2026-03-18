@@ -1,19 +1,9 @@
 use axum::response::Html;
 use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
-use dirtybase_contract::auth_contract::{AuthUserPayload, LoginCredential, PermissionManager};
-use dirtybase_contract::auth_contract::{Permission, PermissionRepo};
 use dirtybase_contract::cli_contract::CliMiddlewareManager;
-use dirtybase_contract::{
-    app_contract::{Context, ContextResourceManager, CtxExt},
-    prelude::*,
-    session_contract::Session,
-};
-use dirtybase_db::TableModel;
-use dirtybase_db::base::manager::Manager;
-use dirtybase_db::types::{ArcUuid7, ToColumnAndValue};
+use dirtybase_contract::{app_contract::Context, prelude::*};
 use tracing_subscriber::EnvFilter;
-use validator::Validate;
 
 #[tokio::main]
 async fn main() {
@@ -36,22 +26,7 @@ struct App;
 #[async_trait::async_trait]
 impl ExtensionSetup for App {
     async fn setup(&mut self, _context: &Context) {
-        busybody::helpers::register_service(ContextResourceManager::<i32>::new(
-            |_| {
-                Box::pin(async {
-                    //
-                    Ok(("global points".to_string(), 50).into())
-                })
-            },
-            |_| {
-                Box::pin(async {
-                    tracing::error!(">>>>>>>>>>>>>>>>>>>>>>>  making new i32");
-                    Ok(40000)
-                })
-            },
-            |_| Box::pin(async {}),
-        ))
-        .await;
+        //
     }
 
     async fn register_cli_middlewares(
@@ -64,77 +39,6 @@ impl ExtensionSetup for App {
     fn register_routes(&self, manager: &mut RouterManager) {
         manager.general(None, |router| {
             router.get("/", index_request_handler, "index-page");
-            // manager.apply(router, ["auth::jwt"])
-        });
-
-        manager.api(None, |router| {
-            router.get_x("/hello", || async { "Hello from api" });
-        });
-
-        // login
-        manager.general(None, |router| {
-            router
-                .get_x("/form", || async move {
-                    let form = r#"<form action='/do-login', method='post'>
-                    <label>Username</label><br/>
-                    <input type='text' name='username' placeholder='Username' /> <br/>
-                    <label>Password</label><br/>
-                    <input type='password' name='password' placeholder='Password' /> <br/>
-                    <input type='submit' value='Login'/>
-                    </form>"#;
-                    Html(form)
-                })
-                .post(
-                    "/do-login", // TODO: CSRF CHECK
-                    |credential: LoginCredential| async move {
-                        println!("credential - username : {:#?}", credential.username());
-                        println!("credential - password: {:#?}", credential.password());
-                        "Auth finish"
-                    },
-                    "do-login",
-                )
-                .get("/xx", test_cookie_handler, "xx")
-                .get_x(
-                    "/resource/{name}",
-                    |Path(name): Path<String>,
-                     CtxExt(perm): CtxExt<PermissionManager>,
-                     CtxExt(ctx): CtxExt<_>,
-                     CtxExt(db_manager): CtxExt<Manager>| async move {
-                        let action = format!("{}:create", &name);
-                        let mut collection = Vec::<Permission>::new();
-                        let mut repo = PermissionRepo::new(&db_manager);
-                        repo.filter(|builder| {
-                            builder.asc(Permission::id_column());
-                        });
-                        if perm.can(action, &ctx).await
-                            && let Ok(c) = repo.get().await
-                        {
-                            collection = c;
-                        }
-
-                        axum::Json(collection)
-                    },
-                )
-                .post_x(
-                    "/create-user",
-                    |CtxExt(manager): CtxExt<Manager>,
-                     Form(mut auth_user): Form<AuthUserPayload>| async move {
-                        let result = auth_user.validate();
-                        auth_user.id = Some(ArcUuid7::default());
-                        _ = manager.insert_ref("auth_users", &auth_user).await;
-                        tracing::error!("validation result: {:#?}", result);
-                        format!("new user id: {}", auth_user.id.unwrap())
-                    },
-                )
-                .put_x(
-                    "/update-user/{id}",
-                    |Path(id): Path<ArcUuid7>, Form(mut data): Form<AuthUserPayload>| async move {
-                        data.id = Some(id.clone());
-                        tracing::error!("updating{:#?}", &data);
-                        tracing::error!("column/value: {:#?}", data.to_column_value());
-                        format!("updated user id: {}", &id)
-                    },
-                );
         });
     }
 
@@ -144,14 +48,6 @@ impl ExtensionSetup for App {
         let _id = tenant.id().to_string();
         req
     }
-}
-
-async fn test_cookie_handler(
-    _jar: CookieJar,
-    CtxExt(session): CtxExt<Session>,
-    _req: Request,
-) -> impl IntoResponse {
-    session.id().to_string()
 }
 
 async fn index_request_handler() -> impl IntoResponse {

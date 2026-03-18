@@ -12,7 +12,7 @@ use dirtybase_contract::auth_contract::{
     FetchRoleOption, FetchRolePayload, FetchRolePermissionOption, FetchRolePermissionPayload,
     Permission, PermissionRepo, PersistActorPayload, PersistActorRolePayload,
     PersistPermissionPayload, PersistRolePayload, PersistRolePermission, Role, RolePermission,
-    RolePermissionRepo, RoleRepo, storage2::PermissionStorage,
+    RolePermissionRepo, RoleRepo, storage::PermissionStorage,
 };
 
 pub struct PermissionDatabaseStorage {

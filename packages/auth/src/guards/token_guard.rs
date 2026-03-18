@@ -1,6 +1,6 @@
 use dirtybase_contract::{
     auth_contract::{
-        FetchActorPayload, GuardResolver, GuardResponse, ParseToken, storage2::PermissionStorage,
+        FetchActorPayload, GuardResolver, GuardResponse, ParseToken, storage::PermissionStorage,
     },
     prelude::{Credentials, axum_extra},
 };

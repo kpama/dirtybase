@@ -16,7 +16,6 @@ mod context_manager;
 mod context_metadata;
 
 use crate::{
-    auth_contract::AuthUser,
     config_contract::{DirtyConfig, TryFromDirtyConfig},
     http_contract::{Bind, ModelBindResolver},
     multitenant_contract::*,
@@ -69,8 +68,6 @@ impl Context {
         busybody::helpers::set_type(AppContext::make_global()).await;
         // tenant
         busybody::helpers::set_type(TenantContext::make_global()).await;
-        // user
-        busybody::helpers::set_type(AuthUser::default()).await;
 
         let instance = Self {
             id: ArcUuid7::default(),
@@ -80,10 +77,6 @@ impl Context {
 
         busybody::helpers::set_type(instance.clone()).await;
         instance
-    }
-
-    pub async fn set_user(&self, user: AuthUser) -> &Self {
-        self.set(user).await
     }
 
     pub async fn set_tenant_context(&self, tenant: TenantContext) -> &Self {
@@ -148,10 +141,6 @@ impl Context {
 
     pub fn container_ref(&self) -> &busybody::ServiceContainer {
         &self.sc
-    }
-
-    pub async fn user(&self) -> Option<AuthUser> {
-        self.get().await.ok()
     }
 
     pub async fn tenant_context(&self) -> Option<TenantContext> {

@@ -1,5 +1,5 @@
-mod auth_storage_resolver;
-mod storage_provider;
+mod perm_storage_provider;
+mod perm_storage_resolver;
 
-pub use auth_storage_resolver::*;
-pub use storage_provider::*;
+pub use perm_storage_provider::*;
+pub use perm_storage_resolver::*;

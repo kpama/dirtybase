@@ -4,7 +4,7 @@ use axum::{Json, extract::Path, response::Html};
 use dirtybase_app::app::AppService;
 use dirtybase_contract::{
     ExtensionSetup,
-    auth_contract::{Actor, AuthUser, FetchPermissionPayload, Gate, Role, storage2::{PermStorageProvider, PermissionStorage}},
+    auth_contract::{Actor, FetchPermissionPayload, Gate, Role, storage::{PermStorageProvider, PermissionStorage}},
     prelude::{
         Context, CtxExt, Observable, RouterManager,
         observable::cel::{CelContext, CommonExpressionSandbox},

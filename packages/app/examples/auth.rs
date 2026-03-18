@@ -1,7 +1,7 @@
 use dirtybase_app::setup;
 use dirtybase_auth::helpers::get_auth_storage;
 use dirtybase_contract::auth_contract::{
-    ActorPayload, FetchActorPayload, PersistActorPayload, storage2::PermissionStorage,
+    ActorPayload, FetchActorPayload, PersistActorPayload, storage::PermissionStorage,
 };
 use dirtybase_db::types::ArcUuid7;
 use tracing::Level;

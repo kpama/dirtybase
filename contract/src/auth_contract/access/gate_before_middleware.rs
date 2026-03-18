@@ -4,7 +4,7 @@ use std::{future::Future, sync::Arc};
 
 use busybody::ServiceContainer;
 
-use crate::auth_contract::{AuthUser, GateAbility};
+use crate::auth_contract::GateAbility;
 
 use super::GateResponse;
 

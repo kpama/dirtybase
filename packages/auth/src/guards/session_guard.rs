@@ -5,7 +5,7 @@ use dirtybase_contract::{
     app_contract::Context,
     auth_contract::{
         Actor, AuthUserStatus, FetchActorOption, FetchActorPayload, GuardResolver, GuardResponse,
-        LoginCredential, storage2::PermissionStorage,
+        LoginCredential, storage::PermissionStorage,
     },
     http_contract::{HttpContext, named_routes_axum},
     prelude::IntoResponse,

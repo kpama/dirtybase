@@ -1,8 +1,8 @@
 use dirtybase_contract::{
     app_contract::{CtxExt, RequestContext},
     auth_contract::{
-        ActorPayload, AuthUser, AuthUserStorageProvider, FetchActorPayload, LoginCredential,
-        PersistActorPayload, storage2::PermissionStorage,
+        Actor, ActorPayload, FetchActorPayload, LoginCredential, PersistActorPayload,
+        storage::{PermStorageProvider, PermissionStorage},
     },
     axum::response::Html,
     db_contract::types::ArcUuid7,
@@ -152,9 +152,10 @@ pub(crate) async fn handle_get_auth_token(
 
 pub(crate) async fn handle_get_user_by_id(
     Path(id): Path<ArcUuid7>,
-    CtxExt(storage): CtxExt<AuthUserStorageProvider>,
-) -> ApiResponse<AuthUser> {
-    storage.find_by_id(id).await.into()
+    CtxExt(storage): CtxExt<PermStorageProvider>,
+) -> ApiResponse<Actor> {
+    let payload = FetchActorPayload::by_id(id);
+    storage.fetch_actor(payload, None).await.into()
 }
 
 pub(crate) async fn register_form_handler(
@@ -241,13 +242,6 @@ pub(crate) async fn handle_api_register_request(
     resp
 }
 
-pub(crate) async fn handle_api_get_me(
-    RequestContext(context): RequestContext,
-) -> ApiResponse<AuthUser> {
-    // FIXME: Get the auth user another way
-    if let Ok(user) = context.get::<AuthUser>().await {
-        ApiResponse::success(user)
-    } else {
-        ApiResponse::error("user not found")
-    }
+pub(crate) async fn handle_api_get_me(CtxExt(actor): CtxExt<Actor>) -> ApiResponse<Actor> {
+    ApiResponse::success(actor)
 }

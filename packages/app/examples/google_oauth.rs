@@ -15,7 +15,7 @@ use dirtybase_auth::{
 };
 use dirtybase_contract::{
     ExtensionSetup,
-    auth_contract::{FetchActorPayload, storage2::PermissionStorage},
+    auth_contract::{FetchActorPayload, storage::PermissionStorage},
     http_contract::HttpContext,
     prelude::{ConfigResult, Context, CtxExt, DirtyConfig, RouterManager, TryFromDirtyConfig},
     session_contract::Session,

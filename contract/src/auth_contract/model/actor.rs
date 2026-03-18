@@ -70,7 +70,7 @@ pub struct Actor {
     #[dirty(skip)]
     manager: Arc<PermissionManager>,
 
-    #[serde(skip_deserializing)]
+    #[serde(skip)]
     #[dirty(skip)]
     current_role: Role,
 }

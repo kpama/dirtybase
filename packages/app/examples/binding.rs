@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use axum::{Json, extract::Path};
 use dirtybase_contract::{
-    auth_contract::{AuthUser, Gate},
+    auth_contract::{Actor, Gate},
     http_contract::Bind,
     prelude::CtxExt,
 };
@@ -32,9 +32,9 @@ async fn main() {
     })
     .await;
 
-    Gate::define("view_posts", |post: Post, user: AuthUser| async move {
+    Gate::define("view_posts", |post: Post, actor: Actor| async move {
         //--
-        println!("validating view post: {post:#?}, user: {user:#?}");
+        println!("validating view post: {post:#?}, actor: {actor:#?}");
         Some(post.id > 10)
     })
     .await;

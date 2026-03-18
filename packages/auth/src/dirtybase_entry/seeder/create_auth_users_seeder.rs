@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use dirtybase_contract::app_contract::Context;
-use dirtybase_contract::auth_contract::storage2::{PermStorageProvider, PermissionStorage};
+use dirtybase_contract::auth_contract::storage::{PermStorageProvider, PermissionStorage};
 use dirtybase_contract::auth_contract::{
     Actor, ActorPayload, ActorRole, AuthUserStatus, FetchRolePayload, Permission,
     PersistActorPayload, PersistActorRolePayload, PersistPermissionPayload, PersistRolePayload,

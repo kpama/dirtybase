@@ -13,7 +13,7 @@ use crate::{
     auth_contract::{
         Actor,
         observable::{AuthSucceeded, AuthUnSuccessful},
-        storage2::PermStorageProvider,
+        storage::PermStorageProvider,
     },
     prelude::{Context, Observable},
 };

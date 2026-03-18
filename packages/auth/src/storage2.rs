@@ -2,7 +2,7 @@ use dirtybase_common::db::base::manager::Manager;
 use dirtybase_contract::{
     auth_contract::{
         Actor, PermissionManager, PermissionRepo,
-        storage2::{PermStorageProvider, PermissionStorageResolver},
+        storage::{PermStorageProvider, PermissionStorageResolver},
     },
     prelude::{ContextResourceManager, ResourceManager},
 };

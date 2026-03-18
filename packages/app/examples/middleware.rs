@@ -1,6 +1,6 @@
 use axum::{Json, response::Html};
 use dirtybase_contract::{
-    auth_contract::{Actor, AuthUser, Gate},
+    auth_contract::{Actor, Gate},
     http_contract::Bind,
     prelude::{CtxExt, OptionCtxExt},
 };
@@ -36,11 +36,9 @@ async fn main() {
             );
             router.get_x_with_middleware(
                 "/secure",
-                |CtxExt(user): CtxExt<AuthUser>,
-                 CtxExt(ctx): CtxExt<_>,
-                 OptionCtxExt(actor_opt): OptionCtxExt<Actor>| async move {
-                    tracing::warn!("auth user: {:#?}", user.username());
+                |CtxExt(ctx): CtxExt<_>, OptionCtxExt(actor_opt): OptionCtxExt<Actor>| async move {
                     if let Some(actor) = actor_opt {
+                        tracing::warn!("auth user: {:#?}", actor.username());
                         if actor.can("secrets:view", &ctx).await {
                             return Html("One ring to rule them all is the big secret");
                         }
