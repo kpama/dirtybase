@@ -66,7 +66,7 @@ crypto = { version = "0.5.1", features = ["aead", "password-hash", "digest"] }
 argon2 = { version = "0.5.3" }
 dashmap = { version = "6.1.0" }
 anyhow = { version = "1.0.102" }
-clap = { version = "4.5.60", features = ["derive", "unstable-doc"] }
+clap = { version = "4.6.0", features = ["derive", "unstable-doc"] }
 serde = { version = "1.0.228", features = ["derive", "rc"] }
 serde_json = { version = "1.0.149", features = ["raw_value"] }
 toml = { version = "0.9.8" }
@@ -89,7 +89,7 @@ rand = { version = "0.10.0" }
 futures = { version = "0.3.32" }
 futures-util = { version = "0.3.32" }
 ulid = { version = "1.2.1", features = ["serde", "rand", "std"] }
-tokio-tungstenite = { version = "0.27.0", features = ["native-tls"] }
+tokio-tungstenite = { version = "0.29.0", features = ["native-tls"] }
 futures-channel = { version = "0.3.32" }
 native-tls = { version = "0.2.18" }
 tokio = { version = "1.50.0", features = ["full"] }
@@ -107,17 +107,17 @@ busybody = { version = "1.0.16" }
 orsomafo = { version = "0.5.0" }
 fama = { version = "0.4.6" }
 busstop = { version = "0.2.7" }
-redis = { version = "1.0.5", features = [
+redis = { version = "1.1.0", features = [
 	"tokio-comp",
 	"aio",
 	# "tls-native-tls",
 	"cluster-async",
 ] }
 lettre = { version = "0.11" }
-config = "0.15.18"
+config = "0.15.22"
 deadpool = "0.13.0"
 deadpool-redis = { version = "0.23.0" }
-cron = { version = "0.15.0" }
+cron = { version = "0.16.0" }
 english-to-cron = { version = "0.1.6" }
 validator = { version = "0.20.0", features = ["derive"] }
 tower-service = { version = "0.3.3" }
@@ -152,14 +152,14 @@ uuid = { version = "1.21.0", features = [
 	"macro-diagnostics",
 ] }
 tracing = { version = "0.1.41", features = ["std"] }
-tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 tempfile = { version = "3.27.0" }
 uuid25 = { version = "0.3.5", features = ["gen", "serde", "uuid"] }
 snowflaker = { version = "0.3.6", features = ["dynamic"] }
 ipnet = { version = "2.12.0" }
 cookie = { version = "0.18.1" }
 tera = { version = "1.20.1" }
-cel = { version = "0.12.0", features = ["json"] }
+cel = { version = "0.13.0", features = ["json"] }
 reqwest = { version = "0.13.2", features = [
 	"json",
 	"form",
