@@ -15,6 +15,7 @@ use dirtybase_contract::{
 use dirtybase_db::types::ArcUuid7;
 use dirtybase_encrypt::Encrypter;
 use named_routes_axum::RouterWrapper;
+use tower_http::services::ServeDir;
 use tracing::{Instrument, field};
 
 use crate::{
@@ -24,9 +25,6 @@ use crate::{
 
 pub async fn init(app: AppService) -> anyhow::Result<()> {
     app.init().await;
-
-    let static_assets_path =
-        env::var("DTY_PUBLIC_DIRECTORY").unwrap_or_else(|_| String::from("./public"));
     let config = app.config();
 
     let mut w_lock = app.web_setup.write().await;
@@ -268,17 +266,24 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
         .await
         .unwrap();
 
-    tracing::info!("Serving static file from: {}", static_assets_path);
+    tracing::info!("Serving static file from: {}", config.web_public_dir());
     tracing::info!(
         "Server exposed at: {} on port: {}",
         config.web_ip_address(),
         config.web_port()
     );
     display_welcome_info(config.web_ip_address(), config.web_port());
+    let mut axum_router = web_app.into_router();
+
+    if !config.web_public_dir().is_empty() && !config.web_static_files_route().is_empty() {
+        axum_router = axum_router.nest_service(
+            config.web_static_files_route(),
+            ServeDir::new(config.web_public_dir()),
+        );
+    }
     axum::serve(
         listener,
-        web_app
-            .into_router()
+        axum_router
             .with_state(busybody::helpers::make_proxy())
             .into_make_service_with_connect_info::<SocketAddr>(),
     )
