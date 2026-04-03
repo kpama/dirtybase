@@ -101,7 +101,6 @@ pub async fn guard(resolver: GuardResolver) -> GuardResponse {
             } else {
                 tracing::debug!("authentication unsuccessful: {}", &actor_id);
                 session.invalidate(resolver.context_ref()).await;
-                return fail_resp;
             }
         }
     }
