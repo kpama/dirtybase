@@ -9,7 +9,7 @@ use dirtybase_contract::{
     http_contract::RouterManager, prelude::ArgMatches,
 };
 
-use crate::{AuthConfig, guards::register_guards, register_storages, storage, storage2};
+use crate::{AuthConfig, guards::register_guards, register_storages, storage2};
 
 #[derive(Debug, Default)]
 pub struct AuthExtension {
@@ -39,8 +39,6 @@ impl ExtensionSetup for AuthExtension {
             tracing::debug!("Auth is not enabled");
             return;
         }
-
-        self.global_container().set_type(global_config).await;
 
         storage2::register_storage().await;
         storage2::register_manager().await;
@@ -80,7 +78,7 @@ impl ExtensionSetup for AuthExtension {
 
 impl AuthExtension {
     pub async fn config_from_ctx(ctx: &Context) -> Result<AuthConfig, anyhow::Error> {
-        let config = ctx.get_config("auth").await;
+        let config = ctx.get_config_once("auth").await;
 
         if config.is_err() {
             tracing::error!("could not fetch auth config: {:?}", config.as_ref().err());
