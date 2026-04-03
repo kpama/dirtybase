@@ -121,7 +121,7 @@ cron = { version = "0.16.0" }
 english-to-cron = { version = "0.1.6" }
 validator = { version = "0.20.0", features = ["derive"] }
 tower-service = { version = "0.3.3" }
-named_routes_axum = { version = "0.2.5" }
+named_routes_axum = { version = "0.2.6" }
 simple-middleware = { version = "0.3.0" }
 cruet = { version = "*" }
 axum-extra = { version = "0.12.1", features = [
@@ -139,12 +139,13 @@ axum-extra = { version = "0.12.1", features = [
 ] }
 mime_guess = { version = "2.0.5" }
 tower-http = { version = "0.6.6", features = ["full"] }
+tower = { version = "0.5.2", features = ["util"] }
 hex = { version = "0.4.3" }
 base64 = "0.22.1"
 base64ct = { version = "1.8.3", features = ["std"] }
 utoipa = { version = "5.4.0", features = ["default", "axum_extras"] }
 utoipa-axum = { version = "0.2.0" }
-uuid = { version = "1.21.0", features = [
+uuid = { version = "1.23.0", features = [
 	"v4",
 	"v7",
 	"serde",
