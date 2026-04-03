@@ -1,7 +1,8 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::Infallible};
 
-use axum::{Router, handler::Handler};
+use axum::{Router, extract::Request, handler::Handler, response::IntoResponse, routing::Route};
 use named_routes_axum::RouterWrapper;
+use tower::{Layer, Service};
 
 use super::WebMiddlewareManager;
 
@@ -46,7 +47,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().delete(path, handler, name));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .delete(path, handler, name),
+        );
         self
     }
 
@@ -77,7 +82,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().delete_x(path, handler));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .delete_x(path, handler),
+        );
         self
     }
 
@@ -107,7 +116,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().get(path, handler, name));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .get(path, handler, name),
+        );
 
         self
     }
@@ -139,7 +152,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().get_x(path, handler));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .get_x(path, handler),
+        );
         self
     }
 
@@ -169,7 +186,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().head(path, handler, name));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .head(path, handler, name),
+        );
         self
     }
     pub fn head_with_middleware<H, T, L, I>(
@@ -199,7 +220,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().head_x(path, handler));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .head_x(path, handler),
+        );
         self
     }
 
@@ -229,7 +254,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().options(path, handler, name));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .options(path, handler, name),
+        );
         self
     }
     pub fn options_with_middleware<H, T, L, I>(
@@ -259,7 +288,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().options_x(path, handler));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .options_x(path, handler),
+        );
         self
     }
 
@@ -289,7 +322,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().patch(path, handler, name));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .patch(path, handler, name),
+        );
         self
     }
 
@@ -320,7 +357,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().patch_x(path, handler));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .patch_x(path, handler),
+        );
         self
     }
 
@@ -350,7 +391,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().post(path, handler, name));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .post(path, handler, name),
+        );
         self
     }
 
@@ -381,7 +426,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().post_x(path, handler));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .post_x(path, handler),
+        );
         self
     }
 
@@ -411,7 +460,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().put(path, handler, name));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .put(path, handler, name),
+        );
         self
     }
 
@@ -442,7 +495,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().put_x(path, handler));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .put_x(path, handler),
+        );
         self
     }
 
@@ -472,7 +529,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().trace(path, handler, name));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .trace(path, handler, name),
+        );
         self
     }
 
@@ -503,7 +564,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().trace_x(path, handler));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .trace_x(path, handler),
+        );
         self
     }
 
@@ -534,7 +599,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().any(path, handler, name));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .any(path, handler, name),
+        );
         self
     }
 
@@ -566,7 +635,11 @@ impl RouterBuilder {
         T: 'static,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().any_x(path, handler));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .any_x(path, handler),
+        );
         self
     }
 
@@ -596,7 +669,11 @@ impl RouterBuilder {
         V: ToString,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().any_of(verbs, path, handler, name));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .any_of(verbs, path, handler, name),
+        );
         self
     }
 
@@ -629,7 +706,11 @@ impl RouterBuilder {
         V: ToString,
     {
         let wrapper = self.wrapper.take();
-        self.wrapper = Some(wrapper.unwrap().any_of_x(verbs, path, handler));
+        self.wrapper = Some(
+            wrapper
+                .expect("could not get inner wrapped router")
+                .any_of_x(verbs, path, handler),
+        );
         self
     }
 
@@ -698,6 +779,55 @@ impl RouterBuilder {
 
         callback(&mut router);
         self.append(router, "");
+
+        self
+    }
+
+    pub fn layer<L>(&mut self, layer: L) -> &mut Self
+    where
+        L: Layer<Route> + Clone + Send + Sync + 'static,
+        L::Service: Service<Request> + Clone + Send + Sync + 'static,
+        <L::Service as Service<Request>>::Response: IntoResponse + 'static,
+        <L::Service as Service<Request>>::Error: Into<Infallible> + 'static,
+        <L::Service as Service<Request>>::Future: Send + 'static,
+    {
+        let mut wrapper = self
+            .wrapper
+            .take()
+            .expect("wrapper should always have a router");
+        wrapper = wrapper.layer(layer);
+        self.wrapper = Some(wrapper);
+
+        self
+    }
+
+    pub fn route_layer<L>(&mut self, layer: L) -> &mut Self
+    where
+        L: Layer<Route> + Clone + Send + Sync + 'static,
+        L::Service: Service<Request> + Clone + Send + Sync + 'static,
+        <L::Service as Service<Request>>::Response: IntoResponse + 'static,
+        <L::Service as Service<Request>>::Error: Into<Infallible> + 'static,
+        <L::Service as Service<Request>>::Future: Send + 'static,
+    {
+        let mut wrapper = self
+            .wrapper
+            .take()
+            .expect("wrapper should always have a router");
+        wrapper = wrapper.route_layer(layer);
+        self.wrapper = Some(wrapper);
+        self
+    }
+
+    pub fn given_inner<F>(&mut self, callback: F) -> &mut Self
+    where
+        F: Fn(Router<busybody::ServiceContainer>) -> Router<busybody::ServiceContainer>,
+    {
+        let mut wrapper = self
+            .wrapper
+            .take()
+            .expect("wrapper should always have a router");
+        wrapper = wrapper.given_inner(callback);
+        self.wrapper = Some(wrapper);
 
         self
     }
