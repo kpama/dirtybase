@@ -18,6 +18,7 @@ validator = { workspace = true }
 busstop = { workspace = true }
 busybody = { workspace = true }
 fama = { workspace = true }
+tower = { workspace = true }
 ulid = { workspace = true }
 simple-middleware = { workspace = true }
 anyhow = { workspace = true }
