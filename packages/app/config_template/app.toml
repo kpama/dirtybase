@@ -15,6 +15,7 @@ previous_keys = []
 web_port = 8080
 web_ip_address = "0.0.0.0"
 web_public_directory = "public"
+web_static_files_routes = "/assets"
 
 #       Web 
 #------------------------------------------------

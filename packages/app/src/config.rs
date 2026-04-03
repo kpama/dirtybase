@@ -210,6 +210,7 @@ struct ConfigEntry {
     web_proxy_trusted_headers: Option<Vec<String>>,
     #[serde(rename = "web_public_directory")]
     web_public_dir: String,
+    web_static_files_route: String,
     #[serde(default)]
     web_middleware: MiddlewareConfig,
     #[serde(default)]
@@ -248,6 +249,7 @@ impl Default for ConfigEntry {
             web_trusted_proxies: Default::default(),
             web_proxy_trusted_headers: Default::default(),
             web_public_dir: "public".into(),
+            web_static_files_route: "/assets".into(),
             web_middleware: Default::default(),
             web_api_routes_cors: RouterCorsConfig {
                 headers: Some(vec!["*".into()]),
@@ -366,6 +368,10 @@ impl Config {
 
     pub fn web_public_dir(&self) -> &str {
         self.entry.web_public_dir.as_str()
+    }
+
+    pub fn web_static_files_route(&self) -> &str {
+        self.entry.web_static_files_route.as_ref()
     }
 
     pub fn web_general_routes_cors(&self) -> CorsLayer {
