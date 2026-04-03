@@ -92,7 +92,7 @@ ulid = { version = "1.2.1", features = ["serde", "rand", "std"] }
 tokio-tungstenite = { version = "0.29.0", features = ["native-tls"] }
 futures-channel = { version = "0.3.32" }
 native-tls = { version = "0.2.18" }
-tokio = { version = "1.50.0", features = ["full"] }
+tokio = { version = "1.51.0", features = ["full"] }
 tokio-stream = { version = "0.1.18", features = ["sync"] }
 tokio-util = { version = "0.7.18", features = ["full"] }
 hmac = { version = "0.12.1" }
