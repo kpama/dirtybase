@@ -27,6 +27,8 @@ impl ExtensionSetup for AuthExtension {
 
         self.is_enable = global_config.is_enabled();
         self.allow_self_signup = global_config.allow_self_signup();
+        self.is_db_storage = global_config.is_db_storage();
+
 
         ctx.container()
             .resolver(|sc| async move {

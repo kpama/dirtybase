@@ -74,4 +74,9 @@ impl AuthConfig {
     pub fn storage_as_str(&self) -> &str {
         self.storage_ref().as_str()
     }
+
+    pub fn is_db_storage(&self) -> bool {
+        let storage = self.storage_as_str().to_lowercase();
+        storage == "db" || storage == "database"
+    }
 }
