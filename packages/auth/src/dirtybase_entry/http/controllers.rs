@@ -9,6 +9,7 @@ use dirtybase_contract::{
     http_contract::{HttpContext, api::ApiResponse, named_routes_axum, prelude::*},
     session_contract::Session,
 };
+use jwt::ToBase64;
 
 use crate::{
     AuthConfig, AuthExtension, guards::session_guard::auth_session::AuthSession,
@@ -140,7 +141,12 @@ pub(crate) async fn handle_get_auth_token(
         && user.verify_password(cred.password())
         && let Some(token) = user.generate_token()
     {
-        res.set_data(token);
+        let key = b"the quick brown fox jumps over";
+        let claim = user
+            .generate_signed_jwt(key)
+            .expect("could not generate jwt");
+        dbg!("{}", &claim);
+        res.set_data(claim);
     }
 
     if !res.has_data() {

@@ -28,6 +28,7 @@ pub async fn register_storage() {
     )
     .await;
 
+    #[cfg(feature = "permission")]
     PermissionStorageResolver::register("database", |resolver| async move {
         let manager = resolver
             .context()

@@ -8,7 +8,10 @@ use crypto::aead::rand_core::RngCore;
 use dirtybase_common::db::types::{DateTimeField, StringField};
 use dirtybase_db_macro::DirtyTable;
 use dirtybase_helper::hash::sha256;
+use hmac::digest::KeyInit;
+use jwt::{Claims, RegisteredClaims, SignWithKey, VerifyWithKey};
 use serde::{Deserialize, Serialize};
+use sha2::Sha256;
 use validator::Validate;
 
 use crate::{
@@ -204,6 +207,62 @@ impl Actor {
                 self.id().as_ref().unwrap(),
             ))
         }
+    }
+
+    pub fn generate_jwt_token_id(&self) -> String {
+        sha256::hash_string(format!(
+            "{}{}",
+            match self.id() {
+                Some(id) => id.to_string(),
+                None => "".into(),
+            },
+            &self.salt
+        ))
+    }
+
+    pub fn varify_jwt_token_id(&self, id: &str) -> bool {
+        self.generate_jwt_token_id() == id
+    }
+
+    pub fn generate_jwt_claim(&self) -> Claims {
+        let mut registered = RegisteredClaims::default();
+        registered.subject = match self.id() {
+            Some(id) => Some(id.to_string()),
+            None => None,
+        };
+
+        registered.json_web_token_id = Some(self.generate_jwt_token_id());
+
+        let mut claim = Claims::new(registered);
+        if let Some(id) = self.current_role().id() {
+            claim.private.insert(
+                "role_id".to_string(),
+                serde_json::Value::String(id.to_string()),
+            );
+        }
+        claim
+    }
+
+    pub fn generate_signed_jwt(&self, key: &[u8]) -> Result<String, jwt::Error> {
+        self.sign_jwt_claims(self.generate_jwt_claim(), key)
+    }
+
+    pub fn sign_jwt_claims(&self, claims: Claims, key: &[u8]) -> Result<String, jwt::Error> {
+        let hmac_key: hmac::Hmac<Sha256> = hmac::Hmac::new_from_slice(key)?;
+        claims.sign_with_key(&hmac_key)
+    }
+
+    // pub fn verify_jwt(&self, token: &str) -> Result<Claims, jwt::Error> {
+    //     let hmac_key: hmac::Hmac<Sha256> = hmac::Hmac::new_from_slice(key)?;
+    //     token.verify_with_key(&hmac_key)
+    // }
+
+    pub fn verify_jwt_claim(&self, claim: &Claims) -> bool {
+        if let Some(id) = claim.registered.json_web_token_id.clone() {
+            return id == self.generate_jwt_token_id();
+        }
+
+        false
     }
 
     pub fn validate_token(&self, token: &str) -> bool {

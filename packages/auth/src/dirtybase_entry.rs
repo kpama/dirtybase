@@ -69,6 +69,7 @@ impl ExtensionSetup for AuthExtension {
     ) -> ArgMatches {
         // TODO: Check the feature's flag
         if cmd == "seed" {
+            #[cfg(feature = "seeders")]
             seeder::register_seeders().await;
         }
 

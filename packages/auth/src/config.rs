@@ -13,6 +13,7 @@ pub struct AuthConfig {
     allow_self_signup: bool,
     signin_form_route: Arc<String>,
     auth_route: Arc<String>,
+    jwt_key: Arc<String>,
 }
 
 impl Default for AuthConfig {
@@ -23,6 +24,7 @@ impl Default for AuthConfig {
             allow_self_signup: false,
             signin_form_route: Arc::new(String::from("auth:signin-form")),
             auth_route: Arc::new(String::from("auth::do-signin")),
+            jwt_key: Arc::new(String::from("change-this-jwt-key")),
         }
     }
 }

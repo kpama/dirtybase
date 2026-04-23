@@ -309,7 +309,7 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
         let clean_up_fn = self.drop_fn.clone();
         let mut write_lock = self.collection.write().await;
         for (x, wrapper) in write_lock.drain() {
-            tracing::error!("dropping instance of {} named {}", self.name_of_t(), x);
+            tracing::info!("dropping instance of {} named {}", self.name_of_t(), x);
             let mut clean_fn_lock = clean_up_fn.write().await;
             (clean_fn_lock)(wrapper.resource()).await;
         }

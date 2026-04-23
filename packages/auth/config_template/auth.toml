@@ -9,3 +9,4 @@ storage = "memory" #options: memory, database
 allow_self_signup = false
 signin_form_route = "auth:signin-form"
 auth_route = "auth::do-signin"
+jwt_key = "change-this-jwt-key"
