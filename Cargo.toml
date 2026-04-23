@@ -19,6 +19,7 @@ order = [
 	"dirtybase_cache",
 	"dirtybase_multitenant",
 	"dirtybase_realtime",
+	"dirtybase_app", # always the last
 ]
 
 [patch.crates-io]
