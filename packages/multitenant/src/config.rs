@@ -49,7 +49,7 @@ impl TryFromDirtyConfig for MultitenantConfig {
             .await
             .context("could not configure multitenant configuration")?
             .try_deserialize()
-            .unwrap_or_default())
+            .expect("could not load multitenant config"))
     }
 }
 

@@ -39,7 +39,8 @@ impl TryFromDirtyConfig for AuthConfig {
             .build()
             .await?
             .try_deserialize::<Self>()
-            .unwrap_or_default();
+            .expect("could not load auth config");
+
         config.storage = config.storage.to_lowercase().trim().to_string().into();
 
         Ok(config)

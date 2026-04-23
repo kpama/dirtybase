@@ -35,7 +35,7 @@ impl TryFromDirtyConfig for CacheConfig {
             .build()
             .await?
             .try_deserialize()
-            .unwrap_or_default();
+            .expect("could not load cache config");
 
         Ok(con)
     }
