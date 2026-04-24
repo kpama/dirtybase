@@ -328,7 +328,7 @@ async fn inject_tenant(context: &Context) -> Option<axum::http::Response<Body>> 
 
             Some(match e {
                 TenantInjectionError::TenantNotFound => {
-                    // FIXME: Implement a way to glbally handle 403 error
+                    // FIXME: Implement a way to globally handle 403 error
                     let resp_403 = Response::builder()
                         .status(StatusCode::FORBIDDEN)
                         .body(Body::empty())
@@ -337,7 +337,7 @@ async fn inject_tenant(context: &Context) -> Option<axum::http::Response<Body>> 
                     resp_403
                 }
                 TenantInjectionError::SystemError(e) => {
-                    // FIXME: Implement a way to glbally handle 500 error
+                    // FIXME: Implement a way to globally handle 500 error
                     tracing::error!("system error injecting tenant: {}", e);
                     let resp_500 = Response::builder()
                         .status(StatusCode::INTERNAL_SERVER_ERROR)

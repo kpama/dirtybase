@@ -4,23 +4,32 @@ use dirtybase_contract::{
         FetchActorOption, FetchActorPayload, GuardResolver, GuardResponse,
         storage::PermissionStorage,
     },
-    prelude::{Credentials, axum_extra},
+    prelude::{Credentials, Response, StatusCode, axum_extra},
 };
 use hmac::Mac;
 use jwt::{Claims, VerifyWithKey};
 use sha2::Sha256;
 
+use crate::AuthExtension;
+
 pub const JWT_GUARD: &str = "jwt";
 
 pub async fn guard(resolver: GuardResolver) -> GuardResponse {
-    tracing::info!(">>>> In JWT Authentication guard");
+    tracing::trace!(">>>> In JWT Authentication guard");
+    let config = if let Ok(config) = AuthExtension::config_from_ctx(resolver.context_ref()).await {
+        config
+    } else {
+        let mut resp = Response::default();
+        *resp.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+        return GuardResponse::failed(resp);
+    };
 
     if let Some(header) = resolver.headers_ref().get("authorization") {
         let bearer = axum_extra::headers::authorization::Bearer::decode(header);
 
         if let Some(cred) = bearer {
             // TODO: Get key from the app
-            let key_str = b"jwt key goes here. This is a test key";
+            let key_str = config.jwt_key();
             let key: hmac::Hmac<Sha256> = match hmac::Hmac::new_from_slice(key_str) {
                 Ok(k) => k,
                 Err(e) => {
@@ -34,7 +43,7 @@ pub async fn guard(resolver: GuardResolver) -> GuardResponse {
                     c
                 }
                 Err(e) => {
-                    tracing::debug!("{}", e);
+                    tracing::error!("{}", e);
                     return GuardResponse::unauthorized();
                 }
             };
@@ -63,7 +72,7 @@ pub async fn guard(resolver: GuardResolver) -> GuardResponse {
                     }
                     Ok(None) => return GuardResponse::forbid(),
                     Err(e) => {
-                        tracing::debug!("{}", e);
+                        tracing::error!("{}", e);
                         return GuardResponse::forbid();
                     }
                 }

@@ -3,6 +3,7 @@ use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
 use dirtybase_contract::cli_contract::CliMiddlewareManager;
 use dirtybase_contract::{app_contract::Context, prelude::*};
+use dirtybase_helper::uuid;
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -50,6 +51,9 @@ impl ExtensionSetup for App {
     }
 }
 
-async fn index_request_handler() -> impl IntoResponse {
-    Html("<h1>Index page</h1>")
+async fn index_request_handler(CtxExt(_): CtxExt<Context>) -> impl IntoResponse {
+    Html(format!(
+        "<h1>Index page: {}</h1>",
+        dirtybase_helper::uuid::uuid_v7()
+    ))
 }

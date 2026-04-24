@@ -79,4 +79,8 @@ impl AuthConfig {
         let storage = self.storage_as_str().to_lowercase();
         storage == "db" || storage == "database"
     }
+
+    pub fn jwt_key(&self) -> &[u8] {
+        self.jwt_key.as_bytes()
+    }
 }

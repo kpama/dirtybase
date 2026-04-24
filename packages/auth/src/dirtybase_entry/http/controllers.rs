@@ -9,7 +9,6 @@ use dirtybase_contract::{
     http_contract::{HttpContext, api::ApiResponse, named_routes_axum, prelude::*},
     session_contract::Session,
 };
-use jwt::ToBase64;
 
 use crate::{
     AuthConfig, AuthExtension, guards::session_guard::auth_session::AuthSession,
@@ -43,19 +42,10 @@ pub(crate) async fn login_form_handler(
 pub(crate) async fn handle_login_request(
     RequestContext(ctx): RequestContext,
     CtxExt(http_ctx): CtxExt<HttpContext>,
+    CtxExt(session): CtxExt<Session>,
+    CtxExt(storage): CtxExt<PermStorageProvider>,
     Form(cred): Form<LoginCredential>,
 ) -> Response<Body> {
-    // TODO: This will use the auth service in the future
-    let storage = if let Ok(s) = get_auth_storage(ctx.clone()).await {
-        s
-    } else {
-        let bdy = Body::empty();
-        return bdy.into_response();
-    };
-
-    // FIXME: handle error...
-    let session = ctx.get::<Session>().await.unwrap();
-
     let result = if cred.username().is_some() {
         let payload = FetchActorPayload::by_username(cred.username().as_ref().cloned().unwrap());
         storage.fetch_actor(payload, None).await
@@ -187,15 +177,9 @@ pub(crate) async fn register_form_handler(
 
 pub(crate) async fn handle_register_request(
     RequestContext(ctx): RequestContext,
+    CtxExt(storage): CtxExt<PermStorageProvider>,
     Form(mut payload): Form<ActorPayload>,
 ) -> impl IntoResponse {
-    // FIXME: This will use the auth service in the future
-    let storage = if let Ok(s) = get_auth_storage(ctx.clone()).await {
-        s
-    } else {
-        return "token:".to_string();
-    };
-
     payload.rotate_salt = true;
     payload.status = match payload.status {
         Some(s) => Some(s),

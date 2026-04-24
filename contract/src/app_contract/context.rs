@@ -51,14 +51,11 @@ impl Context {
     }
 
     pub async fn new_with_id(id: ArcUuid7) -> Self {
-        let sc = busybody::helpers::make_proxy();
         let instance = Self {
             id,
             is_global: false,
-            sc: sc.clone(),
+            sc: busybody::helpers::make_proxy(),
         };
-
-        sc.set_type(instance.clone()).await;
 
         instance
     }
@@ -75,7 +72,6 @@ impl Context {
             sc: busybody::helpers::service_container(),
         };
 
-        busybody::helpers::set_type(instance.clone()).await;
         instance
     }
 
