@@ -1,16 +1,15 @@
-use std::sync::Arc;
 
 use axum::{Json, extract::Path, response::Html};
 use dirtybase_app::app::AppService;
 use dirtybase_contract::{
     ExtensionSetup,
-    auth_contract::{Actor, FetchPermissionPayload, Gate, Role, storage::{PermStorageProvider, PermissionStorage}},
+    auth_contract::{Actor, Gate},
     prelude::{
         Context, CtxExt, Observable, RouterManager,
         observable::cel::{CelContext, CommonExpressionSandbox},
     },
 };
-use dirtybase_db::{base::manager::Manager, types::{ArcUuid7, JsonField}};
+use dirtybase_db::{base::manager::Manager, types::{JsonField}};
 use dirtybase_db_macro::DirtyTable;
 use tracing::Level;
 

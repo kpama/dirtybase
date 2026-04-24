@@ -22,10 +22,8 @@ async fn main() {
             .unwrap(),
     );
 
-    println!("{:#?}", &config);
-    return;
     // 3. register a job
-    CronJobRegisterer::register("foo::job", |ctx| {
+    _ = CronJobRegisterer::register("foo::job", |ctx| {
         Box::pin(async move {
             println!(">>>>>>>> running {} <<<<<<<", ctx.id());
         })

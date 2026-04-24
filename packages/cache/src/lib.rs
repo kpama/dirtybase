@@ -1,5 +1,3 @@
-use config::CacheConfig;
-
 mod cache_manager;
 mod cache_storage_resolver;
 mod dirtybase_entry;
@@ -16,11 +14,6 @@ use dirtybase_contract::app_contract::Context;
 pub use dirtybase_entry::*;
 pub use resource_manager::*;
 
-pub async fn setup(context: &Context) {
-    context
-        .load_config::<CacheConfig>("cache")
-        .await
-        .expect("could not configure cache manager");
-
+pub async fn setup(_context: &Context) {
     register_resource_manager().await;
 }

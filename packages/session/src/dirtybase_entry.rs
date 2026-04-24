@@ -17,12 +17,12 @@ pub struct SessionExtension;
 #[async_trait]
 impl ExtensionSetup for SessionExtension {
     async fn setup(&mut self, ctx: &Context) {
-        if let Ok(config) = Self::config_from_ctx(ctx).await {
-            ctx.set(config).await;
-        }
-
+        _ = Self::config_from_ctx(ctx).await;
         register_resource_manager().await;
-        register_session_resolver(&ctx).await;
+    }
+
+    async fn on_new_context(&self, context: &Context) {
+        register_session_resolver(context).await;
     }
 
     async fn on_web_response(
@@ -34,19 +34,18 @@ impl ExtensionSetup for SessionExtension {
         (resp, attach_session_cookie(&context, cookie).await)
     }
 
-    fn migrations(&self, _: &Context) -> Option<ExtensionMigrations> {
+    async fn migrations(&self, _: &Context) -> Option<ExtensionMigrations> {
         migration::setup()
     }
 }
 
 impl SessionExtension {
     pub async fn config_from_ctx(ctx: &Context) -> Result<SessionConfig, anyhow::Error> {
-        let result = ctx.get_config::<SessionConfig>("session").await;
+        let result = ctx.get_config_once::<SessionConfig>("session").await;
 
         if result.is_err() {
             tracing::error!("could not load session config: {:?}", result.as_ref().err());
         }
-
         result
     }
 }

@@ -29,14 +29,6 @@ impl ExtensionSetup for AuthExtension {
         self.allow_self_signup = global_config.allow_self_signup();
         self.is_db_storage = global_config.is_db_storage();
 
-
-        ctx.container()
-            .resolver(|sc| async move {
-                tracing::info!("called the gate resolver: {}", sc.id());
-                Gate::new(sc)
-            })
-            .await;
-
         if !self.is_enable {
             tracing::debug!("Auth is not enabled");
             return;
@@ -51,11 +43,23 @@ impl ExtensionSetup for AuthExtension {
         observer::register_observers().await;
     }
 
-    fn migrations(&self, _: &Context) -> Option<ExtensionMigrations> {
-        if self.is_db_storage && self.is_enable {
+    async fn on_new_context(&self, context: &Context) {
+        context
+            .container()
+            .resolver(|sc| async move {
+                tracing::info!("called the gate resolver: {}", sc.id());
+                Gate::new(sc)
+            })
+            .await;
+    }
+
+    async fn migrations(&self, context: &Context) -> Option<ExtensionMigrations> {
+        if let Ok(config) = Self::config_from_ctx(context).await
+            && config.is_db_storage()
+            && config.is_enabled()
+        {
             return migration::setup();
         }
-
         None
     }
 
@@ -69,9 +73,7 @@ impl ExtensionSetup for AuthExtension {
         matches: ArgMatches,
         _context: Context,
     ) -> ArgMatches {
-        // TODO: Check the feature's flag
         if cmd == "seed" {
-            #[cfg(feature = "seeders")]
             seeder::register_seeders().await;
         }
 

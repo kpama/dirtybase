@@ -45,17 +45,41 @@ impl Debug for Context {
     }
 }
 
+impl Drop for Context {
+    fn drop(&mut self) {
+        // Only this copy and the copy in the resolver closure now, so it's safe to clean up
+        if Arc::strong_count(&self.id) == 2 {
+            let sc = self.sc.clone();
+            tracing::trace!(
+                "context {} is being dropped, cleaning up it's service container",
+                self.id
+            );
+            tokio::spawn(async move {
+                sc.forget_resolver::<Self>().await;
+            });
+        }
+    }
+}
+
 impl Context {
     pub async fn new() -> Self {
         Self::new_with_id(ArcUuid7::default()).await
     }
 
     pub async fn new_with_id(id: ArcUuid7) -> Self {
+        let sc = busybody::helpers::make_proxy();
         let instance = Self {
             id,
             is_global: false,
-            sc: busybody::helpers::make_proxy(),
+            sc: sc.clone(),
         };
+
+        let ctx = instance.clone();
+        sc.resolver(move |_| {
+            let c = ctx.clone();
+            async move { c }
+        })
+        .await;
 
         instance
     }

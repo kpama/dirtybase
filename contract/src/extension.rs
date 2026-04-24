@@ -82,8 +82,16 @@ pub trait ExtensionSetup: Send + Sync {
         matches
     }
 
+    /// Called when a new context is created, either for a web request or a CLI command
+    async fn on_new_context(&self, context: &Context) {
+        //
+    }
+
     /// Register web middleware
-    fn register_web_middlewares(&self, mut manager: WebMiddlewareManager) -> WebMiddlewareManager {
+    async fn register_web_middlewares(
+        &self,
+        mut manager: WebMiddlewareManager,
+    ) -> WebMiddlewareManager {
         manager
     }
 
@@ -96,11 +104,11 @@ pub trait ExtensionSetup: Send + Sync {
     }
 
     /// register CLI sub commands
-    fn register_cli_commands(&self, mut manager: CliCommandManager) -> CliCommandManager {
+    async fn register_cli_commands(&self, mut manager: CliCommandManager) -> CliCommandManager {
         manager
     }
 
-    fn migrations(&self, context: &Context) -> Option<ExtensionMigrations> {
+    async fn migrations(&self, context: &Context) -> Option<ExtensionMigrations> {
         None
     }
 

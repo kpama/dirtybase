@@ -17,8 +17,11 @@ pub struct CacheDbStoreEntity {
 }
 
 impl CacheDbStoreEntityRepo {
-    pub async fn by_key(&mut self, key: &str) -> Result<Option<CacheDbStoreEntity>, anyhow::Error> {
-        self.filter(|qb| {
+    pub async fn by_key(
+        &mut self,
+        _key: &str,
+    ) -> Result<Option<CacheDbStoreEntity>, anyhow::Error> {
+        self.filter(|_qb| {
             // qb.is_eq(Self::, value)
         });
 

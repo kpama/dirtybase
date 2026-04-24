@@ -130,13 +130,26 @@ impl Migrator {
     }
 
     async fn migrations(&self) -> Vec<Box<dyn Migration>> {
-        let mut migrations = Vec::with_capacity(100);
-        ExtensionManager::extensions(|ext| {
-            if let Some(m) = ext.migrations(&self.context) {
-                migrations.extend(m);
+        let mut migrations = Vec::with_capacity(110);
+        for ext in ExtensionManager::list().read().await.iter() {
+            if let Some(list) = ext.migrations(&self.context).await {
+                for m in list {
+                    if let Err(e) = m.setup(&self.context).await {
+                        tracing::error!("migration setup failed for {}: {}", m.id(), e);
+                        continue;
+                    }
+
+                    if !m.should_run(&self.context).await {
+                        tracing::debug!(
+                            "skipping migration {} as should_run returned false",
+                            m.id()
+                        );
+                        continue;
+                    }
+                    migrations.push(m);
+                }
             }
-        })
-        .await;
+        }
         migrations
     }
 }

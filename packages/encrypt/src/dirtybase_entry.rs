@@ -13,7 +13,7 @@ pub struct Extension;
 
 #[async_trait]
 impl ExtensionSetup for Extension {
-    fn register_cli_commands(&self, mut manager: CliCommandManager) -> CliCommandManager {
+    async fn register_cli_commands(&self, mut manager: CliCommandManager) -> CliCommandManager {
         let command = clap::Command::new("encrypt")
             .about("Execute encryption command")
             .arg_required_else_help(true)

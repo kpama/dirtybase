@@ -14,7 +14,7 @@ struct MyApp;
 
 #[async_trait::async_trait]
 impl ExtensionSetup for MyApp {
-    fn register_cli_commands(&self, mut manager: CliCommandManager) -> CliCommandManager {
+    async fn register_cli_commands(&self, mut manager: CliCommandManager) -> CliCommandManager {
         manager.register(
             clap::Command::new("hello")
                 .about("greet the user with a `hello xxxx world`")

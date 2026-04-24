@@ -142,6 +142,7 @@ impl CliCommandManager {
 
             if let Some((name, mut command)) = matches.remove_subcommand() {
                 for ext in ExtensionManager::list().read().await.iter() {
+                    ext.on_new_context(&context).await;
                     command = ext
                         .on_cli_command(name.as_str(), command, context.clone())
                         .await;

@@ -16,7 +16,6 @@ async fn main() -> anyhow::Result<()> {
 
     let x = ArcUuid7::default();
     println!("{:?} = {}", &x, x.to_uuid25_string());
-    return Ok(());
 
     dirtybase_db::setup_pool_resolvers().await;
 

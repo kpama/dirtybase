@@ -1,21 +1,10 @@
 use dirtybase_realtime::ws::{RealtimeWebSocket, RealtimeWebSocketSetup};
-use futures_util::{sink::SinkExt, stream::StreamExt};
-use std::{net::SocketAddr, ops::ControlFlow};
 
 use axum::{
-    Extension,
-    body::Bytes,
-    extract::{
-        ConnectInfo, WebSocketUpgrade,
-        ws::{CloseFrame, Message, Utf8Bytes, WebSocket},
-    },
+    extract::ws::Message,
     response::{Html, IntoResponse},
 };
-use dirtybase_contract::{
-    ExtensionSetup,
-    http_contract::HttpContext,
-    prelude::{CtxExt, RouterManager},
-};
+use dirtybase_contract::{ExtensionSetup, prelude::RouterManager};
 
 #[tokio::main]
 async fn main() {

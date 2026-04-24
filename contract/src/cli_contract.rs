@@ -32,7 +32,7 @@ pub async fn setup_cli_command_manager(
     }
 
     for ext in lock.iter() {
-        manager = ext.register_cli_commands(manager);
+        manager = ext.register_cli_commands(manager).await;
     }
 
     manager

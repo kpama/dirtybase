@@ -39,7 +39,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
     let lock = ExtensionManager::list().read().await;
 
     for ext in lock.iter() {
-        middleware_manager = ext.register_web_middlewares(middleware_manager);
+        middleware_manager = ext.register_web_middlewares(middleware_manager).await;
     }
 
     #[cfg(feature = "auth")]
@@ -165,6 +165,7 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             let context = req.extensions().get::<Context>().cloned().unwrap();
             for ext in ExtensionManager::list().read().await.iter() {
                 tracing::trace!("on web request: {}", ext.id());
+                ext.on_new_context(&context).await;
                 req = ext.on_web_request(req, context.clone(), &cookie).await;
             }
 

@@ -14,11 +14,14 @@ impl dirtybase_contract::ExtensionSetup for Extension {
         observer::register_observers().await;
     }
 
-    fn register_cli_commands(&self, manager: CliCommandManager) -> CliCommandManager {
+    async fn register_cli_commands(&self, manager: CliCommandManager) -> CliCommandManager {
         commands_setup::register(manager)
     }
 
-    fn register_web_middlewares(&self, manager: WebMiddlewareManager) -> WebMiddlewareManager {
+    async fn register_web_middlewares(
+        &self,
+        manager: WebMiddlewareManager,
+    ) -> WebMiddlewareManager {
         dirtybase_contract::http_contract::middlewares::setup_middlewares(manager)
     }
 }

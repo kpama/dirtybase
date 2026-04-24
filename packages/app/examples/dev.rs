@@ -3,7 +3,6 @@ use axum_extra::extract::CookieJar;
 use dirtybase_app::{run, setup};
 use dirtybase_contract::cli_contract::CliMiddlewareManager;
 use dirtybase_contract::{app_contract::Context, prelude::*};
-use dirtybase_helper::uuid;
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -40,6 +39,10 @@ impl ExtensionSetup for App {
     fn register_routes(&self, manager: &mut RouterManager) {
         manager.general(None, |router| {
             router.get("/", index_request_handler, "index-page");
+        });
+
+        manager.backend(None, |router| {
+            router.get_x("/", || async { "backend index" });
         });
     }
 

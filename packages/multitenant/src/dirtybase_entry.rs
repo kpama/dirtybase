@@ -42,7 +42,14 @@ impl dirtybase_contract::ExtensionSetup for Extension {
             .await;
     }
 
-    fn migrations(&self, _context: &Context) -> Option<dirtybase_contract::ExtensionMigrations> {
+    async fn on_new_context(&self, _context: &Context) {
+        //
+    }
+
+    async fn migrations(
+        &self,
+        _context: &Context,
+    ) -> Option<dirtybase_contract::ExtensionMigrations> {
         migration::setup()
     }
 }

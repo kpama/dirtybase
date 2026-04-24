@@ -16,12 +16,6 @@ async fn main() -> anyhow::Result<()> {
 }
 
 #[derive(Debug, serde::Deserialize)]
-struct Conf {
-    _name: String,
-    _age: i32,
-}
-
-#[derive(Debug, serde::Deserialize)]
 struct DbConfigurations {
     _clients: HashMap<String, ConnectionConfig>,
 }

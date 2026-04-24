@@ -47,7 +47,6 @@ async fn main() -> anyhow::Result<()> {
         .await;
 
     println!("Done, success: {:?}", result);
-    return Ok(());
 
     // mariadb
     // let base_config = ConnectionConfig {

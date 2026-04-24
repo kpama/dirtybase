@@ -43,6 +43,7 @@ pub(crate) async fn seed(_manager: Manager, context: Context) {
     }
 }
 
+#[cfg(feature = "permission")]
 async fn seed_roles(storage: &PermStorageProvider) -> Vec<Role> {
     let admin = "Administrator";
     let editor = "Editor";
@@ -115,6 +116,7 @@ async fn seed_roles(storage: &PermStorageProvider) -> Vec<Role> {
     created_roles
 }
 
+#[cfg(feature = "permission")]
 async fn seed_actors(storage: &PermStorageProvider) -> Vec<Actor> {
     let mut created_actors = Vec::new();
 
@@ -140,6 +142,7 @@ async fn seed_actors(storage: &PermStorageProvider) -> Vec<Actor> {
     created_actors
 }
 
+#[cfg(feature = "permission")]
 async fn seed_actor_to_role(storage: &PermStorageProvider, roles: &Vec<Role>, actors: &Vec<Actor>) {
     let mut window = actors.chunks(5);
     for role in roles {

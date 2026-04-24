@@ -19,11 +19,14 @@ pub(crate) async fn register_session_resolver(context: &Context) {
             let context = ci
                 .get_type::<Context>()
                 .await
-                .expect("could not get context from CI");
+                .expect("could not get context from service container");
             if let Ok(config) = context.get_config::<SessionConfig>("session").await
                 && let Ok(provider) = context.get::<SessionStorageProvider>().await
             {
-                let h_context = context.get::<HttpContext>().await.unwrap();
+                let h_context = context
+                    .get::<HttpContext>()
+                    .await
+                    .expect("could not get http context from service container");
                 let cookie = h_context.cookie_jar().await;
 
                 let id = if let Some(c) = cookie.get(config.cookie_id_ref()) {

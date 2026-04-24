@@ -1,8 +1,5 @@
-use dirtybase_contract::auth_contract::{Actor, ActorRepo, PermissionManager};
-use dirtybase_db::{
-    TableModel,
-    base::{cursor_builder::CursorBuilder, manager::Manager, paginate_builder::PaginateBuilder},
-};
+use dirtybase_contract::auth_contract::Actor;
+use dirtybase_db::base::{manager::Manager, paginate_builder::PaginateBuilder};
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]

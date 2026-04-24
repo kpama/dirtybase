@@ -11,7 +11,11 @@ impl ExtensionSetup for Extension {
         register_resource_manager().await;
     }
 
-    fn register_cli_commands(&self, manager: CliCommandManager) -> CliCommandManager {
+    async fn on_new_context(&self, _context: &Context) {
+        //
+    }
+
+    async fn register_cli_commands(&self, manager: CliCommandManager) -> CliCommandManager {
         setup_commands(manager)
     }
 }

@@ -4,7 +4,6 @@ use axum::{
     response::{Html, IntoResponse, Response},
 };
 use dirtybase_contract::{
-    app_contract::CtxExt,
     http_contract::{RouterManager, WebMiddlewareManager},
     prelude::Context,
 };
@@ -44,7 +43,10 @@ impl dirtybase_app::contract::ExtensionSetup for MyApp {
             });
     }
 
-    fn register_web_middlewares(&self, mut manager: WebMiddlewareManager) -> WebMiddlewareManager {
+    async fn register_web_middlewares(
+        &self,
+        mut manager: WebMiddlewareManager,
+    ) -> WebMiddlewareManager {
         manager.register("example1", |req, _params, mut next| async move {
             println!(">>>>> we are in the basic example middleware");
             next.call(req).await

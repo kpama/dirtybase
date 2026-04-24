@@ -18,7 +18,7 @@ impl dirtybase_contract::ExtensionSetup for Extension {
         event_handler::setup().await;
     }
 
-    fn migrations(
+    async fn migrations(
         &self,
         _global_context: &Context,
     ) -> Option<dirtybase_contract::ExtensionMigrations> {
