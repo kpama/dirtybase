@@ -11,6 +11,10 @@ pub struct Encrypter {
 
 impl Encrypter {
     pub fn new(key: &[u8], previous_keys: Option<Vec<Vec<u8>>>) -> Self {
+        if key.len() == 0 {
+            panic!("encryption key is valid. Generate a valid key");
+        }
+
         Self {
             key: Arc::new(key.to_vec()),
             previous_keys: Arc::new(previous_keys),
