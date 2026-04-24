@@ -117,6 +117,12 @@ pub(crate) async fn handle_get_auth_token(
         return ApiResponse::<String>::error("could not resolve storage");
     };
 
+    let config = if let Ok(c) = AuthExtension::config_from_ctx(&ctx).await {
+        c
+    } else {
+        return ApiResponse::<String>::error("could not resolve auth config");
+    };
+
     let result = if cred.username().is_some() {
         let payload = FetchActorPayload::by_username(cred.username().as_ref().unwrap());
         storage.fetch_actor(payload, None).await
@@ -127,16 +133,11 @@ pub(crate) async fn handle_get_auth_token(
 
     let mut res = ApiResponse::<String>::default();
 
-    if let Ok(Some(user)) = result
-        && user.verify_password(cred.password())
-        && let Some(token) = user.generate_token()
+    if let Ok(Some(actor)) = result
+        && actor.verify_password(cred.password())
+        && let Ok(token) = actor.generate_signed_jwt(config.jwt_key().as_ref())
     {
-        let key = b"the quick brown fox jumps over";
-        let claim = user
-            .generate_signed_jwt(key)
-            .expect("could not generate jwt");
-        dbg!("{}", &claim);
-        res.set_data(claim);
+        res.set_data(token);
     }
 
     if !res.has_data() {
@@ -176,7 +177,6 @@ pub(crate) async fn register_form_handler(
 }
 
 pub(crate) async fn handle_register_request(
-    RequestContext(ctx): RequestContext,
     CtxExt(storage): CtxExt<PermStorageProvider>,
     Form(mut payload): Form<ActorPayload>,
 ) -> impl IntoResponse {

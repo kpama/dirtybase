@@ -11,7 +11,8 @@ pub fn hash_string(subject: String) -> String {
 pub fn hash_bytes(subject: &[u8]) -> String {
     let mut hash = Sha256::new();
     hash.update(subject);
-    format!("{:x}", hash.finalize())
+    let bytes = hash.finalize();
+    hex::encode(bytes)
 }
 
 pub fn hash_struct<S: serde::Serialize>(subject: &S) -> String {

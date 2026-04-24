@@ -7,7 +7,7 @@ pub fn hash_str(subject: &str) -> String {
 pub fn hash_bytes(subject: &[u8]) -> String {
     let mut hash = Sha512::new();
     hash.update(subject);
-    format!("{:x}", hash.finalize())
+    hex::encode(hash.finalize())
 }
 
 pub fn hash_struct<S: serde::Serialize>(subject: &S) -> String {

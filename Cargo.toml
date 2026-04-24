@@ -96,11 +96,10 @@ native-tls = { version = "0.2.18" }
 tokio = { version = "1.52.0", features = ["full"] }
 tokio-stream = { version = "0.1.18", features = ["sync"] }
 tokio-util = { version = "0.7.18", features = ["full"] }
-hmac = { version = "0.12.1" }
+hmac = { version = "0.13.0" }
 mime = { version = "0.3.17" }
-jwt = { version = "0.16.0" }
 jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
-sha2 = { version = "0.10.9" }
+sha2 = { version = "0.11.0" }
 quote = { version = "1.0.45" }
 syn = { version = "2.0.117", features = ["extra-traits"] }
 dotenvy = { version = "0.15.7" }
@@ -108,13 +107,13 @@ busybody = { version = "1.0.16" }
 orsomafo = { version = "0.5.0" }
 fama = { version = "0.4.6" }
 busstop = { version = "0.2.7" }
-redis = { version = "1.1.0", features = [
+redis = { version = "1.2.0", features = [
 	"tokio-comp",
 	"aio",
 	# "tls-native-tls",
 	"cluster-async",
 ] }
-lettre = { version = "0.11" }
+lettre = { version = "0.11.21" }
 config = "0.15.22"
 deadpool = "0.13.0"
 deadpool-redis = { version = "0.23.0" }

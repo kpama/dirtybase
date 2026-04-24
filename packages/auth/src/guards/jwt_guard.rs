@@ -1,14 +1,12 @@
 use dirtybase_common::db::types::ArcUuid7;
 use dirtybase_contract::{
     auth_contract::{
-        FetchActorOption, FetchActorPayload, GuardResolver, GuardResponse,
+        ActorJWTClaims, FetchActorOption, FetchActorPayload, GuardResolver, GuardResponse,
         storage::PermissionStorage,
     },
     prelude::{Credentials, Response, StatusCode, axum_extra},
 };
-use hmac::Mac;
-use jwt::{Claims, VerifyWithKey};
-use sha2::Sha256;
+use jsonwebtoken::{DecodingKey, Validation, decode};
 
 use crate::AuthExtension;
 
@@ -28,32 +26,24 @@ pub async fn guard(resolver: GuardResolver) -> GuardResponse {
         let bearer = axum_extra::headers::authorization::Bearer::decode(header);
 
         if let Some(cred) = bearer {
-            // TODO: Get key from the app
             let key_str = config.jwt_key();
-            let key: hmac::Hmac<Sha256> = match hmac::Hmac::new_from_slice(key_str) {
-                Ok(k) => k,
-                Err(e) => {
-                    tracing::error!("{}", e);
-                    return GuardResponse::forbid();
-                }
-            };
-            let claimns: Claims = match VerifyWithKey::verify_with_key(cred.token(), &key) {
-                Ok(c) => {
-                    // TODO: Dispatch an event with this claims so that other module can varified
-                    c
-                }
-                Err(e) => {
-                    tracing::error!("{}", e);
-                    return GuardResponse::unauthorized();
-                }
+            let claims = if let Ok(c) = decode::<ActorJWTClaims>(
+                cred.token(),
+                &DecodingKey::from_secret(key_str),
+                &Validation::default(),
+            ) {
+                c.claims
+            } else {
+                tracing::error!("Failed to decode JWT token");
+                return GuardResponse::unauthorized();
             };
 
-            if let Some(sub) = claimns.registered.subject
+            if let Some(sub) = &claims.sub
                 && let Ok(id) = ArcUuid7::try_from(sub)
             {
                 let payload = FetchActorPayload::by_id(id);
                 let mut option = FetchActorOption::default();
-                if let Some(value) = claimns.private.get("role_id").cloned()
+                if let Some(value) = claims.private.get("role_id").cloned()
                     && let Ok(role_id) = serde_json::from_value::<ArcUuid7>(value)
                 {
                     option.with_active_role = Some(role_id);
@@ -64,9 +54,7 @@ pub async fn guard(resolver: GuardResolver) -> GuardResponse {
                     .await
                 {
                     Ok(Some(actor)) => {
-                        if actor.varify_jwt_token_id(
-                            &claimns.registered.json_web_token_id.unwrap_or_default(),
-                        ) {
+                        if actor.varify_jwt_token_id(&claims.jti.clone().unwrap_or_default()) {
                             return GuardResponse::success(actor);
                         }
                     }

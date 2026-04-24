@@ -35,7 +35,7 @@ named_routes_axum = { workspace = true }
 futures = { workspace = true }
 futures-util = { workspace = true }
 cruet = { workspace = true }
-jwt = { workspace = true }
+jsonwebtoken = { workspace = true }
 hex = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

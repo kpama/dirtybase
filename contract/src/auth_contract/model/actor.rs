@@ -8,10 +8,8 @@ use crypto::aead::rand_core::RngCore;
 use dirtybase_common::db::types::{DateTimeField, StringField};
 use dirtybase_db_macro::DirtyTable;
 use dirtybase_helper::hash::sha256;
-use hmac::digest::KeyInit;
-use jwt::{Claims, RegisteredClaims, SignWithKey, VerifyWithKey};
+use jsonwebtoken::{EncodingKey, Header, encode};
 use serde::{Deserialize, Serialize};
-use sha2::Sha256;
 use validator::Validate;
 
 use crate::{
@@ -224,42 +222,25 @@ impl Actor {
         self.generate_jwt_token_id() == id
     }
 
-    pub fn generate_jwt_claim(&self) -> Claims {
-        let mut registered = RegisteredClaims::default();
-        registered.subject = match self.id() {
-            Some(id) => Some(id.to_string()),
-            None => None,
-        };
-
-        registered.json_web_token_id = Some(self.generate_jwt_token_id());
-
-        let mut claim = Claims::new(registered);
-        if let Some(id) = self.current_role().id() {
-            claim.private.insert(
-                "role_id".to_string(),
-                serde_json::Value::String(id.to_string()),
-            );
-        }
-        claim
+    pub fn generate_jwt_claim(&self) -> ActorJWTClaims {
+        self.into()
     }
 
-    pub fn generate_signed_jwt(&self, key: &[u8]) -> Result<String, jwt::Error> {
-        self.sign_jwt_claims(self.generate_jwt_claim(), key)
+    pub fn generate_signed_jwt(&self, key: &[u8]) -> Result<String, jsonwebtoken::errors::Error> {
+        self.sign_jwt_claims(&self.generate_jwt_claim(), key)
     }
 
-    pub fn sign_jwt_claims(&self, claims: Claims, key: &[u8]) -> Result<String, jwt::Error> {
-        let hmac_key: hmac::Hmac<Sha256> = hmac::Hmac::new_from_slice(key)?;
-        claims.sign_with_key(&hmac_key)
+    pub fn sign_jwt_claims(
+        &self,
+        claims: &ActorJWTClaims,
+        key: &[u8],
+    ) -> Result<String, jsonwebtoken::errors::Error> {
+        encode(&Header::default(), &claims, &EncodingKey::from_secret(key))
     }
 
-    // pub fn verify_jwt(&self, token: &str) -> Result<Claims, jwt::Error> {
-    //     let hmac_key: hmac::Hmac<Sha256> = hmac::Hmac::new_from_slice(key)?;
-    //     token.verify_with_key(&hmac_key)
-    // }
-
-    pub fn verify_jwt_claim(&self, claim: &Claims) -> bool {
-        if let Some(id) = claim.registered.json_web_token_id.clone() {
-            return id == self.generate_jwt_token_id();
+    pub fn verify_jwt_claim(&self, claim: &ActorJWTClaims) -> bool {
+        if let Some(id) = &claim.jti {
+            return *id == self.generate_jwt_token_id();
         }
 
         false
@@ -480,5 +461,80 @@ impl FetchActorPayload {
     pub fn by_email(email: &str) -> Self {
         let email_hash = sha256::hash_str(email);
         Self::ByEmailHash { email_hash }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActorJWTClaims {
+    pub aud: Option<String>,
+    pub sub: Option<String>,
+    pub exp: Option<u64>,
+    pub iat: Option<u64>,
+    pub nbf: Option<u64>,
+    pub jti: Option<String>,
+    pub iss: Option<String>,
+    pub private: serde_json::map::Map<String, serde_json::Value>,
+}
+
+impl Display for ActorJWTClaims {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "ActorJWTClaims {{ sub: {:?}, private: {:?} }}",
+            self.sub, self.private
+        )
+    }
+}
+
+impl Default for ActorJWTClaims {
+    fn default() -> Self {
+        Self {
+            aud: None,
+            sub: None,
+            exp: None,
+            iat: None,
+            nbf: None,
+            jti: None,
+            iss: None,
+            private: serde_json::map::Map::new(),
+        }
+    }
+}
+
+impl ActorJWTClaims {
+    pub fn add_registered_claim(&mut self, key: &str, value: serde_json::Value) {
+        match key {
+            "aud" => self.aud = value.as_str().map(|s| s.to_string()),
+            "sub" => self.sub = value.as_str().map(|s| s.to_string()),
+            "exp" => self.exp = value.as_u64(),
+            "iat" => self.iat = value.as_u64(),
+            "nbf" => self.nbf = value.as_u64(),
+            "jti" => self.jti = value.as_str().map(|s| s.to_string()),
+            "iss" => self.iss = value.as_str().map(|s| s.to_string()),
+            _ => {
+                // If the key is not a registered claim, add it to private claims
+                self.private.insert(key.to_string(), value);
+            }
+        }
+    }
+    pub fn add_private_claim<T: Serialize>(&mut self, key: &str, value: T) {
+        if let Ok(v) = serde_json::to_value(value) {
+            self.private.insert(key.to_string(), v);
+        }
+    }
+}
+
+impl From<&Actor> for ActorJWTClaims {
+    fn from(actor: &Actor) -> Self {
+        let mut claims = ActorJWTClaims::default();
+        claims.sub = actor.id().map(|id| id.to_string());
+        claims.jti = actor.generate_jwt_token_id().into();
+        if let Some(role_id) = actor.current_role().id() {
+            claims.private.insert(
+                "role_id".to_string(),
+                serde_json::Value::String(role_id.to_string()),
+            );
+        }
+        claims
     }
 }
