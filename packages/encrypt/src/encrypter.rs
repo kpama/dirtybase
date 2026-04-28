@@ -12,7 +12,7 @@ pub struct Encrypter {
 impl Encrypter {
     pub fn new(key: &[u8], previous_keys: Option<Vec<Vec<u8>>>) -> Self {
         if key.len() == 0 {
-            panic!("encryption key is valid. Generate a valid key");
+            panic!("encryption key is not set. Generate a valid key");
         }
 
         Self {
