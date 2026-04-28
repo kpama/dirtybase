@@ -46,11 +46,28 @@ pub(crate) fn setup_commands(mut manager: CliCommandManager) -> CliCommandManage
                     let migrator = Migrator::new(Some(context.clone())).await;
                     if let Ok(db_manager) = context.get::<Manager>().await {
                         match action {
-                            MigrateAction::Up => return migrator.up(&db_manager).await,
-                            MigrateAction::Down => return migrator.down(&db_manager).await,
-                            MigrateAction::Reset => return migrator.reset(&db_manager).await,
-                            MigrateAction::Refresh => return migrator.refresh(&db_manager).await,
+                            MigrateAction::Up => {
+                                let result = migrator.up(&db_manager).await;
+                                db_manager.close().await;
+                                result
+                            }
+                            MigrateAction::Down => {
+                                let result = migrator.down(&db_manager).await;
+                                db_manager.close().await;
+                                result
+                            }
+                            MigrateAction::Reset => {
+                                let result = migrator.reset(&db_manager).await;
+                                db_manager.close().await;
+                                result
+                            }
+                            MigrateAction::Refresh => {
+                                let result = migrator.refresh(&db_manager).await;
+                                db_manager.close().await;
+                                result
+                            }
                             MigrateAction::Unknown => {
+                                db_manager.close().await;
                                 eprintln!("unknown action");
                                 Err(anyhow!("unknown action"))
                             }
