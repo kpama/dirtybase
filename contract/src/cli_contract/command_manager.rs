@@ -1,10 +1,9 @@
 use clap::command;
 use futures::future::BoxFuture;
 
-use crate::{ExtensionManager, app_contract::Context};
+use crate::{ExtensionManager, app_contract::Context, prelude::AppCancellationToken};
 
 use super::CliMiddlewareManager;
-use tokio_util::sync::CancellationToken;
 
 type CommandCollection = Vec<(
     clap::Command,
@@ -128,17 +127,11 @@ impl CliCommandManager {
 
         let task = tokio::spawn(async move {
             let context = Context::new().await;
-            let token = CancellationToken::new();
-            let cloned_token = token.clone();
-            let cloned_context = context.clone();
-
-            let handler = tokio::spawn(async move {
-                tokio::select! {
-                    _ = cloned_token.cancelled() => {
-                        ExtensionManager::shutdown(&cloned_context).await;
-                    }
-                }
-            });
+            let cancellation_token = busybody::helpers::service_container()
+                .get_type::<AppCancellationToken>()
+                .await
+                .expect("could not get application's cancellation token")
+                .into_inner();
 
             if let Some((name, mut command)) = matches.remove_subcommand() {
                 for ext in ExtensionManager::list().read().await.iter() {
@@ -155,12 +148,11 @@ impl CliCommandManager {
                         .await;
                     if name == cmd.get_name() {
                         _ = middleware.send((name, command, context.clone())).await;
-                        token.cancel();
                         break;
                     }
                 }
             }
-            _ = handler.await;
+            cancellation_token.cancel();
         });
 
         _ = task.await;

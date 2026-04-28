@@ -8,6 +8,8 @@ use anyhow::anyhow;
 use futures::future::BoxFuture;
 use tokio::{sync::RwLock, time::sleep};
 
+use crate::prelude::AppCancellationToken;
+
 use super::Context;
 
 type ContextCollection<T> = Arc<RwLock<HashMap<String, ResourceWrapper<T>>>>;
@@ -152,7 +154,14 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
             collection: ContextCollection::default(),
         };
 
-        instance.handle_shutdown_signal().await
+        instance
+            .handle_shutdown_signal(
+                busybody::helpers::service_container()
+                    .get_type()
+                    .await
+                    .expect("could not get application's cancellation token"),
+            )
+            .await
     }
 
     pub async fn register<S, SR, F, FR, C, CR>(setup_fn: S, resolver_fn: F, drop_fn: C)
@@ -305,11 +314,11 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
     }
 
     async fn drop_all(&self) {
-        tracing::trace!("shutting down manager: {}", self.name_of_t());
+        tracing::trace!("shutting down resource manager: {}", self.name_of_t());
         let clean_up_fn = self.drop_fn.clone();
         let mut write_lock = self.collection.write().await;
         for (x, wrapper) in write_lock.drain() {
-            tracing::info!("dropping instance of {} named {}", self.name_of_t(), x);
+            tracing::trace!("dropping instance of {} named {}", self.name_of_t(), x);
             let mut clean_fn_lock = clean_up_fn.write().await;
             (clean_fn_lock)(wrapper.resource()).await;
         }
@@ -319,38 +328,12 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
         std::any::type_name::<T>()
     }
 
-    async fn handle_shutdown_signal(self) -> Self {
+    async fn handle_shutdown_signal(self, token: AppCancellationToken) -> Self {
         let this_manager = self.clone();
         tokio::spawn(async move {
-            let ctrl_c = async {
-                tokio::signal::ctrl_c()
-                    .await
-                    .expect("failed to install Ctrl+C handler");
-            };
-
-            #[cfg(unix)]
-            let terminate = async {
-                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-                    .expect("failed to install signal handler")
-                    .recv()
-                    .await;
-            };
-
-            #[cfg(not(unix))]
-            let terminate = std::future::pending::<()>();
-
-            tokio::select! {
-                _ = ctrl_c => {
-                    tracing::debug!("shutting down due to ctr+c");
-                     this_manager.drop_all().await;
-                    drop(this_manager);
-                },
-                _ = terminate => {
-                    tracing::debug!("shutting down for other reason");
-                    this_manager.drop_all().await;
-                    drop(this_manager);
-                },
-            }
+            token.into_inner().cancelled().await;
+            this_manager.drop_all().await;
+            drop(this_manager);
         });
 
         self

@@ -57,6 +57,9 @@ pub async fn setup_using(config: &app::Config) -> anyhow::Result<AppService> {
     app.register(dirtybase_entry::Extension).await;
     app.register(dirtybase_cache::Extension).await;
     app.register(dirtybase_cron::Extension).await;
+
+    tokio::spawn(shutdown_signal());
+
     Ok(app)
 }
 

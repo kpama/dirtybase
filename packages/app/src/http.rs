@@ -18,14 +18,12 @@ use named_routes_axum::RouterWrapper;
 use tower_http::services::ServeDir;
 use tracing::{Instrument, field};
 
-use crate::{
-    app::{AppService, WebSetup},
-    shutdown_signal,
-};
+use crate::app::{AppService, WebSetup};
 
 pub async fn init(app: AppService) -> anyhow::Result<()> {
     app.init().await;
     let config = app.config();
+    let cancel_token = app.cancel_token();
 
     let mut w_lock = app.web_setup.write().await;
     let WebSetup(mut manager, mut middleware_manager) = if let Some(web_setup) = w_lock.take() {
@@ -288,7 +286,9 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
             .with_state(busybody::helpers::make_proxy())
             .into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .with_graceful_shutdown(shutdown_signal())
+    .with_graceful_shutdown(async {
+        cancel_token.into_inner().cancelled().await;
+    })
     .await
     .unwrap();
 

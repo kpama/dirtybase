@@ -14,7 +14,6 @@ pub enum MigrateAction {
     Down,
     Refresh,
     Reset,
-    Unknown,
 }
 
 pub struct Migrator {
@@ -156,12 +155,12 @@ impl Migrator {
 
 impl From<(String, ArgMatches)> for MigrateAction {
     fn from(value: (String, ArgMatches)) -> Self {
-        match value.0.as_str() {
+        match value.0.to_lowercase().as_str() {
             "up" => MigrateAction::Up,
             "down" => MigrateAction::Down,
             "refresh" => MigrateAction::Refresh,
             "reset" => MigrateAction::Reset,
-            _ => MigrateAction::Unknown,
+            _ => panic!("unknown migration action: {}", value.0),
         }
     }
 }

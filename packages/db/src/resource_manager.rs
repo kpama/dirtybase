@@ -21,7 +21,7 @@ pub(crate) async fn register_resource_manager() {
                 let name = context
                     .tenant_context()
                     .await
-                    .context("coult not get tenant context")?
+                    .context("could not get tenant context")?
                     .id()
                     .to_string();
                 Ok(ResourceManager::new(&name, timeout))
@@ -42,6 +42,10 @@ pub(crate) async fn register_resource_manager() {
         move |manager| {
             Box::pin(async move {
                 tracing::debug!("closing {} pool", manager.db_kind().as_str(),);
+                tokio::time::sleep_until(
+                    tokio::time::Instant::now() + std::time::Duration::from_secs(20),
+                )
+                .await;
                 manager.close().await;
             })
         },

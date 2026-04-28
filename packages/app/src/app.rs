@@ -75,6 +75,7 @@ impl App {
     }
 
     pub async fn shutdown(&self) {
+        tracing::trace!("shutting down application");
         ExtensionManager::shutdown(&self.global_context().await).await;
         self.cancel_token.clone().into_inner().cancel();
     }
