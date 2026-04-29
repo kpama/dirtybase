@@ -92,9 +92,9 @@ async fn seed_roles(storage: &PermStorageProvider) -> Vec<Role> {
         if let Ok(Some(perm)) = storage.save_permission(payload).await {
             for (name, perm_list) in &permissions {
                 for a_role in &created_roles {
-                    if a_role.name().as_str() == name.to_lowercase() {
+                    if a_role.name().as_ref() == name.to_lowercase() {
                         for perm_name in perm_list {
-                            if *perm_name == perm.name().as_str() {
+                            if *perm_name == perm.name().as_ref() {
                                 let payload = PersistRolePermission::Save {
                                     record: RolePermission::new(
                                         perm.id().cloned().unwrap(),

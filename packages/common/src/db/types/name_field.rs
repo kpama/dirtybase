@@ -1,16 +1,16 @@
-use std::{fmt::Display, ops::Deref, str::FromStr, sync::Arc};
+use std::{fmt::Display, ops::Deref, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationError};
 
-use crate::db::field_values::FieldValue;
+use crate::db::{field_values::FieldValue, types::ArcStrField};
 
 /// NameField
 ///
 /// Takes a string, removes all white spaces, join the words with a dash and convert it to lowercase
 /// Example: "Foo Bar" => "foo-bar"
 #[derive(Debug, Default, PartialEq, Hash, Eq, Clone, Serialize, Deserialize)]
-pub struct NameField(Arc<String>);
+pub struct NameField(ArcStrField);
 
 impl Validate for NameField {
     fn validate(&self) -> Result<(), validator::ValidationErrors> {
@@ -28,7 +28,7 @@ impl Validate for NameField {
 }
 
 impl Deref for NameField {
-    type Target = Arc<String>;
+    type Target = ArcStrField;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -61,7 +61,7 @@ impl Display for NameField {
 
 impl AsRef<str> for NameField {
     fn as_ref(&self) -> &str {
-        self.0.as_str()
+        &self.0
     }
 }
 
@@ -88,7 +88,7 @@ impl NameField {
             .join("-")
             .to_string()
             .to_lowercase();
-        Self(Arc::new(String::from_iter(name.chars().take(255))))
+        Self(String::from_iter(name.chars().take(255)).into())
     }
 }
 
@@ -100,20 +100,20 @@ mod test {
     fn test_name_field1() {
         let name = NameField::new("The Quick Brown");
 
-        assert_eq!(name.as_str(), "the-quick-brown");
+        assert_eq!(name.as_ref(), "the-quick-brown");
     }
 
     #[test]
     fn test_name_field2() {
         let name = NameField::new("The   Quick Brown");
 
-        assert_eq!(name.as_str(), "the-quick-brown");
+        assert_eq!(name.as_ref(), "the-quick-brown");
     }
 
     #[test]
     pub fn test_name_field_from_str() {
         let name: NameField = "The \r \n quick Brown".into();
-        assert_eq!(name.as_str(), "the-quick-brown");
+        assert_eq!(name.as_ref(), "the-quick-brown");
     }
 
     #[test]
