@@ -1,8 +1,8 @@
 use dirtybase_common::db::types::ArcUuid7;
 use dirtybase_contract::{
     auth_contract::{
-        ActorJWTClaims, FetchActorOption, FetchActorPayload, GuardResolver, GuardResponse,
-        storage::PermissionStorage,
+        ActorJWTClaims, AuthUserStatus, FetchActorOption, FetchActorPayload, GuardResolver,
+        GuardResponse, storage::PermissionStorage,
     },
     prelude::{Credentials, Response, StatusCode, axum_extra},
 };
@@ -13,7 +13,7 @@ use crate::AuthExtension;
 pub const JWT_GUARD: &str = "jwt";
 
 pub async fn guard(resolver: GuardResolver) -> GuardResponse {
-    tracing::trace!(">>>> In JWT Authentication guard");
+    tracing::trace!("In JWT Authentication guard");
     let config = if let Ok(config) = AuthExtension::config_from_ctx(resolver.context_ref()).await {
         config
     } else {
@@ -54,13 +54,15 @@ pub async fn guard(resolver: GuardResolver) -> GuardResponse {
                     .await
                 {
                     Ok(Some(actor)) => {
-                        if actor.varify_jwt_token_id(&claims.jti.clone().unwrap_or_default()) {
+                        if actor.varify_jwt_token_id(&claims.jti.clone().unwrap_or_default())
+                            && actor.status() == AuthUserStatus::Active
+                        {
                             return GuardResponse::success(actor);
                         }
                     }
                     Ok(None) => return GuardResponse::forbid(),
                     Err(e) => {
-                        tracing::error!("{}", e);
+                        tracing::error!("error verifying JWT: {}", e);
                         return GuardResponse::forbid();
                     }
                 }
