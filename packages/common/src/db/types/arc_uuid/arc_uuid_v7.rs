@@ -132,7 +132,7 @@ impl TryFrom<String> for ArcUuid7 {
 impl TryFrom<&String> for ArcUuid7 {
     type Error = String;
     fn try_from(value: &String) -> Result<Self, Self::Error> {
-        value.try_into()
+        value.as_str().try_into()
     }
 }
 
