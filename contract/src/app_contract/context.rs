@@ -50,10 +50,6 @@ impl Drop for Context {
         // Only this copy and the copy in the resolver closure now, so it's safe to clean up
         if Arc::strong_count(&self.id) == 2 {
             let sc = self.sc.clone();
-            tracing::trace!(
-                "context {} is being dropped, cleaning up it's service container",
-                self.id
-            );
             tokio::spawn(async move {
                 sc.forget_resolver::<Self>().await;
             });
