@@ -488,12 +488,14 @@ impl Display for ActorJWTClaims {
 
 impl Default for ActorJWTClaims {
     fn default() -> Self {
+        let exp = dirtybase_helper::time::now().add_days(30).timestamp() as u64;
+        let iat = dirtybase_helper::time::now().timestamp() as u64;
         Self {
             aud: None,
             sub: None,
-            exp: None,
-            iat: None,
-            nbf: None,
+            exp: Some(exp),
+            iat: Some(iat),
+            nbf: Some(iat),
             jti: None,
             iss: None,
             private: serde_json::map::Map::new(),
