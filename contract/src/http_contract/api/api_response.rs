@@ -221,13 +221,35 @@ impl<D: serde::Serialize> From<PaginateResult<D>> for ApiResponse<Vec<D>> {
 
 impl<D: serde::Serialize> From<CursorResult<D>> for ApiResponse<Vec<D>> {
     fn from(value: CursorResult<D>) -> Self {
-        let (cursor, result) = value.parts();
+        let (cursor, result, previous) = value.parts();
         let mut response = match result {
             Ok(v) => Self::new(Some(v), None),
             Err(e) => Self::new(None, Some(e.into())),
         };
 
-        response.meta = serde_json::to_value(cursor).ok();
+        if let Ok(mut meta) = serde_json::to_value(cursor.clone()) {
+            if let Some(m) = meta.as_object_mut() {
+                m.insert(
+                    "_next".into(),
+                    serde_json::to_value(cursor.encode()).unwrap(),
+                );
+                m.insert(
+                    "_previous".into(),
+                    if let Some(p) = previous {
+                        serde_json::to_value(p.encode()).unwrap()
+                    } else {
+                        serde_json::Value::Null
+                    },
+                );
+                m.insert(
+                    "_query".into(),
+                    serde_json::to_value(cursor.as_query_string()).unwrap(),
+                );
+                //
+            }
+
+            response.meta = Some(meta);
+        }
         response
     }
 }

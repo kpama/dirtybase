@@ -296,9 +296,10 @@ impl SchemaQuery {
         cursor: CursorBuilder,
     ) -> CursorResult<StructuredColumnAndValue> {
         let mut cursor_two = cursor.clone();
+        let fullname = format!("{}.{}", self.query_builder.table(), &cursor.column());
         if let Some(field_value) = cursor.last().cloned() {
             self.query_builder.and_where(|q| {
-                if let Some((col, dir)) = cursor.order().orders.first().cloned() {
+                if let Some((col, dir)) = cursor.order().order.first().cloned() {
                     if dir == Direction::ASC {
                         q.gt(col, field_value);
                     } else {
@@ -307,25 +308,25 @@ impl SchemaQuery {
                 }
             });
         }
-        self.query_builder.cursor(cursor);
+        self.query_builder.cursor(cursor.clone());
 
         let result = self.fetch_all().await;
         if let Ok(rows) = &result {
             if let Some(last) = rows.last()
-                && let Some(value) = last.get(cursor_two.column()).cloned()
+                && let Some(value) = last.get(&fullname).cloned()
             {
                 cursor_two.set_last(value);
             }
         }
 
-        CursorResult::new(cursor_two, result)
+        CursorResult::new(cursor_two, result, Some(cursor))
     }
 
     pub async fn cursor_paginate_to<T>(self, cursor: CursorBuilder) -> CursorResult<T>
     where
         T: FromColumnAndValue,
     {
-        let (cursor, result) = self.cursor_paginate(cursor).await.parts();
+        let (cursor, result, previous) = self.cursor_paginate(cursor).await.parts();
 
         let data = match result {
             Ok(rows) => Ok(rows
@@ -334,7 +335,7 @@ impl SchemaQuery {
                 .collect::<Vec<T>>()),
             Err(e) => Err(e),
         };
-        CursorResult::new(cursor, data)
+        CursorResult::new(cursor, data, previous)
     }
 
     pub async fn paginate(
@@ -345,7 +346,7 @@ impl SchemaQuery {
         let table = self.query_builder.table().to_string();
         let column = {
             let mut col = "id".to_string();
-            for order in page.order() {
+            for order in page.order().order.clone() {
                 col = order.0.clone();
                 break;
             }
@@ -360,15 +361,9 @@ impl SchemaQuery {
             &table,
             |q| {
                 q.select_as(&column, "page2_id");
-                q.limit(page.limit());
-                q.offset(page.offset());
-                for (col, dir) in page.order() {
-                    if *dir == Direction::ASC {
-                        q.asc(col);
-                    } else {
-                        q.desc(col);
-                    }
-                }
+                q.set_limit_builder(page.limit);
+                q.set_offset_builder(page.offset);
+                q.set_order_builder(page.order);
             },
         );
 
@@ -377,7 +372,7 @@ impl SchemaQuery {
         if let Ok(rows) = &result
             && !rows.is_empty()
         {
-            page_two.set_offset(page_two.offset() + page_two.limit());
+            page_two.set_offset(page_two.offset().offset + page_two.limit().limit);
         }
 
         PaginateResult::new(page_two, result)

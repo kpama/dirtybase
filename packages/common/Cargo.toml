@@ -24,3 +24,5 @@ futures-util = { workspace = true }
 log = { workspace = true }
 simple-middleware = { workspace = true }
 busybody = { workspace = true }
+axum = { workspace = true }
+axum-extra = { workspace = true }

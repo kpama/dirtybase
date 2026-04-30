@@ -45,7 +45,7 @@ macro_rules! register_migration {
 
 pub mod prelude {
     pub use super::app_contract::*;
-    pub use super::auth_contract::prelude;
+    // pub use super::auth_contract::prelude;
     pub use super::cli_contract::prelude::*;
     pub use super::config_contract::*;
     pub use super::extension::ExtensionManager;
@@ -55,7 +55,7 @@ pub mod prelude {
     pub use super::observable::*;
     pub use chrono::*;
 
-    pub use anyhow;
+    // pub use anyhow;
     pub use async_trait::async_trait;
     pub use busybody;
     pub use busybody::Resolver;

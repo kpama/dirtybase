@@ -369,13 +369,18 @@ impl QueryBuilder {
         self
     }
 
+    pub fn set_order_builder(&mut self, order: OrderByBuilder) -> &mut Self {
+        self.order_by = Some(order);
+        self
+    }
+
     /// Order in ascending order
     pub fn asc<C: ToString>(&mut self, column: C) -> &mut Self {
         if self.order_by.is_none() {
-            self.order_by = Some(OrderByBuilder::new());
+            self.set_order_builder(OrderByBuilder::new());
         }
 
-        self.order_by.as_mut().unwrap().asc(column);
+        self.order_by.as_mut().unwrap().add_asc(column);
 
         self
     }
@@ -383,16 +388,21 @@ impl QueryBuilder {
     /// Order in descending order
     pub fn desc<C: ToString>(&mut self, column: C) -> &mut Self {
         if self.order_by.is_none() {
-            self.order_by = Some(OrderByBuilder::new());
+            self.set_order_builder(OrderByBuilder::new());
         }
 
-        self.order_by.as_mut().unwrap().desc(column);
+        self.order_by.as_mut().unwrap().add_desc(column);
 
         self
     }
 
     pub fn limit(&mut self, limit: usize) -> &mut Self {
-        self.limit = Some(LimitBuilder { limit });
+        self.set_limit_builder(LimitBuilder::new(limit));
+        self
+    }
+
+    pub fn set_limit_builder(&mut self, limit: LimitBuilder) -> &mut Self {
+        self.limit = Some(limit);
         self
     }
 
@@ -410,7 +420,11 @@ impl QueryBuilder {
     }
 
     pub fn offset(&mut self, offset: usize) -> &mut Self {
-        self.offset = Some(OffsetBuilder { offset });
+        self.set_offset_builder(OffsetBuilder::new(offset));
+        self
+    }
+    pub fn set_offset_builder(&mut self, offset: OffsetBuilder) -> &mut Self {
+        self.offset = Some(offset);
         self
     }
 

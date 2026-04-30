@@ -1,18 +1,44 @@
-use std::fmt::Debug;
+use std::{collections::HashMap, fmt::Debug};
 
+use axum::{
+    extract::{FromRequestParts, Query},
+    http::{StatusCode, request::Parts},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::db::{
-    base::order_by_builder::{LimitBuilder, OrderByBuilder},
+    base::order_by_builder::{Direction, LimitBuilder, OrderByBuilder},
     field_values::FieldValue,
 };
 
+/// # CursorBuilder
+///
+/// Uses a cursor based on list fetched value for paginating
+///
+/// Extract an instance from the current HTTP request
+///```rust,no_run
+/// async handler(cursor: CursorBuilder) {...}
+/// ```
+/// Attributes that are extracted from the current HTTP request:
+///
+/// - `_cursor`: A cursor encoded string
+/// - `_limit` : An unsigned numeric value
+/// - `_col` : The name of the column used
+/// - `_last` : Last value from which to start the cursor after
+/// - `_sort` : One or more string values separated by comma, `,`. Prepending a minus,`-id`, means sort DESCENDING and
+///            plus, `+id`, means ASCENDING. Ascending is the default order means ASCENDING. Ascending is the default ordering.
+///
+/// Example: `_limit=20&_sort=-id`
+/// Example: `_cursor=......`
+///
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct CursorBuilder {
-    col: String,
-    last: Option<FieldValue>,
-    limit: LimitBuilder,
-    order: OrderByBuilder,
+    pub(crate) col: String,
+    pub(crate) last: Option<FieldValue>,
+    #[serde(flatten)]
+    pub(crate) limit: LimitBuilder,
+    #[serde(flatten)]
+    pub(crate) order: OrderByBuilder,
 }
 
 impl CursorBuilder {
@@ -78,6 +104,19 @@ impl CursorBuilder {
             Err(e) => Err(anyhow::anyhow!(e)),
         }
     }
+
+    pub fn as_query_string(&self) -> String {
+        let mut query = Vec::new();
+        dbg!(&self.last);
+        if let Some(last) = &self.last {
+            query.push(format!("_last={}", last));
+        }
+        query.push(format!("_col={}", self.col));
+        query.push(format!("_limit={}", self.limit.limit));
+        query.push(format!("_sort={}", self.order().as_uri_query()));
+
+        query.join("&")
+    }
 }
 
 impl Default for CursorBuilder {
@@ -92,17 +131,34 @@ impl Default for CursorBuilder {
 }
 
 pub struct CursorResult<T> {
+    previous: Option<CursorBuilder>,
     cursor: CursorBuilder,
     data: Result<Vec<T>, anyhow::Error>,
 }
 
 impl<T> CursorResult<T> {
-    pub fn new(cursor: CursorBuilder, data: Result<Vec<T>, anyhow::Error>) -> Self {
-        Self { cursor, data }
+    pub fn new(
+        cursor: CursorBuilder,
+        data: Result<Vec<T>, anyhow::Error>,
+        previous: Option<CursorBuilder>,
+    ) -> Self {
+        Self {
+            cursor,
+            data,
+            previous,
+        }
     }
 
     pub fn cursor(&self) -> CursorBuilder {
         self.cursor.clone()
+    }
+
+    pub fn previous(&self) -> Option<CursorBuilder> {
+        self.previous.clone()
+    }
+
+    pub fn previous_ref(&self) -> Option<&CursorBuilder> {
+        self.previous.as_ref()
     }
 
     pub fn cursor_ref(&self) -> &CursorBuilder {
@@ -113,7 +169,77 @@ impl<T> CursorResult<T> {
         &self.data
     }
 
-    pub fn parts(self) -> (CursorBuilder, Result<Vec<T>, anyhow::Error>) {
-        (self.cursor, self.data)
+    pub fn parts(
+        self,
+    ) -> (
+        CursorBuilder,
+        Result<Vec<T>, anyhow::Error>,
+        Option<CursorBuilder>,
+    ) {
+        (self.cursor, self.data, self.previous)
+    }
+}
+
+impl<S> FromRequestParts<S> for CursorBuilder
+where
+    S: Send + Sync,
+{
+    type Rejection = (StatusCode, String);
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let mut builder = Self::default();
+
+        match Query::<HashMap<String, String>>::try_from_uri(&parts.uri) {
+            Ok(kv) => {
+                if let Some(s) = kv.get("_cursor")
+                    && let Ok(c) = Self::decode(s)
+                {
+                    builder = c;
+                }
+
+                // column
+                if let Some(col) = kv.get("_col").cloned() {
+                    builder.col = col
+                }
+
+                // Limit
+                if let Some(v) = kv.get("_limit")
+                    && let Ok(limit) = v.parse::<usize>()
+                {
+                    builder.set_limit(limit);
+                }
+
+                // last
+                if let Some(v) = kv.get("_last") {
+                    let value = FieldValue::from(v);
+                    if value != FieldValue::NotSet && value != FieldValue::Null {
+                        builder.set_last(value);
+                    }
+                }
+
+                // Sort
+                if let Some(sort) = kv.get("_sort") {
+                    let list = sort
+                        .split(',')
+                        .into_iter()
+                        .filter(|entry| entry.trim().len() > 0 && *entry != "-" && *entry != "+")
+                        .map(|entry| {
+                            if entry.starts_with('-') {
+                                (entry.trim_matches('-').to_string(), Direction::DESC)
+                            } else {
+                                (entry.trim_matches('+').to_string(), Direction::ASC)
+                            }
+                        })
+                        .collect::<Vec<(String, Direction)>>();
+                    if list.len() > 0 {
+                        builder.order = OrderByBuilder::from(list);
+                    } else {
+                        tracing::warn!("query string sort list is empty");
+                    }
+                }
+            }
+            Err(e) => tracing::error!("error building cursor paginator from query: {}", e),
+        }
+        Ok(builder)
     }
 }
