@@ -337,7 +337,7 @@ pub fn build_entity_repo(
                 self.builder
                     .select_multiple(&<#ident as ::dirtybase_common::db::table_model::TableModel>::table_query_col_aliases(None));
                 let paginate_result = self.manager.execute_query(self.builder.clone()).paginate(page).await;
-                let (page, result) = paginate_result.parts();
+                let (result, next, previous) = paginate_result.parts();
 
               match result {
                     Ok(mut raw_list) => {
@@ -352,7 +352,7 @@ pub fn build_entity_repo(
                         for (name, rel) in &self.relation {
                            if let Err(e)  = rel.clone().process(&name, &self.manager, &rows_map, &mut join_field_values, &mut rows_rel_map).await {
                                 *self = Self::new(&self.manager);
-                                return ::dirtybase_common::db::base::paginate_builder::PaginateResult::<#ident>::new(page, Err(e));
+                                return ::dirtybase_common::db::base::paginate_builder::PaginateResult::<#ident>::new(Err(e), next, previous);
                            }
                         }
 
@@ -363,11 +363,11 @@ pub fn build_entity_repo(
                         }
 
                         *self = Self::new(&self.manager);
-                        ::dirtybase_common::db::base::paginate_builder::PaginateResult::<#ident>::new(page,Ok(rows_map))
+                        ::dirtybase_common::db::base::paginate_builder::PaginateResult::<#ident>::new(Ok(rows_map), next, previous)
                     }
                     Err(e) => {
                         *self = Self::new(&self.manager);
-                        ::dirtybase_common::db::base::paginate_builder::PaginateResult::<#ident>::new(page, Err(e))
+                        ::dirtybase_common::db::base::paginate_builder::PaginateResult::<#ident>::new(Err(e), next, previous)
                     },
                 }
 
@@ -395,7 +395,7 @@ pub fn build_entity_repo(
                 self.builder
                     .select_multiple(&<#ident as ::dirtybase_common::db::table_model::TableModel>::table_query_col_aliases(None));
                 let cursor_result = self.manager.execute_query(self.builder.clone()).cursor_paginate(cursor).await;
-                let (cursor, result, previous) = cursor_result.parts();
+                let (result, next,  previous) = cursor_result.parts();
 
               match result {
                     Ok(mut raw_list) => {
@@ -410,7 +410,7 @@ pub fn build_entity_repo(
                         for (name, rel) in &self.relation {
                            if let Err(e)  = rel.clone().process(&name, &self.manager, &rows_map, &mut join_field_values, &mut rows_rel_map).await {
                                 *self = Self::new(&self.manager);
-                                return ::dirtybase_common::db::base::cursor_builder::CursorResult::<#ident>::new(cursor, Err(e), previous);
+                                return ::dirtybase_common::db::base::cursor_builder::CursorResult::<#ident>::new(Err(e), next,  previous);
                            }
                         }
 
@@ -421,11 +421,11 @@ pub fn build_entity_repo(
                         }
 
                         *self = Self::new(&self.manager);
-                        ::dirtybase_common::db::base::cursor_builder::CursorResult::<#ident>::new(cursor,Ok(rows_map), previous)
+                        ::dirtybase_common::db::base::cursor_builder::CursorResult::<#ident>::new(Ok(rows_map),next, previous)
                     }
                     Err(e) => {
                         *self = Self::new(&self.manager);
-                        ::dirtybase_common::db::base::cursor_builder::CursorResult::<#ident>::new(cursor, Err(e), previous)
+                        ::dirtybase_common::db::base::cursor_builder::CursorResult::<#ident>::new( Err(e), next, previous)
                     },
                 }
 

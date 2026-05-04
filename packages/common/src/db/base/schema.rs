@@ -293,13 +293,13 @@ impl SchemaQuery {
 
     pub async fn cursor_paginate(
         mut self,
-        cursor: CursorBuilder,
+        current: CursorBuilder,
     ) -> CursorResult<StructuredColumnAndValue> {
-        let mut cursor_two = cursor.clone();
-        let fullname = format!("{}.{}", self.query_builder.table(), &cursor.column());
-        if let Some(field_value) = cursor.last().cloned() {
+        let mut next = current.clone();
+        let fullname = format!("{}.{}", self.query_builder.table(), &current.column());
+        if let Some(field_value) = current.last().cloned() {
             self.query_builder.and_where(|q| {
-                if let Some((col, dir)) = cursor.order().order.first().cloned() {
+                if let Some((col, dir)) = current.order().order.first().cloned() {
                     if dir == Direction::ASC {
                         q.gt(col, field_value);
                     } else {
@@ -308,25 +308,31 @@ impl SchemaQuery {
                 }
             });
         }
-        self.query_builder.cursor(cursor.clone());
+        self.query_builder.cursor(current.clone());
 
         let result = self.fetch_all().await;
-        if let Ok(rows) = &result {
+        let next = if let Ok(rows) = &result {
             if let Some(last) = rows.last()
                 && let Some(value) = last.get(&fullname).cloned()
             {
-                cursor_two.set_last(value);
+                let r = serde_json::to_string(&value);
+                next.set_last(value);
+                Some(next)
+            } else {
+                None
             }
-        }
+        } else {
+            None
+        };
 
-        CursorResult::new(cursor_two, result, Some(cursor))
+        CursorResult::new(result, next, Some(current))
     }
 
     pub async fn cursor_paginate_to<T>(self, cursor: CursorBuilder) -> CursorResult<T>
     where
         T: FromColumnAndValue,
     {
-        let (cursor, result, previous) = self.cursor_paginate(cursor).await.parts();
+        let (result, next, previous) = self.cursor_paginate(cursor).await.parts();
 
         let data = match result {
             Ok(rows) => Ok(rows
@@ -335,23 +341,36 @@ impl SchemaQuery {
                 .collect::<Vec<T>>()),
             Err(e) => Err(e),
         };
-        CursorResult::new(cursor, data, previous)
+        CursorResult::new(data, next, previous)
     }
 
     pub async fn paginate(
         mut self,
-        mut page: PaginateBuilder,
+        mut current: PaginateBuilder,
     ) -> PaginateResult<StructuredColumnAndValue> {
-        let mut page_two = page.clone();
-        let table = self.query_builder.table().to_string();
+        let mut total = 0usize;
         let column = {
             let mut col = "id".to_string();
-            for order in page.order().order.clone() {
+            for order in current.order().order.clone() {
                 col = order.0.clone();
                 break;
             }
             col
         };
+        let mut query_copy = self.query_builder.clone();
+        query_copy.count_as(&column, "_total_rows");
+        let counter = Self::new(query_copy, self.manager.clone());
+        if let Ok(Some(data)) = counter.fetch_one().await
+            && let Some(value) = data.get("_total_rows").cloned()
+            && let FieldValue::I64(t) = value
+        {
+            total = t as usize;
+        }
+
+        current.set_total(total);
+        let mut page_two = current.clone();
+
+        let table = self.query_builder.table().to_string();
 
         self.query_builder.inner_join_sub_query(
             &format!("{}2", &table),
@@ -360,6 +379,7 @@ impl SchemaQuery {
             &column,
             &table,
             |q| {
+                let page = current.clone();
                 q.select_as(&column, "page2_id");
                 q.set_limit_builder(page.limit);
                 q.set_offset_builder(page.offset);
@@ -369,20 +389,23 @@ impl SchemaQuery {
 
         let result = self.fetch_all().await;
 
-        if let Ok(rows) = &result
+        let next = if let Ok(rows) = &result
             && !rows.is_empty()
         {
             page_two.set_offset(page_two.offset().offset + page_two.limit().limit);
-        }
+            Some(page_two)
+        } else {
+            None
+        };
 
-        PaginateResult::new(page_two, result)
+        PaginateResult::new(result, next, Some(current))
     }
 
     pub async fn paginate_to<T>(self, page: PaginateBuilder) -> PaginateResult<T>
     where
         T: FromColumnAndValue,
     {
-        let (page, result) = self.paginate(page).await.parts();
+        let (result, next, previous) = self.paginate(page).await.parts();
 
         let data = match result {
             Ok(rows) => Ok(rows
@@ -392,7 +415,7 @@ impl SchemaQuery {
             Err(e) => Err(e),
         };
 
-        PaginateResult::new(page, data)
+        PaginateResult::new(data, next, previous)
     }
     pub async fn fetch_all_to<T>(self) -> Result<Vec<T>, anyhow::Error>
     where

@@ -25,7 +25,7 @@ async fn main() {
     loop {
         println!("{:?}", serde_json::to_string(&page));
 
-        let (p, result) = manager
+        let (result, p, _) = manager
             .select_from::<Actor>(|_| {
                 //
             })
@@ -43,6 +43,10 @@ async fn main() {
             }
         }
 
-        page = p;
+        if let Some(p) = p {
+            page = p
+        } else {
+            break;
+        }
     }
 }

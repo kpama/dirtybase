@@ -13,16 +13,16 @@ use crate::db::types::ToColumnAndValue;
 use super::types::ColumnAndValue;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(untagged)]
+#[serde(tag = "t", content = "v")] // Storign the type makes it easy to decode
 pub enum FieldValue {
     Null,
     NotSet,
-    U64(u64),
-    U32(u32),
-    I64(i64),
-    I32(i32),
-    I16(i16),
     I8(i8),
+    I16(i16),
+    I32(i32),
+    U32(u32),
+    U64(u64),
+    I64(i64),
     F64(f64),
     String(String),
     Boolean(bool),

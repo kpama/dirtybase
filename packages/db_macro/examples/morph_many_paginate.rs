@@ -12,7 +12,7 @@ async fn main() {
     if let Ok(Some(post)) = post_repo.with_images().one().await {
         let mut paginator = post_repo.images_paginate_cursor(&post);
         loop {
-            if let (_, Ok(data), _) = paginator.next().await.parts() {
+            if let (Ok(data), _, _) = paginator.next().await.parts() {
                 if data.is_empty() {
                     break;
                 }

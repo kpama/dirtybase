@@ -342,7 +342,7 @@ impl<T: TableModel + FromColumnAndValue> RelationCursorPaginator<T> {
             .cursor_paginate_to::<T>(cursor)
             .await;
 
-        self.next_cursor = Some(result.cursor());
+        self.next_cursor = result.next();
 
         result
     }

@@ -107,7 +107,6 @@ impl CursorBuilder {
 
     pub fn as_query_string(&self) -> String {
         let mut query = Vec::new();
-        dbg!(&self.last);
         if let Some(last) = &self.last {
             query.push(format!("_last={}", last));
         }
@@ -131,26 +130,29 @@ impl Default for CursorBuilder {
 }
 
 pub struct CursorResult<T> {
+    next: Option<CursorBuilder>,
     previous: Option<CursorBuilder>,
-    cursor: CursorBuilder,
     data: Result<Vec<T>, anyhow::Error>,
 }
 
 impl<T> CursorResult<T> {
     pub fn new(
-        cursor: CursorBuilder,
         data: Result<Vec<T>, anyhow::Error>,
+        next: Option<CursorBuilder>,
         previous: Option<CursorBuilder>,
     ) -> Self {
         Self {
-            cursor,
+            next,
             data,
             previous,
         }
     }
 
-    pub fn cursor(&self) -> CursorBuilder {
-        self.cursor.clone()
+    pub fn next(&self) -> Option<CursorBuilder> {
+        self.next.clone()
+    }
+    pub fn next_ref(&self) -> Option<&CursorBuilder> {
+        self.next.as_ref()
     }
 
     pub fn previous(&self) -> Option<CursorBuilder> {
@@ -161,22 +163,19 @@ impl<T> CursorResult<T> {
         self.previous.as_ref()
     }
 
-    pub fn cursor_ref(&self) -> &CursorBuilder {
-        &self.cursor
-    }
-
     pub fn data_ref(&self) -> &Result<Vec<T>, anyhow::Error> {
         &self.data
     }
 
+    /// Returns tuple of (data, next, previous)
     pub fn parts(
         self,
     ) -> (
-        CursorBuilder,
         Result<Vec<T>, anyhow::Error>,
         Option<CursorBuilder>,
+        Option<CursorBuilder>,
     ) {
-        (self.cursor, self.data, self.previous)
+        (self.data, self.next, self.previous)
     }
 }
 
@@ -191,9 +190,14 @@ where
 
         match Query::<HashMap<String, String>>::try_from_uri(&parts.uri) {
             Ok(kv) => {
+                let mut is_cursor_value = false;
                 if let Some(s) = kv.get("_cursor")
-                    && let Ok(c) = Self::decode(s)
+                    && let Ok(mut c) = Self::decode(s)
                 {
+                    is_cursor_value = true;
+                    if let Some(last) = c.last.clone() {
+                        c.last = Some(last.into());
+                    }
                     builder = c;
                 }
 

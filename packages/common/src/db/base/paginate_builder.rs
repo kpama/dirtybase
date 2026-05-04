@@ -35,6 +35,8 @@ pub struct PaginateBuilder {
     pub(crate) order: OrderByBuilder,
     #[serde(flatten)]
     pub(crate) offset: OffsetBuilder,
+    #[serde(flatten)]
+    total: usize,
 }
 
 impl PaginateBuilder {
@@ -43,11 +45,12 @@ impl PaginateBuilder {
             order: OrderByBuilder::new_asc(order_column),
             limit: LimitBuilder::new(limit),
             offset: OffsetBuilder::new(offset),
+            total: 0,
         }
     }
 
-    pub fn order(&mut self) -> &mut OrderByBuilder {
-        &mut self.order
+    pub fn order(&self) -> &OrderByBuilder {
+        &self.order
     }
 
     pub fn add_order(&mut self, column: &str, direction: Direction) -> &mut Self {
@@ -77,8 +80,25 @@ impl PaginateBuilder {
         self
     }
 
+    pub fn set_total(&mut self, total: usize) -> &mut Self {
+        self.total = total;
+        self
+    }
+
+    pub fn total(&self) -> usize {
+        self.total
+    }
+
     pub fn limit(&self) -> &LimitBuilder {
         &self.limit
+    }
+
+    pub fn as_query_string(&self) -> String {
+        let mut query = Vec::new();
+        query.push(format!("_limit={}", self.limit.limit));
+        query.push(format!("_offset={}", self.offset.offset));
+        query.push(format!("_sort={}", self.order().as_uri_query()));
+        query.join("&")
     }
 }
 
@@ -89,28 +109,52 @@ impl Default for PaginateBuilder {
 }
 
 pub struct PaginateResult<T> {
-    page: PaginateBuilder,
+    previous: Option<PaginateBuilder>,
+    next: Option<PaginateBuilder>,
     data: Result<Vec<T>, anyhow::Error>,
 }
 
 impl<T> PaginateResult<T> {
-    pub fn new(page: PaginateBuilder, data: Result<Vec<T>, anyhow::Error>) -> Self {
-        Self { page, data }
+    pub fn new(
+        data: Result<Vec<T>, anyhow::Error>,
+        next: Option<PaginateBuilder>,
+        previous: Option<PaginateBuilder>,
+    ) -> Self {
+        Self {
+            next,
+            data,
+            previous,
+        }
     }
 
-    pub fn page(&self) -> PaginateBuilder {
-        self.page.clone()
+    pub fn next(&self) -> Option<PaginateBuilder> {
+        self.next.clone()
     }
-    pub fn page_ref(&self) -> &PaginateBuilder {
-        &self.page
+    pub fn next_ref(&self) -> Option<&PaginateBuilder> {
+        self.next.as_ref()
+    }
+
+    pub fn previous(&self) -> Option<PaginateBuilder> {
+        self.previous.clone()
+    }
+
+    pub fn previous_ref(&self) -> Option<&PaginateBuilder> {
+        self.previous.as_ref()
     }
 
     pub fn data_ref(&self) -> &Result<Vec<T>, anyhow::Error> {
         &self.data
     }
 
-    pub fn parts(self) -> (PaginateBuilder, Result<Vec<T>, anyhow::Error>) {
-        (self.page, self.data)
+    /// Returns tuple of (data, next, previous)
+    pub fn parts(
+        self,
+    ) -> (
+        Result<Vec<T>, anyhow::Error>,
+        Option<PaginateBuilder>,
+        Option<PaginateBuilder>,
+    ) {
+        (self.data, self.next, self.previous)
     }
 }
 
