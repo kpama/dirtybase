@@ -315,7 +315,6 @@ impl SchemaQuery {
             if let Some(last) = rows.last()
                 && let Some(value) = last.get(&fullname).cloned()
             {
-                let r = serde_json::to_string(&value);
                 next.set_last(value);
                 Some(next)
             } else {
