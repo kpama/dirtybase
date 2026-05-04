@@ -208,48 +208,80 @@ impl<D: serde::Serialize> From<ApiResponse<D>> for Response {
 
 impl<D: serde::Serialize> From<PaginateResult<D>> for ApiResponse<Vec<D>> {
     fn from(value: PaginateResult<D>) -> Self {
-        let (page, result) = value.parts();
+        let (result, page, previous) = value.parts();
         let mut response = match result {
             Ok(v) => Self::new(Some(v), None),
             Err(e) => Self::new(None, Some(e.into())),
         };
 
-        response.meta = serde_json::to_value(page).ok();
+        response.meta = {
+            let mut map = serde_json::Map::<String, serde_json::Value>::new();
+            let mut queries = serde_json::Map::<String, serde_json::Value>::new();
+
+            // next
+            if let Some(next) = page {
+                queries.insert(
+                    "total".to_string(),
+                    serde_json::to_value(next.total()).unwrap(),
+                );
+                queries.insert(
+                    "next".to_string(),
+                    serde_json::to_value(next.as_query_string()).unwrap(),
+                );
+            } else {
+                queries.insert("total".to_string(), serde_json::to_value(0usize).unwrap());
+                queries.insert("next".to_string(), serde_json::Value::Null);
+            }
+            // previous
+            queries.insert(
+                "previous".to_string(),
+                if let Some(pre) = previous {
+                    serde_json::to_value(pre.as_query_string()).unwrap()
+                } else {
+                    serde_json::Value::Null
+                },
+            );
+
+            map.insert("page".to_string(), serde_json::Value::Object(queries));
+
+            Some(serde_json::Value::Object(map))
+        };
         response
     }
 }
 
 impl<D: serde::Serialize> From<CursorResult<D>> for ApiResponse<Vec<D>> {
     fn from(value: CursorResult<D>) -> Self {
-        let (cursor, result, previous) = value.parts();
+        let (result, next, previous) = value.parts();
         let mut response = match result {
             Ok(v) => Self::new(Some(v), None),
             Err(e) => Self::new(None, Some(e.into())),
         };
 
-        if let Ok(mut meta) = serde_json::to_value(cursor.clone()) {
-            if let Some(m) = meta.as_object_mut() {
-                m.insert(
-                    "_next".into(),
-                    serde_json::to_value(cursor.encode()).unwrap(),
-                );
-                m.insert(
-                    "_previous".into(),
-                    if let Some(p) = previous {
-                        serde_json::to_value(p.encode()).unwrap()
-                    } else {
-                        serde_json::Value::Null
-                    },
-                );
-                m.insert(
-                    "_query".into(),
-                    serde_json::to_value(cursor.as_query_string()).unwrap(),
-                );
-                //
-            }
+        response.meta = {
+            let mut map = serde_json::Map::<String, serde_json::Value>::new();
+            let mut queries = serde_json::Map::<String, serde_json::Value>::new();
+            queries.insert(
+                "_next".into(),
+                if let Some(cursor) = next {
+                    serde_json::to_value(format!("_cursor={}", cursor.encode())).unwrap()
+                } else {
+                    serde_json::Value::Null
+                },
+            );
+            queries.insert(
+                "_previous".into(),
+                if let Some(p) = previous {
+                    serde_json::to_value(format!("_cursor={}", p.encode())).unwrap()
+                } else {
+                    serde_json::Value::Null
+                },
+            );
 
-            response.meta = Some(meta);
-        }
+            map.insert("page".to_string(), serde_json::Value::Object(queries));
+            Some(serde_json::Value::Object(map))
+        };
+
         response
     }
 }
