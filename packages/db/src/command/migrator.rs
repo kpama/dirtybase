@@ -149,6 +149,7 @@ impl Migrator {
             }
         }
 
+        migrations.reverse();
         migrations
     }
 
@@ -173,6 +174,8 @@ impl Migrator {
                 }
             }
         }
+
+        migrations.reverse();
         migrations
     }
 }
