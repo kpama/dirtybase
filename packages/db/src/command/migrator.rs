@@ -143,13 +143,13 @@ impl Migrator {
         let mut migrations = Vec::with_capacity(110);
         for ext in ExtensionManager::list().read().await.iter() {
             if let Some(mut list) = ext.migrations(&self.context).await {
-                list.reverse();
                 for m in list {
                     migrations.push(m);
                 }
             }
         }
 
+        migrations.sort();
         migrations
     }
 
@@ -157,7 +157,6 @@ impl Migrator {
         let mut migrations = Vec::with_capacity(110);
         for ext in ExtensionManager::list().read().await.iter() {
             if let Some(mut list) = ext.migrations(&self.context).await {
-                list.reverse();
                 for m in list {
                     if let Err(e) = m.setup(&self.context).await {
                         tracing::error!("migration setup failed for {}: {}", m.id(), e);
@@ -176,6 +175,7 @@ impl Migrator {
             }
         }
 
+        migrations.sort();
         migrations
     }
 }
