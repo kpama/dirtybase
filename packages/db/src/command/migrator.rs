@@ -12,6 +12,7 @@ use crate::model::migration::{MigrationRepository, TABLE_NAME};
 pub enum MigrateAction {
     Up,
     Down,
+    List,
     Refresh,
     Reset,
 }
@@ -101,14 +102,21 @@ impl Migrator {
     }
 
     pub async fn refresh(&self, manager: &Manager) -> Result<(), anyhow::Error> {
-        self.down(manager).await?;
+        let repo = self.repo(manager).await;
+        loop {
+            let collection = repo.get_last_batch().await;
+            if collection.is_empty() {
+                break;
+            }
+            self.down(manager).await?;
+        }
         manager.drop_table(TABLE_NAME).await?;
         self.up(manager).await
     }
 
     pub async fn reset(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+        let repo = self.repo(manager).await;
         loop {
-            let repo = self.repo(manager).await;
             let collection = repo.get_last_batch().await;
             if collection.is_empty() {
                 break;
@@ -129,6 +137,19 @@ impl Migrator {
         }
 
         repo
+    }
+
+    pub async fn list(&self) -> Vec<Box<dyn Migration>> {
+        let mut migrations = Vec::with_capacity(110);
+        for ext in ExtensionManager::list().read().await.iter() {
+            if let Some(list) = ext.migrations(&self.context).await {
+                for m in list {
+                    migrations.push(m);
+                }
+            }
+        }
+
+        migrations
     }
 
     async fn migrations(&self) -> Vec<Box<dyn Migration>> {
@@ -163,6 +184,7 @@ impl From<(String, ArgMatches)> for MigrateAction {
             "down" => MigrateAction::Down,
             "refresh" => MigrateAction::Refresh,
             "reset" => MigrateAction::Reset,
+            "list" => MigrateAction::List,
             _ => panic!("unknown migration action: {}", value.0),
         }
     }

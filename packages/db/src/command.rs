@@ -34,6 +34,7 @@ pub(crate) fn setup_commands(mut manager: CliCommandManager) -> CliCommandManage
         .arg_required_else_help(true)
         .subcommand(clap::Command::new("up").about("Migrate up"))
         .subcommand(clap::Command::new("down").about("Migrate down"))
+        .subcommand(clap::Command::new("list").about("List registered migrations"))
         .subcommand(clap::Command::new("refresh").about("Resets and migrate all up"))
         .subcommand(clap::Command::new("reset").about("Migrate all down"));
 
@@ -48,6 +49,16 @@ pub(crate) fn setup_commands(mut manager: CliCommandManager) -> CliCommandManage
                         match action {
                             MigrateAction::Up => migrator.up(&db_manager).await,
                             MigrateAction::Down => migrator.down(&db_manager).await,
+                            MigrateAction::List => {
+                                println!("-----------------------------------------------------------------");
+                                println!("                      Migrations                                 ");
+                                println!("-----------------------------------------------------------------");
+                                for (count, entry) in migrator.list().await.iter().enumerate() {
+                                    println!(" {} : {}", count + 1, entry.id());
+                                }
+
+                                Ok(())
+                            },
                             MigrateAction::Reset => migrator.reset(&db_manager).await,
                             MigrateAction::Refresh => migrator.refresh(&db_manager).await,
                         }
