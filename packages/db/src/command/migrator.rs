@@ -142,21 +142,22 @@ impl Migrator {
     pub async fn list(&self) -> Vec<Box<dyn Migration>> {
         let mut migrations = Vec::with_capacity(110);
         for ext in ExtensionManager::list().read().await.iter() {
-            if let Some(list) = ext.migrations(&self.context).await {
+            if let Some(mut list) = ext.migrations(&self.context).await {
+                list.reverse();
                 for m in list {
                     migrations.push(m);
                 }
             }
         }
 
-        migrations.reverse();
         migrations
     }
 
     async fn migrations(&self) -> Vec<Box<dyn Migration>> {
         let mut migrations = Vec::with_capacity(110);
         for ext in ExtensionManager::list().read().await.iter() {
-            if let Some(list) = ext.migrations(&self.context).await {
+            if let Some(mut list) = ext.migrations(&self.context).await {
+                list.reverse();
                 for m in list {
                     if let Err(e) = m.setup(&self.context).await {
                         tracing::error!("migration setup failed for {}: {}", m.id(), e);
@@ -175,7 +176,6 @@ impl Migrator {
             }
         }
 
-        migrations.reverse();
         migrations
     }
 }
