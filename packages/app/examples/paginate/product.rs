@@ -52,6 +52,7 @@ async fn serve_product_list2(
 }
 
 pub mod models {
+    use dirtybase_contract::prelude::Context;
     use dirtybase_db::{
         TableModel,
         base::manager::Manager,
@@ -91,7 +92,7 @@ pub mod models {
     #[async_trait::async_trait]
     impl Migration for ProductMigration {
         /// Migrate up aka apply the migration
-        async fn up(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+        async fn up(&self, manager: &Manager, _: &Context) -> Result<(), anyhow::Error> {
             manager
                 .create_table_schema(Product::table_name(), |bp| {
                     bp.uuid_as_id(None);
@@ -105,7 +106,7 @@ pub mod models {
         }
 
         /// Migrate down aka revert the migration
-        async fn down(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+        async fn down(&self, manager: &Manager, _: &Context) -> Result<(), anyhow::Error> {
             manager.drop_table(Product::table_name()).await
         }
     }

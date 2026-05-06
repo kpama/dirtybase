@@ -1,4 +1,5 @@
 use dirtybase_common::db::TableModel;
+use dirtybase_contract::app_contract::Context;
 use dirtybase_contract::db_contract::base::manager::Manager;
 use dirtybase_contract::db_contract::migration::Migration;
 
@@ -9,7 +10,7 @@ pub struct Mig1744604919CreateCacheTables;
 
 #[dirtybase_contract::async_trait]
 impl Migration for Mig1744604919CreateCacheTables {
-    async fn up(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+    async fn up(&self, manager: &Manager, _ctx: &Context) -> Result<(), anyhow::Error> {
         manager
             .create_table_schema(CacheDbStoreEntity::table_name(), |bp| {
                 bp.id(None);
@@ -27,7 +28,7 @@ impl Migration for Mig1744604919CreateCacheTables {
             .await
     }
 
-    async fn down(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+    async fn down(&self, manager: &Manager, _ctx: &Context) -> Result<(), anyhow::Error> {
         manager.drop_table(CacheDbStoreEntity::table_name()).await
     }
 }

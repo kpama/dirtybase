@@ -1,6 +1,7 @@
 use dirtybase_common::db::TableModel;
 use dirtybase_common::db::types::StatusField;
 use dirtybase_contract::anyhow;
+use dirtybase_contract::app_contract::Context;
 use dirtybase_contract::auth_contract::{Actor, ActorRole, Permission, Role, RolePermission};
 use dirtybase_contract::db_contract::base::manager::Manager;
 use dirtybase_contract::db_contract::migration::Migration;
@@ -9,7 +10,7 @@ pub struct Mig1762480990CreatePermissionTables;
 
 #[dirtybase_contract::async_trait]
 impl Migration for Mig1762480990CreatePermissionTables {
-    async fn up(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+    async fn up(&self, manager: &Manager, _: &Context) -> Result<(), anyhow::Error> {
         // Role table
         _ = manager
             .create_table_schema(Role::table_name(), |bp| {
@@ -73,7 +74,7 @@ impl Migration for Mig1762480990CreatePermissionTables {
         Ok(())
     }
 
-    async fn down(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+    async fn down(&self, manager: &Manager, _: &Context) -> Result<(), anyhow::Error> {
         _ = manager.drop_table(RolePermission::table_name()).await?;
         _ = manager.drop_table(ActorRole::table_name()).await?;
         _ = manager.drop_table(Permission::table_name()).await?;

@@ -50,7 +50,10 @@ impl From<&DeriveInput> for TableAttribute {
             {
                 let mut walker = the_list.tokens.clone().into_iter();
                 while let Some(arg) = walker.next() {
-                    if arg.to_string() == "timestamp" || arg.to_string() == "timestampable" {
+                    if arg.to_string() == "timestamp"
+                        || arg.to_string() == "timestamps"
+                        || arg.to_string() == "timestampable"
+                    {
                         value.timestamp = true;
                     }
 

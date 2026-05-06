@@ -1,3 +1,4 @@
+use dirtybase_contract::app_contract::Context;
 use dirtybase_contract::auth_contract::{Actor, AuthUserStatus};
 use dirtybase_contract::db_contract::TableModel;
 use dirtybase_contract::db_contract::base::manager::Manager;
@@ -7,7 +8,7 @@ pub struct Mig1740151519CreateAuthUserTable;
 
 #[dirtybase_contract::async_trait]
 impl Migration for Mig1740151519CreateAuthUserTable {
-    async fn up(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+    async fn up(&self, manager: &Manager, _: &Context) -> Result<(), anyhow::Error> {
         manager
             .create_table_schema(Actor::table_name(), |table| {
                 table.uuid_as_id(None);
@@ -50,7 +51,7 @@ impl Migration for Mig1740151519CreateAuthUserTable {
     }
 
     #[cfg(feature = "permission")]
-    async fn down(&self, _manager: &Manager) -> Result<(), anyhow::Error> {
+    async fn down(&self, _manager: &Manager, _: &Context) -> Result<(), anyhow::Error> {
         Ok(())
     }
 }

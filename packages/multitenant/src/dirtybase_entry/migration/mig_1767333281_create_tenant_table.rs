@@ -1,5 +1,6 @@
 use dirtybase_common::db::TableModel;
 use dirtybase_contract::anyhow;
+use dirtybase_contract::app_contract::Context;
 use dirtybase_contract::db_contract::base::manager::Manager;
 use dirtybase_contract::db_contract::migration::Migration;
 use dirtybase_contract::multitenant_contract::model::{Tenant, TenantStatus};
@@ -8,7 +9,7 @@ pub struct Mig1767333281CreateTenantTable;
 
 #[dirtybase_contract::async_trait]
 impl Migration for Mig1767333281CreateTenantTable {
-    async fn up(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+    async fn up(&self, manager: &Manager, _: &Context) -> Result<(), anyhow::Error> {
         _ = manager
             .create_table_schema(Tenant::table_name(), |bp| {
                 bp.uuid_as_id(Some(Tenant::id_column()));
@@ -29,7 +30,7 @@ impl Migration for Mig1767333281CreateTenantTable {
         Ok(())
     }
 
-    async fn down(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+    async fn down(&self, manager: &Manager, _: &Context) -> Result<(), anyhow::Error> {
         _ = manager.drop_table(Tenant::table_name()).await?;
         Ok(())
     }

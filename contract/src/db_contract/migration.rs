@@ -17,12 +17,12 @@ pub trait Migration: Send + Sync {
     }
 
     /// Migrate up aka apply the migration
-    async fn up(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+    async fn up(&self, manager: &Manager, context: &Context) -> Result<(), anyhow::Error> {
         Ok(())
     }
 
     /// Migrate down aka revert the migration
-    async fn down(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+    async fn down(&self, manager: &Manager, context: &Context) -> Result<(), anyhow::Error> {
         Ok(())
     }
 

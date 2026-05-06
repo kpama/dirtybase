@@ -1,4 +1,5 @@
 use dirtybase_contract::anyhow;
+use dirtybase_contract::app_contract::Context;
 use dirtybase_contract::db_contract::base::manager::Manager;
 use dirtybase_contract::db_contract::migration::Migration;
 
@@ -9,7 +10,7 @@ pub struct Mig1758251736CreateLockTable;
 
 #[dirtybase_contract::async_trait]
 impl Migration for Mig1758251736CreateLockTable {
-    async fn up(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+    async fn up(&self, manager: &Manager, _: &Context) -> Result<(), anyhow::Error> {
         manager
             .create_table_schema(LockDataWrapper::table_name(), |bp| {
                 //
@@ -22,7 +23,7 @@ impl Migration for Mig1758251736CreateLockTable {
             .await
     }
 
-    async fn down(&self, manager: &Manager) -> Result<(), anyhow::Error> {
+    async fn down(&self, manager: &Manager, _: &Context) -> Result<(), anyhow::Error> {
         manager.drop_table(LockDataWrapper::table_name()).await
     }
 }

@@ -1,17 +1,18 @@
 use dirtybase_contract::anyhow;
 use dirtybase_contract::db_contract::migration::Migration;
 use dirtybase_contract::db_contract::base::manager::Manager;
+use dirtybase_contract::app_contract::Context;
 
 pub struct struct_name;
 
 #[dirtybase_contract::async_trait]
 impl Migration for struct_name {
-  async fn up(&self, _manager: &Manager)-> Result<(), anyhow::Error> {
+  async fn up(&self, _manager: &Manager, _ctx: &Context)-> Result<(), anyhow::Error> {
      println!("going up: {}", "struct_name");
      Ok(())
   }
 
-  async fn down(&self, _manager: &Manager) -> Result<(), anyhow::Error> {
+  async fn down(&self, _manager: &Manager, _ctx: &Context) -> Result<(), anyhow::Error> {
      println!("going down: {}", "struct_name");
      Ok(())
   }

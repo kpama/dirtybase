@@ -36,22 +36,24 @@ impl Migrator {
         let repo = self.repo(manager).await;
 
         let migrations = self.migrations().await;
+        let context = self.context.clone();
 
         manager
             .transaction(|trans| async move {
+                let ctx = context.clone();
                 for entry in &migrations {
                     let name = entry.id();
                     if !repo.exist(&name).await {
                         tracing::debug!("migrating {} up", &name);
-                        if let Err(e) = entry.up(&trans).await {
+                        if let Err(e) = entry.up(&trans, &ctx).await {
                             tracing::debug!("reverting migration: {}", entry.id());
-                            entry.down(&trans).await?;
+                            entry.down(&trans, &ctx).await?;
                             let collection = repo.get_batch(batch).await;
                             for name in collection.keys() {
                                 for entry in &migrations {
                                     if entry.id() != name.as_str() {
                                         tracing::debug!("reverting migration: {}", entry.id());
-                                        entry.down(&trans).await?
+                                        entry.down(&trans, &ctx).await?
                                     }
                                 }
                             }
@@ -61,7 +63,7 @@ impl Migrator {
 
                         if let Err(e) = repo.create(&name, batch).await {
                             tracing::error!("could not create migration entry: {:?}", &e);
-                            entry.down(&trans).await?;
+                            entry.down(&trans, &ctx).await?;
                             return Err(e);
                         }
                     } else {
@@ -78,13 +80,14 @@ impl Migrator {
 
         let collection = repo.get_last_batch().await;
         let migrations = self.migrations().await;
+        let ctx = self.context.clone();
         manager
             .transaction(|trans| async move {
                 for name in collection.keys() {
                     for entry in &migrations {
                         if entry.id() == name.as_str() {
                             tracing::debug!("migrating {} down", entry.id());
-                            entry.down(&trans).await?;
+                            entry.down(&trans, &ctx).await?;
                         }
                     }
                 }
