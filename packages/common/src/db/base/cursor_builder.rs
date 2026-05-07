@@ -190,11 +190,9 @@ where
 
         match Query::<HashMap<String, String>>::try_from_uri(&parts.uri) {
             Ok(kv) => {
-                let mut is_cursor_value = false;
                 if let Some(s) = kv.get("_cursor")
                     && let Ok(mut c) = Self::decode(s)
                 {
-                    is_cursor_value = true;
                     if let Some(last) = c.last.clone() {
                         c.last = Some(last.into());
                     }
