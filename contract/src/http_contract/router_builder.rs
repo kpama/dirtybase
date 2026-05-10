@@ -735,15 +735,18 @@ impl RouterBuilder {
         self
     }
 
+    /// Register a list of middlewares
+    /// The middleware are called in the order they are registered
     pub fn middleware<L, I>(&mut self, list: L) -> &mut Self
     where
         L: IntoIterator<Item = I>,
         I: ToString,
     {
-        let list = list
+        let mut list = list
             .into_iter()
             .map(|e| e.to_string())
             .collect::<Vec<String>>();
+        list.reverse();
 
         if self.middleware.is_none() {
             self.middleware = Some(list);

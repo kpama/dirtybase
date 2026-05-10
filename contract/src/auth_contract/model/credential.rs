@@ -1,5 +1,6 @@
 use axum::extract::{FromRequest, Request};
 use axum_extra::extract::{Form, FormRejection};
+use dirtybase_common::db::types::ArcUuid7;
 
 #[derive(serde::Deserialize, Default)]
 pub struct LoginCredential {
@@ -8,6 +9,7 @@ pub struct LoginCredential {
     password: String,
     #[serde(default)]
     remember_me: bool,
+    role_id: Option<ArcUuid7>,
 }
 
 impl LoginCredential {
@@ -17,6 +19,10 @@ impl LoginCredential {
 
     pub fn email(&self) -> Option<&String> {
         self.email.as_ref()
+    }
+
+    pub fn role_id(&self) -> Option<&ArcUuid7> {
+        self.role_id.as_ref()
     }
 
     pub fn password(&self) -> &str {

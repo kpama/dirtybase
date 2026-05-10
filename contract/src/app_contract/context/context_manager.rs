@@ -155,12 +155,7 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
         };
 
         instance
-            .handle_shutdown_signal(
-                busybody::helpers::service_container()
-                    .get_type()
-                    .await
-                    .expect("could not get application's cancellation token"),
-            )
+            .handle_shutdown_signal(busybody::helpers::service_container().get_type().await)
             .await
     }
 
@@ -328,10 +323,12 @@ impl<T: Clone + Send + Sync + 'static> ContextResourceManager<T> {
         std::any::type_name::<T>()
     }
 
-    async fn handle_shutdown_signal(self, token: AppCancellationToken) -> Self {
+    async fn handle_shutdown_signal(self, token: Option<AppCancellationToken>) -> Self {
         let this_manager = self.clone();
         tokio::spawn(async move {
-            token.into_inner().cancelled().await;
+            if let Some(token) = token {
+                token.into_inner().cancelled().await;
+            }
             this_manager.drop_all().await;
             drop(this_manager);
         });

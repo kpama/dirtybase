@@ -82,7 +82,7 @@ impl PermissionManager {
             }
         }
 
-        tracing::error!("checking ability: {}, result: {}", &action, ans);
+        tracing::trace!("checking ability: {}, result: {}", &action, ans);
         if ans && self.apply_condition(context, action).await {
             return true;
         }
@@ -100,7 +100,7 @@ impl PermissionManager {
             }
         }
 
-        tracing::error!("checking children abilities: {}, result: {}", &action, ans);
+        tracing::trace!("checking children abilities: {}, result: {}", &action, ans);
         if !ans {
             return ans;
         }

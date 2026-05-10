@@ -43,7 +43,7 @@ pub async fn guard(resolver: GuardResolver) -> GuardResponse {
             {
                 let payload = FetchActorPayload::by_id(id);
                 let mut option = FetchActorOption::default();
-                if let Some(value) = claims.private.get("role_id").cloned()
+                if let Some(value) = claims.private.get("_ar").cloned()
                     && let Ok(role_id) = serde_json::from_value::<ArcUuid7>(value)
                 {
                     option.with_active_role = Some(role_id);
@@ -53,10 +53,15 @@ pub async fn guard(resolver: GuardResolver) -> GuardResponse {
                     .fetch_actor(payload, Some(option))
                     .await
                 {
-                    Ok(Some(actor)) => {
+                    Ok(Some(mut actor)) => {
                         if actor.varify_jwt_token_id(&claims.jti.clone().unwrap_or_default())
                             && actor.status() == AuthUserStatus::Active
                         {
+                            if let Some(role) = actor.roles().first().cloned()
+                                && actor.current_role().is_guest()
+                            {
+                                actor.set_current_role(role);
+                            }
                             return GuardResponse::success(actor);
                         }
                     }

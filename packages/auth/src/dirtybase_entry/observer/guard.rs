@@ -31,6 +31,7 @@ pub(crate) async fn register_guard_observers() {
             for permission in list {
                 let name = permission.name();
                 if let Some(condition) = permission.condition()
+                    && !condition.is_empty()
                     && let Ok(sandbox) = cel_sandbox.as_mut()
                 {
                     sandbox.add_program(&name, &condition);

@@ -17,7 +17,7 @@ use crate::db::{
 ///
 /// Extract an instance from the current HTTP request
 ///```rust,no_run
-/// async handler(cursor: CursorBuilder) {...}
+/// async handler(cursor: CursorBuilder) {}
 /// ```
 /// Attributes that are extracted from the current HTTP request:
 ///

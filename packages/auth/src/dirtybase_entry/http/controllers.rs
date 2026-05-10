@@ -1,7 +1,8 @@
 use dirtybase_contract::{
     app_contract::{CtxExt, RequestContext},
     auth_contract::{
-        Actor, ActorPayload, FetchActorPayload, LoginCredential, PersistActorPayload,
+        Actor, ActorPayload, FetchActorOption, FetchActorPayload, LoginCredential,
+        PersistActorPayload,
         storage::{PermStorageProvider, PermissionStorage},
     },
     axum::response::Html,
@@ -123,21 +124,34 @@ pub(crate) async fn handle_get_auth_token(
         return ApiResponse::<String>::error("could not resolve auth config");
     };
 
+    let mut option = FetchActorOption::default();
+    if let Some(role_id) = cred.role_id().cloned() {
+        option.with_active_role = Some(role_id);
+    } else {
+        option.with_roles = true;
+        option.with_actor_roles = true;
+    };
+
     let result = if cred.username().is_some() {
         let payload = FetchActorPayload::by_username(cred.username().as_ref().unwrap());
-        storage.fetch_actor(payload, None).await
+        storage.fetch_actor(payload, Some(option)).await
     } else {
         let payload = FetchActorPayload::by_email(&cred.email().cloned().unwrap_or("".to_string()));
-        storage.fetch_actor(payload, None).await
+        storage.fetch_actor(payload, Some(option)).await
     };
 
     let mut res = ApiResponse::<String>::default();
 
-    if let Ok(Some(actor)) = result
+    if let Ok(Some(mut actor)) = result
         && actor.verify_password(cred.password())
-        && let Ok(token) = actor.generate_signed_jwt(config.jwt_key().as_ref())
     {
-        res.set_data(token);
+        if let Some(role) = actor.roles().first().cloned() {
+            actor.set_current_role(role);
+        }
+
+        if let Ok(token) = actor.generate_signed_jwt(config.jwt_key().as_ref()) {
+            res.set_data(token);
+        }
     }
 
     if !res.has_data() {

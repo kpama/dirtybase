@@ -32,7 +32,7 @@ pub async fn setup() -> anyhow::Result<AppService> {
 /// Set up database application using custom configuration
 /// A builder exist that assist in building the configuration instance
 /// ```rust
-/// # use dirtybase_app::core::ConfigBuilder;
+/// # use dirtybase_app::app::ConfigBuilder;
 /// let builder = ConfigBuilder::new();
 /// let config = builder.app_name("My awesome application")
 ///                     .web_port(8709)

@@ -533,7 +533,7 @@ impl From<&Actor> for ActorJWTClaims {
         claims.jti = actor.generate_jwt_token_id().into();
         if let Some(role_id) = actor.current_role().id() {
             claims.private.insert(
-                "role_id".to_string(),
+                "_ar".to_string(),
                 serde_json::Value::String(role_id.to_string()),
             );
         }

@@ -31,9 +31,9 @@ impl Registerer {
             let name = name.clone();
             let result = (handler)(req, params.clone(), next);
             async move {
-                tracing::trace!("calling middleware: {}", name.clone());
+                tracing::trace!("calling middleware: {}", &name);
                 let resp = result.await;
-                tracing::trace!("called middleware: {}", name.clone());
+                tracing::trace!("called middleware: {}", &name);
                 resp
             }
         });
@@ -57,9 +57,9 @@ impl Registerer {
                 let name = name.clone();
                 let result = (handler)(state, req, params.clone(), next);
                 async move {
-                    tracing::trace!("calling middleware: {}", name.clone());
+                    tracing::trace!("calling middleware: {}", &name);
                     let resp = result.await;
-                    tracing::trace!("called middleware: {}", name.clone());
+                    tracing::trace!("called middleware: {}", &name);
                     resp
                 }
             },

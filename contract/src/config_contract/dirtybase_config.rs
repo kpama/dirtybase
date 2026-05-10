@@ -18,8 +18,6 @@ pub struct DirtyConfig {
 
 impl Default for DirtyConfig {
     fn default() -> Self {
-        load_dot_env::<&str>(None);
-
         Self {
             app_name: env::var(APP_NAME_KEY)
                 .unwrap_or(APP_DEFAULT_NAME.into())
@@ -35,6 +33,7 @@ impl Default for DirtyConfig {
 
 impl DirtyConfig {
     pub fn new() -> Self {
+        load_dot_env::<&str>(None);
         Self::default()
     }
 
@@ -56,10 +55,6 @@ impl DirtyConfig {
             current_env,
             config_dir: Arc::new(env::var(CONFIG_DIR_KEY).unwrap_or_default()),
         }
-    }
-
-    pub fn new_skip() -> Self {
-        Self { ..Self::default() }
     }
 
     pub fn app_name(&self) -> &String {
@@ -267,23 +262,6 @@ mod test {
             CurrentEnvironment::Development,
             config.current_env().clone()
         );
-    }
-
-    #[test]
-    fn test_overriding() {
-        let app_name = "Test app";
-        let config = DirtyConfig::new();
-
-        assert_eq!(config.app_name(), app_name);
-        assert_eq!(config.current_env(), &CurrentEnvironment::Development);
-    }
-
-    #[test]
-    fn test_skipping() {
-        let config = DirtyConfig::new_skip();
-
-        assert_eq!(config.app_name(), APP_DEFAULT_NAME);
-        assert_eq!(config.current_env(), &CurrentEnvironment::Development);
     }
 
     #[test]
