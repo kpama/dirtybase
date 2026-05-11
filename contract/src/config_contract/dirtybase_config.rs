@@ -18,6 +18,7 @@ pub struct DirtyConfig {
 
 impl Default for DirtyConfig {
     fn default() -> Self {
+        load_dot_env::<&str>(None);
         Self {
             app_name: env::var(APP_NAME_KEY)
                 .unwrap_or(APP_DEFAULT_NAME.into())
@@ -33,19 +34,24 @@ impl Default for DirtyConfig {
 
 impl DirtyConfig {
     pub fn new() -> Self {
-        load_dot_env::<&str>(None);
         Self::default()
     }
 
     pub fn new_at_dir<D: AsRef<Path>>(dir: D) -> Self {
         let path = dir.as_ref().join("");
-        load_dot_env(Some(dir));
+        load_dot_env::<&str>(path.to_str());
 
         let p = path.to_str().to_owned().unwrap_or_default().to_string();
 
         Self {
             config_dir: p.into(),
-            ..Self::default()
+            app_name: env::var(APP_NAME_KEY)
+                .unwrap_or(APP_DEFAULT_NAME.into())
+                .into(),
+            current_env: env::var(ENVIRONMENT_KEY)
+                .unwrap_or_default()
+                .as_str()
+                .into(),
         }
     }
 
