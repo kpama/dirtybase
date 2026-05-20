@@ -55,6 +55,14 @@ impl<D: serde::Serialize> ApiResponse<D> {
         }
     }
 
+    pub fn not_found() -> Self {
+        Self {
+            data: None,
+            status_code: Some(StatusCode::NOT_FOUND),
+            ..Self::default()
+        }
+    }
+
     pub fn error<E: Into<ApiError>>(error: E) -> Self {
         Self {
             error: Some(error.into()),
