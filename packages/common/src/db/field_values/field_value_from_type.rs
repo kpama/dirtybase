@@ -175,7 +175,11 @@ where
     T: Into<FieldValue>,
 {
     fn from(value: HashSet<T>) -> Self {
-        Self::Array(value.into_iter().map(|i| i.into()).collect())
+        let list = value
+            .into_iter()
+            .map(|i| i.into())
+            .collect::<Vec<FieldValue>>();
+        Self::String(serde_json::to_string(&list).expect("could not serialize hashSet for saving"))
     }
 }
 
@@ -189,7 +193,7 @@ where
             .into_iter()
             .map(|i| i.into())
             .collect::<Vec<FieldValue>>();
-        Self::Array(list)
+        Self::String(serde_json::to_string(&list).expect("could not serialize hashSet for saving"))
     }
 }
 

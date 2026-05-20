@@ -21,6 +21,12 @@ where
 {
     fn from(value: FieldValue) -> Self {
         match value {
+            FieldValue::String(v) => {
+                if let Ok(l) = serde_json::from_str::<Vec<FieldValue>>(&v) {
+                    return l.into_iter().map(|f| f.into()).collect();
+                }
+                Vec::new()
+            }
             FieldValue::Array(v) => v.into_iter().map(|f| f.into()).collect(),
             _ => Vec::new(),
         }
@@ -33,6 +39,12 @@ where
 {
     fn from(value: &FieldValue) -> Self {
         match value {
+            FieldValue::String(v) => {
+                if let Ok(l) = serde_json::from_str::<Vec<FieldValue>>(v) {
+                    return l.into_iter().map(|f| f.into()).collect();
+                }
+                Vec::new()
+            }
             FieldValue::Array(v) => v.iter().map(|f| f.clone().into()).collect(),
             _ => Vec::new(),
         }
@@ -45,6 +57,12 @@ where
 {
     fn from(value: FieldValue) -> Self {
         match value {
+            FieldValue::String(v) => {
+                if let Ok(l) = serde_json::from_str::<Vec<FieldValue>>(&v) {
+                    return l.into_iter().map(|f| f.into()).collect();
+                }
+                HashSet::new()
+            }
             FieldValue::Array(v) => v.into_iter().map(|v| v.into()).collect(),
             _ => HashSet::new(),
         }
@@ -57,6 +75,12 @@ where
 {
     fn from(value: &FieldValue) -> Self {
         match value {
+            FieldValue::String(v) => {
+                if let Ok(l) = serde_json::from_str::<Vec<FieldValue>>(v) {
+                    return l.into_iter().map(|f| f.into()).collect();
+                }
+                HashSet::new()
+            }
             FieldValue::Array(v) => v.iter().map(|f| f.clone().into()).collect(),
             _ => HashSet::new(),
         }

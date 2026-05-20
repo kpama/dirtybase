@@ -13,7 +13,7 @@ use crate::db::types::ToColumnAndValue;
 use super::types::ColumnAndValue;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(tag = "t", content = "v")] // Storign the type makes it easy to decode
+#[serde(tag = "t", content = "v")] // Storing the type makes it easy to decode
 pub enum FieldValue {
     Null,
     NotSet,
@@ -129,14 +129,7 @@ impl Display for FieldValue {
             Self::Uuid(data) => {
                 write!(f, "{data}",)
             }
-            Self::Array(v) => {
-                let mut data = "".to_owned();
-                for entry in v {
-                    data = format!("{data} {entry},");
-                }
-
-                write!(f, "[{data}]",)
-            }
+            Self::Array(v) => f.write_str(&serde_json::to_string(v).unwrap()),
             Self::DateTime(v) => write!(f, "{v}",),
             Self::Timestamp(v) => write!(f, "{v}",),
             Self::Date(v) => write!(f, "{v}",),

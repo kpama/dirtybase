@@ -284,7 +284,7 @@ impl<T> Relation<T> {
             processor,
             manager: manager.clone(),
             next_cursor: None,
-            _phanthom_data: PhantomData::default(),
+            _phantom_data: PhantomData::default(),
         }
     }
 }
@@ -316,7 +316,7 @@ pub struct RelationCursorPaginator<T> {
     manager: Manager,
     processor: RelationProcessor,
     next_cursor: Option<CursorBuilder>,
-    _phanthom_data: PhantomData<T>,
+    _phantom_data: PhantomData<T>,
 }
 
 impl<T: TableModel + FromColumnAndValue> RelationCursorPaginator<T> {

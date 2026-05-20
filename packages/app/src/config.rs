@@ -280,7 +280,9 @@ pub struct Config {
 impl Config {
     pub async fn new(config: Option<DirtyConfig>) -> Self {
         let config = config.unwrap_or_default();
-        Self::try_from_config(&config).await.expect("could not load app config")
+        Self::try_from_config(&config)
+            .await
+            .expect("could not load app config")
     }
 
     pub async fn try_from_config(config: &DirtyConfig) -> ConfigResult<Self> {
