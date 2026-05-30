@@ -23,12 +23,14 @@ async fn main() {
     );
 
     // 3. register a job
-    _ = CronJobRegisterer::register("foo::job", |ctx| {
+    _ = CronJobRegisterer::register("foo", |ctx| {
         Box::pin(async move {
             println!(">>>>>>>> running {} <<<<<<<", ctx.id());
         })
     })
     .await;
+
+    dbg!("config: {:?}", &config);
 
     // 4. Run the enabled jobs
     let manager = CronJobManager::new();

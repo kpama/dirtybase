@@ -4,7 +4,7 @@ use crate::{CronJobManager, CronJobRegisterer};
 
 pub async fn register_resource_manager() {
     // dummy job
-    CronJobRegisterer::register("foo::job", |ctx| {
+    CronJobRegisterer::register("foo", |ctx| {
         Box::pin(async move {
             tracing::debug!("{} is running but does nothing", ctx.id());
         })

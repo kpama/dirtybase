@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use serde::de::DeserializeOwned;
+
 use super::FieldValue;
 
 pub mod field_to_chrono_datetime;
@@ -53,17 +55,16 @@ where
 
 impl<T> From<FieldValue> for HashSet<T>
 where
-    T: std::cmp::Eq + std::hash::Hash + From<FieldValue>,
+    T: std::cmp::Eq + std::hash::Hash + DeserializeOwned,
 {
     fn from(value: FieldValue) -> Self {
         match value {
             FieldValue::String(v) => {
-                if let Ok(l) = serde_json::from_str::<Vec<FieldValue>>(&v) {
-                    return l.into_iter().map(|f| f.into()).collect();
+                if let Ok(l) = serde_json::from_str::<HashSet<T>>(&v) {
+                    return l;
                 }
                 HashSet::new()
             }
-            FieldValue::Array(v) => v.into_iter().map(|v| v.into()).collect(),
             _ => HashSet::new(),
         }
     }
@@ -71,17 +72,16 @@ where
 
 impl<T> From<&FieldValue> for HashSet<T>
 where
-    T: std::cmp::Eq + std::hash::Hash + From<FieldValue>,
+    T: std::cmp::Eq + std::hash::Hash + DeserializeOwned,
 {
     fn from(value: &FieldValue) -> Self {
         match value {
             FieldValue::String(v) => {
-                if let Ok(l) = serde_json::from_str::<Vec<FieldValue>>(v) {
-                    return l.into_iter().map(|f| f.into()).collect();
+                if let Ok(l) = serde_json::from_str::<HashSet<T>>(&v) {
+                    return l;
                 }
                 HashSet::new()
             }
-            FieldValue::Array(v) => v.iter().map(|f| f.clone().into()).collect(),
             _ => HashSet::new(),
         }
     }

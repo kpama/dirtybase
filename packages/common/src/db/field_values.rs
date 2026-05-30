@@ -2,7 +2,7 @@ use dirtybase_helper::uuid::Uuid;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Display, str::FromStr};
 
-mod field_value_from_type;
+pub mod field_value_from_type;
 mod insert_value;
 
 pub mod to_raw_values;

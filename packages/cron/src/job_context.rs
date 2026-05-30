@@ -32,6 +32,10 @@ impl JobContext {
         &self.id
     }
 
+    pub fn service_container_ref(&self) -> &Arc<busybody::ServiceContainer> {
+        &self.container
+    }
+
     pub fn service_container(&self) -> Arc<busybody::ServiceContainer> {
         self.container.clone()
     }

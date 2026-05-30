@@ -4,6 +4,7 @@ use std::{
 };
 
 use chrono::{DateTime, NaiveDate, Utc};
+use serde::{Serialize, de::DeserializeOwned};
 
 use super::FieldValue;
 
@@ -172,28 +173,19 @@ impl From<&HashMap<String, String>> for FieldValue {
 
 impl<T> From<HashSet<T>> for FieldValue
 where
-    T: Into<FieldValue>,
+    T: Serialize + DeserializeOwned,
 {
     fn from(value: HashSet<T>) -> Self {
-        let list = value
-            .into_iter()
-            .map(|i| i.into())
-            .collect::<Vec<FieldValue>>();
-        Self::String(serde_json::to_string(&list).expect("could not serialize hashSet for saving"))
+        Self::String(serde_json::to_string(&value).expect("could not serialize hashSet for saving"))
     }
 }
 
 impl<T> From<&HashSet<T>> for FieldValue
 where
-    T: Clone + Into<FieldValue>,
+    T: Serialize + DeserializeOwned,
 {
     fn from(value: &HashSet<T>) -> Self {
-        let list = value
-            .clone()
-            .into_iter()
-            .map(|i| i.into())
-            .collect::<Vec<FieldValue>>();
-        Self::String(serde_json::to_string(&list).expect("could not serialize hashSet for saving"))
+        Self::String(serde_json::to_string(value).expect("could not serialize hashSet for saving"))
     }
 }
 

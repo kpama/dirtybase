@@ -63,6 +63,35 @@ impl<D: serde::Serialize> ApiResponse<D> {
         }
     }
 
+    pub fn bad_request() -> Self {
+        Self {
+            data: None,
+            status_code: Some(StatusCode::BAD_REQUEST),
+            ..Self::default()
+        }
+    }
+
+    pub fn internal_error() -> Self {
+        Self {
+            data: None,
+            status_code: Some(StatusCode::INTERNAL_SERVER_ERROR),
+            ..Self::default()
+        }
+    }
+
+    pub fn forbidden() -> Self {
+        Self {
+            data: None,
+            status_code: Some(StatusCode::FORBIDDEN),
+            ..Self::default()
+        }
+    }
+
+    pub fn with_message(mut self, message: &str) -> Self {
+        self.meta = Some(serde_json::json!({ "message": message }));
+        self
+    }
+
     pub fn error<E: Into<ApiError>>(error: E) -> Self {
         Self {
             error: Some(error.into()),

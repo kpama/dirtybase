@@ -1,4 +1,3 @@
-
 use axum::{Json, extract::Path, response::Html};
 use dirtybase_app::app::AppService;
 use dirtybase_contract::{
@@ -9,7 +8,7 @@ use dirtybase_contract::{
         observable::cel::{CelContext, CommonExpressionSandbox},
     },
 };
-use dirtybase_db::{base::manager::Manager, types::{JsonField}};
+use dirtybase_db::{base::manager::Manager, types::JsonField};
 use dirtybase_db_macro::DirtyTable;
 use tracing::Level;
 
@@ -53,7 +52,10 @@ impl ExtensionSetup for MyApp {
         CommonExpressionSandbox::subscribe(|manager, _| async move {
             tracing::error!("registering is_prod programming");
             manager.set_program("is_prod", "env == 'prod'");
-            manager.set_program("user_is_allow", "_actor.id == '019cd845-5fca-7b80-9f3c-5068476a9df4'");
+            manager.set_program(
+                "user_is_allow",
+                "_actor.id == '019cd845-5fca-7b80-9f3c-5068476a9df4'",
+            );
             manager.set_program("_actor", "_actor.id");
             manager
         })
@@ -151,18 +153,17 @@ impl ExtensionSetup for MyApp {
     }
 }
 
-
 #[derive(serde::Deserialize, serde::Serialize)]
-struct CelPayload{
+struct CelPayload {
     attributes: Option<serde_json::Value>,
-    source: String
+    source: String,
 }
 
-#[derive(Debug, Default, Clone,  DirtyTable, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Default, Clone, DirtyTable, serde::Deserialize, serde::Serialize)]
 #[dirty(table = "resources_metadata")]
 struct ResourceMeta {
     #[serde(skip_deserializing)]
     id: Option<i64>,
     resource_id: String,
-    metadata: JsonField
+    metadata: JsonField,
 }

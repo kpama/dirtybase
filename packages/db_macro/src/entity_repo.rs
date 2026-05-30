@@ -489,6 +489,17 @@ pub fn build_entity_repo(
                 }
             }
 
+            pub async fn find_by(&mut self, mut callback: impl FnOnce(&mut ::dirtybase_common::db::base::query::QueryBuilder)) -> Result<Option<#ident>, ::dirtybase_common::anyhow::Error> {
+                callback(&mut self.builder);
+                self.one().await
+            }
+
+
+            pub async fn find_all_by(&mut self, mut callback: impl FnOnce(&mut ::dirtybase_common::db::base::query::QueryBuilder)) -> Result<Vec<#ident>, ::dirtybase_common::anyhow::Error> {
+                callback(&mut self.builder);
+                self.get().await
+            }
+
             pub fn limit(&mut self, limit: usize) -> &mut Self {
                  self.builder.limit(limit);
                  self
