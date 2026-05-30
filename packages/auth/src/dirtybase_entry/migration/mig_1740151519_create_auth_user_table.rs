@@ -13,7 +13,7 @@ impl Migration for Mig1740151519CreateAuthUserTable {
             .create_table_schema(Actor::table_name(), |table| {
                 table.uuid_as_id(None);
                 table
-                    .string(Actor::col_name_for_username())
+                    .sized_string(Actor::col_name_for_username(), 16)
                     .set_is_unique(true);
                 table
                     .string(Actor::col_name_for_password())
