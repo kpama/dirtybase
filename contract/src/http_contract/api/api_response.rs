@@ -7,6 +7,7 @@ use axum::{
 };
 use dirtybase_common::db::base::{cursor_builder::CursorResult, paginate_builder::PaginateResult};
 use serde::Serialize;
+use validator::ValidationErrors;
 
 type MoreErrorData = serde_json::map::Map<String, serde_json::Value>;
 
@@ -67,6 +68,20 @@ impl<D: serde::Serialize> ApiResponse<D> {
         Self {
             data: None,
             status_code: Some(StatusCode::BAD_REQUEST),
+            ..Self::default()
+        }
+    }
+
+    pub fn validation_error(error: ValidationErrors) -> Self {
+        Self {
+            data: None,
+            error: Some(ApiError::new(
+                "validation_error",
+                "validation error occurred",
+                "validation error",
+                Some(error),
+            )),
+            status_code: Some(StatusCode::UNPROCESSABLE_ENTITY),
             ..Self::default()
         }
     }

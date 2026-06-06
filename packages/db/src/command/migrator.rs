@@ -50,9 +50,10 @@ impl Migrator {
                             tracing::debug!("reverting migration: {}", entry.id());
                             entry.down(&trans, &ctx).await?;
                             let collection = repo.get_batch(batch).await;
-                            for name in collection.keys() {
+                            for existing in collection {
+                                let name = existing.name.as_str();
                                 for entry in &migrations {
-                                    if entry.id() != name.as_str() {
+                                    if entry.id() != name {
                                         tracing::debug!("reverting migration: {}", entry.id());
                                         entry.down(&trans, &ctx).await?
                                     }
@@ -84,17 +85,18 @@ impl Migrator {
         let ctx = self.context.clone();
         manager
             .transaction(|trans| async move {
-                for name in collection.keys() {
+                for existing in &collection {
+                    let name = existing.name.as_str();
                     for entry in &migrations {
-                        if entry.id() == name.as_str() {
+                        if entry.id() == name {
                             tracing::debug!("migrating {} down", entry.id());
                             entry.down(&trans, &ctx).await?;
                         }
                     }
                 }
 
-                if let Some((name, _)) = collection.iter().next() {
-                    _ = repo.delete(&name).await;
+                for entry in collection {
+                    _ = repo.delete(&entry.name).await;
                 }
                 Ok(())
             })

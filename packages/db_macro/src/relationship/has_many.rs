@@ -109,10 +109,14 @@ pub(crate) fn generate_join_method(
 
                     values.dedup();
 
+                    if values.is_empty() {
+                        return None;
+                    }
                     query.is_in(
                        <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::prefix_with_tbl(#foreign_col),
                         values);
-                    ::dirtybase_common::db::repo_relation::RelationProcessor::new(query, parent_col_name, <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::table_name().to_string(), #foreign_col.to_string())
+
+                    Some(::dirtybase_common::db::repo_relation::RelationProcessor::new(query, parent_col_name, <#foreign_type as ::dirtybase_common::db::table_model::TableModel>::table_name().to_string(), #foreign_col.to_string()))
 
                 }
             );

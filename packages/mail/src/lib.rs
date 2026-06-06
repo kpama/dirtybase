@@ -15,7 +15,7 @@ pub use email::EmailBuilder;
 pub use mailman::Mailman;
 
 pub async fn register_mail_adapters() {
-    // TODO: Use configuration here....
+    // TODO: Use configuration here ...
     TestAdapter.register().await;
     DummyAdapter.register().await;
     SmtpAdapter.register().await;

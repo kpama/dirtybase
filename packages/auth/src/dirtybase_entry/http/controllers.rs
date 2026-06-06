@@ -140,8 +140,6 @@ pub(crate) async fn handle_get_auth_token(
         storage.fetch_actor(payload, Some(option)).await
     };
 
-    let mut res = ApiResponse::<String>::default();
-
     if let Ok(Some(mut actor)) = result
         && actor.verify_password(cred.password())
     {
@@ -150,15 +148,11 @@ pub(crate) async fn handle_get_auth_token(
         }
 
         if let Ok(token) = actor.generate_signed_jwt(config.jwt_key().as_ref()) {
-            res.set_data(token);
+            return ApiResponse::success(token);
         }
     }
 
-    if !res.has_data() {
-        res.set_error("authentication failed");
-    }
-
-    res
+    ApiResponse::bad_request().with_message("authentication failed")
 }
 
 pub(crate) async fn handle_get_user_by_id(

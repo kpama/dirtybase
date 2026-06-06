@@ -351,10 +351,14 @@ pub struct ActorPayload {
     #[serde(skip_deserializing)]
     pub id: Option<ArcUuid7>,
     #[serde(default)]
-    #[validate(length(min = 4, max = 256))]
+    #[validate(length(
+        min = 3,
+        max = 16,
+        message = "username must be between 3 and 16 characters"
+    ))]
     pub username: Option<String>,
     #[serde(default)]
-    #[validate(email(message = "most be a valid email address"))]
+    #[validate(email(message = "must be a valid email address"))]
     pub email: Option<String>,
     #[serde(default)]
     pub status: Option<AuthUserStatus>,

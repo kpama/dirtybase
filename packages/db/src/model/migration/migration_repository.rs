@@ -1,6 +1,6 @@
-use dirtybase_contract::db_contract::{base::manager::Manager, types::StringField};
+use dirtybase_contract::db_contract::base::manager::Manager;
 use dirtybase_helper::time::current_datetime;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 use super::{BATCH_COLUMN, CREATED_AT_COLUMN, MigrationEntity, NAME_COLUMN, TABLE_NAME};
 
@@ -48,25 +48,22 @@ impl MigrationRepository {
             .await
     }
 
-    pub async fn get_batch(&self, batch: i64) -> BTreeMap<StringField, MigrationEntity> {
+    pub async fn get_batch(&self, batch: i64) -> Vec<MigrationEntity> {
         if let Ok(collection) = self
             .manager
             .select_from_table(TABLE_NAME, |q| {
-                q.is_eq(BATCH_COLUMN, batch).desc("created_at");
+                q.is_eq(BATCH_COLUMN, batch).desc("id");
             })
             .fetch_all_to::<MigrationEntity>()
             .await
         {
-            return collection
-                .into_iter()
-                .map(|m| (m.name.clone(), m))
-                .collect::<BTreeMap<StringField, MigrationEntity>>();
+            return collection;
         }
 
-        BTreeMap::new()
+        Vec::new()
     }
 
-    pub async fn get_last_batch(&self) -> BTreeMap<StringField, MigrationEntity> {
+    pub async fn get_last_batch(&self) -> Vec<MigrationEntity> {
         if let Ok(Some(last)) = self
             .manager
             .select_from_table(TABLE_NAME, |q| {
@@ -77,18 +74,15 @@ impl MigrationRepository {
             && let Ok(collection) = self
                 .manager
                 .select_from_table(TABLE_NAME, |q| {
-                    q.is_eq(BATCH_COLUMN, last.batch).desc("created_at");
+                    q.is_eq(BATCH_COLUMN, last.batch).desc("id");
                 })
                 .fetch_all_to::<MigrationEntity>()
                 .await
         {
-            return collection
-                .into_iter()
-                .map(|m| (m.name.clone(), m))
-                .collect::<BTreeMap<StringField, MigrationEntity>>();
+            return collection;
         }
 
-        BTreeMap::new()
+        Vec::new()
     }
 
     pub async fn delete_batch(&self, batch: i64) {

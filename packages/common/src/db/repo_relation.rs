@@ -116,7 +116,7 @@ pub struct Relation<T> {
                         Self,
                         &[T],
                         &mut HashMap<String, HashMap<u64, FieldValue>>,
-                    ) -> RelationProcessor
+                    ) -> Option<RelationProcessor>
                     + Sync
                     + Send,
             >,
@@ -153,7 +153,7 @@ impl<T> Relation<T> {
             Self,
             &[T],
             &mut HashMap<String, HashMap<u64, FieldValue>>,
-        ) -> RelationProcessor
+        ) -> Option<RelationProcessor>
         + Send
         + Sync
         + 'static,
@@ -214,12 +214,18 @@ impl<T> Relation<T> {
             .take()
             .expect("could not get relation processor");
 
+        let result = (process)(self, rows, join_field_values);
+
+        if result.is_none() {
+            return Ok(());
+        }
+
         let RelationProcessor {
             query,
             child_col_name,
             child_field_prefix,
             parent_col_name,
-        } = (process)(self, rows, join_field_values);
+        } = result.unwrap();
 
         match manager.execute_query(query).all().await {
             Ok(rel_list) => {
@@ -314,7 +320,7 @@ impl RelationProcessor {
 
 pub struct RelationCursorPaginator<T> {
     manager: Manager,
-    processor: RelationProcessor,
+    processor: Option<RelationProcessor>,
     next_cursor: Option<CursorBuilder>,
     _phantom_data: PhantomData<T>,
 }
@@ -334,7 +340,11 @@ impl<T: TableModel + FromColumnAndValue> RelationCursorPaginator<T> {
                 .unwrap_or_else(|| CursorBuilder::new(&T::prefix_with_tbl(T::id_column()), None))
         };
 
-        let query = self.processor.query.clone();
+        if self.processor.is_none() {
+            return CursorResult::new(Ok(Vec::new()), None, None);
+        }
+
+        let query = self.processor.as_ref().unwrap().query.clone();
 
         let result = self
             .manager

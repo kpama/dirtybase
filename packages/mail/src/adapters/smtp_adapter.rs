@@ -26,10 +26,10 @@ impl AdapterTrait for SmtpAdapter {
 
         let _creds = Credentials::new("smtp_username".to_owned(), "smtp_password".to_owned());
 
-        // Open a remote connection to gmail
-        let mailer = SmtpTransport::relay("mail")
+        // Open a remote connection to Gmail
+        let mailer = SmtpTransport::relay("192.168.0.144")
             .unwrap()
-            .port(1025)
+            .port(1026)
             .tls(Tls::None)
             // .credentials(creds)
             .build();

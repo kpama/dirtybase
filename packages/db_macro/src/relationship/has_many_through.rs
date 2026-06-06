@@ -127,7 +127,13 @@ pub(crate) fn generate_join_method(
                             let values = join_values.get(&parent_col_name).cloned().unwrap().into_values().collect::<Vec<
                                 ::dirtybase_common::db::field_values::FieldValue
                             >>();
+
+                            if values.is_empty() {
+                                return None;
+                            }
+
                             pivot.is_in(#foreign_col, values);
+
                             if is_soft_deletable  {
                                 let col = <#pivot_type as ::dirtybase_common::db::table_model::TableModel>::deleted_at_column().expect(&format!("{} are not soft deletable", #name));
                                 pivot.is_null(col);
@@ -140,7 +146,7 @@ pub(crate) fn generate_join_method(
                         }
                         let pivot_data = format!("{}_pivot", #name);
                         query.inner_join_table_and_select::<#pivot_type, #foreign_type>(#pivot_through_col,#through_col, Some(&pivot_data));
-                        ::dirtybase_common::db::repo_relation::RelationProcessor::new(query, parent_col_name, pivot_data, #foreign_col.to_string())
+                        Some(::dirtybase_common::db::repo_relation::RelationProcessor::new(query, parent_col_name, pivot_data, #foreign_col.to_string()))
                     }
                 );
 
