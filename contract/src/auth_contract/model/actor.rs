@@ -218,7 +218,7 @@ impl Actor {
         ))
     }
 
-    pub fn varify_jwt_token_id(&self, id: &str) -> bool {
+    pub fn verify_jwt_token_id(&self, id: &str) -> bool {
         self.generate_jwt_token_id() == id
     }
 
