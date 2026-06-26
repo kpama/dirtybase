@@ -151,7 +151,7 @@ impl Serialize for ArcUuid7 {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&self.0.to_string())
+        serializer.serialize_str(&self.0.simple().to_string())
     }
 }
 
