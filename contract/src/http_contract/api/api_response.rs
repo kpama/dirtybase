@@ -103,7 +103,13 @@ impl<D: serde::Serialize> ApiResponse<D> {
     }
 
     pub fn with_message(mut self, message: &str) -> Self {
-        self.meta = Some(serde_json::json!({ "message": message }));
+        if let Some(e) = &mut self.error {
+            e.message = message.to_string();
+        } else {
+            let mut error = ApiError::default();
+            error.message = message.to_string();
+            self.error = Some(error)
+        }
         self
     }
 
