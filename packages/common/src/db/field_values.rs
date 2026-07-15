@@ -1,5 +1,6 @@
 use dirtybase_helper::uuid::Uuid;
 use serde::{Deserialize, Serialize};
+use sqlx::types::BigDecimal;
 use std::{collections::HashMap, fmt::Display, str::FromStr};
 
 pub mod field_value_from_type;

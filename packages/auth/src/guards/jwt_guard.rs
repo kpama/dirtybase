@@ -54,7 +54,8 @@ pub async fn guard(resolver: GuardResolver) -> GuardResponse {
                     .await
                 {
                     Ok(Some(mut actor)) => {
-                        if actor.varify_jwt_token_id(&claims.jti.clone().unwrap_or_default())
+                        tracing::trace!("used jwt to find actor: {:#?}", &actor);
+                        if actor.verify_jwt_token_id(&claims.jti.clone().unwrap_or_default())
                             && actor.status() == AuthUserStatus::Active
                         {
                             if let Some(role) = actor.roles().first().cloned()

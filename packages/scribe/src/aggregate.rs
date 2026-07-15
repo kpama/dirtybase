@@ -9,10 +9,11 @@ use tokio::sync::RwLock;
 
 use crate::{DispatchedDomainEvent, DomainEvent};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
 pub struct Aggregate {
     id: ArcUuid7,
     sequency: i64,
+    #[serde(skip)]
     events: Arc<RwLock<Vec<DispatchedDomainEvent>>>,
 }
 

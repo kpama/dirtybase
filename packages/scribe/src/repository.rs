@@ -26,11 +26,13 @@ impl Repository {
         Aggregate::default()
     }
 
-    pub async fn save(&self, custom: &mut impl AggregateTrait) {
+    pub async fn save<T: AggregateTrait>(&self, mut custom: T) -> T {
         for an_event in custom.aggregate().take_events().await {
             println!("applying: {:?}", &an_event);
-            custom.apply(an_event).await;
+            custom = custom.apply(an_event).await;
             // TODO: Save the event
         }
+        // TODO: Save the aggregate
+        custom
     }
 }

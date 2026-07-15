@@ -24,5 +24,6 @@ busybody = { workspace = true }
 futures = { workspace = true }
 futures-util = { workspace = true }
 futures-channel = { workspace = true }
-simple-middleware= { workspace = true }
+simple-middleware = { workspace = true }
 hex = { workspace = true }
+num-traits = { workspace = true }

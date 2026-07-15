@@ -104,7 +104,7 @@ impl PaginateBuilder {
 
 impl Default for PaginateBuilder {
     fn default() -> Self {
-        Self::new("id", 0, 25)
+        Self::new("id", 0, 100)
     }
 }
 

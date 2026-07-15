@@ -328,7 +328,7 @@ pub fn build_entity_repo(
                     ::dirtybase_common::db::base::paginate_builder::PaginateBuilder::new(
                         &<#ident as ::dirtybase_common::db::table_model::TableModel>::id_column(),
                         0,
-                        25
+                        100
                     )
                 };
 

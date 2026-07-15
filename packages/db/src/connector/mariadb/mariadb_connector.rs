@@ -6,10 +6,11 @@ use dirtybase_contract::db_contract::{
     query_column::{QueryColumn, QueryColumnName},
 };
 use futures::stream::TryStreamExt;
+use num_traits::ToPrimitive;
 use sqlx::{
     Arguments, Column, MySql, MySqlTransaction, Pool, Row,
     mysql::{MySqlArguments, MySqlRow},
-    types::chrono,
+    types::{BigDecimal, chrono},
 };
 use std::{collections::HashMap, sync::Arc};
 
@@ -924,7 +925,7 @@ impl MariadbSchemaManager {
         let mut this_row = HashMap::new();
         for col in row.columns() {
             let name = col.name().to_string();
-            match col.type_info().to_string().as_str() {
+            match col.type_info().to_string().to_uppercase().as_str() {
                 "BOOLEAN" | "TINYINT(1)" => {
                     let v: bool = row.try_get::<i8, &str>(col.name()).unwrap_or_default() > 0;
                     this_row.insert(name, FieldValue::Boolean(v));
@@ -993,6 +994,13 @@ impl MariadbSchemaManager {
                         this_row.insert(name, 0_u64.into());
                     }
                 }
+                "DECIMAL" => {
+                    // FIXME: Use the real decimal type
+                    let v = row.try_get::<BigDecimal, &str>(col.name());
+                    if let Ok(v) = v {
+                        this_row.insert(name, v.to_i64().unwrap_or_default().into());
+                    }
+                }
                 "DOUBLE" | "FLOAT" => {
                     let v = row.try_get::<f64, &str>(col.name());
                     if let Ok(v) = v {
@@ -1058,11 +1066,11 @@ impl MariadbSchemaManager {
                     }
                 }
                 _ => {
-                    tracing::debug!(
+                    tracing::error!(
                         target: LOG_TARGET,
                         "unsupported field type : {:?} => value: {:#?}",
                         name,
-                        col.type_info()
+                        col.type_info().to_string()
                     );
                 }
             }

@@ -65,6 +65,14 @@ where
                 }
                 HashSet::new()
             }
+            FieldValue::Binary(bytes) => {
+                if let Ok(v) = String::from_utf8(bytes) {
+                    if let Ok(l) = serde_json::from_str::<HashSet<T>>(&v) {
+                        return l;
+                    }
+                }
+                HashSet::new()
+            }
             _ => HashSet::new(),
         }
     }
@@ -79,6 +87,14 @@ where
             FieldValue::String(v) => {
                 if let Ok(l) = serde_json::from_str::<HashSet<T>>(&v) {
                     return l;
+                }
+                HashSet::new()
+            }
+            FieldValue::Binary(bytes) => {
+                if let Ok(v) = String::from_utf8(bytes.clone()) {
+                    if let Ok(l) = serde_json::from_str::<HashSet<T>>(&v) {
+                        return l;
+                    }
                 }
                 HashSet::new()
             }

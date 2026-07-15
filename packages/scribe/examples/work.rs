@@ -12,7 +12,7 @@ async fn main() {
     _ = order_aggregate.create("28/08/2024").await;
     _ = order_aggregate.delete("28/08/2024").await;
 
-    _ = repo.save(&mut order_aggregate).await;
+    _ = repo.save(order_aggregate).await;
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
@@ -90,7 +90,8 @@ impl AggregateTrait for OrderAggregate {
         &self.aggregate
     }
 
-    async fn apply(&mut self, event: dirtybase_scribe::DispatchedDomainEvent) {
+    async fn apply(self, event: dirtybase_scribe::DispatchedDomainEvent) -> Self {
         println!("applying: {event:#?}");
+        self
     }
 }

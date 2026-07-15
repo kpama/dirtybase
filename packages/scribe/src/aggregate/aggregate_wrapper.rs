@@ -4,6 +4,6 @@ use super::Aggregate;
 
 #[async_trait::async_trait]
 pub trait AggregateTrait {
-    async fn apply(&mut self, event: DispatchedDomainEvent);
+    async fn apply(self, event: DispatchedDomainEvent) -> Self;
     fn aggregate(&self) -> &Aggregate;
 }

@@ -857,7 +857,7 @@ impl MySqlSchemaManager {
 
         for col in row.columns() {
             let name = col.name().to_string();
-            match col.type_info().to_string().as_str() {
+            match col.type_info().to_string().to_uppercase().as_str() {
                 "BOOLEAN" | "TINYINT(1)" => {
                     let v: bool = row.try_get::<i8, &str>(col.name()).unwrap_or_default() > 0;
                     this_row.insert(name, FieldValue::Boolean(v));
@@ -926,8 +926,13 @@ impl MySqlSchemaManager {
                         this_row.insert(name, 0_u64.into());
                     }
                 }
-                "DOUBLE" | "FLOAT" => {
+                "DOUBLE" | "FLOAT" | "NEWDECIMAL" | "DECIMAL" => {
                     let v = row.try_get::<f64, &str>(col.name());
+                    if v.is_err() {
+                        tracing::error!("{:#?}", v);
+                        this_row.insert(name, 0.0_f64.into());
+                        continue;
+                    }
                     if let Ok(v) = v {
                         this_row.insert(name, v.into());
                     } else {
@@ -995,7 +1000,7 @@ impl MySqlSchemaManager {
                         target: LOG_TARGET,
                         "unsupported field type : {:?} => value: {:#?}",
                         name,
-                        col.type_info()
+                        col.type_info().to_string()
                     );
                 }
             }
