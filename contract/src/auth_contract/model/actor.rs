@@ -4,7 +4,6 @@ use std::{
 };
 
 use anyhow::anyhow;
-use crypto::aead::rand_core::RngCore;
 use dirtybase_common::db::types::{DateTimeField, StringField};
 use dirtybase_db_macro::DirtyTable;
 use dirtybase_helper::hash::sha256;
@@ -27,7 +26,7 @@ use crate::{
 
 use argon2::{
     Argon2,
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
+    password_hash::{PasswordHasher, PasswordVerifier},
 };
 
 use super::ParseToken;
@@ -79,10 +78,8 @@ pub struct Actor {
 impl Default for Actor {
     fn default() -> Self {
         let username = generate_ulid();
-        let mut password_bytes = [0u8, 32];
-        let salt = SaltString::generate(&mut OsRng).to_string();
-        crypto::common::rand_core::OsRng.fill_bytes(&mut password_bytes);
-        let password = SaltString::encode_b64(&password_bytes).unwrap().to_string();
+        let salt = generate_salt();
+        let password = generate_salt();
         let email_hash = dirtybase_helper::hash::sha256::hash_str(&username);
         Self {
             id: None,
@@ -255,7 +252,7 @@ impl Actor {
     }
 
     pub fn rotate_salt(&mut self) {
-        self.salt = SaltString::generate(&mut OsRng).to_string().into();
+        self.salt = generate_salt().into();
     }
 
     pub fn is_guest(&self) -> bool {
@@ -306,10 +303,10 @@ impl Actor {
 
     pub(crate) fn hash_password(raw_password: &str) -> anyhow::Result<String> {
         let password = sha256::hash_str(raw_password);
-        let salt = SaltString::generate(&mut OsRng);
+        let salt = generate_salt();
         let argon2 = Argon2::default();
 
-        match argon2.hash_password(password.as_bytes(), &salt) {
+        match argon2.hash_password_with_salt(password.as_bytes(), salt.as_bytes()) {
             Ok(hash) => Ok(hash.to_string()),
             Err(e) => Err(anyhow!("{}", e)),
         }
@@ -317,7 +314,7 @@ impl Actor {
 
     pub(crate) fn check_password(raw_password: &str, password_hash: &str) -> bool {
         let password = sha256::hash_str(raw_password);
-        match PasswordHash::new(password_hash) {
+        match argon2::password_hash::phc::PasswordHash::new(password_hash) {
             Ok(parsed_hash) => Argon2::default()
                 .verify_password(password.as_bytes(), &parsed_hash)
                 .is_ok(),

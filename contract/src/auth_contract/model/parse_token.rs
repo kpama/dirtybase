@@ -1,14 +1,12 @@
 use std::fmt::{Debug, Display};
 
 use anyhow::anyhow;
-use argon2::password_hash::SaltString;
-use crypto::aead::OsRng;
 use dirtybase_helper::{
     hash::sha256,
     uuid::{uuid_v7_from_str, uuid25_from_str},
 };
 
-use crate::db_contract::types::ArcUuid7;
+use crate::{auth_contract::generate_salt, db_contract::types::ArcUuid7};
 
 pub struct ParseToken {
     base: String,
@@ -35,7 +33,7 @@ impl ParseToken {
     }
 
     pub fn generate_token(salt: &str, auth_user_id: &ArcUuid7) -> String {
-        let base = SaltString::generate(&mut OsRng).to_string();
+        let base = generate_salt();
         let uuid_25 = auth_user_id.to_uuid25();
         let salt = format!("{}{}{}", &base, salt, auth_user_id);
         format!("{}|{}|{}", &base, sha256::hash_str(&salt), uuid_25)

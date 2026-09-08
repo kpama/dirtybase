@@ -6,7 +6,7 @@ pub trait DomainEvent {
     where
         Self: Sized;
     fn metadata(&self) -> impl ToString {
-        ""
+        "{}"
     }
 }
 

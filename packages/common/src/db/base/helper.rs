@@ -5,7 +5,7 @@ use ulid::Ulid;
 pub type ArcUlid = Arc<String>;
 
 pub fn generate_ulid() -> String {
-    Ulid::new().to_string().to_lowercase()
+    Ulid::generate().to_string().to_lowercase()
 }
 
 pub fn generate_arc_ulid() -> ArcUlid {

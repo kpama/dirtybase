@@ -1,5 +1,5 @@
-use argon2::password_hash::SaltString;
-use crypto::aead::OsRng;
+use rand::RngExt;
+use rand::distr::Alphanumeric;
 
 use crate::db_contract::types::ArcUuid7;
 
@@ -14,5 +14,6 @@ pub fn parse_user_token(token: &str) -> Result<ParseToken, anyhow::Error> {
 }
 
 pub fn generate_salt() -> String {
-    SaltString::generate(&mut OsRng).to_string()
+    let mut rng = rand::rng();
+    (0..=15).map(|_| rng.sample(Alphanumeric) as char).collect()
 }

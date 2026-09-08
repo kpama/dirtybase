@@ -17,7 +17,7 @@ use dirtybase_contract::db_contract::{
 };
 use futures::stream::TryStreamExt;
 use sqlx::{
-    Arguments, Column, Pool, Row, Sqlite, SqliteTransaction, TypeInfo,
+    Arguments, AssertSqlSafe, Column, Pool, Row, Sqlite, SqliteTransaction, TypeInfo,
     sqlite::{SqliteArguments, SqliteRow},
     types::chrono,
 };
@@ -103,7 +103,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         let mut params = SqliteArguments::default();
         let statement = self.build_query(query_builder, &mut params)?;
 
-        let query = sqlx::query_with(&statement, params);
+        let query = sqlx::query_with(statement, params);
 
         let mut rows = query.fetch(self.db_pool.as_ref());
         while let Ok(result) = rows.try_next().await {
@@ -144,7 +144,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         let mut params = SqliteArguments::default();
         let statement = self.build_query(query_builder, &mut params)?;
 
-        let query = sqlx::query_with(&statement, params);
+        let query = sqlx::query_with(statement, params);
 
         let mut rows = query.fetch(self.db_pool.as_ref());
         loop {
@@ -173,7 +173,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         let mut params = SqliteArguments::default();
 
         let statement = self.build_query(query_builder, &mut params)?;
-        let query = sqlx::query_with(&statement, params);
+        let query = sqlx::query_with(statement, params);
 
         return match query.fetch_optional(self.db_pool.as_ref()).await {
             Ok(result) => match result {
@@ -185,8 +185,9 @@ impl SchemaManagerTrait for SqliteSchemaManager {
     }
 
     async fn raw_insert(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
+        let statement = AssertSqlSafe(sql.to_string());
         let result = if let Some(mut trans) = self.trans.take() {
-            let result = sqlx::query(sql).execute(&mut *trans).await;
+            let result = sqlx::query(statement).execute(&mut *trans).await;
             if result.is_ok() {
                 if let Err(e) = trans.commit().await {
                     tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
@@ -199,7 +200,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
 
             result
         } else {
-            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+            sqlx::query(statement).execute(self.db_pool.as_ref()).await
         };
 
         match result {
@@ -219,6 +220,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         sql: &str,
         params: Vec<FieldValue>,
     ) -> Result<u64, anyhow::Error> {
+        let statement = AssertSqlSafe(sql.to_string());
         let mut built_params = SqliteArguments::default();
 
         for field in params {
@@ -226,7 +228,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         }
 
         let result = if let Some(mut trans) = self.trans.take() {
-            let result = sqlx::query_with(&sql, built_params)
+            let result = sqlx::query_with(statement, built_params)
                 .execute(&mut *trans)
                 .await;
             if result.is_ok() {
@@ -241,7 +243,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
 
             result
         } else {
-            sqlx::query_with(&sql, built_params)
+            sqlx::query_with(statement, built_params)
                 .execute(self.db_pool.as_ref())
                 .await
         };
@@ -271,13 +273,14 @@ impl SchemaManagerTrait for SqliteSchemaManager {
         sql: &str,
         params: Vec<FieldValue>,
     ) -> Result<Vec<ColumnAndValue>, anyhow::Error> {
+        let statement = AssertSqlSafe(sql.to_string());
         let mut results = Vec::new();
         let mut built_params = SqliteArguments::default();
 
         for field in params {
             build_field_value_to_args(&field, &mut built_params)?;
         }
-        let query = sqlx::query_with(sql, built_params);
+        let query = sqlx::query_with(statement, built_params);
 
         let mut rows = query.fetch(self.db_pool.as_ref());
         loop {
@@ -300,8 +303,9 @@ impl SchemaManagerTrait for SqliteSchemaManager {
     }
 
     async fn raw_statement(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
+        let statement = AssertSqlSafe(sql.to_string());
         let result = if let Some(mut trans) = self.trans.take() {
-            let result = sqlx::query(sql).execute(&mut *trans).await;
+            let result = sqlx::query(statement).execute(&mut *trans).await;
             if result.is_ok() {
                 if let Err(e) = trans.commit().await {
                     tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
@@ -314,7 +318,7 @@ impl SchemaManagerTrait for SqliteSchemaManager {
 
             result
         } else {
-            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+            sqlx::query(statement).execute(self.db_pool.as_ref()).await
         };
 
         match result {
@@ -431,7 +435,9 @@ impl SqliteSchemaManager {
         }
 
         let result = if let Some(mut trans) = self.trans.take() {
-            let result = sqlx::query_with(&sql, params).execute(&mut *trans).await;
+            let result = sqlx::query_with(AssertSqlSafe(sql), params)
+                .execute(&mut *trans)
+                .await;
             if result.is_ok() {
                 if let Err(e) = trans.commit().await {
                     tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
@@ -444,7 +450,7 @@ impl SqliteSchemaManager {
 
             result
         } else {
-            sqlx::query_with(&sql, params)
+            sqlx::query_with(AssertSqlSafe(sql), params)
                 .execute(self.db_pool.as_ref())
                 .await
         };
@@ -464,11 +470,11 @@ impl SqliteSchemaManager {
     async fn create_or_replace_view(&self, table: TableBlueprint) -> Result<(), anyhow::Error> {
         if let Some(query) = &table.view_query {
             let mut params = SqliteArguments::default();
-            let sql = self.build_query(query, &mut params)?;
+            let sql = self.build_query(query, &mut params)?.0;
 
             let query = format!("CREATE OR REPLACE VIEW `{}` AS ({})", &table.name, sql);
 
-            let result = sqlx::query_with(&query, params)
+            let result = sqlx::query_with(AssertSqlSafe(query), params)
                 .execute(self.db_pool.as_ref())
                 .await;
             match result {
@@ -522,7 +528,9 @@ impl SqliteSchemaManager {
             }
         }
 
-        let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
+        let result = sqlx::query(AssertSqlSafe(query))
+            .execute(self.db_pool.as_ref())
+            .await;
 
         match result {
             Ok(_) => {
@@ -584,11 +592,12 @@ impl SqliteSchemaManager {
                     }
                 }
 
-                let index_result = sqlx::query(&sql).execute(self.db_pool.as_ref()).await;
+                let index_result = sqlx::query(AssertSqlSafe(sql))
+                    .execute(self.db_pool.as_ref())
+                    .await;
                 match index_result {
                     Ok(_e) => log::info!("table index created"),
                     Err(e) => {
-                        log::error!("sql: {}", &sql);
                         log::error!("could not create table index: {}", &e);
                         return Err(anyhow::anyhow!("could not create table index: {}", &e));
                     }
@@ -742,7 +751,7 @@ impl SqliteSchemaManager {
         &self,
         query: &QueryBuilder,
         params: &mut SqliteArguments,
-    ) -> Result<String, anyhow::Error> {
+    ) -> Result<AssertSqlSafe<String>, anyhow::Error> {
         let mut sql = "SELECT".to_owned();
 
         // fields
@@ -806,7 +815,7 @@ impl SqliteSchemaManager {
         //     sql = format!("{sql} FOR UPDATE");
         // }
 
-        Ok(sql)
+        Ok(AssertSqlSafe(sql))
     }
 
     fn build_join(
@@ -822,7 +831,7 @@ impl SqliteSchemaManager {
                         "{} {} JOIN ({}) {} ON {}",
                         sql,
                         a_join.join_type(),
-                        self.build_query(sub_query, params)?,
+                        self.build_query(sub_query, params)?.0,
                         a_join.table(),
                         a_join.join_clause()
                     );
@@ -875,7 +884,7 @@ impl SqliteSchemaManager {
         params: &mut SqliteArguments,
     ) -> Result<String, anyhow::Error> {
         let placeholder = match condition.value() {
-            QueryValue::SubQuery(sub) => self.build_query(sub, params)?,
+            QueryValue::SubQuery(sub) => self.build_query(sub, params)?.0,
             QueryValue::ColumnName(name) => name.clone(),
             QueryValue::Clause(clause) => {
                 let mut wheres = "".to_owned();
@@ -1123,7 +1132,7 @@ impl SqliteSchemaManager {
                     }
                 }
                 QueryColumnName::SubQuery(query) => {
-                    let sql = self.build_query(query, params)?;
+                    let sql = self.build_query(query, params)?.0;
                     if alias.is_empty() {
                         Ok(sql)
                     } else {
@@ -1147,7 +1156,7 @@ impl SqliteSchemaManager {
                 }
             }
             QueryColumnName::SubQuery(query) => {
-                let sql = self.build_query(query, params)?;
+                let sql = self.build_query(query, params)?.0;
                 if alias.is_empty() {
                     Ok(sql)
                 } else {
@@ -1260,7 +1269,7 @@ mod test {
 
         // use to test generated sql
         assert_eq!(
-            sqlite.build_query(&query, &mut params).unwrap(),
+            sqlite.build_query(&query, &mut params).unwrap().0,
             "SELECT (COUNT(SELECT * FROM 'inner'  WHERE   user = ?)) as 'points' FROM 'foo'  WHERE   age = ?"
         )
     }

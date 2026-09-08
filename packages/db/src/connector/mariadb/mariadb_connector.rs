@@ -8,7 +8,7 @@ use dirtybase_contract::db_contract::{
 use futures::stream::TryStreamExt;
 use num_traits::ToPrimitive;
 use sqlx::{
-    Arguments, Column, MySql, MySqlTransaction, Pool, Row,
+    Arguments, AssertSqlSafe, Column, MySql, MySqlTransaction, Pool, Row,
     mysql::{MySqlArguments, MySqlRow},
     types::{BigDecimal, chrono},
 };
@@ -123,7 +123,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
         let mut params = MySqlArguments::default();
         let statement = self.build_query(query_builder, &mut params)?;
 
-        let query = sqlx::query_with(&statement, params);
+        let query = sqlx::query_with(statement, params);
 
         let mut rows = query.fetch(self.db_pool.as_ref());
         while let Ok(result) = rows.try_next().await {
@@ -166,7 +166,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
         let mut params = MySqlArguments::default();
         let statement = self.build_query(query_builder, &mut params)?;
 
-        let query = sqlx::query_with(&statement, params);
+        let query = sqlx::query_with(statement, params);
         let mut rows = query.fetch(self.db_pool.as_ref());
 
         loop {
@@ -195,7 +195,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
         let mut params = MySqlArguments::default();
         let statement = self.build_query(query_builder, &mut params)?;
 
-        let query = sqlx::query_with(&statement, params);
+        let query = sqlx::query_with(statement, params);
         return match query.fetch_optional(self.db_pool.as_ref()).await {
             Ok(result) => match result {
                 Some(row) => Ok(Some(self.row_to_column_value(&row))),
@@ -206,8 +206,9 @@ impl SchemaManagerTrait for MariadbSchemaManager {
     }
 
     async fn raw_insert(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
+        let statement = AssertSqlSafe(sql.to_string());
         let result = if let Some(mut trans) = self.trans.take() {
-            let result = sqlx::query(sql).execute(&mut *trans).await;
+            let result = sqlx::query(statement).execute(&mut *trans).await;
             if result.is_ok() {
                 if let Err(e) = trans.commit().await {
                     tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
@@ -220,7 +221,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
 
             result
         } else {
-            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+            sqlx::query(statement).execute(self.db_pool.as_ref()).await
         };
 
         match result {
@@ -240,6 +241,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
         sql: &str,
         params: Vec<FieldValue>,
     ) -> Result<u64, anyhow::Error> {
+        let statement = AssertSqlSafe(sql);
         let mut built_params = MySqlArguments::default();
 
         for field in params {
@@ -247,7 +249,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
         }
 
         let result = if let Some(mut trans) = self.trans.take() {
-            let result = sqlx::query_with(&sql, built_params)
+            let result = sqlx::query_with(statement, built_params)
                 .execute(&mut *trans)
                 .await;
             if result.is_ok() {
@@ -262,7 +264,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
 
             result
         } else {
-            sqlx::query_with(&sql, built_params)
+            sqlx::query_with(statement, built_params)
                 .execute(self.db_pool.as_ref())
                 .await
         };
@@ -292,13 +294,14 @@ impl SchemaManagerTrait for MariadbSchemaManager {
         sql: &str,
         params: Vec<FieldValue>,
     ) -> Result<Vec<ColumnAndValue>, anyhow::Error> {
+        let statement = AssertSqlSafe(sql);
         let mut results = Vec::new();
         let mut built_params = MySqlArguments::default();
 
         for field in params {
             build_field_value_to_args(&field, &mut built_params)?;
         }
-        let query = sqlx::query_with(sql, built_params);
+        let query = sqlx::query_with(statement, built_params);
 
         let mut rows = query.fetch(self.db_pool.as_ref());
         loop {
@@ -321,8 +324,9 @@ impl SchemaManagerTrait for MariadbSchemaManager {
     }
 
     async fn raw_statement(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
+        let statement = AssertSqlSafe(sql);
         let result = if let Some(mut trans) = self.trans.take() {
-            let result = sqlx::query(sql).execute(&mut *trans).await;
+            let result = sqlx::query(statement).execute(&mut *trans).await;
             if result.is_ok() {
                 if let Err(e) = trans.commit().await {
                     tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
@@ -335,7 +339,7 @@ impl SchemaManagerTrait for MariadbSchemaManager {
 
             result
         } else {
-            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+            sqlx::query(statement).execute(self.db_pool.as_ref()).await
         };
 
         match result {
@@ -448,7 +452,9 @@ impl MariadbSchemaManager {
         }
 
         let result = if let Some(mut trans) = self.trans.take() {
-            let result = sqlx::query_with(&sql, params).execute(&mut *trans).await;
+            let result = sqlx::query_with(AssertSqlSafe(sql), params)
+                .execute(&mut *trans)
+                .await;
             if result.is_ok() {
                 if let Err(e) = trans.commit().await {
                     tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
@@ -461,7 +467,7 @@ impl MariadbSchemaManager {
 
             result
         } else {
-            sqlx::query_with(&sql, params)
+            sqlx::query_with(AssertSqlSafe(sql), params)
                 .execute(self.db_pool.as_ref())
                 .await
         };
@@ -486,9 +492,9 @@ impl MariadbSchemaManager {
             let mut params = MySqlArguments::default();
             let sql = self.build_query(query, &mut params)?;
 
-            let query = format!("CREATE OR REPLACE VIEW `{}` AS ({})", &table.name, sql);
+            let query = format!("CREATE OR REPLACE VIEW `{}` AS ({})", &table.name, &sql.0);
 
-            let result = sqlx::query_with(&query, params)
+            let result = sqlx::query_with(AssertSqlSafe(query), params)
                 .execute(self.db_pool.as_ref())
                 .await;
             match result {
@@ -536,7 +542,7 @@ impl MariadbSchemaManager {
         }
 
         let result = if let Some(mut trans) = self.trans.take() {
-            let result = sqlx::query(&query).execute(&mut *trans).await;
+            let result = sqlx::query(AssertSqlSafe(query)).execute(&mut *trans).await;
             if result.is_ok() {
                 if let Err(e) = trans.commit().await {
                     tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
@@ -549,7 +555,9 @@ impl MariadbSchemaManager {
 
             result
         } else {
-            sqlx::query(&query).execute(self.db_pool.as_ref()).await
+            sqlx::query(AssertSqlSafe(query))
+                .execute(self.db_pool.as_ref())
+                .await
         };
 
         match result {
@@ -613,11 +621,12 @@ impl MariadbSchemaManager {
                     }
                 }
 
-                let index_result = sqlx::query(&sql).execute(self.db_pool.as_ref()).await;
+                let index_result = sqlx::query(AssertSqlSafe(sql))
+                    .execute(self.db_pool.as_ref())
+                    .await;
                 match index_result {
                     Ok(_) => tracing::info!(target: LOG_TARGET,"table index created"),
                     Err(e) => {
-                        tracing::error!(target: LOG_TARGET, "{}", &sql);
                         tracing::error!(target: LOG_TARGET, "could not create table index: {}", &e);
                         return Err(anyhow::anyhow!(e));
                     }
@@ -734,7 +743,7 @@ impl MariadbSchemaManager {
         &self,
         query: &QueryBuilder,
         params: &mut MySqlArguments,
-    ) -> Result<String, anyhow::Error> {
+    ) -> Result<AssertSqlSafe<String>, anyhow::Error> {
         let mut sql = "SELECT".to_owned();
 
         // fields
@@ -799,7 +808,7 @@ impl MariadbSchemaManager {
             sql = format!("{sql} FOR UPDATE");
         }
 
-        Ok(sql)
+        Ok(AssertSqlSafe(sql))
     }
 
     fn build_join(
@@ -815,7 +824,7 @@ impl MariadbSchemaManager {
                         "{} {} JOIN ({}) {} ON {}",
                         sql,
                         a_join.join_type(),
-                        self.build_query(sub_query, params)?,
+                        &self.build_query(sub_query, params)?.0,
                         a_join.table(),
                         a_join.join_clause()
                     );
@@ -868,7 +877,7 @@ impl MariadbSchemaManager {
         params: &mut MySqlArguments,
     ) -> Result<String, anyhow::Error> {
         let placeholder = match condition.value() {
-            QueryValue::SubQuery(sub) => self.build_query(sub, params)?,
+            QueryValue::SubQuery(sub) => self.build_query(sub, params)?.0,
             QueryValue::ColumnName(name) => name.clone(),
             QueryValue::Clause(clause) => {
                 let mut wheres = "".to_owned();
@@ -1155,9 +1164,9 @@ impl MariadbSchemaManager {
                 QueryColumnName::SubQuery(query) => {
                     let sql = self.build_query(query, params)?;
                     if alias.is_empty() {
-                        Ok(sql)
+                        Ok(sql.0)
                     } else {
-                        Ok(format!("({aggregate}({sql})) as '{alias}'"))
+                        Ok(format!("({aggregate}({})) as '{alias}'", &sql.0))
                     }
                 }
             };
@@ -1179,9 +1188,9 @@ impl MariadbSchemaManager {
             QueryColumnName::SubQuery(query) => {
                 let sql = self.build_query(query, params)?;
                 if alias.is_empty() {
-                    Ok(sql)
+                    Ok(sql.0)
                 } else {
-                    Ok(format!("({sql}) as '{alias}'"))
+                    Ok(format!("({}) as '{alias}'", &sql.0))
                 }
             }
         }

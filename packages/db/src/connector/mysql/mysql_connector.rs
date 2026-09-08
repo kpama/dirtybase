@@ -7,7 +7,7 @@ use dirtybase_contract::db_contract::{
 };
 use futures::stream::TryStreamExt;
 use sqlx::{
-    Arguments, Column, MySql, MySqlTransaction, Pool, Row,
+    Arguments, AssertSqlSafe, Column, MySql, MySqlTransaction, Pool, Row,
     mysql::{MySqlArguments, MySqlRow},
     types::chrono,
 };
@@ -122,7 +122,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         let mut params = MySqlArguments::default();
         let statement = self.build_query(query_builder, &mut params)?;
 
-        let query = sqlx::query_with(&statement, params);
+        let query = sqlx::query_with(statement, params);
 
         let mut rows = query.fetch(self.db_pool.as_ref());
         while let Ok(result) = rows.try_next().await {
@@ -165,7 +165,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         let mut params = MySqlArguments::default();
         let statement = self.build_query(query_builder, &mut params)?;
 
-        let query = sqlx::query_with(&statement, params);
+        let query = sqlx::query_with(statement, params);
         let mut rows = query.fetch(self.db_pool.as_ref());
 
         loop {
@@ -194,7 +194,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         let mut params = MySqlArguments::default();
         let statement = self.build_query(query_builder, &mut params)?;
 
-        let query = sqlx::query_with(&statement, params);
+        let query = sqlx::query_with(statement, params);
         return match query.fetch_optional(self.db_pool.as_ref()).await {
             Ok(result) => match result {
                 Some(row) => Ok(Some(self.row_to_column_value(&row))),
@@ -205,8 +205,9 @@ impl SchemaManagerTrait for MySqlSchemaManager {
     }
 
     async fn raw_insert(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
+        let statement = AssertSqlSafe(sql.to_string());
         let result = if let Some(mut trans) = self.trans.take() {
-            let result = sqlx::query(sql).execute(&mut *trans).await;
+            let result = sqlx::query(statement).execute(&mut *trans).await;
             if result.is_ok() {
                 if let Err(e) = trans.commit().await {
                     tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
@@ -219,7 +220,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
 
             result
         } else {
-            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+            sqlx::query(statement).execute(self.db_pool.as_ref()).await
         };
 
         match result {
@@ -239,7 +240,8 @@ impl SchemaManagerTrait for MySqlSchemaManager {
         sql: &str,
         params: Vec<FieldValue>,
     ) -> Result<u64, anyhow::Error> {
-        let mut query = sqlx::query(sql);
+        let statement = AssertSqlSafe(sql.to_string());
+        let mut query = sqlx::query_with(statement, MySqlArguments::default());
         for p in params {
             query = query.bind(p.to_string());
         }
@@ -267,8 +269,9 @@ impl SchemaManagerTrait for MySqlSchemaManager {
     }
 
     async fn raw_statement(&mut self, sql: &str) -> Result<bool, anyhow::Error> {
+        let statement = AssertSqlSafe(sql.to_string());
         let result = if let Some(mut trans) = self.trans.take() {
-            let result = sqlx::query(sql).execute(&mut *trans).await;
+            let result = sqlx::query(statement).execute(&mut *trans).await;
             if result.is_ok() {
                 if let Err(e) = trans.commit().await {
                     tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
@@ -281,7 +284,7 @@ impl SchemaManagerTrait for MySqlSchemaManager {
 
             result
         } else {
-            sqlx::query(sql).execute(self.db_pool.as_ref()).await
+            sqlx::query(statement).execute(self.db_pool.as_ref()).await
         };
 
         match result {
@@ -394,8 +397,11 @@ impl MySqlSchemaManager {
             }
         }
 
+        let statement = AssertSqlSafe(sql);
         let result = if let Some(mut trans) = self.trans.take() {
-            let result = sqlx::query_with(&sql, params).execute(&mut *trans).await;
+            let result = sqlx::query_with(statement, params)
+                .execute(&mut *trans)
+                .await;
             if result.is_ok() {
                 if let Err(e) = trans.commit().await {
                     tracing::error!(target: LOG_TARGET, "committing error: {}", &e);
@@ -408,7 +414,7 @@ impl MySqlSchemaManager {
 
             result
         } else {
-            sqlx::query_with(&sql, params)
+            sqlx::query_with(statement, params)
                 .execute(self.db_pool.as_ref())
                 .await
         };
@@ -433,9 +439,9 @@ impl MySqlSchemaManager {
             let mut params = MySqlArguments::default();
             let sql = self.build_query(query, &mut params)?;
 
-            let query = format!("CREATE OR REPLACE VIEW `{}` AS ({})", &table.name, sql);
+            let query = format!("CREATE OR REPLACE VIEW `{}` AS ({})", &table.name, &sql.0);
 
-            let result = sqlx::query_with(&query, params)
+            let result = sqlx::query_with(AssertSqlSafe(query), params)
                 .execute(self.db_pool.as_ref())
                 .await;
             match result {
@@ -482,7 +488,9 @@ impl MySqlSchemaManager {
             query = format!("{query} ENGINE='InnoDB';");
         }
 
-        let result = sqlx::query(&query).execute(self.db_pool.as_ref()).await;
+        let result = sqlx::query(AssertSqlSafe(query.to_string()))
+            .execute(self.db_pool.as_ref())
+            .await;
 
         match result {
             Ok(_) => {
@@ -544,11 +552,12 @@ impl MySqlSchemaManager {
                     }
                 }
 
-                let index_result = sqlx::query(&sql).execute(self.db_pool.as_ref()).await;
+                let index_result = sqlx::query(AssertSqlSafe(sql))
+                    .execute(self.db_pool.as_ref())
+                    .await;
                 match index_result {
                     Ok(_) => log::info!("table index created"),
                     Err(e) => {
-                        log::error!("mysql: {}", &sql);
                         log::error!("could not create table index: {}", &e);
                         return Err(anyhow::anyhow!(e));
                     }
@@ -665,7 +674,7 @@ impl MySqlSchemaManager {
         &self,
         query: &QueryBuilder,
         params: &mut MySqlArguments,
-    ) -> Result<String, anyhow::Error> {
+    ) -> Result<AssertSqlSafe<String>, anyhow::Error> {
         let mut sql = "SELECT".to_owned();
 
         // fields
@@ -730,7 +739,7 @@ impl MySqlSchemaManager {
             sql = format!("{sql} FOR UPDATE");
         }
 
-        Ok(sql)
+        Ok(AssertSqlSafe(sql))
     }
 
     fn build_join(
@@ -746,7 +755,7 @@ impl MySqlSchemaManager {
                         "{} {} JOIN ({}) {} ON {}",
                         sql,
                         a_join.join_type(),
-                        self.build_query(sub_query, params)?,
+                        self.build_query(sub_query, params)?.0,
                         a_join.table(),
                         a_join.join_clause()
                     );
@@ -799,7 +808,7 @@ impl MySqlSchemaManager {
         params: &mut MySqlArguments,
     ) -> Result<String, anyhow::Error> {
         let placeholder = match condition.value() {
-            QueryValue::SubQuery(sub) => self.build_query(sub, params)?,
+            QueryValue::SubQuery(sub) => self.build_query(sub, params)?.0,
             QueryValue::ColumnName(name) => name.clone(),
             QueryValue::Clause(clause) => {
                 let mut wheres = "".to_owned();
@@ -1085,9 +1094,9 @@ impl MySqlSchemaManager {
                 QueryColumnName::SubQuery(query) => {
                     let sql = self.build_query(query, params)?;
                     if alias.is_empty() {
-                        Ok(sql)
+                        Ok(sql.0)
                     } else {
-                        Ok(format!("({aggregate}({sql})) as '{alias}'"))
+                        Ok(format!("({aggregate}({})) as '{alias}'", sql.0))
                     }
                 }
             };
@@ -1109,9 +1118,9 @@ impl MySqlSchemaManager {
             QueryColumnName::SubQuery(query) => {
                 let sql = self.build_query(query, params)?;
                 if alias.is_empty() {
-                    Ok(sql)
+                    Ok(sql.0)
                 } else {
-                    Ok(format!("({sql}) as '{alias}'"))
+                    Ok(format!("({}) as '{alias}'", sql.0))
                 }
             }
         }
