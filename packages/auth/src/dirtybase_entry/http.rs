@@ -22,7 +22,6 @@ pub(crate) fn register_routes(manager: &mut RouterManager, allow_self_signup: bo
                     .get("/signup", register_form_handler, "auth:signup-form")
                     .post("/do-signup", handle_register_request, "auth:do-signup-form");
             }
-            router.get("/users/{id}", handle_get_user_by_id, "auth:my-id");
             openid_controller::register_routes(router);
         })
         .insecure_api(Some("/auth"), |router| {
