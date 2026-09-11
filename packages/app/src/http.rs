@@ -221,6 +221,9 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                 );
 
                 decrypt_cookies(cookie_jar, &encrypter, cookie_config, &mut req);
+                http_ctx
+                    .set_cookie_jar(CookieJar::from_headers(req.headers()))
+                    .await;
 
                 // pass the request
                 let mut response = {

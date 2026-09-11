@@ -268,6 +268,11 @@ impl HttpContext {
         r_lock.as_ref().unwrap().clone()
     }
 
+    pub async fn set_cookie_jar(&self, cookie_jar: CookieJar) {
+        let mut w_lock = self.cookie_jar.write().await;
+        *w_lock = Some(cookie_jar);
+    }
+
     pub async fn set_cookie_json<V>(&self, name: &str, value: &V)
     where
         V: serde::Serialize,
@@ -507,6 +512,24 @@ mod test {
         let ctx = HttpContext::from_request(&mut req).await;
         assert_eq!(ctx.host().is_some(), true);
         assert_eq!(ctx.host().unwrap(), "yahoo.com");
+    }
+
+    #[tokio::test]
+    async fn test_cookie_jar_can_be_refreshed() {
+        let mut req = Request::builder()
+            .uri("https://yahoo.com/path1")
+            .body(Body::empty())
+            .unwrap();
+        let ctx = HttpContext::from_request(&mut req).await;
+        assert!(ctx.get_cookie("dty_session").await.is_none());
+
+        let cookie_jar = CookieJar::new().add(Cookie::new("dty_session", "session-id"));
+        ctx.set_cookie_jar(cookie_jar).await;
+
+        assert_eq!(
+            ctx.get_cookie_value("dty_session").await.as_deref(),
+            Some("session-id")
+        );
     }
 
     #[tokio::test]
