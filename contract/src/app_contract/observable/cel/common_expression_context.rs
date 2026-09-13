@@ -63,7 +63,7 @@ impl CommonExpressionSandbox {
         self
     }
 
-    /// Update a existing program.
+    /// Update an existing program.
     pub fn put_program(&self, name: &str, source: &str) -> &Self {
         match self.collection.read() {
             Ok(r_lock) => {
@@ -96,6 +96,7 @@ impl CommonExpressionSandbox {
         self.set_program(name, source)
     }
 
+    /// Execute a program that was previously registered
     pub async fn execute(&self, context: &Context, name: &str) -> Result<Value, CelManagerError> {
         self.execute_with(context, name, |_| {}).await
     }
