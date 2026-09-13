@@ -261,6 +261,7 @@ mod test {
 
         let service = PermissionManager::from(perms.iter());
         let context = Context::new().await;
+        context.set(CommonExpressionSandbox::new().await).await;
 
         // truth cases
         assert!(service.can("posts:create", &context).await);
@@ -275,6 +276,8 @@ mod test {
     async fn wrongly_formed_permissions() {
         let mut service = PermissionManager::new();
         let context = Context::new().await;
+        context.set(CommonExpressionSandbox::new().await).await;
+
         service.add_str("posts");
         service.add_str("products");
 
@@ -295,6 +298,8 @@ mod test {
     #[tokio::test]
     async fn test_one_part() {
         let context = Context::new().await;
+        context.set(CommonExpressionSandbox::new().await).await;
+
         let mut service = PermissionManager::new();
         service.add_str("posts");
         service.add_str("products");
@@ -343,6 +348,8 @@ mod test {
     #[tokio::test]
     async fn test_two_subparts() {
         let context = Context::new().await;
+        context.set(CommonExpressionSandbox::new().await).await;
+
         let mut service = PermissionManager::new();
         service.add_str("posts:create");
         service.add_str("products:create");
@@ -364,6 +371,8 @@ mod test {
     #[tokio::test]
     async fn test_three_parts() {
         let context = Context::new().await;
+        context.set(CommonExpressionSandbox::new().await).await;
+
         let mut service = PermissionManager::new();
         service.add_str("posts:create:123");
         service.add_str("products:create:123");
@@ -387,6 +396,8 @@ mod test {
     #[tokio::test]
     async fn test_wildcard() {
         let context = Context::new().await;
+        context.set(CommonExpressionSandbox::new().await).await;
+
         let mut service = PermissionManager::new();
         service.add_str("*");
 
@@ -396,6 +407,8 @@ mod test {
     #[tokio::test]
     async fn test_permission_condition() {
         let context = Context::new().await;
+        context.set(CommonExpressionSandbox::new().await).await;
+
         let mut service = PermissionManager::new();
         let cel_sandbox = CommonExpressionSandbox::new().await;
 
