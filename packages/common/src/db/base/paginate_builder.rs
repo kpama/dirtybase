@@ -14,7 +14,7 @@ use crate::db::base::order_by_builder::{Direction, LimitBuilder, OffsetBuilder, 
 /// Uses `offset`, `limit` and `sorting`
 ///
 /// Extract an instance from the current HTTP request
-///```rust,no_run
+///```ignore
 /// async handler(page: PaginateBuilder) {...}
 /// ```
 ///

@@ -1,0 +1,24 @@
+[package]
+name = "dirtybase_soot"
+version.workspace = true
+edition.workspace = true
+
+[features]
+default = []
+# Exposes `SootMigration`, a `dirtybase_contract::db_contract::migration::Migration`
+# implementation that creates/drops every table declared by a `Domain`.
+migrations = ["dirtybase_contract"]
+
+[dependencies]
+dirtybase_common = { workspace = true }
+dirtybase_db = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+futures = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+
+dirtybase_contract = { workspace = true, optional = true }

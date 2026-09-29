@@ -16,7 +16,7 @@ use crate::db::{
 /// Uses a cursor based on list fetched value for paginating
 ///
 /// Extract an instance from the current HTTP request
-///```rust,no_run
+///```ignore
 /// async handler(cursor: CursorBuilder) {}
 /// ```
 /// Attributes that are extracted from the current HTTP request:
