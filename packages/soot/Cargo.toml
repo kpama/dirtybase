@@ -4,10 +4,16 @@ version.workspace = true
 edition.workspace = true
 
 [features]
-default = []
+default = ["extension"]
+# Soot as a dirtybase extension: `dirtybase_entry::Extension`, the `[soot]`
+# config, the `Soot` context resource and the `soot` CLI command. Without it
+# soot is a standalone framework and depends on nothing but `dirtybase_db`.
+extension = ["dirtybase_contract"]
 # Exposes `SootMigration`, a `dirtybase_contract::db_contract::migration::Migration`
-# implementation that creates/drops every table declared by a `Domain`.
-migrations = ["dirtybase_contract"]
+# implementation that creates/drops every table declared by a `Domain`. It is
+# also registered by `Extension::migrations`, so turning this on is what makes
+# `migrate up` create a domain's tables.
+migrations = ["dirtybase_contract", "extension"]
 
 [dependencies]
 dirtybase_common = { workspace = true }

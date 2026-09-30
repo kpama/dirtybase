@@ -15,6 +15,7 @@ use crate::{
     error::{Error, ErrorList, Result},
     preparation::Preparation,
     query::Query,
+    record::Record,
     validation::Validation,
 };
 
@@ -28,6 +29,10 @@ use crate::{
 pub type ChangeFuture<'a> = Pin<Box<dyn Future<Output = Result<Changeset>> + Send + 'a>>;
 pub type ValidationFuture<'a> = Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>;
 pub type PreparationFuture<'a> = Pin<Box<dyn Future<Output = Result<()>> + Send + 'a>>;
+/// The future shape a [`crate::extension::SootExtension::after_write`] closure
+/// returns. It is here rather than in `extension` so every closure-driven hook
+/// in the crate names its future from the same place.
+pub type RecordFuture<'a> = Pin<Box<dyn Future<Output = Result<Record>> + Send + 'a>>;
 
 /// Build a [`Change`] from a closure.
 pub fn change<F>(f: F) -> Box<dyn Change>
@@ -518,4 +523,441 @@ fn pattern_matches(pattern: &str, value: &str) -> bool {
     }
 
     match_here(pattern.as_bytes(), value.as_bytes())
+}
+
+/// Ready-made [`crate::extension::SootExtension`]s.
+///
+/// Ash ships equivalents for the concerns that come up in most applications —
+/// who performed the write, whether this actor may, and which tenant the row
+/// belongs to. Each one here narrows itself to the resources that declare what
+/// it needs, so registering one on a whole domain is enough.
+pub mod extensions {
+    use std::{
+        collections::BTreeMap,
+        sync::{Arc, Mutex},
+    };
+
+    use async_trait::async_trait;
+
+    use crate::{
+        attribute::Attribute,
+        changeset::{Changeset, ChangesetKind},
+        context::ActionContext,
+        error::{Error, Errors, Result},
+        extension::SootExtension,
+        query::Query,
+        record::Record,
+        resource::ResourceDef,
+    };
+
+    /// Stamps who performed a write, the way Ash's `managed_by` and
+    /// `changed_by` do.
+    ///
+    /// The extension adds the two columns, so nothing has to declare them, and
+    /// fills them from the context's actor: `created_by` on a create, and
+    /// `updated_by` on every write. A write with no actor is left unstamped
+    /// rather than rejected — a system writing on its own behalf is normal.
+    pub struct StampActor {
+        created_by: String,
+        updated_by: String,
+    }
+
+    impl Default for StampActor {
+        fn default() -> Self {
+            Self::new("created_by", "updated_by")
+        }
+    }
+
+    impl StampActor {
+        pub fn new(created_by: &str, updated_by: &str) -> Self {
+            Self {
+                created_by: created_by.to_string(),
+                updated_by: updated_by.to_string(),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl SootExtension for StampActor {
+        fn name(&self) -> &str {
+            "stamp_actor"
+        }
+
+        fn description(&self) -> Option<&str> {
+            Some("stamps the acting actor onto every write")
+        }
+
+        fn applies_to(&self, resource: &ResourceDef) -> bool {
+            // Stamping is defined by the columns being there, and `extend` is
+            // what puts them there — so this reads true after an extension of any
+            // kind, and false only for a resource whose attributes were removed
+            // again. Testing for their *absence* instead would filter the
+            // extension out of exactly the resources it had just added itself to.
+            resource.has_attribute(&self.updated_by)
+        }
+
+        fn extend(&self, resource: &mut ResourceDef) {
+            if !resource.has_attribute(&self.created_by) {
+                resource.add_attribute(
+                    Attribute::uuid(&self.created_by)
+                        .optional()
+                        .describe("Stamped by the StampActor extension"),
+                );
+            }
+            if !resource.has_attribute(&self.updated_by) {
+                resource.add_attribute(
+                    Attribute::uuid(&self.updated_by)
+                        .optional()
+                        .describe("Stamped by the StampActor extension"),
+                );
+            }
+        }
+
+        async fn before_changeset(
+            &self,
+            mut changeset: Changeset,
+            context: &dyn ActionContext,
+        ) -> Result<Changeset> {
+            let Some(actor_id) = context.actor().and_then(|actor| actor.id()) else {
+                return Ok(changeset);
+            };
+
+            // `updated_by` is always the actor on the write. `created_by` is too,
+            // unless the caller supplied it — which usually means a system
+            // creating a record on someone's behalf — in which case the explicit
+            // author wins.
+            changeset.set(&self.updated_by, actor_id.clone())?;
+            if changeset.kind() == ChangesetKind::Create && changeset.is_nil(&self.created_by) {
+                changeset.set(&self.created_by, actor_id)?;
+            }
+            Ok(changeset)
+        }
+    }
+
+    /// Refuses actions that do not pass a check, the way Ash's policies do.
+    ///
+    /// The check sees the changeset on a write and the query on a read, so one
+    /// extension can gate both. A refusal is reported as a changeset error
+    /// rather than a framework failure, since it is the caller's input that was
+    /// turned down.
+    pub struct Authorize {
+        name: String,
+        error_message: String,
+        check: Box<dyn AuthorizeCheck>,
+    }
+
+    /// What an [`Authorize`] check is handed.
+    ///
+    /// A changeset and a query are different things, so the check gets the parts
+    /// they have in common — the resource, the action type, the caller's
+    /// context — and reaches for the values it needs through the two
+    /// optional handles.
+    pub struct AuthorizeInput<'a> {
+        pub resource: &'a ResourceDef,
+        pub action_type: &'a crate::action::ActionType,
+        pub changeset: Option<&'a Changeset>,
+        pub query: Option<&'a Query>,
+        pub context: &'a dyn ActionContext,
+    }
+
+    /// The predicate behind an [`Authorize`].
+    pub trait AuthorizeCheck: Send + Sync {
+        fn check(&self, input: AuthorizeInput<'_>) -> std::result::Result<(), String>;
+    }
+
+    impl Authorize {
+        /// An extension that refuses an action unless `check` passes.
+        pub fn new<F>(name: &str, error_message: &str, check: F) -> Self
+        where
+            F: Fn(AuthorizeInput<'_>) -> std::result::Result<(), String> + Send + Sync + 'static,
+        {
+            Self {
+                name: name.to_string(),
+                error_message: error_message.to_string(),
+                check: Box::new(ClosureAuthorize { check }),
+            }
+        }
+
+        /// The error reported when the check turns an action down.
+        pub fn on_failure(mut self, error_message: &str) -> Self {
+            self.error_message = error_message.to_string();
+            self
+        }
+    }
+
+    struct ClosureAuthorize<F> {
+        check: F,
+    }
+
+    impl<F> AuthorizeCheck for ClosureAuthorize<F>
+    where
+        F: Fn(AuthorizeInput<'_>) -> std::result::Result<(), String> + Send + Sync,
+    {
+        fn check(&self, input: AuthorizeInput<'_>) -> std::result::Result<(), String> {
+            (self.check)(input)
+        }
+    }
+
+    #[async_trait]
+    impl SootExtension for Authorize {
+        fn name(&self) -> &str {
+            &self.name
+        }
+
+        fn description(&self) -> Option<&str> {
+            Some(&self.error_message)
+        }
+
+        async fn before_query(&self, query: &mut Query, context: &dyn ActionContext) -> Result<()> {
+            let input = AuthorizeInput {
+                resource: query.resource(),
+                action_type: &query.action().action_type(),
+                changeset: None,
+                query: Some(query),
+                context,
+            };
+            match self.check.check(input) {
+                Ok(()) => Ok(()),
+                Err(reason) => Err(self.refusal(query.resource().name(), &reason)),
+            }
+        }
+
+        async fn before_changeset(
+            &self,
+            changeset: Changeset,
+            context: &dyn ActionContext,
+        ) -> Result<Changeset> {
+            let input = AuthorizeInput {
+                resource: changeset.resource(),
+                action_type: &changeset.action_type(),
+                changeset: Some(&changeset),
+                query: None,
+                context,
+            };
+            match self.check.check(input) {
+                Ok(()) => Ok(changeset),
+                Err(reason) => Err(self.refusal(changeset.resource().name(), &reason)),
+            }
+        }
+    }
+
+    impl Authorize {
+        /// One refusal, phrased the same way whichever side it came from.
+        fn refusal(&self, resource: &str, reason: &str) -> Errors {
+            let detail = if reason.is_empty() {
+                self.error_message.clone()
+            } else {
+                format!("{}: {reason}", self.error_message)
+            };
+            Error::changeset(format!("`{resource}` is not allowed: {detail}")).into()
+        }
+    }
+
+    /// Keeps every row of a resource inside the caller's tenant, and stamps the
+    /// tenant onto anything created.
+    ///
+    /// A tenant filter added to every read is the whole point: a caller that
+    /// forgets to scope a query should not see another tenant's rows. The
+    /// filter is added as an `AND`, so it narrows whatever the action and the
+    /// caller already asked for rather than replacing it.
+    ///
+    /// A request with no tenant is refused rather than allowed through
+    /// unscoped, since an unscoped read across tenants is the failure this
+    /// extension exists to prevent.
+    pub struct FilterByTenant {
+        attribute: String,
+        nullable: bool,
+    }
+
+    impl Default for FilterByTenant {
+        fn default() -> Self {
+            Self::new("tenant_id")
+        }
+    }
+
+    impl FilterByTenant {
+        pub fn new(attribute: &str) -> Self {
+            Self {
+                attribute: attribute.to_string(),
+                nullable: false,
+            }
+        }
+
+        /// Allow an action with no tenant through, leaving the column nil.
+        ///
+        /// Right for a resource that is shared across tenants, or for rows that
+        /// deliberately belong to none.
+        pub fn allow_without_tenant(mut self) -> Self {
+            self.nullable = true;
+            self
+        }
+    }
+
+    #[async_trait]
+    impl SootExtension for FilterByTenant {
+        fn name(&self) -> &str {
+            "filter_by_tenant"
+        }
+
+        fn description(&self) -> Option<&str> {
+            Some("scopes every action to the caller's tenant")
+        }
+
+        fn applies_to(&self, resource: &ResourceDef) -> bool {
+            resource.has_attribute(&self.attribute)
+        }
+
+        fn extend(&self, resource: &mut ResourceDef) {
+            if !resource.has_attribute(&self.attribute) {
+                resource.add_attribute(
+                    Attribute::uuid(&self.attribute)
+                        .optional()
+                        .describe("The tenant this row belongs to"),
+                );
+            }
+        }
+
+        async fn before_query(&self, query: &mut Query, context: &dyn ActionContext) -> Result<()> {
+            match context.tenant() {
+                Some(tenant) => {
+                    query.filter_eq(&self.attribute, tenant);
+                    Ok(())
+                }
+                None if self.nullable => Ok(()),
+                None => Err(Error::changeset(format!(
+                    "a tenant is required to read `{}`",
+                    query.resource().name()
+                ))
+                .into()),
+            }
+        }
+
+        async fn before_changeset(
+            &self,
+            mut changeset: Changeset,
+            context: &dyn ActionContext,
+        ) -> Result<Changeset> {
+            let Some(tenant) = context.tenant() else {
+                if self.nullable {
+                    return Ok(changeset);
+                }
+                return Err(Error::changeset(format!(
+                    "a tenant is required to write `{}`",
+                    changeset.resource().name()
+                ))
+                .into());
+            };
+
+            if changeset.is_nil(&self.attribute) {
+                changeset.set(&self.attribute, tenant)?;
+            }
+            Ok(changeset)
+        }
+
+        async fn after_write(&self, mut record: Record, changeset: &Changeset) -> Result<Record> {
+            // The column was written, but the write-back read is built from the
+            // resource's attributes, so put the value on the record directly
+            // rather than re-reading it.
+            if let Some(value) = changeset.effective(&self.attribute) {
+                record.set(&self.attribute, value);
+            }
+            Ok(record)
+        }
+    }
+
+    /// Counts how many times each hook ran, for a caller asserting that an
+    /// extension actually fired.
+    ///
+    /// Not a behaviour extension — it does nothing except observe — but the
+    /// alternative in a test is a shared `Arc<AtomicUsize>` threaded through
+    /// three closures.
+    ///
+    /// Cloning shares the counts, so a caller can keep a handle to read them
+    /// after handing the extension itself to a resource.
+    #[derive(Clone)]
+    pub struct Recorder {
+        name: String,
+        seen: Arc<Mutex<BTreeMap<&'static str, usize>>>,
+    }
+
+    impl Recorder {
+        pub fn new(name: &str) -> Self {
+            Self {
+                name: name.to_string(),
+                seen: Arc::new(Mutex::new(BTreeMap::new())),
+            }
+        }
+
+        /// How many times `hook` ran, by name: `before_query`, `before_changeset`,
+        /// `after_write`, `after_read`, `setup` or `teardown`.
+        pub fn count(&self, hook: &str) -> usize {
+            self.seen
+                .lock()
+                .ok()
+                .and_then(|seen| seen.get(hook).copied())
+                .unwrap_or(0)
+        }
+
+        /// Every hook that ran, with its count.
+        pub fn counts(&self) -> BTreeMap<String, usize> {
+            self.seen
+                .lock()
+                .map(|seen| seen.iter().map(|(k, v)| ((*k).to_string(), *v)).collect())
+                .unwrap_or_default()
+        }
+    }
+
+    #[async_trait]
+    impl SootExtension for Recorder {
+        fn name(&self) -> &str {
+            &self.name
+        }
+
+        async fn setup(&self, _context: &dyn ActionContext) -> Result<()> {
+            self.record("setup");
+            Ok(())
+        }
+
+        async fn teardown(&self) -> Result<()> {
+            self.record("teardown");
+            Ok(())
+        }
+
+        async fn before_query(
+            &self,
+            query: &mut Query,
+            _context: &dyn ActionContext,
+        ) -> Result<()> {
+            let _ = query;
+            self.record("before_query");
+            Ok(())
+        }
+
+        async fn before_changeset(
+            &self,
+            changeset: Changeset,
+            _context: &dyn ActionContext,
+        ) -> Result<Changeset> {
+            self.record("before_changeset");
+            Ok(changeset)
+        }
+
+        async fn after_write(&self, record: Record, _changeset: &Changeset) -> Result<Record> {
+            self.record("after_write");
+            Ok(record)
+        }
+
+        async fn after_read(&self, records: Vec<Record>, _query: &Query) -> Result<Vec<Record>> {
+            self.record("after_read");
+            Ok(records)
+        }
+    }
+
+    impl Recorder {
+        fn record(&self, hook: &'static str) {
+            if let Ok(mut seen) = self.seen.lock() {
+                *seen.entry(hook).or_insert(0) += 1;
+            }
+        }
+    }
 }

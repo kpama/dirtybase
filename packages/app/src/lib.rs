@@ -19,6 +19,8 @@ pub use dirtybase_db as db;
 pub use dirtybase_db_macro as db_macro;
 pub use dirtybase_helper as helper;
 pub use dirtybase_mail as mail;
+#[cfg(feature = "soot")]
+pub use dirtybase_soot as soot;
 pub use orsomafo;
 
 use dirtybase_contract::cli_contract::setup_cli_command_manager;

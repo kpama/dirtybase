@@ -118,6 +118,17 @@ impl DefaultActionContext {
         }
     }
 
+    /// Both at once, which is what a request authenticated inside a tenant has.
+    /// The two builders above each start from the default, so a caller holding
+    /// both an actor and a tenant needs this rather than chaining them.
+    pub fn with_actor_and_tenant(actor: Actor, tenant: impl Into<FieldValue>) -> Self {
+        Self {
+            actor: Some(actor),
+            tenant: Some(tenant.into()),
+            ..Default::default()
+        }
+    }
+
     pub fn with_value(mut self, key: &str, value: impl Into<FieldValue>) -> Self {
         self.values.insert(key.to_string(), value.into());
         self

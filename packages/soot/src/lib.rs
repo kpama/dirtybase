@@ -63,6 +63,7 @@ pub mod context;
 pub mod data_layer;
 pub mod domain;
 pub mod error;
+pub mod extension;
 pub mod generic;
 pub mod pipeline;
 pub mod preparation;
@@ -75,6 +76,11 @@ pub mod schema;
 pub mod validation;
 
 pub mod builtins;
+
+#[cfg(feature = "extension")]
+pub mod config;
+#[cfg(feature = "extension")]
+pub mod dirtybase_entry;
 
 #[cfg(feature = "migrations")]
 pub mod migrations;
@@ -94,6 +100,7 @@ pub mod prelude {
         data_layer::{DataLayer, RelationalDataLayer},
         domain::Domain,
         error::{Error, ErrorClass, ErrorList, Errors, Result},
+        extension::{ExtensionRef, FnExtension, SootExtension, extension},
         pipeline::Pipeline,
         preparation::Preparation,
         query::{Filter, FilterOperator, Query, SortDirection},

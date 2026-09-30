@@ -13,6 +13,7 @@ use crate::{
     aggregate::Aggregate,
     attribute::{Attribute, AttributeType},
     error::{Error, Errors, Result},
+    extension::ExtensionRef,
     pipeline::Pipeline,
     relationship::{Calculation, Relationship, RelationshipType},
 };
@@ -35,6 +36,7 @@ pub struct ResourceDef {
     actions: Vec<Action>,
     pipelines: Vec<Pipeline>,
     interfaces: Vec<InterfaceDefinition>,
+    extensions: Vec<ExtensionRef>,
     metadata: BTreeMap<String, FieldValue>,
     timestamps: bool,
     soft_deletable: bool,
@@ -66,6 +68,7 @@ impl ResourceDef {
             actions: Vec::new(),
             pipelines: Vec::new(),
             interfaces: Vec::new(),
+            extensions: Vec::new(),
             metadata: BTreeMap::new(),
             timestamps: false,
             soft_deletable: false,
@@ -107,6 +110,18 @@ impl ResourceDef {
     }
 
     pub fn attribute(mut self, attribute: Attribute) -> Self {
+        self.attributes.push(attribute);
+        self
+    }
+
+    /// Append an attribute in place.
+    ///
+    /// [`ResourceDef::attribute`] consumes the resource, so an extension
+    /// extending a declaration it was handed by reference needs this instead.
+    /// A duplicate name is appended rather than rejected, matching
+    /// [`ResourceDef::attribute`]; the first declaration is the one
+    /// [`ResourceDef::find_attribute`] returns.
+    pub fn add_attribute(&mut self, attribute: Attribute) -> &mut Self {
         self.attributes.push(attribute);
         self
     }
@@ -229,6 +244,61 @@ impl ResourceDef {
         self
     }
 
+    /// Attach an extension to this resource.
+    ///
+    /// The extension's [`crate::extension::SootExtension::extend`] runs
+    /// immediately, so anything it adds is part of the declaration from here on.
+    /// Its runtime hooks then run around every action on this resource.
+    ///
+    /// ```
+    /// # use dirtybase_soot::prelude::*;
+    /// # use dirtybase_soot::extension::extension;
+    /// let post = ResourceDef::new("Post")
+    ///     .uuid_primary_key()
+    ///     .extension(extension("stamp").describe("stamps `updated_by`"))
+    ///     .default_actions();
+    /// assert_eq!(post.extensions().len(), 1);
+    /// ```
+    pub fn extension<E: crate::extension::SootExtension + 'static>(mut self, extension: E) -> Self {
+        self.add_extension(extension);
+        self
+    }
+
+    /// Attach an extension in place. See [`ResourceDef::extension`].
+    pub fn add_extension<E: crate::extension::SootExtension + 'static>(
+        &mut self,
+        extension: E,
+    ) -> &mut Self {
+        extension.extend(self);
+        self.extensions.push(Arc::new(extension));
+        self
+    }
+
+    /// Attach several extensions.
+    pub fn with_extensions(mut self, extensions: impl IntoIterator<Item = ExtensionRef>) -> Self {
+        for extension in extensions {
+            extension.extend(&mut self);
+            self.extensions.push(extension);
+        }
+        self
+    }
+
+    pub fn extensions(&self) -> &[ExtensionRef] {
+        &self.extensions
+    }
+
+    pub fn find_extension(&self, name: &str) -> Option<&ExtensionRef> {
+        self.extensions
+            .iter()
+            .find(|extension| extension.name() == name)
+    }
+
+    /// Whether an extension of that name is attached, which is the check an
+    /// extension itself makes before contributing twice.
+    pub fn has_extension(&self, name: &str) -> bool {
+        self.find_extension(name).is_some()
+    }
+
     pub fn with_metadata(mut self, key: &str, value: impl Into<FieldValue>) -> Self {
         self.metadata.insert(key.to_string(), value.into());
         self
@@ -256,6 +326,15 @@ impl ResourceDef {
 
     pub fn find_attribute(&self, name: &str) -> Option<&Attribute> {
         self.attributes.iter().find(|a| a.name() == name)
+    }
+
+    /// Whether the resource declares that attribute.
+    ///
+    /// An extension that contributes a column needs this before adding it, since
+    /// a resource that already declares the name — to type it differently, or
+    /// to make it required — must not have a second declaration appended.
+    pub fn has_attribute(&self, name: &str) -> bool {
+        self.find_attribute(name).is_some()
     }
 
     pub fn attributes(&self) -> &[Attribute] {
@@ -300,6 +379,21 @@ impl ResourceDef {
 
     pub fn actions(&self) -> &[Action] {
         &self.actions
+    }
+
+    /// The declared actions, mutably.
+    ///
+    /// An extension that has to change the actions already declared — adding a
+    /// change to every create, say — needs this rather than a way to append,
+    /// because the actions it wants are the ones the resource built earlier.
+    pub fn actions_mut(&mut self) -> &mut [Action] {
+        &mut self.actions
+    }
+
+    /// Append an action in place, for an extension extending the declaration.
+    pub fn add_action(&mut self, action: Action) -> &mut Self {
+        self.actions.push(action);
+        self
     }
 
     pub fn find_action(&self, name: &str) -> Option<&Action> {

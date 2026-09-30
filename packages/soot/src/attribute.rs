@@ -147,8 +147,13 @@ impl AttributeType {
             Self::Uuid => match value {
                 FieldValue::Uuid(v) => FieldValue::Uuid(v),
                 FieldValue::String(ref s) => {
-                    let cleaned = s.replace(['-', '_'], "");
-                    match ArcUuid7::try_from(cleaned.as_str()) {
+                    // The canonical hyphenated form, which is what dirtybase
+                    // hands out everywhere. `ArcUuid7::try_from` parses through
+                    // `Uuid::parse_str`, which needs the hyphens — stripping
+                    // them here would make every coercion fail and fall back to
+                    // a fresh id. Keeping them means a caller's value survives
+                    // a round trip.
+                    match ArcUuid7::try_from(s.as_str()) {
                         Ok(v) => v.into(),
                         Err(_) => ArcUuid7::default().into(),
                     }

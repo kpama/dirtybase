@@ -11,6 +11,7 @@ use crate::{
     context::{ActionContext, DefaultActionContext},
     data_layer::DataLayer,
     error::{Error, ErrorList, Errors, Result},
+    extension::{ExtensionRef, SootExtension},
     query::{INCLUDE_DELETED_FLAG, Query},
     record::Record,
     resource::ResourceDef,
@@ -25,9 +26,15 @@ use crate::{
 ///
 /// That is the property that makes a resource metadata-driven. The engine is
 /// written once, here, and works for every resource ever registered.
+///
+/// A domain also holds its own [`SootExtension`]s. Those apply to every
+/// resource in it, which is Ash's `extensions` list lifted from the resource to
+/// the whole domain: a cross-cutting concern like auditing or tenant scoping
+/// belongs here rather than being repeated on each declaration.
 #[derive(Clone, Default)]
 pub struct Domain {
     resources: Vec<Arc<ResourceDef>>,
+    extensions: Vec<ExtensionRef>,
 }
 
 impl std::fmt::Debug for Domain {
@@ -39,6 +46,14 @@ impl std::fmt::Debug for Domain {
                     .resources
                     .iter()
                     .map(|r| r.name())
+                    .collect::<Vec<&str>>(),
+            )
+            .field(
+                "extensions",
+                &self
+                    .extensions
+                    .iter()
+                    .map(|e| e.name())
                     .collect::<Vec<&str>>(),
             )
             .finish()
@@ -57,7 +72,13 @@ impl Domain {
     }
 
     /// Register a resource in place.
+    ///
+    /// The domain's own extensions get to extend the resource as it is
+    /// registered, so a resource declared before them still ends up with what
+    /// they contribute.
     pub fn push(&mut self, resource: ResourceDef) -> &mut Self {
+        let mut resource = resource;
+        crate::extension::extend_resource(&self.extensions, &mut resource);
         let resource = Arc::new(resource);
         if self
             .resources
@@ -88,6 +109,154 @@ impl Domain {
     pub fn is_empty(&self) -> bool {
         self.resources.is_empty()
     }
+
+    // ---- extensions --------------------------------------------------------
+
+    /// Attach an extension to the whole domain.
+    ///
+    /// The extension is run against every resource here, in registration order
+    /// ahead of the resource's own extensions. Its
+    /// [`SootExtension::extend`] runs over every resource when it is
+    /// registered — both the ones already in the domain and the ones added
+    /// later — so a column it adds is there no matter how the caller ordered
+    /// its declarations.
+    ///
+    /// ```
+    /// # use dirtybase_soot::prelude::*;
+    /// # use dirtybase_soot::extension::extension;
+    /// # use dirtybase_soot::builtins::extensions::StampActor;
+    /// // Before the resource...
+    /// let domain = Domain::new()
+    ///     .extension(StampActor::default())
+    ///     .add(ResourceDef::new("Post").uuid_primary_key().default_actions());
+    /// assert!(domain.resource("Post").unwrap().find_attribute("updated_by").is_some());
+    ///
+    /// // ...or after it — both orders give a resource that has been extended.
+    /// let later = Domain::new()
+    ///     .add(ResourceDef::new("Post").uuid_primary_key().default_actions())
+    ///     .extension(StampActor::default());
+    /// assert!(later.resource("Post").unwrap().find_attribute("updated_by").is_some());
+    /// ```
+    pub fn extension<E: SootExtension + 'static>(mut self, extension: E) -> Self {
+        self.push_extension(extension);
+        self
+    }
+
+    /// Attach a domain extension in place. See [`Domain::extension`].
+    ///
+    /// Runs the extension's `extend` over every resource already in the domain,
+    /// so the declaration contribution does not depend on registration order.
+    pub fn push_extension<E: SootExtension + 'static>(&mut self, extension: E) -> &mut Self {
+        let extension: ExtensionRef = Arc::new(extension);
+        self.extend_registered(&extension);
+        self.extensions.push(extension);
+        self
+    }
+
+    /// Attach several domain extensions.
+    pub fn with_extensions(mut self, extensions: impl IntoIterator<Item = ExtensionRef>) -> Self {
+        for extension in extensions {
+            self.extend_registered(&extension);
+            self.extensions.push(extension);
+        }
+        self
+    }
+
+    /// Apply one extension's declaration contribution to every resource already
+    /// in the domain.
+    ///
+    /// A resource is held behind an `Arc` so the domain can share it, but a
+    /// *declared* resource is usually not shared — `Arc::make_mut` only pays the
+    /// clone a caller holding a copy forces on it.
+    fn extend_registered(&mut self, extension: &ExtensionRef) {
+        for resource in &mut self.resources {
+            extension.extend(Arc::make_mut(resource));
+        }
+    }
+
+    /// The domain's own extensions, not merged with any resource's.
+    pub fn extensions(&self) -> &[ExtensionRef] {
+        &self.extensions
+    }
+
+    pub fn find_extension(&self, name: &str) -> Option<&ExtensionRef> {
+        self.extensions
+            .iter()
+            .find(|extension| extension.name() == name)
+    }
+
+    /// The extensions that apply to a resource, by name.
+    ///
+    /// An unregistered resource name resolves against the domain extensions
+    /// alone, so this is a safe way to ask what would run without a
+    /// `Result`.
+    pub fn extensions_for(&self, resource: &str) -> Vec<ExtensionRef> {
+        match self.resource(resource) {
+            Ok(definition) => self.extensions_of(definition),
+            Err(_) => self
+                .extensions
+                .iter()
+                .filter(|extension| extension.applies_to(&ResourceDef::new(resource)))
+                .cloned()
+                .collect(),
+        }
+    }
+
+    /// The extensions that apply to `definition`: the domain's, then the
+    /// resource's own, each filtered by [`SootExtension::applies_to`].
+    ///
+    /// Domain first, so a domain-wide extension runs before a resource can
+    /// narrow or override what it contributed.
+    pub fn extensions_of(&self, definition: &ResourceDef) -> Vec<ExtensionRef> {
+        self.extensions
+            .iter()
+            .filter(|extension| extension.applies_to(definition))
+            .chain(
+                definition
+                    .extensions()
+                    .iter()
+                    .filter(|extension| extension.applies_to(definition)),
+            )
+            .cloned()
+            .collect()
+    }
+
+    /// Every distinct extension in the domain: the domain's own, then each
+    /// resource's.
+    ///
+    /// This is the list [`Domain::setup_extensions`] and
+    /// [`Domain::teardown_extensions`] work on, so a domain extension is
+    /// set up once no matter how many resources it applies to.
+    pub fn all_extensions(&self) -> Vec<ExtensionRef> {
+        let mut out: Vec<ExtensionRef> = Vec::new();
+        let mut seen: BTreeSet<String> = BTreeSet::new();
+        for extension in self
+            .extensions
+            .iter()
+            .chain(self.resources.iter().flat_map(|r| r.extensions().iter()))
+        {
+            if seen.insert(extension.name().to_string()) {
+                out.push(Arc::clone(extension));
+            }
+        }
+        out
+    }
+
+    /// Run every extension's setup hook. Call once, after registration.
+    pub async fn setup_extensions(&self, context: &dyn ActionContext) -> Result<()> {
+        crate::extension::setup_all(&self.all_extensions(), context).await
+    }
+
+    /// Run every extension's teardown hook, in setup order.
+    ///
+    /// Like setup, this reports what failed rather than swallowing it: a
+    /// teardown that could not release a lock or drop a subscription is worth
+    /// hearing about on the way down.
+    pub async fn teardown_extensions(&self) -> Result<()> {
+        crate::extension::teardown_all(&self.all_extensions()).await
+    }
+
+    // ---- lookup ------------------------------------------------------------
 
     /// Look up a resource by name.
     pub fn resource(&self, name: &str) -> Result<&Arc<ResourceDef>> {
@@ -133,10 +302,11 @@ impl Domain {
         context: &dyn ActionContext,
     ) -> Result<Record> {
         let definition = self.resource(resource)?.clone();
+        let extensions = self.extensions_of(&definition);
         let action = definition.resolve_action(action, ActionType::Create)?;
         let arguments = action.resolve_arguments(&no_arguments())?;
         let changeset = Changeset::for_create(definition, action, params, arguments)?;
-        run_changeset_with(data_layer, changeset, context).await
+        run_changeset_with_extensions(data_layer, changeset, context, &extensions).await
     }
 
     /// Run an update action against the record identified by `id`.
@@ -150,6 +320,7 @@ impl Domain {
         context: &dyn ActionContext,
     ) -> Result<Record> {
         let definition = self.resource(resource)?.clone();
+        let extensions = self.extensions_of(&definition);
         let action = definition.resolve_action(action, ActionType::Update)?;
         let arguments = action.resolve_arguments(&BTreeMap::new())?;
 
@@ -163,7 +334,7 @@ impl Domain {
             })?;
 
         let changeset = Changeset::for_update(definition, action, record, params, arguments)?;
-        run_changeset_with(data_layer, changeset, context).await
+        run_changeset_with_extensions(data_layer, changeset, context, &extensions).await
     }
 
     /// Run a destroy action against the record identified by `id`.
@@ -176,6 +347,7 @@ impl Domain {
         context: &dyn ActionContext,
     ) -> Result<Record> {
         let definition = self.resource(resource)?.clone();
+        let extensions = self.extensions_of(&definition);
         let action = definition.resolve_action(action, ActionType::Destroy)?;
         let arguments = action.resolve_arguments(&BTreeMap::new())?;
 
@@ -189,7 +361,7 @@ impl Domain {
             })?;
 
         let changeset = Changeset::for_destroy(definition, action, record, arguments)?;
-        run_changeset_with(data_layer, changeset, context).await
+        run_changeset_with_extensions(data_layer, changeset, context, &extensions).await
     }
 
     /// Run a read action, returning every matching record.
@@ -204,7 +376,11 @@ impl Domain {
         let query = self
             .build_query(resource, action, configure, context)
             .await?;
-        data_layer.read(Arc::clone(query.resource()), &query).await
+        let extensions = self.extensions_of(query.resource());
+        let records = data_layer
+            .read(Arc::clone(query.resource()), &query)
+            .await?;
+        crate::extension::after_read(&extensions, records, &query).await
     }
 
     /// Run a read action restricted to one record.
@@ -219,8 +395,14 @@ impl Domain {
         let query = self
             .build_query(resource, action, configure, context)
             .await?;
-        Ok(data_layer
+        let extensions = self.extensions_of(query.resource());
+        let records = data_layer
             .read(Arc::clone(query.resource()), &query)
+            .await?;
+        // The extension sees the whole result set even though only the first
+        // record survives, so a hook does not have to care which of the two it
+        // is running under.
+        Ok(crate::extension::after_read(&extensions, records, &query)
             .await?
             .into_iter()
             .next())
@@ -350,6 +532,11 @@ impl Domain {
     }
 
     /// Build a query for a read action, running its preparations first.
+    ///
+    /// The extensions that apply to the resource run their
+    /// [`SootExtension::before_query`] hook between the preparations and the
+    /// validation, so a query an extension shaped is still checked before it
+    /// reaches the data layer.
     pub async fn build_query(
         &self,
         resource: &str,
@@ -358,6 +545,7 @@ impl Domain {
         context: &dyn ActionContext,
     ) -> Result<Query> {
         let definition = self.resource(resource)?.clone();
+        let extensions = self.extensions_of(&definition);
         let action = definition.resolve_action(action, ActionType::Read)?;
 
         if action.action_type() != ActionType::Read {
@@ -371,13 +559,17 @@ impl Domain {
 
         let mut query = Query::new(Arc::clone(&definition), Arc::clone(&action));
         configure(&mut query);
-        run_preparations(&mut query, &action, context).await?;
+        run_preparations_with(&mut query, &action, context, &extensions).await?;
         query.validate()?;
         Ok(query)
     }
 
     /// Read a single record by primary key, ignoring the resource's read
     /// action entirely. Used to fetch the current state before a write.
+    ///
+    /// Deliberately skips the extensions: this is the engine looking up the
+    /// row it is about to write, not a caller reading it, so a tenant filter
+    /// applied here would make a record invisible to the action that owns it.
     async fn find_record(
         &self,
         data_layer: &Arc<dyn DataLayer>,
@@ -400,6 +592,7 @@ impl Domain {
     /// without the developer writing it.
     pub fn describe(&self) -> DomainDescription {
         DomainDescription {
+            extensions: crate::extension::extension_names(&self.all_extensions()),
             resources: self
                 .resources
                 .iter()
@@ -410,6 +603,9 @@ impl Domain {
                     primary_key: resource.primary_key_column().to_string(),
                     timestamps: resource.has_timestamps(),
                     soft_deletable: resource.is_soft_deletable(),
+                    // What actually runs for this resource, domain extensions
+                    // included, rather than just what the declaration attached.
+                    extensions: crate::extension::extension_names(&self.extensions_of(resource)),
                     attributes: resource
                         .attributes()
                         .iter()
@@ -538,10 +734,27 @@ fn coerce_id(definition: &ResourceDef, id: &str) -> FieldValue {
 /// Preparations run in declaration order and each one sees the query as the
 /// previous left it, which is what lets a preparation build on a filter an
 /// earlier one added.
+///
+/// This is the extension-free form; a caller acting through a [`Domain`] gets
+/// the resource's extensions run too, via
+/// [`run_preparations_with`].
 pub async fn run_preparations(
     query: &mut Query,
     action: &Action,
     context: &dyn ActionContext,
+) -> Result<()> {
+    run_preparations_with(query, action, context, &[]).await
+}
+
+/// Run a query's preparations, then the extensions' `before_query` hooks.
+///
+/// Preparations run first so an extension can shape what the declaration asked
+/// for rather than fight it, and both run before validation.
+pub async fn run_preparations_with(
+    query: &mut Query,
+    action: &Action,
+    context: &dyn ActionContext,
+    extensions: &[ExtensionRef],
 ) -> Result<()> {
     let mut errors = ErrorList::new();
     for entity in action.preparations() {
@@ -552,6 +765,9 @@ pub async fn run_preparations(
             errors.add_errors(found);
         }
     }
+    // Reported alongside the preparation errors rather than instead of them, so
+    // one read surfaces every reason it was refused.
+    errors.add_result(crate::extension::before_query(extensions, query, context).await);
     errors.into_result()
 }
 
@@ -572,6 +788,23 @@ pub async fn run_changeset_with(
     changeset: Changeset,
     context: &dyn ActionContext,
 ) -> Result<Record> {
+    run_changeset_with_extensions(data_layer, changeset, context, &[]).await
+}
+
+/// The full action lifecycle, with extensions running around it.
+///
+/// The order is: the extensions' `before_changeset` hook, the action's changes,
+/// its validations, the constraint checks, the data layer write, and finally the
+/// `after_write` hook. The extension goes first so it can contribute to what the
+/// changes and validations see, and last on the record so it can decorate what
+/// the caller gets back.
+pub async fn run_changeset_with_extensions(
+    data_layer: &Arc<dyn DataLayer>,
+    changeset: Changeset,
+    context: &dyn ActionContext,
+    extensions: &[ExtensionRef],
+) -> Result<Record> {
+    let changeset = crate::extension::before_changeset(extensions, changeset, context).await?;
     let changeset = apply_changes(changeset, context).await?;
     apply_validations(&changeset, context).await?;
     changeset.check_constraints()?;
@@ -593,6 +826,11 @@ pub async fn run_changeset_with(
                 .await?
         }
     };
+
+    // The record as stored, before anything derived is layered on, so an
+    // extension hook sees the write itself rather than a calculation it did not
+    // ask for.
+    record = crate::extension::after_write(extensions, record, &changeset).await?;
 
     apply_calculations(&resource, &mut record).await;
     apply_aggregates(data_layer, &resource, &mut record).await?;
@@ -740,6 +978,8 @@ pub async fn apply_aggregates(
 
 #[derive(Debug, Clone)]
 pub struct DomainDescription {
+    /// Every extension in the domain, whatever it applies to.
+    pub extensions: Vec<String>,
     pub resources: Vec<ResourceDescription>,
 }
 
@@ -751,6 +991,8 @@ pub struct ResourceDescription {
     pub primary_key: String,
     pub timestamps: bool,
     pub soft_deletable: bool,
+    /// The extensions that run around every action on this resource.
+    pub extensions: Vec<String>,
     pub attributes: Vec<AttributeDescription>,
     pub relationships: Vec<RelationshipDescription>,
     pub calculations: Vec<String>,

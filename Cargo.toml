@@ -19,6 +19,7 @@ order = [
 	"dirtybase_cache",
 	"dirtybase_multitenant",
 	"dirtybase_realtime",
+	"dirtybase_soot",
 	"dirtybase_app",         # always the last
 ]
 
@@ -40,6 +41,7 @@ dirtybase_multitenant = { path = "./packages/multitenant" }
 dirtybase_queue = { path = "./packages/queue" }
 dirtybase_realtime = { path = "./packages/realtime" }
 dirtybase_session = { path = "./packages/session" }
+dirtybase_soot = { path = "./packages/soot" }
 
 
 [workspace.dependencies]
@@ -59,6 +61,7 @@ dirtybase_multitenant = { version = "*" }
 dirtybase_queue = { version = "*" }
 dirtybase_session = { version = "*" }
 dirtybase_realtime = { version = "*" }
+dirtybase_soot = { version = "*" }
 dirtybase_3rd_client = { version = "*" }
 
 axum = { version = "0.8.4", features = ["ws", "multipart"] }
