@@ -1477,8 +1477,10 @@ dependencies = [
  "base64ct",
  "crypto",
  "dirtybase_contract",
+ "dotenvy",
  "serde",
  "serde_json",
+ "tempfile",
  "tracing",
 ]
 

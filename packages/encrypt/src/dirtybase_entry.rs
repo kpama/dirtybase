@@ -1,3 +1,5 @@
+mod key_rotation;
+
 use dirtybase_contract::{
     cli_contract::{
         CliCommandManager,
@@ -28,20 +30,17 @@ impl ExtensionSetup for Extension {
                     )
                     .about("generate encryption key"),
             );
-        manager.register(command, |_name, matches, _context| {
+        manager.register(command, |_name, matches, context| {
             Box::pin(async move {
-                if let Some((name, arg)) = matches.subcommand() {
-                    if name == "keygen" {
-                        // generate the random bytes
-                        // base64 encode it
-                        let key = Encrypter::key_to_env_value(&Encrypter::generate_aes256gcm_key());
-                        if arg.get_flag("print") {
-                            println!("{key}");
-                        } else {
-                            // TODO: WRITE THIS KEY TO THE .ENV FILE
-                            //       If there is an existing key, move it to the list of previous keys
-                            println!("writing to .env: {key}");
-                        }
+                if let Some(("keygen", arg)) = matches.subcommand() {
+                    let key = Encrypter::key_to_env_value(&Encrypter::generate_aes256gcm_key());
+                    if arg.get_flag("print") {
+                        println!("{key}");
+                    } else {
+                        let config = context.get::<DirtyConfig>().await?;
+                        let keys = key_rotation::ConfiguredKeys::load(&config).await?;
+                        let path = key_rotation::write_key(&config, &keys, &key)?;
+                        println!("wrote encryption key to {}", path.display());
                     }
                 }
                 Ok(())
