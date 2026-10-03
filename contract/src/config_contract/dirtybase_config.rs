@@ -30,7 +30,7 @@ impl Default for DirtyConfig {
                 .as_str()
                 .into(),
             config_dir: env::var(CONFIG_DIR_KEY).unwrap_or_default().into(),
-            dotenv_dir: ".".into(),
+            dotenv_dir: env::var(CONFIG_DIR_KEY).unwrap_or_default().into(),
         }
     }
 }
@@ -64,7 +64,7 @@ impl DirtyConfig {
             app_name: Arc::new(name.to_string()),
             current_env,
             config_dir: Arc::new(env::var(CONFIG_DIR_KEY).unwrap_or_default()),
-            dotenv_dir: ".".into(),
+            dotenv_dir: env::var(CONFIG_DIR_KEY).unwrap_or_default().into(),
         }
     }
 
