@@ -212,9 +212,11 @@ pub async fn init(app: AppService) -> anyhow::Result<()> {
                     .await
                     .expect("could not get app service");
 
-                // TODO: CHECK THAT WE HAVE AN ENCRYPTION KEY
                 let app_config = app.config_ref();
                 let cookie_config = app_config.web_cookie_ref();
+                // NOTE: If the key is empty, the encrypter will generate a key and print it to the terminal
+                //       This allows the application to run istead of crashint. Hopefully, I can implement saving
+                //       the key to the .env file
                 let encrypter = dirtybase_encrypt::Encrypter::new(
                     app_config.key_ref(),
                     app_config.previous_keys(),

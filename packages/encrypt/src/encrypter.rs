@@ -13,13 +13,28 @@ pub struct Encrypter {
 }
 
 impl Encrypter {
+    /// If the key is an empty slice, a random key will be generated and printed out
     pub fn new(key: &[u8], previous_keys: Option<Vec<Vec<u8>>>) -> Self {
+        let mut generated_key = Vec::new();
         if key.len() == 0 {
-            panic!("encryption key is not set. Generate a valid key");
+            generated_key = Self::generate_aes256gcm_key();
+            let key_string = Self::key_to_env_value(&generated_key);
+            println!("-----------------------------------------------");
+            println!("                   WARNING!                    ");
+            println!("-----------------------------------------------");
+            println!(
+                "Encryption key is not set.\nOne was generated.\nStore it in your .env:\n\n{}",
+                &key_string
+            );
+            println!("***********************************************");
         }
 
         Self {
-            key: Arc::new(key.to_vec()),
+            key: Arc::new(if key.len() > 0 {
+                key.to_vec()
+            } else {
+                generated_key
+            }),
             previous_keys: Arc::new(previous_keys),
         }
     }
@@ -50,6 +65,10 @@ impl Encrypter {
 
     pub fn generate_aes256gcm_key_string() -> String {
         base64ct::Base64::encode_string(&Self::generate_aes256gcm_key())
+    }
+
+    pub fn key_to_env_value(key: &[u8]) -> String {
+        format!("base64:{}", base64ct::Base64::encode_string(key))
     }
 }
 

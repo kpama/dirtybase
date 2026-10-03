@@ -34,7 +34,7 @@ impl ExtensionSetup for Extension {
                     if name == "keygen" {
                         // generate the random bytes
                         // base64 encode it
-                        let key = format!("base64:{}", Encrypter::generate_aes256gcm_key_string());
+                        let key = Encrypter::key_to_env_value(&Encrypter::generate_aes256gcm_key());
                         if arg.get_flag("print") {
                             println!("{key}");
                         } else {
