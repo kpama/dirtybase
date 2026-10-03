@@ -235,6 +235,7 @@ impl AttributeType {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Constraints {
     pub allow_nil: bool,
+    pub unique: bool,
     pub min: Option<f64>,
     pub max: Option<f64>,
     pub min_length: Option<usize>,
@@ -257,6 +258,7 @@ impl Default for Constraints {
     fn default() -> Self {
         Self {
             allow_nil: true,
+            unique: false,
             min: None,
             max: None,
             min_length: None,
@@ -277,6 +279,11 @@ impl Constraints {
     /// every attribute that is not explicitly optional.
     pub fn required(mut self) -> Self {
         self.allow_nil = false;
+        self
+    }
+
+    pub fn unique(mut self) -> Self {
+        self.unique = true;
         self
     }
 
@@ -539,6 +546,11 @@ impl Attribute {
     pub fn primary_key(mut self) -> Self {
         self.primary_key = true;
         self.constraints.allow_nil = false;
+        self
+    }
+
+    pub fn with_constraints(mut self, callback: impl FnOnce(Constraints) -> Constraints) -> Self {
+        self.constraints = callback(self.constraints);
         self
     }
 

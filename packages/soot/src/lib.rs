@@ -108,6 +108,7 @@ pub mod prelude {
         relationship::{Calculation, LoadedRelationship, Relationship, RelationshipType},
         resource::{InterfaceDefinition, ResourceDef},
         resource_impl::Resource,
+        schema,
         validation::Validation,
     };
 }
