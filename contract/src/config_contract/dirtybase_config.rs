@@ -14,6 +14,8 @@ pub struct DirtyConfig {
     app_name: Arc<String>,
     current_env: CurrentEnvironment,
     config_dir: Arc<String>,
+    #[serde(default)]
+    dotenv_dir: std::path::PathBuf,
 }
 
 impl Default for DirtyConfig {
@@ -28,6 +30,7 @@ impl Default for DirtyConfig {
                 .as_str()
                 .into(),
             config_dir: env::var(CONFIG_DIR_KEY).unwrap_or_default().into(),
+            dotenv_dir: env::var(CONFIG_DIR_KEY).unwrap_or_default().into(),
         }
     }
 }
@@ -45,6 +48,7 @@ impl DirtyConfig {
 
         Self {
             config_dir: p.into(),
+            dotenv_dir: path,
             app_name: env::var(APP_NAME_KEY)
                 .unwrap_or(APP_DEFAULT_NAME.into())
                 .into(),
@@ -60,11 +64,17 @@ impl DirtyConfig {
             app_name: Arc::new(name.to_string()),
             current_env,
             config_dir: Arc::new(env::var(CONFIG_DIR_KEY).unwrap_or_default()),
+            dotenv_dir: env::var(CONFIG_DIR_KEY).unwrap_or_default().into(),
         }
     }
 
     pub fn app_name(&self) -> &String {
         &self.app_name
+    }
+
+    /// Directory used to load dotenv files, independently of TOML configuration.
+    pub fn dotenv_dir(&self) -> &Path {
+        &self.dotenv_dir
     }
 
     pub fn current_env(&self) -> &CurrentEnvironment {
