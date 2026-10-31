@@ -13,7 +13,7 @@ use crate::prelude::{
 };
 
 /// An Observable that allows other crates to add function, variable to global context
-pub type CelContext<'a> = CelCtx<'a>;
+pub type CelContext<'a> = CelCtx<'a, 'a>;
 
 pub use cel;
 
@@ -108,7 +108,7 @@ impl CommonExpressionSandbox {
         callback: F,
     ) -> Result<Value, CelManagerError>
     where
-        F: Fn(&mut CelCtx<'_>) -> (),
+        F: Fn(&mut CelCtx<'_, '_>) -> (),
     {
         let ctx = context.clone();
         context
@@ -192,7 +192,7 @@ mod test {
     async fn test_program_and_context_manager() {
         let global_ctx = global_context().await;
         CelContext::subscribe(|mut cel_ctx, _| async move {
-            cel_ctx.add_function("get_back", |x: i64| x);
+            cel_ctx.add_function("get_back", |x: i64| x).unwrap();
             cel_ctx
                 .add_variable("environment", "dev")
                 .expect("could not add variable");

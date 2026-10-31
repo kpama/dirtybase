@@ -79,7 +79,7 @@ anyhow = { version = "1.0.102" }
 clap = { version = "4.6.7", features = ["derive", "unstable-doc"] }
 serde = { version = "1.0.228", features = ["derive", "rc"] }
 serde_json = { version = "1.0.149", features = ["raw_value"] }
-toml = { version = "1.1.6" }
+toml = { version = "1.1.6+spec-1.1.0" }
 num-traits = { version = "0.2.19" }
 sqlx = { version = "0.9.0", features = [
 	"runtime-tokio",
@@ -97,14 +97,14 @@ async-trait = { version = "0.1.89" }
 pretty_env_logger = { version = "0.5.0" }
 log = { version = "0.4.34" }
 bcrypt = { version = "0.19.0" }
-rand = { version = "0.10.2" }
+rand = { version = "0.10.3" }
 futures = { version = "0.3.32" }
 futures-util = { version = "0.3.32" }
 ulid = { version = "3.0.0", features = ["serde", "std"] }
 tokio-tungstenite = { version = "0.30.0", features = ["native-tls"] }
 futures-channel = { version = "0.3.32" }
 native-tls = { version = "0.2.18" }
-tokio = { version = "1.52.0", features = ["full"] }
+tokio = { version = "1.53.2", features = ["full"] }
 tokio-stream = { version = "0.1.18", features = ["sync"] }
 tokio-util = { version = "0.7.18", features = ["full"] }
 hmac = { version = "0.13.0" }
@@ -119,15 +119,15 @@ orsomafo = { version = "0.5.0" }
 fama = { version = "0.4.6" }
 busstop = { version = "0.2.7" }
 parking_lot = { version = "0.12.5" }
-thiserror = { version = "2.0.20" }
-redis = { version = "1.7.0", features = [
+thiserror = { version = "2.0.21" }
+redis = { version = "1.7.1", features = [
 	"tokio-comp",
 	"aio",
 	# "tls-native-tls",
 	"cluster-async",
 ] }
 lettre = { version = "0.11.21" }
-config = "0.15.22"
+config = "0.15.27"
 deadpool = "0.13.1"
 deadpool-redis = { version = "0.23.0" }
 cron = { version = "0.17.0" }
@@ -156,9 +156,9 @@ tower = { version = "0.5.2", features = ["util"] }
 hex = { version = "0.4.3" }
 base64 = "0.23.1"
 base64ct = { version = "1.8.3", features = ["std"] }
-utoipa = { version = "5.4.0", features = ["default", "axum_extras"] }
-utoipa-axum = { version = "0.2.0" }
-uuid = { version = "1.26.1", features = [
+utoipa = { version = "6.0.0", features = ["default", "axum_extras"] }
+utoipa-axum = { version = "0.3.0" }
+uuid = { version = "1.27.0", features = [
 	"v4",
 	"v7",
 	"serde",
@@ -173,7 +173,7 @@ snowflaker = { version = "0.3.6", features = ["dynamic"] }
 ipnet = { version = "2.12.2" }
 cookie = { version = "0.18.1" }
 tera = { version = "2.4.0" }
-cel = { version = "0.14.5", features = ["json"] }
+cel = { version = "0.15.0", features = ["json"] }
 reqwest = { version = "0.13.5", features = [
 	"json",
 	"form",

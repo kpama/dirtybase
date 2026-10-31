@@ -117,7 +117,7 @@ impl GuardResolver {
                 .await
                 .get()
                 .await
-                .unwrap() // Should never failed as we just registered the instance
+                .unwrap() // SAFETY: Should never failed as we just registered the instance
         }
     }
 }
