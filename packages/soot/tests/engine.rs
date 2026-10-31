@@ -78,7 +78,7 @@ fn blog_domain() -> Domain {
 
     // Registration order matters: `Post` and `Comment` both carry foreign keys
     // into tables registered before them.
-    Domain::new().add(user).add(post).add(comment)
+    Domain::new("blog").add(user).add(post).add(comment)
 }
 
 struct Harness {
@@ -584,7 +584,7 @@ async fn a_read_action_runs_its_preparations_and_validations() {
     }
 
     // Give `User` a read action that filters, so `read` has to run it.
-    let domain = Domain::new()
+    let domain = Domain::new("blog")
         .add(blog_domain().resources()[0].clone().as_ref().clone())
         .add(
             ResourceDef::new("Post")
@@ -624,7 +624,7 @@ async fn a_read_action_runs_its_preparations_and_validations() {
 async fn a_builtin_validation_runs_on_a_write() {
     let harness = Harness::new().await;
 
-    let domain = Domain::new().add(
+    let domain = Domain::new("ui").add(
         ResourceDef::new("Widget")
             .uuid_primary_key()
             .attribute(Attribute::string("name").optional())

@@ -13,9 +13,9 @@ use crate::{
     aggregate::Aggregate,
     attribute::{Attribute, AttributeType},
     error::{Error, Errors, Result},
-    extension::ExtensionRef,
     pipeline::Pipeline,
     relationship::{Calculation, Relationship, RelationshipType},
+    soot_extension::ExtensionRef,
 };
 
 /// The declaration of a resource: everything there is to know about a domain
@@ -57,7 +57,8 @@ impl std::fmt::Debug for ResourceDef {
 
 impl ResourceDef {
     /// Start a resource named `name`, with `name` as the table name.
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: impl ToString) -> Self {
+        // let table = cruet::case::to_table_case(name);
         Self {
             name: name.to_string(),
             table: name.to_string(),
@@ -114,6 +115,18 @@ impl ResourceDef {
         self
     }
 
+    pub fn migration_name(&self) -> String {
+        format!("{}", &self.table_name())
+    }
+    pub fn migration_name_with(&self, prefix: impl ToString, surfix: impl ToString) -> String {
+        format!(
+            "{}_{}{}",
+            prefix.to_string(),
+            self.migration_name(),
+            surfix.to_string()
+        )
+    }
+
     /// Append an attribute in place.
     ///
     /// [`ResourceDef::attribute`] consumes the resource, so an extension
@@ -162,10 +175,10 @@ impl ResourceDef {
         // Only a `belongs_to` puts a key on this side. A `has_one`/`has_many`
         // keys off this table's primary key, which already exists.
         if relationship.relationship_type() == RelationshipType::BelongsTo {
-            let key = relationship.source_attribute().to_string();
+            let key = relationship.source_attribute();
             if !self.attributes.iter().any(|a| a.name() == key) {
                 self.attributes
-                    .push(Attribute::uuid(&key).describe("Implied by a belongs_to relationship"));
+                    .push(Attribute::uuid(key).describe("Implied by a belongs_to relationship"));
             }
         }
         self.relationships.push(relationship);
@@ -259,13 +272,16 @@ impl ResourceDef {
     ///     .default_actions();
     /// assert_eq!(post.extensions().len(), 1);
     /// ```
-    pub fn extension<E: crate::extension::SootExtension + 'static>(mut self, extension: E) -> Self {
+    pub fn extension<E: crate::soot_extension::SootExtension + 'static>(
+        mut self,
+        extension: E,
+    ) -> Self {
         self.add_extension(extension);
         self
     }
 
     /// Attach an extension in place. See [`ResourceDef::extension`].
-    pub fn add_extension<E: crate::extension::SootExtension + 'static>(
+    pub fn add_extension<E: crate::soot_extension::SootExtension + 'static>(
         &mut self,
         extension: E,
     ) -> &mut Self {

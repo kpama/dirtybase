@@ -51,7 +51,6 @@
 //! Nothing above has touched a database. Declaring a resource is pure data;
 //! only [`data_layer::RelationalDataLayer`] and [`schema`] need a `Manager`.
 //!
-//! With the `migrations` feature, [`migrations::SootMigration`] turns a whole
 //! [`Domain`] into tables and back.
 
 pub mod action;
@@ -62,8 +61,8 @@ pub mod changeset;
 pub mod context;
 pub mod data_layer;
 pub mod domain;
+pub mod domain_resolver;
 pub mod error;
-pub mod extension;
 pub mod generic;
 pub mod pipeline;
 pub mod preparation;
@@ -73,19 +72,20 @@ pub mod relationship;
 pub mod resource;
 pub mod resource_impl;
 pub mod schema;
+pub mod soot_extension;
+pub mod soot_manager;
 pub mod validation;
 
 pub mod builtins;
 
-#[cfg(feature = "extension")]
 pub mod config;
-#[cfg(feature = "extension")]
 pub mod dirtybase_entry;
 
-#[cfg(feature = "migrations")]
 pub mod migrations;
 
 pub use dirtybase_db;
+
+pub use dirtybase_entry::Extension;
 
 /// The names most callers need, in one import.
 pub mod prelude {
@@ -99,8 +99,8 @@ pub mod prelude {
         context::{ActionContext, Actor, DefaultActionContext},
         data_layer::{DataLayer, RelationalDataLayer},
         domain::Domain,
+        domain_resolver::SootDomainResolver,
         error::{Error, ErrorClass, ErrorList, Errors, Result},
-        extension::{ExtensionRef, FnExtension, SootExtension, extension},
         pipeline::Pipeline,
         preparation::Preparation,
         query::{Filter, FilterOperator, Query, SortDirection},
@@ -109,6 +109,8 @@ pub mod prelude {
         resource::{InterfaceDefinition, ResourceDef},
         resource_impl::Resource,
         schema,
+        soot_extension::{ExtensionRef, FnExtension, SootExtension, extension},
+        soot_manager::SootManager,
         validation::Validation,
     };
 }

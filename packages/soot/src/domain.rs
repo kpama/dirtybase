@@ -3,6 +3,7 @@ use std::{
     sync::Arc,
 };
 
+use dirtybase_contract::prelude::Observable;
 use dirtybase_db::field_values::FieldValue;
 
 use crate::{
@@ -11,10 +12,10 @@ use crate::{
     context::{ActionContext, DefaultActionContext},
     data_layer::DataLayer,
     error::{Error, ErrorList, Errors, Result},
-    extension::{ExtensionRef, SootExtension},
     query::{INCLUDE_DELETED_FLAG, Query},
     record::Record,
     resource::ResourceDef,
+    soot_extension::{ExtensionRef, SootExtension},
 };
 
 /// A registry of resources, and the engine that runs their actions.
@@ -31,15 +32,19 @@ use crate::{
 /// resource in it, which is Ash's `extensions` list lifted from the resource to
 /// the whole domain: a cross-cutting concern like auditing or tenant scoping
 /// belongs here rather than being repeated on each declaration.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Domain {
+    name: &'static str,
     resources: Vec<Arc<ResourceDef>>,
     extensions: Vec<ExtensionRef>,
 }
 
+impl Observable for Domain {}
+
 impl std::fmt::Debug for Domain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Domain")
+            .field("name", &self.name)
             .field(
                 "resources",
                 &self
@@ -61,14 +66,22 @@ impl std::fmt::Debug for Domain {
 }
 
 impl Domain {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(name: &'static str) -> Self {
+        Self {
+            name,
+            resources: Default::default(),
+            extensions: Default::default(),
+        }
     }
 
     /// Register a resource from its declaration.
     pub fn add(mut self, resource: ResourceDef) -> Self {
         self.push(resource);
         self
+    }
+
+    pub fn name(&self) -> &str {
+        self.name
     }
 
     /// Register a resource in place.
@@ -78,7 +91,7 @@ impl Domain {
     /// they contribute.
     pub fn push(&mut self, resource: ResourceDef) -> &mut Self {
         let mut resource = resource;
-        crate::extension::extend_resource(&self.extensions, &mut resource);
+        crate::soot_extension::extend_resource(&self.extensions, &mut resource);
         let resource = Arc::new(resource);
         if self
             .resources
@@ -244,7 +257,7 @@ impl Domain {
 
     /// Run every extension's setup hook. Call once, after registration.
     pub async fn setup_extensions(&self, context: &dyn ActionContext) -> Result<()> {
-        crate::extension::setup_all(&self.all_extensions(), context).await
+        crate::soot_extension::setup_all(&self.all_extensions(), context).await
     }
 
     /// Run every extension's teardown hook, in setup order.
@@ -253,7 +266,7 @@ impl Domain {
     /// teardown that could not release a lock or drop a subscription is worth
     /// hearing about on the way down.
     pub async fn teardown_extensions(&self) -> Result<()> {
-        crate::extension::teardown_all(&self.all_extensions()).await
+        crate::soot_extension::teardown_all(&self.all_extensions()).await
     }
 
     // ---- lookup ------------------------------------------------------------
@@ -380,7 +393,7 @@ impl Domain {
         let records = data_layer
             .read(Arc::clone(query.resource()), &query)
             .await?;
-        crate::extension::after_read(&extensions, records, &query).await
+        crate::soot_extension::after_read(&extensions, records, &query).await
     }
 
     /// Run a read action restricted to one record.
@@ -402,10 +415,12 @@ impl Domain {
         // The extension sees the whole result set even though only the first
         // record survives, so a hook does not have to care which of the two it
         // is running under.
-        Ok(crate::extension::after_read(&extensions, records, &query)
-            .await?
-            .into_iter()
-            .next())
+        Ok(
+            crate::soot_extension::after_read(&extensions, records, &query)
+                .await?
+                .into_iter()
+                .next(),
+        )
     }
 
     /// Load more relationships onto records that are already in hand, the way
@@ -592,7 +607,7 @@ impl Domain {
     /// without the developer writing it.
     pub fn describe(&self) -> DomainDescription {
         DomainDescription {
-            extensions: crate::extension::extension_names(&self.all_extensions()),
+            extensions: crate::soot_extension::extension_names(&self.all_extensions()),
             resources: self
                 .resources
                 .iter()
@@ -605,7 +620,9 @@ impl Domain {
                     soft_deletable: resource.is_soft_deletable(),
                     // What actually runs for this resource, domain extensions
                     // included, rather than just what the declaration attached.
-                    extensions: crate::extension::extension_names(&self.extensions_of(resource)),
+                    extensions: crate::soot_extension::extension_names(
+                        &self.extensions_of(resource),
+                    ),
                     attributes: resource
                         .attributes()
                         .iter()
@@ -767,7 +784,7 @@ pub async fn run_preparations_with(
     }
     // Reported alongside the preparation errors rather than instead of them, so
     // one read surfaces every reason it was refused.
-    errors.add_result(crate::extension::before_query(extensions, query, context).await);
+    errors.add_result(crate::soot_extension::before_query(extensions, query, context).await);
     errors.into_result()
 }
 
@@ -804,7 +821,7 @@ pub async fn run_changeset_with_extensions(
     context: &dyn ActionContext,
     extensions: &[ExtensionRef],
 ) -> Result<Record> {
-    let changeset = crate::extension::before_changeset(extensions, changeset, context).await?;
+    let changeset = crate::soot_extension::before_changeset(extensions, changeset, context).await?;
     let changeset = apply_changes(changeset, context).await?;
     apply_validations(&changeset, context).await?;
     changeset.check_constraints()?;
@@ -830,7 +847,7 @@ pub async fn run_changeset_with_extensions(
     // The record as stored, before anything derived is layered on, so an
     // extension hook sees the write itself rather than a calculation it did not
     // ask for.
-    record = crate::extension::after_write(extensions, record, &changeset).await?;
+    record = crate::soot_extension::after_write(extensions, record, &changeset).await?;
 
     apply_calculations(&resource, &mut record).await;
     apply_aggregates(data_layer, &resource, &mut record).await?;

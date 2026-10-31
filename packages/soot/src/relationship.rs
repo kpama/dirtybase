@@ -106,6 +106,8 @@ pub struct Relationship {
     description: Option<String>,
     /// For `many_to_many`, the join resource holding the two foreign keys.
     join_resource: Option<String>,
+    join_this_key: Option<String>,
+    join_other_key: Option<String>,
     loader: Option<RelationshipLoader>,
 }
 
@@ -142,6 +144,8 @@ impl Relationship {
             allow_nil: true,
             description: None,
             join_resource: None,
+            join_this_key: None,
+            join_other_key: None,
             loader: None,
         }
     }
@@ -188,8 +192,8 @@ impl Relationship {
         let mut relationship =
             Self::new(name, RelationshipType::ManyToMany, destination, "id", "id");
         relationship.join_resource = Some(join_resource.to_string());
-        relationship.source_attribute = this_side_key.to_string();
-        relationship.destination_attribute = other_side_key.to_string();
+        relationship.join_this_key = Some(this_side_key.to_string());
+        relationship.join_other_key = Some(other_side_key.to_string());
         relationship
     }
 
@@ -250,6 +254,14 @@ impl Relationship {
 
     pub fn destination_attribute(&self) -> &str {
         &self.destination_attribute
+    }
+
+    pub fn join_this_key(&self) -> Option<&str> {
+        self.join_this_key.as_deref()
+    }
+
+    pub fn join_other_key(&self) -> Option<&str> {
+        self.join_other_key.as_deref()
     }
 
     pub fn join_resource(&self) -> Option<&str> {

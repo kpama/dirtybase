@@ -86,7 +86,7 @@ fn blog_domain() -> Domain {
         .timestamps()
         .default_actions();
 
-    Domain::new().add(user).add(post)
+    Domain::new("blog").add(user).add(post)
 }
 
 // ---- extensions used by more than one test ---------------------------------
@@ -159,7 +159,7 @@ async fn an_extension_can_add_attributes_to_the_resource_it_is_attached_to() {
 
     // The column is not just declared, it is in the schema.
     let manager = dirtybase_db::connector::sqlite::make_sqlite_in_memory_manager().await;
-    let domain = Domain::new().add(post);
+    let domain = Domain::new("blog").add(post);
     schema::create_all_tables(&manager, domain.resources(), Some(&domain))
         .await
         .expect("the extension's column should be creatable");
@@ -167,7 +167,7 @@ async fn an_extension_can_add_attributes_to_the_resource_it_is_attached_to() {
 
 #[tokio::test]
 async fn a_domain_extension_extends_every_resource_it_is_registered_on() {
-    let domain = Domain::new()
+    let domain = Domain::new("blog")
         .add(
             ResourceDef::new("User")
                 .uuid_primary_key()
@@ -193,7 +193,7 @@ async fn a_domain_extension_extends_every_resource_it_is_registered_on() {
 
 #[tokio::test]
 async fn a_resource_extension_does_not_reach_other_resources() {
-    let domain = Domain::new()
+    let domain = Domain::new("blog")
         .add(
             ResourceDef::new("User")
                 .uuid_primary_key()
@@ -227,7 +227,7 @@ async fn a_resource_extension_does_not_reach_other_resources() {
 
 #[test]
 fn a_domain_extension_runs_before_a_resource_extension() {
-    let domain = Domain::new()
+    let domain = Domain::new("blog")
         .add(
             ResourceDef::new("Post")
                 .uuid_primary_key()
@@ -262,7 +262,7 @@ fn an_extension_that_does_not_apply_is_left_out() {
         }
     }
 
-    let domain = Domain::new()
+    let domain = Domain::new("blog")
         .add(
             ResourceDef::new("Post")
                 .uuid_primary_key()
@@ -311,7 +311,7 @@ fn extensions_show_up_in_the_domain_description() {
 #[tokio::test]
 async fn a_before_changeset_hook_can_change_what_is_written() {
     let harness = Harness::new().await;
-    let domain = Domain::new()
+    let domain = Domain::new("blog")
         .add(
             ResourceDef::new("User")
                 .uuid_primary_key()
@@ -457,7 +457,7 @@ async fn a_resource_hook_does_not_run_for_another_resource() {
         .expect("the user should be created");
 
     let reads = Arc::new(Mutex::new(Vec::new()));
-    let domain = Domain::new()
+    let domain = Domain::new("blog")
         .add(
             ResourceDef::new("User")
                 .uuid_primary_key()

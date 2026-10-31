@@ -93,7 +93,7 @@ impl RelationalDataLayer {
     pub fn new(manager: Manager) -> Self {
         Self {
             manager,
-            domain: Arc::new(Domain::new()),
+            domain: Arc::new(Domain::new("core::relational_data_layer")),
         }
     }
 
@@ -120,6 +120,8 @@ impl RelationalDataLayer {
         // Soft deleted rows are invisible unless explicitly asked for.
         if resource.is_soft_deletable() && !query.has_flag("include_deleted") {
             builder.without_trashed();
+        } else if resource.is_soft_deletable() && query.has_flag("include_deleted") {
+            builder.with_trashed();
         }
 
         for filter in query.filters() {
@@ -736,8 +738,12 @@ impl RelationalDataLayer {
                 ))
             })?
             .to_string();
-        let this_side = relationship.source_attribute().to_string();
-        let other_side = relationship.destination_attribute().to_string();
+
+        let this_side = relationship.join_this_key().unwrap_or_default().to_string();
+        let other_side = relationship
+            .join_other_key()
+            .unwrap_or_default()
+            .to_string();
 
         let keys: Vec<FieldValue> = records
             .iter()
@@ -766,6 +772,7 @@ impl RelationalDataLayer {
         // Map each source id to the destination ids it links to.
         let mut links: BTreeMap<String, Vec<FieldValue>> = BTreeMap::new();
         let mut destination_ids: Vec<FieldValue> = Vec::new();
+
         for row in join {
             let values = row.fields();
             let source = values.get(&this_side).cloned();

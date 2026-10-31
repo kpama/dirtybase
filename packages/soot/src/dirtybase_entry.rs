@@ -33,7 +33,6 @@
 
 use std::{collections::BTreeMap, sync::Arc};
 
-#[cfg(feature = "migrations")]
 use dirtybase_contract::ExtensionMigrations;
 use dirtybase_contract::{
     ExtensionSetup, app_contract::Context, cli_contract::CliCommandManager,
@@ -42,6 +41,8 @@ use dirtybase_contract::{
 };
 use dirtybase_db::field_values::FieldValue;
 
+use crate::domain_resolver::SootDomainResolver;
+use crate::soot_manager::SootManager;
 use crate::{
     config::SootConfig,
     context::{ActionContext, Actor, DefaultActionContext},
@@ -65,25 +66,9 @@ pub type DomainBuilder = Arc<dyn Fn() -> Domain + Send + Sync>;
 /// The dirtybase extension: it puts the domain and its data layer where the
 /// rest of the application can reach them.
 #[derive(Clone, Default)]
-pub struct Extension {
-    build: Option<DomainBuilder>,
-}
+pub struct Extension {}
 
 impl Extension {
-    /// An extension serving the domain that `build` returns.
-    ///
-    /// The closure is called once per resolution rather than cached, so a
-    /// resource added to the declaration later is picked up without rebuilding
-    /// the extension. It is cheap: a declaration is pure data.
-    pub fn new<F>(build: F) -> Self
-    where
-        F: Fn() -> Domain + Send + Sync + 'static,
-    {
-        Self {
-            build: Some(Arc::new(build)),
-        }
-    }
-
     /// An extension with an empty domain.
     ///
     /// Useful as a placeholder — in a composition root that registers a
@@ -91,14 +76,6 @@ impl Extension {
     /// the application has one.
     pub fn empty() -> Self {
         Self::default()
-    }
-
-    /// The domain this extension serves.
-    pub fn build_domain(&self) -> Domain {
-        match &self.build {
-            Some(build) => build(),
-            None => Domain::new(),
-        }
     }
 
     pub async fn config_from_ctx(ctx: &Context) -> std::result::Result<SootConfig, anyhow::Error> {
@@ -112,7 +89,7 @@ impl ExtensionSetup for Extension {
         let config = match Self::config_from_ctx(context).await {
             Ok(config) => config,
             Err(error) => {
-                tracing::warn!(
+                tracing::error!(
                     target: "soot",
                     "could not read the soot configuration, using the default: {error}"
                 );
@@ -125,21 +102,30 @@ impl ExtensionSetup for Extension {
             return;
         }
 
-        register(self.build_domain(), config).await;
+        register().await;
     }
 
     async fn boot(&mut self, context: &Context) {
         // Extension setup runs here rather than in `setup`, because it may need
         // the `Manager` the database extension registered — and the database
         // extension is registered before this one.
-        let Ok(soot) = context.get::<Soot>().await else {
-            tracing::trace!(target: "soot", "no domain to set extensions up for");
-            return;
-        };
+        let config = Self::config_from_ctx(context).await.unwrap_or_default();
 
-        let action_context = ActionContextBridge::from_context(context).await;
-        if let Err(errors) = soot.domain().setup_extensions(&action_context).await {
-            tracing::warn!(target: "soot", "an extension failed to set up: {errors}");
+        if config.is_enabled() {
+            let Ok(soot_manager) = context.get::<SootManager>().await else {
+                tracing::trace!(target: "soot", "could not get soot manager");
+                return;
+            };
+
+            soot_manager.setup_extensions().await;
+
+            if config.auto_migrate() {
+                let manager = context
+                    .get::<Manager>()
+                    .await
+                    .expect("soot needs a database manager");
+                soot_manager.create_all_tables(manager).await;
+            }
         }
     }
 
@@ -161,12 +147,12 @@ impl ExtensionSetup for Extension {
         setup_cli(manager)
     }
 
-    #[cfg(feature = "migrations")]
     async fn migrations(&self, _context: &Context) -> Option<ExtensionMigrations> {
-        let build = self.build.clone()?;
-        Some(vec![Box::new(crate::migrations::SootMigration::new(
-            move || build(),
-        ))])
+        None
+        // let build = self.build.clone()?;
+        // Some(vec![Box::new(crate::migrations::SootMigration::new(
+        //     move || build(),
+        // ))])
     }
 }
 
@@ -182,6 +168,8 @@ impl ExtensionSetup for Extension {
 pub struct Soot {
     domain: Arc<Domain>,
     data_layer: Arc<dyn DataLayer>,
+    context: Context,
+    action_ctx: ActionContextBridge,
 }
 
 impl std::fmt::Debug for Soot {
@@ -195,7 +183,7 @@ impl std::fmt::Debug for Soot {
 }
 
 impl Soot {
-    pub fn new(domain: Domain, manager: Manager) -> Self {
+    pub async fn new(domain: Domain, manager: Manager, context: Context) -> Self {
         let domain = Arc::new(domain);
         Self {
             data_layer: Arc::new(RelationalDataLayer::with_domain(
@@ -203,15 +191,23 @@ impl Soot {
                 Arc::clone(&domain),
             )),
             domain,
+            action_ctx: ActionContextBridge::from_context(&context).await,
+            context,
         }
     }
 
     /// A handle over an existing pair, for a caller that built its own data
     /// layer — an in-memory one, or one with a different storage.
-    pub fn with_data_layer(domain: Domain, data_layer: Arc<dyn DataLayer>) -> Self {
+    pub async fn with_data_layer(
+        domain: Domain,
+        data_layer: Arc<dyn DataLayer>,
+        context: Context,
+    ) -> Self {
         Self {
             domain: Arc::new(domain),
             data_layer,
+            action_ctx: ActionContextBridge::from_context(&context).await,
+            context,
         }
     }
 
@@ -236,6 +232,13 @@ impl Soot {
         self.domain.describe()
     }
 
+    pub fn action_context(&self) -> &ActionContextBridge {
+        &self.action_ctx
+    }
+    pub fn context(&self) -> &Context {
+        &self.context
+    }
+
     /// Create a record, with the caller's dirtybase context as the action
     /// context.
     pub async fn create(
@@ -243,11 +246,15 @@ impl Soot {
         resource: &str,
         action: Option<&str>,
         params: Params,
-        context: &Context,
     ) -> Result<Record> {
-        let action_context = ActionContextBridge::from_context(context).await;
         self.domain
-            .create(&self.data_layer, resource, action, params, &action_context)
+            .create(
+                &self.data_layer,
+                resource,
+                action,
+                params,
+                self.action_context(),
+            )
             .await
     }
 
@@ -258,9 +265,7 @@ impl Soot {
         action: Option<&str>,
         id: &str,
         params: Params,
-        context: &Context,
     ) -> Result<Record> {
-        let action_context = ActionContextBridge::from_context(context).await;
         self.domain
             .update(
                 &self.data_layer,
@@ -268,22 +273,21 @@ impl Soot {
                 action,
                 id,
                 params,
-                &action_context,
+                self.action_context(),
             )
             .await
     }
 
     /// Destroy the record identified by `id`.
-    pub async fn destroy(
-        &self,
-        resource: &str,
-        action: Option<&str>,
-        id: &str,
-        context: &Context,
-    ) -> Result<Record> {
-        let action_context = ActionContextBridge::from_context(context).await;
+    pub async fn destroy(&self, resource: &str, action: Option<&str>, id: &str) -> Result<Record> {
         self.domain
-            .destroy(&self.data_layer, resource, action, id, &action_context)
+            .destroy(
+                &self.data_layer,
+                resource,
+                action,
+                id,
+                self.action_context(),
+            )
             .await
     }
 
@@ -293,16 +297,14 @@ impl Soot {
         resource: &str,
         action: Option<&str>,
         configure: impl FnOnce(&mut Query),
-        context: &Context,
     ) -> Result<Vec<Record>> {
-        let action_context = ActionContextBridge::from_context(context).await;
         self.domain
             .read(
                 &self.data_layer,
                 resource,
                 action,
                 configure,
-                &action_context,
+                self.action_context(),
             )
             .await
     }
@@ -313,41 +315,26 @@ impl Soot {
 /// The pair is resolved once and then kept, so `auto_migrate` issues its DDL on
 /// the first resolution rather than at registration — the `Manager` it needs is
 /// only reachable from a context, and this is the first moment one exists.
-pub async fn register(domain: Domain, config: SootConfig) {
-    let auto_migrate = config.auto_migrate();
+pub async fn register() {
+    ContextResourceManager::forever("soo_domain_manager", |ctx| async {
+        Ok(SootDomainResolver::new(ctx))
+    })
+    .await;
 
-    ContextResourceManager::<Soot>::register(
+    ContextResourceManager::<SootManager>::register(
         move |_| {
             let name = "soot";
             Box::pin(async move { Ok((name, 0).into()) })
         },
         move |context| {
-            let domain = domain.clone();
             Box::pin(async move {
-                let manager = context
-                    .get::<Manager>()
-                    .await
-                    .map_err(|e| anyhow::anyhow!("soot needs a database manager: {e}"))?;
+                let Ok(resolver) = context.get::<SootDomainResolver>().await else {
+                    return Err(anyhow::anyhow!("could not resolve soot domain resolver"));
+                };
 
-                if auto_migrate {
-                    // Best effort: a deployment that already migrated should not
-                    // fail to boot, and the error is worth seeing but not worth
-                    // stopping for.
-                    if let Err(errors) = crate::schema::create_all_tables(
-                        &manager,
-                        domain.resources(),
-                        Some(&domain),
-                    )
-                    .await
-                    {
-                        tracing::warn!(
-                            target: "soot",
-                            "soot could not create its tables: {errors}"
-                        );
-                    }
-                }
+                let soot_manager = SootManager::new(resolver.resolve().await, context.clone());
 
-                Ok(Soot::new(domain, manager))
+                Ok(soot_manager)
             })
         },
         |_soot| Box::pin(async {}),

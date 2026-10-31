@@ -544,7 +544,7 @@ pub mod extensions {
         changeset::{Changeset, ChangesetKind},
         context::ActionContext,
         error::{Error, Errors, Result},
-        extension::SootExtension,
+        soot_extension::SootExtension,
         query::Query,
         record::Record,
         resource::ResourceDef,

@@ -1,6 +1,3 @@
-#![cfg(feature = "migrations")]
-
-//! The `migrations` feature: a domain turned into real tables and back again.
 //!
 //! These run against SQLite like the engine tests, because the thing worth
 //! checking is that the generated DDL is accepted by a database, not that the
@@ -53,7 +50,7 @@ fn blog() -> Domain {
                 .change(changes::set_attribute("title", "untitled")),
         );
 
-    Domain::new().add(user).add(post).add(comment)
+    Domain::new("blog").add(user).add(post).add(comment)
 }
 
 async fn manager() -> dirtybase_db::base::manager::Manager {

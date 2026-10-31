@@ -82,6 +82,21 @@ fn column_for(
         column.set_is_nullable(attribute.allows_nil());
     }
 
+    if attribute.constraint().unique {
+        column.set_is_unique(true);
+    }
+
+    column.check = attribute.constraint().pattern.clone();
+
+    if let Some(max_length) = attribute.constraint().max_length {
+        match &column.column_type {
+            ColumnType::String(len) if *len != max_length => {
+                column.column_type = ColumnType::String(max_length)
+            }
+            _ => (),
+        }
+    }
+
     // An explicit default is declared on the column too, so the database applies
     // it for writes that do not go through a changeset.
     if let Some(default) = attribute.declared_default() {

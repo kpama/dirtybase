@@ -261,18 +261,7 @@ impl Query {
     /// Match a `null` value explicitly, which is how a caller asks for records
     /// where an optional attribute was never set.
     pub fn filter_nil(&mut self, attribute: &str) -> &mut Self {
-        let filter = if self.resource.is_soft_deletable()
-            && attribute == self.resource.deleted_at_column()
-        {
-            Filter::new(attribute, FilterOperator::IsNull, FieldValue::Null).is_null()
-        } else {
-            Filter::new(
-                attribute,
-                FilterOperator::Eq,
-                FieldValue::String(String::new()),
-            )
-        };
-        self.filter(filter)
+        self.filter(Filter::new(attribute, FilterOperator::IsNull, FieldValue::Null).is_null())
     }
 
     pub fn filters(&self) -> &[Filter] {
