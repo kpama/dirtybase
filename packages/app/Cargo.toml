@@ -71,9 +71,9 @@ realtime = ["dep:dirtybase_realtime"]
 # So the app can hand a domain to `dirtybase_soot::dirtybase_entry::Extension`.
 # It opts in explicitly because soot is a framework to build on, not a behaviour
 # every application wants on.
-soot = ["dep:dirtybase_soot", "dirtybase_soot/extension", "dirtybase_soot/migrations"]
+soot = ["dep:dirtybase_soot"]
 template = ["dep:tera"]
 embed_template = ["template"]
-full = ["template", "realtime", "auth", "permission"]
+full = ["template", "realtime", "auth", "permission", "soot"]
 dev = ["full", "dirtybase_auth/seeders"]
 default = ["full"]
